@@ -1,0 +1,39 @@
+{
+  "name": "gamedev-story-clone",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Клон Game Dev Story (Kairosoft) — M1: ядро (тик, разработка, релиз, продажи)",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "play": "tsx scripts/playthrough.ts",
+    "db:build": "tsx tools/build-db.ts",
+    "db:check": "tsx tools/check-db.ts",
+    "avatars": "tsx tools/make-avatars.ts",
+    "dev": "vite",
+    "server": "tsx src/server/server.ts",
+    "build": "tsc --noEmit && vite build"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sharp": "^0.35.4",
+    "webamp": "^2.3.1",
+    "ws": "^8.21.3"
+  }
+}

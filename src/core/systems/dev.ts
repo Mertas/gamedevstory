@@ -1,0 +1,462 @@
+// Система разработки: старт проекта, недельный прогресс, баги, отладка, релиз, сиквелы.
+import { CONFIG } from '../config';
+import { COMBO_GRADES, CONSOLES, GENRES, GENRE_ORDER, MESSAGES, TYPES } from '../data/db';
+import {
+  debugRate, distributePoints, judgeScore, projectCost, reviewTotal,
+  salesPlan, totalBugs, weeklyPoints,
+} from '../formulas';
+import type { Rng } from '../rng';
+import type {
+  ActiveGame, ActionResult, ComboGrade, GameState, Role, Staff, StartProjectInput, Stats,
+} from '../types';
+import type { CareerId } from '../data/schema';
+import { DIRECTION_WEIGHTS, EMPTY_STATS } from '../types';
+
+export function genreById(id: string) {
+  return GENRES.find((g) => g.id === id)!;
+}
+
+export function typeById(id: string) {
+  return TYPES.find((t) => t.id === id)!;
+}
+
+export function consoleById(id: string) {
+  return CONSOLES.find((c) => c.id === id)!;
+}
+
+export function comboGrade(genreId: string, typeId: string): ComboGrade {
+  const grades = COMBO_GRADES[typeId];
+  if (!grades) return 'C';
+  const gi = GENRE_ORDER.indexOf(genreId);
+  if (gi < 0) return 'C';
+  return (grades[gi] ?? 'C') as ComboGrade;
+}
+
+// открыт ли жанр/тип (уровни карьер сотрудников)
+export function isUnlocked(state: GameState, job: string | null, level: number | null, training?: string | null): boolean {
+  if (job && level && !state.staff.some((s) => (s.careers[job as CareerId] ?? 0) >= level)) return false;
+  if (training && !state.unlockedTrainings.some((t) => t.toLowerCase().includes(training.toLowerCase()))) return false;
+  return true;
+}
+
+export function consoleAvailable(state: GameState, consoleId: string): boolean {
+  const cs = state.consoles[consoleId];
+  if (!cs) return false;
+  if (cs.removedAtWeek !== null && cs.removedAtWeek <= state.week) return false;
+  if (cs.availableAtWeek !== null && cs.availableAtWeek > state.week) return false;
+  return true;
+}
+
+export function isSequel(state: GameState, genreId: string, typeId: string): boolean {
+  return state.history.some(
+    (h) => h.genreId === genreId && h.typeId === typeId && h.score >= CONFIG.HALL_OF_FAME,
+  );
+}
+
+export function startProject(state: GameState, input: StartProjectInput): ActionResult {
+  const genre = genreById(input.genreId);
+  const type = typeById(input.typeId);
+  const consoleData = consoleById(input.consoleId);
+  const cs = state.consoles[input.consoleId];
+  if (!genre || !type || !consoleData || !cs) return { ok: false, error: 'Неизвестный выбор' };
+  if (state.activeGame) return { ok: false, error: 'Идёт другой проект' };
+  if (state.bankrupt) return { ok: false, error: 'Компания банкрот' };
+  if (!consoleAvailable(state, input.consoleId)) return { ok: false, error: 'Консоль недоступна' };
+  if (!cs.licensed) return { ok: false, error: 'Нужна лицензия на консоль' };
+  if (!isUnlocked(state, genre.unlockJob, genre.unlockLevel)) return { ok: false, error: `Жанр «${genre.name}» не открыт` };
+  if (!isUnlocked(state, type.unlockJob, type.unlockLevel, type.unlockTraining)) {
+    return { ok: false, error: `Тип «${type.name}» не открыт${type.unlockTraining ? ' (нужен тренинг)' : ''}` };
+  }
+  if (!state.staff.some((s) => s.id === input.proposalStaffId)) return { ok: false, error: 'Нет сценариста' };
+
+  const direction = { ...EMPTY_DIRECTION, ...input.direction } as Record<string, number>;
+  const spent = Object.values(direction).reduce((a, b) => a + b, 0);
+  // очки направления — перераспределяемый пул (не списываются; растут с уровнями жанров)
+  if (spent > state.directionPoints) return { ok: false, error: 'Не хватает очков направления' };
+
+  const cost = projectCost(
+    genre.costWan, state.genreLevels[genre.id] ?? 0,
+    state.typeLevels[type.id] ?? 0,
+    consoleData.costMult, input.mode,
+  );
+  if (state.money < cost) return { ok: false, error: `Не хватает денег (нужно ${Math.round(cost)}K)` };
+  state.money -= cost;
+
+  const game: ActiveGame = {
+    consoleId: input.consoleId,
+    genreId: genre.id,
+    typeId: type.id,
+    mode: input.mode,
+    comboGrade: comboGrade(genre.id, type.id),
+    direction,
+    points: { ...EMPTY_STATS },
+    totalCost: cost,
+    progress: 0,
+    bugs: 0,
+    weekStarted: state.week,
+    phase: 'proposal',
+    proposalStaffId: input.proposalStaffId,
+    assignments: { proposal: [input.proposalStaffId], ...input.assignments },
+    boostOffered: false,
+    boostUsed: false,
+    fame: 10,
+    hype: 10,
+    name: input.name?.trim() ?? '',
+    plot: input.plot?.trim() ?? '',
+    score: null,
+    judgeScores: [],
+    reviewMessages: [],
+    releaseWeek: null,
+    sales: [],
+    totalUnits: 0,
+    totalRevenue: 0,
+    ended: false,
+  };
+  state.activeGame = game;
+  log(state, `Старт разработки: ${genre.name} × ${type.name} (${consoleData.name}, ${input.mode}, ${Math.round(cost)}K, комбо ${game.comboGrade})`);
+  return { ok: true };
+}
+
+const EMPTY_DIRECTION: Record<string, number> = {
+  cute: 0, realism: 0, approach: 0, niche: 0,
+  simple: 0, innovation: 0, world: 0, polish: 0,
+};
+
+// предложение: стартовые Fun/Creativity от сценариста
+function doProposal(state: GameState, game: ActiveGame): void {
+  const st = state.staff.find((s) => s.id === game.proposalStaffId);
+  if (!st) return;
+  game.points.fun += st.stats.scenario * CONFIG.PROPOSAL_SCENARIO_FUN;
+  game.points.creativity += st.stats.scenario * CONFIG.PROPOSAL_SCENARIO_CREATIVITY;
+}
+
+const ROLE_STAT = {
+  proposal: 'scenario', program: 'program', graphics: 'graphics', sound: 'sound', debug: 'program',
+} as const;
+
+function roleContributors(state: GameState, game: ActiveGame, role: Role): { stat: number; power: number }[] {
+  const ids = game.assignments[role] ?? [];
+  return ids
+    .map((id) => state.staff.find((s) => s.id === id))
+    .filter((s): s is Staff => !!s && s.homeWeeks === 0)
+    .map((s) => ({ stat: s.stats[ROLE_STAT[role]], power: s.power }));
+}
+
+// один тик разработки
+export function devTick(state: GameState, rng: Rng): void {
+  const game = state.activeGame;
+  state.devContrib = [];
+  if (!game || game.phase === 'released' || game.phase === 'debug') return;
+
+  if (game.phase === 'proposal') {
+    doProposal(state, game);
+    game.phase = 'dev';
+    log(state, `Предложение готово: Fun ${Math.round(game.points.fun)}, Creativity ${Math.round(game.points.creativity)}`);
+    return;
+  }
+
+  // dev (сценарист пишет сценарий всю разработку — как в оригинале)
+  const genreLevel = state.genreLevels[game.genreId] ?? 0;
+  const contributors = [
+    ...roleContributors(state, game, 'proposal'),
+    ...roleContributors(state, game, 'program'),
+    ...roleContributors(state, game, 'graphics'),
+    ...roleContributors(state, game, 'sound'),
+  ];
+  const weekly = weeklyPoints(contributors, game.mode, genreLevel);
+  const daily = weekly / 7; // тик = день
+  const gain = distributePoints(daily, game.direction, DIRECTION_WEIGHTS);
+  for (const k of ['fun', 'creativity', 'graphics', 'sound'] as const) {
+    game.points[k] += gain[k];
+  }
+
+  // вклад по сотрудникам (для анимации в UI): роль → атрибут
+  const roleAttr: Record<string, 'fun' | 'creativity' | 'graphics' | 'sound'> = {
+    proposal: 'creativity', program: 'fun', graphics: 'graphics', sound: 'sound',
+  };
+  for (const s of state.staff) {
+    if (s.homeWeeks > 0) continue; // ушёл домой — вклада нет
+    for (const r of ['proposal', 'program', 'graphics', 'sound'] as const) {
+      if ((game.assignments[r] ?? []).includes(s.id)) {
+        const fatigue = s.power >= 5 ? 1 : s.power >= 2 ? 0.7 : 0.4;
+        const amount =
+          s.stats[ROLE_STAT[r]] * CONFIG.DEV_STAT_FACTOR * fatigue
+          * CONFIG.MODE[game.mode].speed * CONFIG.GENRE_LV_QUALITY(genreLevel) / 7;
+        state.devContrib.push({ staffId: s.id, attr: roleAttr[r]!, amount });
+      }
+    }
+  }
+
+  // баги пропорционально прогрессу
+  const total = totalBugs(game.totalCost, game.mode, game.comboGrade);
+  game.bugs += (total * daily) / game.totalCost;
+
+  // исследования
+  const researchMult = game.mode === 'research' ? CONFIG.RESEARCH_MODE_MULT : 1;
+  state.research += daily * CONFIG.RESEARCH_DEV_RATE * researchMult;
+
+  // прогресс
+  const before = game.points.fun + game.points.creativity + game.points.graphics + game.points.sound;
+  // прогресс = ВРЕМЯ (100 дней × режим), не зависит от команды;
+  // очки (points) копятся от команды и определяют качество/рейтинг
+  game.progress = Math.min(1, (state.week - game.weekStarted) / (CONFIG.DEV_DAYS * CONFIG.MODE[game.mode].time));
+
+  // события
+  if (game.progress >= 0.25 && !game.boostOffered) {
+    game.boostOffered = true;
+    if (rng.chance(CONFIG.BOOST_CHANCE)) {
+      const staff = state.staff.filter((s) => s.homeWeeks === 0);
+      if (staff.length > 0) {
+        const s = staff[rng.int(0, staff.length - 1)]!;
+        const cost = Math.max(CONFIG.BOOST_COST_MIN, Math.round(state.research / CONFIG.BOOST_COST_DIV));
+        state.pendingEvent = { type: 'boost', staffId: s.id, cost };
+        log(state, `${s.name} предлагает улучшить игру (${cost} PR)`);
+      }
+    }
+  }
+  if (rng.chance(CONFIG.BLACKOUT_CHANCE)) {
+    for (const k of ['fun', 'creativity', 'graphics', 'sound'] as const) {
+      game.points[k] *= 1 - CONFIG.BLACKOUT_LOSS;
+    }
+    log(state, 'Отключение электричества! Потеряно 30% очков разработки');
+    if (!state.pendingEvent) state.pendingEvent = { type: 'disaster', text: '⚡ Отключение электричества! Потеряно 30% накопленных очков разработки.' };
+  }
+  if (rng.chance(CONFIG.BREAKDOWN_CHANCE)) {
+    const loss = rng.int(CONFIG.BREAKDOWN_LOSS[0], CONFIG.BREAKDOWN_LOSS[1]);
+    game.points.fun = Math.max(0, game.points.fun - loss);
+    log(state, `Поломка оборудования: −${loss} очков`);
+    if (!state.pendingEvent) state.pendingEvent = { type: 'disaster', text: `🔧 Поломка оборудования! Потеряно ${loss} очков разработки.` };
+  }
+
+  // фазы
+  if (before < game.totalCost * 0.4 && game.points.fun + game.points.creativity + game.points.graphics + game.points.sound >= game.totalCost * 0.4) {
+    log(state, 'Начата работа над графикой (α-версия)');
+  }
+  if (before < game.totalCost * 0.8 && game.points.fun + game.points.creativity + game.points.graphics + game.points.sound >= game.totalCost * 0.8) {
+    log(state, 'Начата работа над музыкой (β-версия)');
+  }
+
+  if (game.progress >= 1) {
+    game.phase = 'debug';
+    game.bugs = Math.round(game.bugs);
+    log(state, `Разработка завершена! Багов в игре: ${game.bugs}`);
+  }
+}
+
+// отладка: назначенные в debug-роль + все остальные сотрудники (Program стат)
+export function debugTick(state: GameState, rng: Rng): void {
+  const game = state.activeGame;
+  if (!game || game.phase !== 'debug') return;
+  const assigned = new Set(game.assignments.debug ?? []);
+  const debuggers = state.staff
+    .filter((s) => s.homeWeeks === 0)
+    .map((s) => ({ program: s.stats.program, weight: assigned.has(s.id) ? 1 : 0.7 }));
+  const rate = debugRate(debuggers);
+  const removed = Math.min(game.bugs, Math.max(0, Math.round(rate)));
+  game.bugs -= removed;
+  if (removed > 0) {
+    const pr = rng.int(CONFIG.DEBUG_PR_MIN, CONFIG.DEBUG_PR_MAX) * removed;
+    state.research += pr;
+    log(state, `Отладка: −${removed} багов (+${pr} PR)`);
+  }
+  // все баги починены — попап «игра готова» (пауза, как у торговца)
+  if (game.bugs <= 0 && !state.releasePopupShown && !state.pendingEvent) {
+    state.releasePopupShown = true;
+    const genre = genreById(game.genreId);
+    const type = typeById(game.typeId);
+    const top = topContributor(state, game);
+    state.pendingEvent = {
+      type: 'ready_to_release',
+      text:
+        `«${genre?.name ?? '?'} × ${type?.name ?? '?'}» готова к выпуску!\n` +
+        `Fun: ${Math.round(game.points.fun)} · Creativity: ${Math.round(game.points.creativity)} · ` +
+        `Графика: ${Math.round(game.points.graphics)} · Звук: ${Math.round(game.points.sound)} · Комбо: ${game.comboGrade}\n` +
+        `Наибольший вклад: ${top ? `${top.name} (${top.activeCareer})` : '—'}`,
+    };
+  }
+}
+
+// кто внёс наибольший вклад в разработку (сумма статов по назначенным ролям)
+function topContributor(state: GameState, game: ActiveGame): Staff | null {
+  const roleStat: Record<Role, 'program' | 'scenario' | 'graphics' | 'sound'> = {
+    proposal: 'scenario', program: 'program', graphics: 'graphics', sound: 'sound', debug: 'program',
+  };
+  const scores = new Map<string, number>();
+  for (const r of ['proposal', 'program', 'graphics', 'sound', 'debug'] as Role[]) {
+    for (const id of game.assignments[r] ?? []) {
+      const s = state.staff.find((x) => x.id === id);
+      if (s) scores.set(s.id, (scores.get(s.id) ?? 0) + s.stats[roleStat[r]]);
+    }
+  }
+  let best: Staff | null = null;
+  let bestScore = 0;
+  for (const [id, sc] of Array.from(scores.entries())) {
+    const s = state.staff.find((x) => x.id === id);
+    if (s && sc > bestScore) {
+      best = s;
+      bestScore = sc;
+    }
+  }
+  return best;
+}
+
+// релиз: рецензии, уровни жанров/типов, план продаж
+export function releaseGame(state: GameState, rng: Rng, name?: string): ActionResult {
+  const game = state.activeGame;
+  if (!game || game.phase !== 'debug') return { ok: false, error: 'Игра не готова к релизу' };
+
+  const noise = rng.int(-CONFIG.REVIEW_NOISE, CONFIG.REVIEW_NOISE);
+  const { scores } = judgeScore(game.points, CONFIG.JUDGE_WEIGHTS, game.bugs, noise);
+  const total = reviewTotal(scores);
+  const genre = genreById(game.genreId);
+  const type = typeById(game.typeId);
+
+  game.name = game.name || generateName(genre.name, type.name, rng);
+  game.score = total;
+  game.judgeScores = scores;
+  game.reviewMessages = scores.map((s) => pickMessage(s, rng));
+  game.phase = 'released';
+  game.releaseWeek = state.week;
+  state.pendingEvent = null;
+
+  // уровни жанра/типа
+  const gl = Math.min(5, (state.genreLevels[game.genreId] ?? 0) + 1);
+  state.genreLevels[game.genreId] = gl;
+  const tl = Math.min(5, (state.typeLevels[game.typeId] ?? 0) + 1);
+  state.typeLevels[game.typeId] = tl;
+  if (gl === 2 || gl === 5) {
+    state.directionPoints += 2;
+    log(state, `Жанр «${genre.name}» достиг Lv${gl}: +2 очка направления`);
+  }
+
+  // план продаж
+  const cs = state.consoles[game.consoleId];
+  if (!cs) return { ok: false, error: 'Консоль не найдена' };
+  const consoleData = consoleById(game.consoleId);
+  const plan = salesPlan({
+    installBase: cs.base,
+    score: total,
+    combo: game.comboGrade,
+    pop: genre.popularity,
+    fans: state.fans,
+    fame: 10,
+    hype: 10 + (game.boostUsed ? 10 : 0),
+    sequel: isSequel(state, game.genreId, game.typeId),
+    consoleMult: consoleData.costMult,
+    releaseWeek: state.week,
+  });
+  game.sales = plan.weeks;
+  game.totalUnits = plan.totalUnits;
+  game.totalRevenue = plan.totalRevenue;
+
+  // база консоли растёт
+  cs.base += CONFIG.CONSOLE_BASE_GROWTH;
+
+  // запись в историю
+  state.history.push({
+    name: game.name,
+    plot: game.plot,
+    genreId: game.genreId,
+    typeId: game.typeId,
+    consoleId: game.consoleId,
+    score: total,
+    units: plan.totalUnits,
+    revenue: plan.totalRevenue,
+    releaseWeek: state.week,
+    year: state.year,
+    attrs: { ...game.points },
+    bugs: Math.round(game.bugs),
+    awards: [],
+  });
+  if (state.history.length > 32) state.history.splice(0, state.history.length - 32);
+
+  log(state, `РЕЛИЗ «${game.name}»: ${genre.name} × ${type.name} на ${consoleData.name}`);
+  log(state, `Рецензии: ${scores.join('/')} = ${total}/40 ${total >= CONFIG.HALL_OF_FAME ? '— ЗАЛ СЛАВЫ!' : ''}`);
+  state.released.push(game);
+  state.activeGame = null;
+  state.releasePopupShown = false;
+  // попап с оценками (пауза, как у торговца)
+  state.pendingEvent = {
+    type: 'release_result',
+    text:
+      `🎉 «${game.name}» выпущена!\n` +
+      `Оценки критиков: ${scores.join(' · ')} = ${total}/40\n` +
+      `${total >= CONFIG.HALL_OF_FAME ? '🏆 ЗАЛ СЛАВЫ!' : total >= CONFIG.GRAND_PRIZE_SCORE ? 'Претендент на Гран-при!' : 'Удачи в следующий раз!'}`,
+  };
+  return { ok: true };
+}
+
+// буст-событие от сотрудника; amount — сколько PR вложил игрок (от этого зависит шанс)
+export function resolveBoost(state: GameState, rng: Rng, accept: boolean, amount?: number): ActionResult {
+  const ev = state.pendingEvent;
+  const game = state.activeGame;
+  if (!ev || ev.type !== 'boost') return { ok: false, error: 'Нет события' };
+  state.pendingEvent = null;
+  if (!game) return { ok: true };
+  game.boostUsed = true;
+  if (!accept) {
+    log(state, 'Предложение отклонено');
+    return { ok: true };
+  }
+  const spend = Math.max(1, Math.round(amount ?? ev.cost));
+  if (state.research < spend) return { ok: false, error: 'Не хватает PR' };
+  state.research -= spend;
+  const st = state.staff.find((s) => s.id === ev.staffId);
+  const sum = st ? st.stats.program + st.stats.scenario + st.stats.graphics + st.stats.sound : 0;
+  // шанс растёт с вложением: база 0.5 при ставке = предложению, +0.025 за каждый доп. PR
+  const chance = Math.min(
+    CONFIG.BOOST_SUCCESS_CAP,
+    Math.max(0.15, CONFIG.BOOST_SUCCESS_BASE + (spend - ev.cost) * CONFIG.BOOST_RATE_PER_PR + sum / CONFIG.BOOST_SUCCESS_STAT_DIV),
+  );
+  if (rng.chance(chance)) {
+    const gain = rng.int(CONFIG.BOOST_GAIN[0], CONFIG.BOOST_GAIN[1]);
+    const key = st ? bestAttr(st) : 'fun';
+    game.points[key] += gain;
+    log(state, `${st?.name ?? 'Сотрудник'} улучшил игру: +${gain} ${key}`);
+    state.pendingEvent = {
+      type: 'boost_result',
+      outcome: 'success',
+      text: `💪 Улучшение удалось! ${st?.name ?? 'Сотрудник'} добавил +${gain} очков к «${ATTR_RU[key]}».`,
+    };
+  } else {
+    const bugs = rng.int(CONFIG.BOOST_FAIL_BUGS[0], CONFIG.BOOST_FAIL_BUGS[1]);
+    game.bugs += bugs;
+    log(state, `Улучшение провалилось: +${bugs} багов!`);
+    state.pendingEvent = {
+      type: 'boost_result',
+      outcome: 'fail',
+      text: `💥 Улучшение провалилось! В игре появилось ${bugs} новых багов.`,
+    };
+  }
+  return { ok: true };
+}
+
+const ATTR_RU: Record<string, string> = {
+  fun: 'Fun', creativity: 'Creativity', graphics: 'Графику', sound: 'Звук',
+};
+
+function bestAttr(st: Staff): keyof Stats {
+  const m = Math.max(st.stats.program, st.stats.scenario, st.stats.graphics, st.stats.sound);
+  if (m === st.stats.program) return 'fun';
+  if (m === st.stats.scenario) return 'creativity';
+  if (m === st.stats.graphics) return 'graphics';
+  return 'sound';
+}
+
+const NAME_SUFFIXES = ['Story', 'Tales', 'Quest', 'World', 'Heroes', 'Rush', 'Chronicles', 'Simulator', 'Adventure', 'Masters'];
+
+export function generateName(genreName: string, typeName: string, rng: Rng): string {
+  const suffix = NAME_SUFFIXES[rng.int(0, NAME_SUFFIXES.length - 1)]!;
+  return `${typeName} ${suffix}: ${genreName}`;
+}
+
+export function pickMessage(score: number, rng: Rng): string {
+  const pool = MESSAGES.filter((m) => m.points === score);
+  if (pool.length === 0) return '';
+  return pool[rng.int(0, pool.length - 1)]!.message;
+}
+
+function log(state: GameState, text: string): void {
+  state.log.push({ week: state.week, year: state.year, text });
+  if (state.log.length > CONFIG.LOG_CAP) state.log.splice(0, state.log.length - CONFIG.LOG_CAP);
+}

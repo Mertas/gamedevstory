@@ -1,0 +1,168 @@
+/* Windows 95 — вся стилистика. Свои классы, без чужих библиотек. */
+:root {
+  --w95-face: #c0c0c0;
+  --w95-dark: #808080;
+  --w95-darker: #404040;
+  --w95-light: #ffffff;
+  --w95-navy: #000080;
+  --w95-teal: #008080;
+  --w95-font: Tahoma, 'MS Sans Serif', 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; overflow: hidden; }
+body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
+
+/* ── Рабочий стол ── */
+.w95-desktop {
+  position: relative;
+  height: 100%;
+  background: var(--w95-teal);
+  background-image: radial-gradient(ellipse at 30% 20%, #109090 0%, var(--w95-teal) 55%, #006060 100%);
+  overflow: hidden;
+}
+.w95-desktop-icons { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; flex-wrap: wrap; height: calc(100% - 40px); align-content: flex-start; gap: 2px; }
+.w95-d-icon { width: 76px; padding: 6px 2px; text-align: center; cursor: default; color: #fff; text-shadow: 1px 1px 0 #000; }
+.w95-d-icon:hover { outline: 1px dotted #ffff80; outline-offset: -1px; background: rgba(0,0,128,.25); }
+.w95-d-icon .w95-ic { width: 32px; height: 32px; margin: 0 auto 3px; image-rendering: pixelated; display: block; }
+.w95-d-icon span { font-size: 11px; line-height: 1.15; display: block; }
+
+/* ── Панель задач ── */
+.w95-taskbar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 30px;
+  background: var(--w95-face); border-top: 2px solid var(--w95-light);
+  display: flex; align-items: center; padding: 2px 3px; gap: 4px; z-index: 9000;
+}
+.w95-start-btn { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 4px; font-weight: 700; font-size: 11px; }
+.w95-start-btn .w95-ic { width: 18px; height: 18px; }
+.w95-task-btn {
+  height: 24px; min-width: 120px; max-width: 180px; padding: 0 8px; text-align: left;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.w95-task-btn.active { font-weight: 700; }
+.w95-task-btn.flash { background: var(--w95-navy); color: #fff; font-weight: 700; }
+.w95-tray { margin-left: auto; display: flex; align-items: center; gap: 4px; height: 24px; }
+.w95-tray-clock { border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 2px 8px; font-size: 11px; }
+.w95-speed { display: flex; align-items: center; gap: 1px; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 1px; }
+.w95-speed button { min-width: 22px; height: 18px; font-size: 10px; padding: 0 3px; }
+.w95-speed button.on { font-weight: 700; }
+
+/* ── Кнопки / поля (классический бевел) ── */
+.w95-btn {
+  font-family: var(--w95-font); font-size: 11px; color: #000;
+  background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  padding: 3px 12px; outline: none; cursor: default; white-space: nowrap;
+}
+.w95-btn:active, .w95-btn.pressed { border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); }
+.w95-btn:focus { outline: 1px dotted #000; outline-offset: -3px; }
+.w95-btn:disabled { color: var(--w95-dark); text-shadow: 1px 1px 0 var(--w95-light); }
+.w95-input {
+  font-family: var(--w95-font); font-size: 11px; background: #fff;
+  border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark);
+  padding: 2px 4px; outline: none;
+}
+.w95-input:focus { outline: 1px dotted #000; outline-offset: -2px; }
+.w95-bevel { background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); }
+.w95-bevel-in { background: var(--w95-face); border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); }
+.w95-field { background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 2px; }
+.w95-scroll { overflow-y: auto; scrollbar-width: thin; }
+.w95-scroll::-webkit-scrollbar { width: 16px; }
+.w95-scroll::-webkit-scrollbar-track { background: #fff; }
+.w95-scroll::-webkit-scrollbar-thumb { background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); }
+
+/* ── Окно ── */
+.w95-window {
+  position: absolute; min-width: 240px; min-height: 120px;
+  background: var(--w95-face);
+  border: 2px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  box-shadow: 2px 2px 0 rgba(0,0,0,.4);
+  display: flex; flex-direction: column;
+}
+.w95-window.maximized { left: 0 !important; top: 0 !important; width: 100% !important; height: calc(100% - 30px) !important; }
+.w95-titlebar {
+  height: 18px; display: flex; align-items: center; gap: 2px; padding: 0 2px;
+  background: linear-gradient(90deg, var(--w95-navy), #1084d0);
+  color: #fff; font-weight: 700; font-size: 11px; cursor: default;
+}
+.w95-window.focused .w95-titlebar { background: linear-gradient(90deg, var(--w95-navy), #1084d0); }
+.w95-window:not(.focused) .w95-titlebar { background: linear-gradient(90deg, var(--w95-dark), #a0a0a0); }
+.w95-title { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: 2px; }
+.w95-tbtn { width: 16px; height: 14px; font-size: 8px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; font-family: 'Marlett', Tahoma, sans-serif; }
+.w95-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.w95-resize { position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; cursor: nwse-resize; }
+
+/* ── Таблицы/списки ── */
+.w95-table { width: 100%; border-collapse: collapse; font-size: 11px; background: #fff; }
+.w95-table th { background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); padding: 2px 6px; text-align: left; font-weight: 700; }
+.w95-table td { border: 1px solid var(--w95-dark); border-color: #d4d0c8; padding: 2px 6px; }
+.w95-table tr:nth-child(even) td { background: #f4f4f0; }
+.w95-list { background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); overflow-y: auto; }
+.w95-list .w95-li { padding: 2px 6px; cursor: default; }
+.w95-list .w95-li:hover { background: #000080; color: #fff; }
+
+/* ── Меню ── */
+.w95-menu { position: absolute; z-index: 9500; min-width: 180px; background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); box-shadow: 2px 2px 0 rgba(0,0,0,.4); padding: 2px; }
+.w95-menu .w95-mi { display: flex; align-items: center; gap: 8px; padding: 4px 18px 4px 6px; }
+.w95-menu .w95-mi:hover { background: var(--w95-navy); color: #fff; }
+.w95-menu .w95-mi.sep { border-top: 1px solid var(--w95-dark); margin: 3px 2px; padding: 0; }
+
+/* ── Трей/часы ── */
+.w95-tray-clock {
+  border: 1px solid var(--w95-dark);
+  padding: 2px 8px;
+  background: var(--w95-face);
+  font-size: 11px;
+}
+
+/* ─── летящие символы вклада разработки ─── */
+.w95-flier {
+  position: absolute;
+  z-index: 60;
+  pointer-events: none;
+  animation: w95-fly 1.05s cubic-bezier(0.34, 0.1, 0.4, 1) forwards;
+}
+@keyframes w95-fly {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
+  12% { opacity: 1; }
+  55% { transform: translate(calc(var(--dx) * 0.55), calc(var(--dy) * 0.55 - 30px)) rotate(200deg) scale(0.92); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(380deg) scale(0.35); opacity: 0.55; }
+}
+
+/* вспышка бара атрибута при вливании очков */
+.w95-attr-flash {
+  animation: w95-attr-pulse 0.55s ease-out;
+}
+@keyframes w95-attr-pulse {
+  0% { background: #fffbe6; outline: 2px solid #ffd700; }
+  100% { background: transparent; outline: 0 solid transparent; }
+}
+
+/* ── Прогресс ── */
+.w95-progress { height: 14px; background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); }
+.w95-progress > div { height: 100%; background: repeating-linear-gradient(45deg, #000080 0 4px, #1084d0 4px 8px); transition: width 0.45s ease-out; }
+
+/* ── Чат ── */
+.w95-chat { display: flex; flex-direction: column; height: 100%; background: #fff; }
+.w95-chat-msg { display: flex; gap: 6px; padding: 4px 6px; border-bottom: 1px solid #e8e4dc; }
+.w95-chat-msg .w95-avatar { width: 32px; height: 32px; image-rendering: pixelated; border: 1px solid var(--w95-dark); background: #c0c0c0; flex: none; }
+.w95-chat-msg .w95-cname { font-weight: 700; color: #000080; }
+.w95-chat-msg .w95-ctext { white-space: pre-wrap; word-break: break-word; }
+.w95-chat-msg.system { background: #fffbe0; font-style: italic; }
+.w95-chat-typing { padding: 4px 8px; color: var(--w95-dark); font-style: italic; }
+
+/* ── Статус-бар окна ── */
+.w95-statusbar { display: flex; gap: 8px; border-top: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); padding: 2px 4px; font-size: 11px; }
+
+/* ── Мелочи ── */
+.w95-tabs { display: flex; gap: 0; padding: 4px 4px 0; }
+.w95-tab { background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); border-bottom: none; padding: 3px 10px; margin-right: 2px; }
+.w95-tab.on { font-weight: 700; position: relative; top: 1px; }
+.w95-panel { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.w95-row { display: flex; align-items: center; gap: 6px; }
+.w95-grid { display: grid; gap: 6px; }
+.w95-hint { color: #404040; font-size: 10px; }
+.w95-legend { display: flex; gap: 10px; font-size: 10px; flex-wrap: wrap; }
+
+.w95-tray-money { font-weight: 700; }
+.w95-bevel-out { border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); }

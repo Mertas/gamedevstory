@@ -1,0 +1,22 @@
+# Зависимости и сборка
+node_modules/
+dist/
+
+# Игровые данные и БД (генерируются при запуске)
+data/
+
+# Секреты
+.env
+
+# Музыка (пользовательские файлы)
+public/music/
+music/
+research/
+plan/
+tools/
+
+# Логи и временное
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

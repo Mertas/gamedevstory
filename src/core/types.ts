@@ -1,0 +1,200 @@
+import type { CareerId } from './data/schema';
+import type { Mode } from './config';
+
+export type { Mode };
+export type ComboGrade = 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
+
+export interface Stats {
+  fun: number;
+  creativity: number;
+  graphics: number;
+  sound: number;
+}
+
+export const EMPTY_STATS: Stats = { fun: 0, creativity: 0, graphics: 0, sound: 0 };
+
+export type DirectionAxis =
+  | 'cute' | 'realism' | 'approach' | 'niche'
+  | 'simple' | 'innovation' | 'world' | 'polish';
+
+// вклад сотрудника за последний тик (для анимации в UI)
+export interface DevContrib {
+  staffId: string;
+  attr: 'fun' | 'creativity' | 'graphics' | 'sound';
+  amount: number;
+}
+
+// веса осей направления → атрибуты (09 §2.3)
+export const DIRECTION_WEIGHTS: Record<DirectionAxis, Stats> = {
+  cute: { fun: 0.4, creativity: 0, graphics: 0.6, sound: 0 },
+  realism: { fun: 0, creativity: 0, graphics: 0.7, sound: 0.3 },
+  approach: { fun: 0.8, creativity: 0.2, graphics: 0, sound: 0 },
+  niche: { fun: 0, creativity: 1.0, graphics: 0, sound: 0 },
+  simple: { fun: 1.0, creativity: 0, graphics: 0, sound: 0 },
+  innovation: { fun: 0.2, creativity: 0.8, graphics: 0, sound: 0 },
+  world: { fun: 0.5, creativity: 0.5, graphics: 0, sound: 0 },
+  polish: { fun: 0.25, creativity: 0.25, graphics: 0.25, sound: 0.25 },
+};
+
+export type Role = 'proposal' | 'program' | 'graphics' | 'sound' | 'debug';
+
+export interface Staff {
+  id: string;
+  name: string;
+  gender: 'M' | 'F';
+  salary: number; // K/год база (данные)
+  hireFee: number; // K
+  maxPower: number;
+  power: number;
+  stats: { program: number; scenario: number; graphics: number; sound: number };
+  careers: Record<CareerId, number>;
+  activeCareer: CareerId;
+  levelUps: number; // повышений уровня ПОСЛЕ найма (зарплата ×1.2^levelUps)
+  boosterUses: Record<string, number>; // бустер → сколько раз использован на игре
+  avatar: string; // путь к аватарке (UI)
+  homeWeeks: number; // >0: ушёл домой
+  lastRole: Role | null; // штраф «повтор» (механика prev)
+}
+
+export interface ActiveGame {
+  consoleId: string;
+  genreId: string;
+  typeId: string;
+  mode: Mode;
+  comboGrade: ComboGrade;
+  direction: Record<DirectionAxis, number>; // сумма = потраченные очки направления
+  points: Stats;
+  totalCost: number; // K
+  progress: number; // 0..1 (время: дни / 100 × режим)
+  bugs: number;
+  weekStarted: number;
+  phase: 'proposal' | 'dev' | 'debug' | 'released';
+  proposalStaffId: string | null;
+  assignments: Partial<Record<Role, string[]>>;
+  plot?: string; // краткий сюжет из мастера
+  // события
+  boostOffered: boolean;
+  boostUsed: boolean;
+  fame: number; // известность текущего проекта
+  hype: number; // ожидание текущего проекта
+  // результат
+  name: string;
+  score: number | null;
+  judgeScores: number[];
+  reviewMessages: string[];
+  releaseWeek: number | null;
+  sales: { week: number; units: number; revenue: number }[];
+  totalUnits: number;
+  totalRevenue: number;
+  ended: boolean; // снята с продаж
+}
+
+export interface GameRecord {
+  name: string;
+  plot?: string; // краткий сюжет из мастера
+  genreId: string;
+  typeId: string;
+  consoleId: string;
+  score: number;
+  units: number;
+  revenue: number;
+  releaseWeek: number;
+  year: number;
+  attrs: Stats;
+  bugs: number;
+  awards: string[];
+}
+
+export interface ConsoleState {
+  licensed: boolean;
+  base: number; // тыс.
+  availableAtWeek: number | null;
+  removedAtWeek: number | null;
+}
+
+export interface LogEntry {
+  week: number;
+  year: number;
+  text: string;
+}
+
+// ─── M4: контракт ───
+export interface ContractState {
+  id: number; // id из БД
+  name: string;
+  staffIds: string[];
+  deadline: number; // неделя, к которой нужно успеть
+  progress: { program: number; scenario: number; graphics: number; sound: number };
+  done: boolean;
+}
+
+// ─── M4: своя консоль ───
+export interface OwnConsoleState {
+  name: string;
+  type: 'console' | 'portable';
+  cpu: string;
+  media: string;
+  cost: number; // K
+  weeksTotal: number;
+  progress: number; // недель прошло
+}
+
+export type PendingEvent =
+  | { type: 'boost'; staffId: string; cost: number }
+  | { type: 'boost_result'; text: string; outcome: 'success' | 'fail' }
+  | { type: 'salesman' }
+  | { type: 'disaster'; text: string }
+  | { type: 'ready_to_release'; text: string }
+  | { type: 'release_result'; text: string }
+  | null;
+
+export interface GameState {
+  seed: number;
+  week: number; // 1-based
+  money: number; // K
+  research: number; // PR
+  fans: number;
+  directionPoints: number;
+  officeLevel: 1 | 2 | 3;
+  staff: Staff[];
+  hiredIds: string[]; // кто уже нанят/уволен (для пула)
+  activeGame: ActiveGame | null; // проект в производстве
+  released: ActiveGame[]; // выпущенные игры, ещё продающиеся
+  history: GameRecord[];
+  genreLevels: Record<string, number>;
+  typeLevels: Record<string, number>;
+  consoles: Record<string, ConsoleState>;
+  awards: { grand: number; design: number; music: number; runnerUp: number; worst: number };
+  emergencyFundUsed: boolean;
+  bankrupt: boolean;
+  pendingEvent: PendingEvent;
+  log: LogEntry[];
+  rngState: number;
+  year: number; // 1-based
+
+  // ─── M3 ───
+  salesmanHere: boolean; // продавец в офисе (май, с года 2)
+  boosterPurchases: Record<string, number>; // тип бустера → куплено раз (цены растут)
+  unlockedTrainings: string[]; // тренинги, пройденные хотя бы раз (анлок типов)
+  releasePopupShown: boolean; // попап «игра готова» уже показан для текущей игры
+  devContrib: DevContrib[]; // вклад сотрудников за последний тик (UI-анимация)
+
+  // ─── M4 ───
+  contracts: ContractState[];
+  adsBought: Record<string, number>;
+  ownConsole: OwnConsoleState | null;
+}
+
+export interface StartProjectInput {
+  consoleId: string;
+  genreId: string;
+  typeId: string;
+  mode: Mode;
+  direction: Partial<Record<DirectionAxis, number>>;
+  proposalStaffId: string;
+  assignments: { program: string[]; graphics: string[]; sound: string[]; debug: string[] };
+  name?: string; // заданное игроком название (иначе генерируется на релизе)
+  plot?: string; // краткий сюжет
+}
+
+export type ActionResult = { ok: true } | { ok: false; error: string };

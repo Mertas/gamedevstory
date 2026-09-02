@@ -1,0 +1,154 @@
+// GigaChat: OAuth-токен (30 мин) + chat/completions; DeepSeek — OpenAI-совместимый фолбэк.
+// Паттерн из LLMKing/src/server/models.ts: самоподписанный TLS Сбера — rejectUnauthorized:false.
+import * as crypto from 'crypto';
+import * as https from 'https';
+import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET, LLM_TIMEOUT_MS, gigaReady } from './config';
+
+export const GIGA_BASE = 'https://gigachat.devices.sberbank.ru/api/v1';
+const GIGA_MODELS = ['GigaChat-2-Max', 'GigaChat-2-Pro', 'GigaChat-2'];
+
+interface LlmMessage { role: 'system' | 'user' | 'assistant'; content: string }
+
+let gigaToken: string | null = null;
+let gigaExp = 0;
+
+function gigaPost(url: string, headers: Record<string, string>, body: string): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, { method: 'POST', headers, rejectUnauthorized: false }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString()) as Record<string, unknown>); }
+        catch { reject(new Error('GigaChat: bad response')); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(LLM_TIMEOUT_MS, () => req.destroy(new Error('GigaChat: timeout')));
+    req.write(body);
+    req.end();
+  });
+}
+
+async function refreshGigaToken(): Promise<string> {
+  const auth = Buffer.from(`${GIGACHAT_CLIENT_ID}:${GIGACHAT_CLIENT_SECRET}`).toString('base64');
+  const d = await gigaPost('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Accept': 'application/json',
+    'Authorization': `Basic ${auth}`,
+    'RqUID': crypto.randomUUID(),
+  }, 'scope=GIGACHAT_API_PERS');
+  const token = d.access_token;
+  if (typeof token !== 'string') throw new Error('GigaChat OAuth failed');
+  gigaToken = token;
+  gigaExp = Date.now() + (typeof d.expires_in === 'number' ? d.expires_in : 1800) * 1000;
+  return token;
+}
+
+async function gigaTokenOrThrow(): Promise<string> {
+  if (gigaToken && Date.now() < gigaExp - 60000) return gigaToken;
+  return refreshGigaToken();
+}
+
+async function gigaChat(model: string, messages: LlmMessage[], maxTokens: number): Promise<string> {
+  const token = await gigaTokenOrThrow();
+  const d = await gigaPost(`${GIGA_BASE}/chat/completions`, {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  }, JSON.stringify({ model, messages, temperature: 0.9, max_tokens: maxTokens }));
+  const content = (d.choices as Array<{ message?: { content?: unknown } }> | undefined)?.[0]?.message?.content;
+  if (typeof content !== 'string' || !content.trim()) throw new Error(`GigaChat ${model}: пустой ответ`);
+  return content;
+}
+
+async function deepseek(messages: LlmMessage[], maxTokens: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({ model: DEEPSEEK_MODEL, messages, temperature: 0.9, max_tokens: maxTokens });
+    const req = https.request(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+    }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const d = JSON.parse(Buffer.concat(chunks).toString()) as { choices?: Array<{ message?: { content?: unknown } }>; error?: { message?: unknown } };
+          if (d.error) { reject(new Error(`DeepSeek: ${String(d.error.message ?? 'error')}`)); return; }
+          const content = d.choices?.[0]?.message?.content;
+          if (typeof content !== 'string' || !content.trim()) reject(new Error('DeepSeek: пустой ответ'));
+          else resolve(content);
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(LLM_TIMEOUT_MS, () => req.destroy(new Error('DeepSeek: timeout')));
+    req.write(body);
+    req.end();
+  });
+}
+
+/** Чат: только GigaChat (по просьбе). Цепочка Max → Pro → 2; при недоступности — чат молчит. */
+export async function generateWithFallback(messages: LlmMessage[], maxTokens = 800): Promise<{ text: string; model: string }> {
+  if (!gigaReady) throw new Error('GigaChat недоступен: проверьте .env (GIGACHAT_CLIENT_ID/SECRET)');
+  let lastErr: unknown = null;
+  // 2 прохода: GigaChat иногда разово отвечает пустотой (rate limit) — повторяем
+  for (let attempt = 0; attempt < 2; attempt++) {
+    for (const model of GIGA_MODELS) {
+      try {
+        return { text: await gigaChat(model, messages, maxTokens), model: `GigaChat ${model}` };
+      } catch (e) {
+        lastErr = e; /* следующий */
+      }
+    }
+    await new Promise((r) => setTimeout(r, 1500)); // пауза перед повтором
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('GigaChat не ответил');
+}
+
+export function llmStatus(): { giga: boolean; deepseek: boolean } {
+  return { giga: gigaReady, deepseek: !!DEEPSEEK_API_KEY };
+}
+
+// вытащить JSON-объект из ответа LLM (устойчиво к тексту вокруг)
+function extractJsonObject(raw: string): Record<string, unknown> | null {
+  let text = raw.trim().replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  try {
+    const p = JSON.parse(text) as unknown;
+    if (p && typeof p === 'object' && !Array.isArray(p)) return p as Record<string, unknown>;
+  } catch { /* дальше */ }
+  const startIdx = text.indexOf('{');
+  if (startIdx === -1) return null;
+  let depth = 0, inString = false, escaped = false, endIdx = -1;
+  for (let i = startIdx; i < text.length; i++) {
+    const ch = text[i]!;
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (depth === 0) { endIdx = i + 1; break; } }
+  }
+  if (endIdx === -1) return null;
+  try { return JSON.parse(text.slice(startIdx, endIdx)) as Record<string, unknown>; }
+  catch { return null; }
+}
+
+/** Название и краткий сюжет игры (для мастера) — только GigaChat. */
+export async function generateStory(genreRu: string, typeRu: string): Promise<{ title: string; plot: string }> {
+  const prompt =
+    `Ты — геймдизайнер игровой студии. Придумай название и краткий сюжет для игры: жанр «${genreRu}», тема «${typeRu}». ` +
+    `Название: 1–3 слова, по-русски, без кавычек, запоминающееся. Сюжет: 2–3 предложения, по-русски, лёгкий и игровой. ` +
+    `Ответь СТРОГО одним JSON-объектом: {"title":"название","plot":"сюжет"}`;
+  const raw = await generateWithFallback([{ role: 'user', content: prompt }], 400);
+  const json = extractJsonObject(raw.text);
+  const title = typeof json?.title === 'string' ? json.title.trim().replace(/^["'«]+|["'»]+$/g, '').slice(0, 40) : '';
+  const plot = typeof json?.plot === 'string' ? json.plot.trim().slice(0, 10000) : '';
+  if (!title || !plot) throw new Error('GigaChat: не удалось разобрать название и сюжет');
+  return { title, plot };
+}
