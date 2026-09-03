@@ -146,6 +146,7 @@ export type PendingEvent =
   | { type: 'disaster'; text: string }
   | { type: 'ready_to_release'; text: string }
   | { type: 'release_result'; text: string }
+  | { type: 'info'; title: string; text: string }
   | null;
 
 export interface GameState {
@@ -168,6 +169,8 @@ export interface GameState {
   emergencyFundUsed: boolean;
   bankrupt: boolean;
   pendingEvent: PendingEvent;
+  /** отложенный попап результата действия (показывается после текущего события) */
+  lastPopup: PopupInfo | null;
   log: LogEntry[];
   rngState: number;
   year: number; // 1-based
@@ -197,4 +200,9 @@ export interface StartProjectInput {
   plot?: string; // краткий сюжет
 }
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export interface PopupInfo {
+  title: string;
+  text: string;
+}
+
+export type ActionResult = { ok: true; popup?: PopupInfo } | { ok: false; error: string };

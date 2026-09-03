@@ -1,0 +1,505 @@
+/* Styles */
+.wa-webamp .wa-main-window {
+  position: absolute;
+  height: 116px;
+  width: 275px;
+  /* Ask the browser to scale showing large pixels if possible */
+  image-rendering: -moz-crisp-edges; /* Firefox */
+  image-rendering: -o-crisp-edges; /* Opera */
+  image-rendering: -webkit-optimize-contrast; /* Safari */
+  image-rendering: pixelated; /* Only in Chrome > 40 */
+  -ms-interpolation-mode: nearest-neighbor; /* IE (non-standard property) */
+}
+
+.wa-webamp .wa-title-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 14px;
+  width: 275px;
+}
+
+.wa-webamp .wa-option-context,
+.wa-webamp .wa-minimize,
+.wa-webamp .wa-shade,
+.wa-webamp .wa-close {
+  position: absolute;
+  height: 9px;
+  width: 9px;
+  top: 3px;
+}
+
+.wa-webamp .wa-title-bar .wa-option {
+  width: 100%;
+  height: 100%;
+}
+
+.wa-webamp .wa-title-bar .wa-option-context {
+  left: 6px;
+}
+.wa-webamp .wa-title-bar .wa-minimize {
+  left: 244px;
+}
+.wa-webamp .wa-title-bar .wa-shade {
+  left: 254px;
+}
+.wa-webamp .wa-title-bar .wa-close {
+  left: 264px;
+}
+.wa-webamp .wa-clutter-bar {
+  position: absolute;
+  top: 22px;
+  left: 10px;
+  height: 43px;
+  width: 8px;
+}
+
+.wa-webamp .wa-clutter-bar div {
+  position: absolute;
+  height: 7px;
+  width: 8px;
+  left: 0px;
+}
+
+.wa-webamp .wa-clutter-bar .wa-button-o {
+  top: 3px;
+  height: 8px;
+}
+.wa-webamp .wa-clutter-bar .wa-button-a {
+  top: 11px;
+}
+.wa-webamp .wa-clutter-bar .wa-button-i {
+  top: 18px;
+}
+.wa-webamp .wa-clutter-bar .wa-button-d {
+  top: 25px;
+  height: 8px;
+}
+.wa-webamp .wa-clutter-bar .wa-button-v {
+  top: 33px;
+}
+
+.wa-webamp .wa-play-pause {
+  position: absolute;
+  top: 28px;
+  left: 26px;
+  height: 9px;
+  width: 9px;
+  background-repeat: no-repeat;
+}
+
+.wa-webamp .play .wa-work-indicator,
+.wa-webamp .wa-work-indicator.selected {
+  position: absolute;
+  top: 28px;
+  left: 24px;
+  height: 9px;
+  width: 3px;
+}
+.wa-webamp .webamp-status .wa-time {
+  position: absolute;
+  left: 39px;
+  top: 26px;
+  /* Just to make it clickable */
+  height: 13px;
+  width: 59px;
+}
+
+.wa-webamp .stop .webamp-status .wa-time {
+  display: none;
+}
+.wa-webamp .pause .webamp-status .wa-time {
+  animation: blink 2s step-start 1s infinite;
+  -webkit-animation: blink 2s step-start 1s infinite;
+}
+
+.wa-webamp .webamp-status .wa-time .wa-minus-sign {
+  /* Note that this get's augmented by the skin CSS if NUM_EX.BMP is present */
+  position: absolute;
+  top: 6px;
+  left: -1px;
+  width: 5px;
+  height: 1px;
+}
+
+.wa-webamp .webamp-status .wa-time .wa-minute-first-digit {
+  position: absolute;
+  pointer-events: none;
+  left: 9px;
+  height: 13px;
+  width: 9px;
+}
+.wa-webamp .webamp-status .wa-time .wa-minute-second-digit {
+  position: absolute;
+  pointer-events: none;
+  left: 21px;
+  height: 13px;
+  width: 9px;
+}
+.wa-webamp .webamp-status .wa-time .wa-second-first-digit {
+  position: absolute;
+  pointer-events: none;
+  left: 39px;
+  height: 13px;
+  width: 9px;
+}
+.wa-webamp .webamp-status .wa-time .wa-second-second-digit {
+  position: absolute;
+  pointer-events: none;
+  left: 51px;
+  height: 13px;
+  width: 9px;
+}
+
+.wa-webamp .wa-main-window .wa-visualizer {
+  position: absolute;
+  top: 43px;
+  left: 24px;
+}
+
+.wa-webamp .wa-main-window.shade .wa-visualizer {
+  top: 5px;
+  left: 79px;
+}
+
+.wa-webamp .text {
+  display: none;
+}
+
+.wa-webamp .wa-marquee {
+  position: absolute;
+  left: 111px;
+  top: 24px;
+  width: 154px;
+  height: 6px;
+  overflow: hidden;
+  display: block;
+  padding: 3px 0px; /* Ensure the target is correct for the cursor */
+}
+
+.wa-webamp .media-info .wa-kbps {
+  position: absolute;
+  left: 111px;
+  top: 43px;
+  width: 15px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.wa-webamp .stop .media-info .wa-kbps {
+  display: none;
+}
+
+.wa-webamp .media-info .wa-khz {
+  position: absolute;
+  left: 156px;
+  top: 43px;
+  width: 10px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.wa-webamp .stop .media-info .wa-khz {
+  display: none;
+}
+
+.wa-webamp .media-info .mono-stereo {
+  position: absolute;
+  left: 212px;
+  top: 41px;
+  width: 57px;
+  height: 12px;
+}
+
+.wa-webamp .media-info .mono-stereo div {
+  position: absolute;
+  height: 12px;
+}
+
+.wa-webamp .media-info .mono-stereo .wa-mono {
+  width: 27px;
+}
+
+.wa-webamp .media-info .mono-stereo .wa-stereo {
+  left: 27px;
+  width: 29px;
+}
+
+.wa-webamp .wa-volume {
+  position: absolute;
+  left: 107px;
+  top: 57px;
+  height: 13px;
+  width: 68px;
+  background-position: 0 0;
+}
+
+.wa-webamp .wa-volume input {
+  height: 13px;
+  /* The input itself, is actually 3px shorter than the background
+     * https://twitter.com/LuigiHann/status/959275940688867328
+     */
+  width: 65px;
+  display: block;
+}
+.wa-webamp .wa-volume input::-webkit-slider-thumb {
+  top: 1px;
+  height: 11px;
+  width: 14px;
+}
+.wa-webamp .wa-volume input::-moz-range-thumb {
+  top: 1px;
+  height: 11px;
+  width: 14px;
+}
+
+.wa-webamp .wa-balance {
+  position: absolute;
+  left: 177px;
+  top: 57px;
+  height: 13px;
+  width: 38px;
+  background-position: 0 0;
+}
+
+.wa-webamp .wa-balance::-webkit-slider-thumb {
+  top: 1px;
+  height: 11px;
+  width: 14px;
+}
+.wa-webamp .wa-balance::-moz-range-thumb {
+  top: 1px;
+  height: 11px;
+  width: 14px;
+}
+
+.wa-webamp .windows {
+  position: absolute;
+  left: 219px;
+  top: 58px;
+  width: 46px;
+  height: 12px;
+}
+
+.wa-webamp .windows div {
+  position: absolute;
+  width: 23px;
+  height: 12px;
+}
+
+.wa-webamp .windows .wa-equalizer-button {
+  left: 0;
+}
+
+.wa-webamp .windows .wa-playlist-button {
+  left: 23px;
+}
+
+.wa-webamp .wa-position {
+  position: absolute;
+  left: 16px;
+  top: 72px;
+  width: 248px;
+  height: 10px;
+}
+
+.wa-webamp .wa-position::-webkit-slider-thumb {
+  height: 10px;
+  width: 29px;
+  /*
+     * Fix the strange bug in Safair/mobile-chrome
+     * http://stackoverflow.com/questions/26727769/rendering-glitch-when-manipulating-range-input-value-via-javascript-in-webkit
+     */
+  -webkit-box-sizing: border-box;
+  position: relative;
+}
+
+.wa-webamp .wa-position::-moz-range-thumb {
+  height: 10px;
+  width: 29px;
+}
+
+/* For some reason, we can't use display: none here */
+.wa-webamp .stop .wa-position::-webkit-slider-thumb {
+  visibility: hidden;
+}
+.wa-webamp .stop .wa-position::-moz-range-thumb {
+  visibility: hidden;
+}
+
+/* For some reason this is needed for the position slider to show up now that
+ * we are using React.
+ */
+.wa-webamp .play .wa-position::-webkit-slider-thumb {
+  visibility: visible;
+}
+
+.wa-webamp .actions div {
+  height: 18px;
+  width: 23px;
+  position: absolute;
+}
+
+.wa-webamp .actions .wa-previous {
+  top: 88px;
+  left: 16px;
+}
+.wa-webamp .actions .wa-play {
+  top: 88px;
+  left: 39px;
+}
+.wa-webamp .actions .wa-pause {
+  top: 88px;
+  left: 62px;
+}
+.wa-webamp .actions .wa-stop {
+  top: 88px;
+  left: 85px;
+}
+.wa-webamp .actions .wa-next {
+  top: 88px;
+  left: 108px;
+  width: 22px;
+}
+
+.wa-webamp .wa-eject {
+  position: absolute;
+  top: 89px;
+  left: 136px;
+  height: 16px;
+  width: 22px;
+}
+
+.wa-webamp .shuffle-repeat {
+  position: absolute;
+  top: 89px;
+  left: 164px;
+  width: 74px;
+}
+
+.wa-webamp .shuffle-repeat div {
+  position: absolute;
+  height: 15px;
+}
+
+.wa-webamp .shuffle-repeat .wa-shuffle {
+  width: 47px;
+}
+
+.wa-webamp .shuffle-repeat .wa-repeat {
+  left: 46px;
+  width: 28px;
+}
+
+.wa-webamp .wa-about {
+  position: absolute;
+  top: 91px;
+  left: 253px;
+  height: 15px;
+  width: 13px;
+}
+
+.wa-webamp .digit {
+  position: absolute;
+  display: inline-block;
+  width: 9px;
+  height: 13px;
+  background-repeat: no-repeat;
+  text-indent: -9999px;
+}
+
+/* Shade View */
+.wa-webamp .wa-main-window.shade {
+  height: 14px;
+}
+
+.wa-webamp .shade .media-info,
+.wa-webamp .shade .windows,
+.wa-webamp .shade .wa-volume,
+.wa-webamp .shade .wa-balance,
+.wa-webamp .shade .shuffle-repeat,
+.wa-webamp .shade .webamp-status {
+  display: none;
+}
+.wa-webamp .shade .wa-title-bar {
+}
+
+.wa-webamp .shade .actions div {
+  position: absolute;
+}
+.wa-webamp .shade .actions .wa-previous,
+.wa-webamp .shade .actions .wa-previous.winamp-active {
+  background: none;
+  height: 10px;
+  width: 7px;
+  top: 2px;
+  left: 169px;
+}
+.wa-webamp .shade .actions .wa-play,
+.wa-webamp .shade .actions .wa-play.winamp-active {
+  background: none;
+  height: 10px;
+  width: 10px;
+  top: 2px;
+  left: 176px;
+}
+.wa-webamp .shade .actions .wa-pause,
+.wa-webamp .shade .actions .wa-pause.winamp-active {
+  background: none;
+  height: 10px;
+  width: 9px;
+  top: 2px;
+  left: 186px;
+}
+.wa-webamp .shade .actions .wa-stop,
+.wa-webamp .shade .actions .wa-stop.winamp-active {
+  background: none;
+  height: 10px;
+  width: 9px;
+  top: 2px;
+  left: 195px;
+}
+.wa-webamp .shade .actions .wa-next,
+.wa-webamp .shade .actions .wa-next.winamp-active {
+  background: none;
+  height: 10px;
+  width: 10px;
+  top: 2px;
+  left: 204px;
+}
+.wa-webamp .shade .wa-eject,
+.wa-webamp .shade .wa-eject.winamp-active {
+  height: 10px;
+  width: 10px;
+  top: 2px;
+  left: 215px;
+  background: none;
+}
+
+.wa-webamp .shade .wa-position {
+  position: absolute;
+  left: 226px;
+  top: 4px;
+  width: 17px;
+  height: 7px;
+}
+
+.wa-webamp .shade .wa-position::-webkit-slider-thumb {
+  height: 7px;
+  width: 3px;
+  /* This make it appear. Not sure why */
+  background: none;
+}
+
+.wa-webamp .shade .wa-position::-moz-range-thumb {
+  height: 7px;
+  width: 3px;
+  /* This make it appear. Not sure why */
+  background: none;
+}
+
+.wa-webamp .wa-main-window .mini-time {
+  position: absolute;
+  top: 4px;
+  left: 127px;
+}

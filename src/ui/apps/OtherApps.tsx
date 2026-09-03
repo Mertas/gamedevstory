@@ -18,10 +18,8 @@ const METHOD_LABELS: Record<HireMethodId, string> = {
   hollywood: 'Голливуд ($3,500K)',
 };
 
-export const CAREER_LABELS: Record<string, string> = {
-  coder: 'Кодер', writer: 'Сценарист', designer: 'Дизайнер', sound: 'Звукорежиссёр',
-  director: 'Режиссёр', producer: 'Продюсер', hw: 'Инженер железа', hacker: 'Хакер',
-};
+import { CAREER_LABELS } from '../careers';
+import { StaffCard } from '../StaffCard';
 
 // ─── Найм (вкладки: Команда / Обучение / Продавец) ───
 export function HireApp() {
@@ -161,12 +159,17 @@ export function HireApp() {
 
       {tab === 'training' && (
         <>
-          <div className="w95-row">
-            <span className="w95-hint">Сотрудник:</span>
-            <select className="w95-input" value={trainStaffId} onChange={(e) => setTrainStaffId(e.target.value)}>
-              <option value="">— выберите —</option>
-              {game.staff.map((st) => <option key={st.id} value={st.id}>{st.name} (POWER {st.power})</option>)}
-            </select>
+          <div className="w95-hint" style={{ marginBottom: 2 }}>Сотрудник на тренинг:</div>
+          <div className="w95-staff-grid">
+            {game.staff.map((st) => (
+              <StaffCard
+                key={st.id}
+                st={st}
+                selected={trainStaffId === st.id}
+                disabled={st.power < 1}
+                onClick={() => setTrainStaffId(st.id)}
+              />
+            ))}
           </div>
           <table className="w95-table">
             <thead>

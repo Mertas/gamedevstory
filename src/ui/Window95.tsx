@@ -3,14 +3,15 @@ import { useRef, type ReactNode } from 'react';
 import type { WinState } from './wm';
 import { useWindows } from './wm';
 
-export function Window95({ win, title, icon, children }: {
-  win: WinState; title: string; icon: string; children: ReactNode;
+export function Window95({ win, title, icon, externalFocus, children }: {
+  win: WinState; title: string; icon: string; externalFocus?: boolean; children: ReactNode;
 }) {
   const wm = useWindows();
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const resize = useRef<{ sx: number; sy: number; sw: number; sh: number } | null>(null);
 
-  const focused = win.z === Math.max(...wm.wins.map((w) => w.z));
+  // окно активно, если оно верхнее в wm И фокус не у внешнего приложения (Winamp)
+  const focused = !externalFocus && win.z === Math.max(...wm.wins.map((w) => w.z));
 
   function onTitleDown(e: React.MouseEvent) {
     wm.focus(win.id);

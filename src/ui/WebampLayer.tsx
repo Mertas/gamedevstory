@@ -1,32 +1,32 @@
-// Webamp — настоящий Winamp 2 в браузере (npm-пакет captbaritone/webamp).
-// Монтируется в слой поверх рабочего стола: свои окна можно таскать,
-// сворачивание/закрытие = прячем в трей (музыка продолжает играть).
-import { useEffect, useRef } from 'react';
-import Webamp from 'webamp';
+// Winamp (webamp, исходники в libs/webamp) как настоящий React-компонент.
+// Webamp монтируется ВНУТРЬ нашего хоста (renderInto, contained-режим):
+// весь DOM winamp (окна, плейлист, эквалайзер, визуализации, меню) живёт
+// внутри .w95-desktop как и остальные окна. Управление — обычные пропсы:
+// zTop — слой поверх окон игры / в фоне; visible — свёрнут в трей.
+import { useEffect, useRef, useState } from 'react';
+import Webamp from 'webamp-internal';
 
 interface Props {
-  visible: boolean; // false = свёрнут в трей
-  onHidden: () => void; // пользователь свернул/закрыл окна webamp → трей
+  visible: boolean; // false = свёрнут в трей (display: none)
+  zTop: boolean; // true = поверх окон игры, false = в фоне
+  onHidden: () => void; // webamp закрыт/минимизирован пользователем → трей
 }
 
-export function WebampLayer({ visible, onHidden }: Props) {
-  const mountRef = useRef<HTMLDivElement>(null);
+export function WebampLayer({ visible, zTop, onHidden }: Props) {
+  const hostRef = useRef<HTMLDivElement>(null);
   const waRef = useRef<Webamp | null>(null);
-  const hiddenByUserRef = useRef(false);
   const onHiddenRef = useRef(onHidden);
   onHiddenRef.current = onHidden;
+  const closedRef = useRef(false); // webamp сам закрыл свои окна (X) — при показе reopen
 
-  // монтирование один раз
+  // один раз: создать и отрисовать webamp внутри хоста
   useEffect(() => {
-    const mount = mountRef.current;
-    if (!mount) return;
+    const host = hostRef.current;
+    if (!host) return;
     let disposed = false;
-    const wa = new Webamp({
-      initialSkin: { url: '/skin/base.wsz' },
-      enableHotkeys: false,
-    });
+    const wa = new Webamp({ initialSkin: { url: '/skin/base.wsz' }, enableHotkeys: true });
     waRef.current = wa;
-    wa.renderWhenReady(mount)
+    wa.renderInto(host)
       .then(async () => {
         if (disposed) return;
         try {
@@ -38,19 +38,21 @@ export function WebampLayer({ visible, onHidden }: Props) {
           }));
           if (tracks.length) wa.setTracksToPlay(tracks);
         } catch {
-          // музыка недоступна — молчим
+          /* нет музыки */
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        /* скин/рендер не удался */
+      });
     const unsubClose = wa.onClose(() => {
       if (!disposed) {
-        hiddenByUserRef.current = true;
+        closedRef.current = true;
         onHiddenRef.current();
       }
     });
     const unsubMin = wa.onMinimize(() => {
       if (!disposed) {
-        hiddenByUserRef.current = true;
+        closedRef.current = true;
         onHiddenRef.current();
       }
     });
@@ -61,39 +63,32 @@ export function WebampLayer({ visible, onHidden }: Props) {
       try {
         wa.dispose();
       } catch {
-        // уже закрыт
+        /* noop */
       }
       waRef.current = null;
     };
   }, []);
 
-  // показ/скрытие по состоянию из трея
   useEffect(() => {
-    const mount = mountRef.current;
-    const wa = waRef.current;
-    if (!mount || !wa) return;
-    if (visible) {
-      mount.style.display = '';
-      if (hiddenByUserRef.current) {
-        hiddenByUserRef.current = false;
-        try {
-          wa.reopen();
-        } catch {
-          // ок
-        }
+    const host = hostRef.current;
+    if (!host) return;
+    // webamp сам закрыл окна — при разворачивании вернуть их
+    if (visible && closedRef.current) {
+      closedRef.current = false;
+      try {
+        waRef.current?.reopen();
+      } catch {
+        /* noop */
       }
-    } else {
-      mount.style.display = 'none';
     }
+    host.style.display = visible ? '' : 'none';
   }, [visible]);
 
   return (
     <div
-      ref={mountRef}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9000,
-        pointerEvents: 'none', background: 'transparent',
-      }}
+      ref={hostRef}
+      data-wa-host
+      style={{ position: 'absolute', inset: 0, zIndex: zTop ? 8998 : 0 }}
     />
   );
 }

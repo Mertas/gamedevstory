@@ -22,9 +22,19 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   background-image: radial-gradient(ellipse at 30% 20%, #109090 0%, var(--w95-teal) 55%, #006060 100%);
   overflow: hidden;
 }
-.w95-desktop-icons { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; flex-wrap: wrap; height: calc(100% - 40px); align-content: flex-start; gap: 2px; }
+.w95-desktop-icons { position: absolute; top: 4px; left: 4px; right: 4px; display: flex; flex-direction: column; flex-wrap: wrap; height: calc(100% - 40px); align-content: flex-start; gap: 2px; user-select: none; }
 .w95-d-icon { width: 76px; padding: 6px 2px; text-align: center; cursor: default; color: #fff; text-shadow: 1px 1px 0 #000; }
-.w95-d-icon:hover { outline: 1px dotted #ffff80; outline-offset: -1px; background: rgba(0,0,128,.25); }
+.w95-d-icon.selected { outline: 1px dotted #ffff80; outline-offset: -1px; background: rgba(0, 0, 128, .3); }
+.w95-desk-box { position: absolute; z-index: 50; border: 1px dotted #fff; background: rgba(0, 128, 255, .12); pointer-events: none; }
+/* хост Winamp (webamp в contained-режиме): пустая зона не перехватывает клики,
+   кликабельны только его окна/попапы */
+[data-wa-host] { pointer-events: none; }
+[data-wa-host] .wa-webamp,
+[data-wa-host] .wa-main-window,
+[data-wa-host] .wa-equalizer-window,
+[data-wa-host] .wa-playlist-window,
+[data-wa-host] .wa-playlist-window-shade,
+[data-wa-host] .wa-webamp-context-menu { pointer-events: auto; }
 .w95-d-icon .w95-ic { width: 32px; height: 32px; margin: 0 auto 3px; image-rendering: pixelated; display: block; }
 .w95-d-icon span { font-size: 11px; line-height: 1.15; display: block; }
 
@@ -40,7 +50,12 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   height: 24px; min-width: 120px; max-width: 180px; padding: 0 8px; text-align: left;
   overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
-.w95-task-btn.active { font-weight: 700; }
+.w95-task-btn.active {
+  border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark);
+  background: #d5d5d5;
+  font-weight: 400;
+}
+.w95-start-btn.active { border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); background: #d5d5d5; }
 .w95-task-btn.flash { background: var(--w95-navy); color: #fff; font-weight: 700; }
 .w95-tray { margin-left: auto; display: flex; align-items: center; gap: 4px; height: 24px; }
 .w95-tray-clock { border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 2px 8px; font-size: 11px; }
@@ -166,3 +181,27 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 
 .w95-tray-money { font-weight: 700; }
 .w95-bevel-out { border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); }
+
+/* ─── карточки выбора сотрудника (обучение, команда проекта) ─── */
+.w95-staff-grid { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px; flex-shrink: 0; }
+.w95-staff-card {
+  width: 118px; border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  background: var(--w95-face); padding: 5px 4px 4px; text-align: center; cursor: default; user-select: none;
+}
+.w95-staff-card:hover { border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); }
+.w95-staff-card.selected {
+  border: 1px solid;
+  border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark);
+  background: #d5d5d5;
+}
+.w95-staff-card.disabled { opacity: 0.45; }
+.w95-staff-avatar { height: 30px; line-height: 30px; font-size: 20px; }
+.w95-staff-avatar img { width: 28px; height: 28px; image-rendering: pixelated; }
+.w95-staff-name { font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w95-staff-sub { font-size: 10px; color: #333; }
+.w95-staff-power { height: 6px; border: 1px solid var(--w95-dark); background: #fff; margin: 4px 4px 1px; }
+.w95-staff-power > div { height: 100%; }
+.w95-staff-power-label { font-size: 9px; color: #333; }
+.w95-staff-stats { display: flex; justify-content: center; gap: 4px; font-size: 10px; margin-top: 2px; }
+.w95-staff-note { font-size: 9px; color: #000080; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w95-btn.active { border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); background: #d5d5d5; }

@@ -6,6 +6,7 @@ import {
   comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
 } from '../../shared/meta';
 import type { DirectionAxis, Role } from '../../core/types';
+import { StaffCard } from '../StaffCard';
 import {
   actionGenerateStory, actionRelease, actionStartProject, actionUseBooster, clearActionError,
   clearStoryResult, useActionError, useGame, useMeta, useSpeed, useStoryResult,
@@ -438,6 +439,7 @@ function ProjectWizard() {
     cute: 0, realism: 0, approach: 5, niche: 0, simple: 0, innovation: 0, world: 0, polish: 5,
   });
   const [roles, setRoles] = useState<Partial<Record<Role, string | null>>>({});
+  const [roleTab, setRoleTab] = useState<Role>('proposal');
   const [title, setTitle] = useState('');
   const [plot, setPlot] = useState('');
   const [storyBusy, setStoryBusy] = useState(false);
@@ -498,10 +500,12 @@ function ProjectWizard() {
   };
   const maxReached = Math.max(...WIZ_STEPS.filter((s) => stepOk[s.id] && s.id < 7).map((s) => s.id), 1);
   const isDone = (id: number) => stepOk[id] && id < step;
+  // первый шаг, который ещё не заполнен (нельзя перепрыгивать через незаполненные)
+  const firstMissing = (WIZ_STEPS.find((s) => !stepOk[s.id]) ?? WIZ_STEPS[WIZ_STEPS.length - 1]!).id;
 
   const next = () => setStep((s) => Math.min(7, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
-  const goTo = (id: number) => { if (id < step || stepOk[id]) setStep(id); };
+  const goTo = (id: number) => { if (id <= step || id <= firstMissing) setStep(id); };
 
   const start = () => {
     clearActionError();
@@ -675,31 +679,35 @@ function ProjectWizard() {
           {step === 6 && (
             <>
               <b>Команда</b>
-              <div className="w95-hint">Каждый сотрудник может быть на нескольких ролях.</div>
-              <table className="w95-table">
-                <tbody>
-                  {(['proposal', 'program', 'graphics', 'sound', 'debug'] as Role[]).map((r) => (
-                    <tr key={r}>
-                      <td style={{ width: 140 }}><b>{ROLE_LABELS[r]}</b></td>
-                      <td>
-                        <select
-                          className="w95-input" style={{ width: '100%' }}
-                          value={roles[r] ?? ''}
-                          onChange={(e) => setRole(r, e.target.value || null)}
-                        >
-                          <option value="">— не назначен —</option>
-                          {game.staff.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name} ({s.stats.program}/{s.stats.scenario}/{s.stats.graphics}/{s.stats.sound})
-                              {Object.entries(roles).some(([k, v]) => k !== r && v === s.id) ? ' — занят' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="w95-hint" style={{ marginBottom: 2 }}>
+                1) выберите роль · 2) кликните по сотруднику. Каждый занят на одной роли.
+              </div>
+              <div className="w95-row" style={{ flexWrap: 'wrap', gap: 2, marginBottom: 2 }}>
+                {(['proposal', 'program', 'graphics', 'sound', 'debug'] as Role[]).map((r) => (
+                  <button
+                    key={r}
+                    className={`w95-btn${roleTab === r ? ' active' : ''}`}
+                    onClick={() => setRoleTab(r)}
+                    title={roles[r] ? game.staff.find((s) => s.id === roles[r])?.name : '—'}
+                  >
+                    {ROLE_LABELS[r]}: {roles[r] ? game.staff.find((s) => s.id === roles[r])?.name?.split(' ')[0] : '—'}
+                  </button>
+                ))}
+              </div>
+              <div className="w95-staff-grid">
+                {game.staff.map((s) => {
+                  const busyRole = (Object.entries(roles) as [Role, string][]).find(([k, v]) => v === s.id)?.[0];
+                  return (
+                    <StaffCard
+                      key={s.id}
+                      st={s}
+                      selected={roles[roleTab] === s.id}
+                      note={busyRole && busyRole !== roleTab ? `сейчас: ${ROLE_LABELS[busyRole]}` : undefined}
+                      onClick={() => setRole(roleTab, roles[roleTab] === s.id ? null : s.id)}
+                    />
+                  );
+                })}
+              </div>
               {!roles.program && <div className="w95-hint">Совет: назначьте программиста — без него Fun расти не будет.</div>}
             </>
           )}

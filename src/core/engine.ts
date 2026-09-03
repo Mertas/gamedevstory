@@ -40,6 +40,7 @@ export function newGame(seed = 1): GameState {
     emergencyFundUsed: false,
     bankrupt: false,
     pendingEvent: null,
+    lastPopup: null,
     log: [],
     rngState: rng.state,
     salesmanHere: false,
@@ -149,7 +150,13 @@ export function resolveDisasterAction(state: GameState) {
 // закрыть любой информационный попап (результат буста/происшествие/продавец/оценки) — время продолжит идти
 export function resolveEventAction(state: GameState) {
   const t = state.pendingEvent?.type;
-  if (t === 'boost_result' || t === 'disaster' || t === 'salesman' || t === 'release_result') state.pendingEvent = null;
+  if (t === 'boost_result' || t === 'disaster' || t === 'salesman' || t === 'release_result' || t === 'info') state.pendingEvent = null;
+  // показываем отложенный попап результата действия (тренировка/уровень), если он был
+  if (state.lastPopup) {
+    const p = state.lastPopup;
+    state.lastPopup = null;
+    state.pendingEvent = { type: 'info', title: p.title, text: p.text };
+  }
 }
 
 // ---- M3: персонал ----

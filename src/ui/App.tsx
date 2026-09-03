@@ -82,6 +82,15 @@ function EventWatcher() {
         ],
       });
     }
+    if (ev.type === 'info') {
+      showMessageBox({
+        title: ev.title,
+        text: ev.text,
+        buttons: [
+          { label: 'Ок', onClick: () => actionResolveEvent() },
+        ],
+      });
+    }
     if (ev.type === 'ready_to_release') {
       showMessageBox({
         title: 'Игра готова к выпуску!',

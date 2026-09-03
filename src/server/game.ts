@@ -149,8 +149,13 @@ export class GameServer {
     return r;
   }
 
-  private run(res: { ok: boolean; error?: string }): void {
+  private run(res: { ok: boolean; error?: string; popup?: { title: string; text: string } }): void {
     this.lastAction = res;
+    // попап результата действия: если уже висит другое событие — откладываем
+    if (res.ok && res.popup) {
+      if (this.game.pendingEvent) this.game.lastPopup = res.popup;
+      else this.game.pendingEvent = { type: 'info', title: res.popup.title, text: res.popup.text };
+    }
   }
 
   private storyCb: ((res: { ok: boolean; title?: string; plot?: string; error?: string }) => void) | null = null;

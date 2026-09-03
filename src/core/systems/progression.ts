@@ -2,13 +2,19 @@
 // реклама, контракты, своя консоль, переезд офиса.
 import { CONFIG } from '../config';
 import {
-  ADS, BOOSTER_PRICES, CONTRACTS, TRAININGS,
+  ADS, BOOSTER_PRICES, CONTRACTS, GENRES, TRAININGS, TYPES,
 } from '../data/db';
 import type { CareerId } from '../data/schema';
 import type { Rng } from '../rng';
 import type {
-  ActionResult, GameState, OwnConsoleState, Staff,
+  ActionResult, GameState, OwnConsoleState, PopupInfo, Staff,
 } from '../types';
+
+const CAREER_RU: Record<CareerId, string> = {
+  coder: 'Кодер', writer: 'Сценарист', designer: 'Дизайнер', sound: 'Звукорежиссёр',
+  director: 'Режиссёр', producer: 'Продюсер', hw: 'Инженер железа', hacker: 'Хакер',
+};
+const STAT_RU = { program: 'Программирование', scenario: 'Сценарий', graphics: 'Графика', sound: 'Звук' } as const;
 
 export function log(state: GameState, text: string): void {
   state.log.push({ week: state.week, year: state.year, text });
@@ -31,7 +37,9 @@ export function levelUpStaff(state: GameState, staffId: string, rng: Rng): Actio
   if (state.research < price) return { ok: false, error: `Нужно ${price} PR (есть ${Math.round(state.research)})` };
 
   state.research -= price;
-  s.careers[career] = lv + 1;
+  const newLv = lv + 1;
+  const statBefore: Record<string, number> = { program: s.stats.program, scenario: s.stats.scenario, graphics: s.stats.graphics, sound: s.stats.sound };
+  s.careers[career] = newLv;
   s.levelUps += 1;
   const gain = CONFIG.LEVEL_STATS[career]?.[lv - 1];
   if (gain) {
@@ -40,8 +48,33 @@ export function levelUpStaff(state: GameState, staffId: string, rng: Rng): Actio
     s.stats.graphics += gain.g;
     s.stats.sound += gain.so;
   }
-  log(state, `⬆ ${s.name}: ${career} → Lv${lv + 1} (−${price} PR, зарплата ×1.2)`);
-  return { ok: true };
+  log(state, `⬆ ${s.name}: ${career} → Lv${newLv} (−${price} PR, зарплата ×1.2)`);
+
+  // что открылось этим уровнем: жанры и типы под профессию (уровень достиг только что)
+  const opened: string[] = [];
+  for (const g of GENRES) {
+    if (g.unlockJob === career && g.unlockLevel === newLv) opened.push(`🎮 жанр «${g.ru ?? g.name}»`);
+  }
+  for (const t of TYPES) {
+    if (t.unlockJob === career && t.unlockLevel === newLv && !(t.unlockTraining && !state.unlockedTrainings.some((x) => x.toLowerCase().includes(t.unlockTraining!.toLowerCase())))) {
+      opened.push(`📦 тип «${t.nameRu ?? t.name}»`);
+    }
+  }
+  const lines: string[] = [`${CAREER_RU[career] ?? career}: Lv${lv} → Lv${newLv}`];
+  if (gain) {
+    for (const k of ['program', 'scenario', 'graphics', 'sound'] as const) {
+      const d = { p: gain.p, s: gain.s, g: gain.g, so: gain.so };
+      const key = k === 'program' ? 'p' : k === 'scenario' ? 's' : k === 'graphics' ? 'g' : 'so';
+      const dv = d[key];
+      if (dv > 0) lines.push(`${STAT_RU[k]}: ${statBefore[k]} → ${s.stats[k]} (+${dv})`);
+    }
+  }
+  if (opened.length) lines.push('', 'Открыто:', ...opened.map((o) => `• ${o}`));
+  const popup: PopupInfo = {
+    title: 'Повышение уровня',
+    text: `⬆ ${s.name}\n${lines.join('\n')}`,
+  };
+  return { ok: true, popup };
 }
 
 // ─── обучение ───
@@ -57,20 +90,26 @@ export function trainStaff(state: GameState, staffId: string, trainingId: number
 
   state.money -= cost;
   s.power = Math.max(0, s.power - (t.power ?? 0));
+  const before: Record<string, number> = { program: s.stats.program, scenario: s.stats.scenario, graphics: s.stats.graphics, sound: s.stats.sound };
   const deltas = { program: t.program ?? 0, scenario: t.scenario ?? 0, graphics: t.graphics ?? 0, sound: t.sound ?? 0 };
-  let applied = 0;
+  const lines: string[] = [];
   for (const k of ['program', 'scenario', 'graphics', 'sound'] as const) {
     let d = deltas[k];
     if (d === 0) continue;
     // супер-эффективность: шанс ×3 (research/01 §4)
-    if (rng.chance(0.08)) d *= 3;
+    const crit = rng.chance(0.08);
+    if (crit) d *= 3;
     s.stats[k] = Math.max(0, s.stats[k] + d);
-    applied += d;
+    lines.push(`${STAT_RU[k]}: ${before[k]} → ${s.stats[k]} (+${d})${crit ? ' — супер-эффект ×3!' : ''}`);
   }
   if (!state.unlockedTrainings.includes(t.name)) state.unlockedTrainings.push(t.name);
-  log(state, `🎓 ${s.name}: тренинг «${t.name}» (−${cost}K, POWER −${t.power ?? 0})`);
-  void applied;
-  return { ok: true };
+  const tName = t.nameRu ?? t.name;
+  log(state, `🎓 ${s.name}: тренинг «${tName}» (−${cost}K, POWER −${t.power ?? 0})`);
+  const popup: PopupInfo = {
+    title: 'Результат тренировки',
+    text: `🎓 ${s.name} — «${tName}»\n(−${cost}K, POWER −${t.power ?? 0})\n\n${lines.length ? lines.join('\n') : 'Статы не изменились'}`,
+  };
+  return { ok: true, popup };
 }
 
 // ─── смена профессии ───
