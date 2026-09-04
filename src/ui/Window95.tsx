@@ -1,17 +1,24 @@
-// Окно Win95: заголовок, drag, свернуть/развернуть/закрыть, ресайз.
+// Окно Win95: заголовок, drag, свернуть/развернуть/закрыть.
+// Ресайз за все края и углы — единая реализация (8 направлений), окно
+// не выходит за пределы рабочего стола, действуют мин. размеры.
 import { useRef, type ReactNode } from 'react';
 import type { WinState } from './wm';
 import { useWindows } from './wm';
 
-export function Window95({ win, title, icon, externalFocus, children }: {
-  win: WinState; title: string; icon: string; externalFocus?: boolean; children: ReactNode;
+export const WIN_MIN_W = 240;
+export const WIN_MIN_H = 140;
+
+type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+const RESIZE_DIRS: ResizeDir[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+
+export function Window95({ win, title, icon, iconUrl, externalFocus, children }: {
+  win: WinState; title: string; icon?: string; iconUrl?: string; externalFocus?: boolean; children: ReactNode;
 }) {
   const wm = useWindows();
   const drag = useRef<{ dx: number; dy: number } | null>(null);
-  const resize = useRef<{ sx: number; sy: number; sw: number; sh: number } | null>(null);
 
-  // окно активно, если оно верхнее в wm И фокус не у внешнего приложения (Winamp)
-  const focused = !externalFocus && win.z === Math.max(...wm.wins.map((w) => w.z));
+  // окно активно, если под фокусом wm И фокус не у внешнего приложения (Winamp)
+  const focused = !externalFocus && wm.activeId === win.id;
 
   function onTitleDown(e: React.MouseEvent) {
     wm.focus(win.id);
@@ -29,20 +36,52 @@ export function Window95({ win, title, icon, externalFocus, children }: {
     window.addEventListener('mouseup', up);
   }
 
-  function onResizeDown(e: React.MouseEvent) {
-    e.stopPropagation();
-    resize.current = { sx: e.clientX, sy: e.clientY, sw: win.w, sh: win.h };
-    const move = (ev: MouseEvent) => {
-      if (!resize.current) return;
-      wm.resize(win.id, resize.current.sw + (ev.clientX - resize.current.sx), resize.current.sh + (ev.clientY - resize.current.sy));
+  // ─── ресайз за край/угол (единый код для всех направлений) ───
+  const rs = useRef<{
+    dir: ResizeDir; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number;
+  } | null>(null);
+
+  function onResizeStart(dir: ResizeDir) {
+    return (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      wm.focus(win.id);
+      rs.current = {
+        dir, sx: e.clientX, sy: e.clientY,
+        ox: win.x, oy: win.y, ow: win.w, oh: win.h,
+      };
+      const move = (ev: MouseEvent) => {
+        const r = rs.current;
+        if (!r) return;
+        const dx = ev.clientX - r.sx;
+        const dy = ev.clientY - r.sy;
+        // рабочая область: во весь экран, над панелью задач
+        const vw = window.innerWidth;
+        const vh = window.innerHeight - 30;
+        let { x, y, w, h } = { x: r.ox, y: r.oy, w: r.ow, h: r.oh };
+        const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+        if (r.dir.includes('e')) w = clamp(Math.round(r.ow + dx), WIN_MIN_W, vw - x);
+        if (r.dir.includes('s')) h = clamp(Math.round(r.oh + dy), WIN_MIN_H, vh - y);
+        if (r.dir.includes('w')) {
+          const nw = clamp(Math.round(r.ow - dx), WIN_MIN_W, x + r.ow);
+          x += r.ow - nw;
+          w = nw;
+        }
+        if (r.dir.includes('n')) {
+          const nh = clamp(Math.round(r.oh - dy), WIN_MIN_H, y + r.oh);
+          y += r.oh - nh;
+          h = nh;
+        }
+        wm.setRect(win.id, x, y, w, h);
+      };
+      const up = () => {
+        rs.current = null;
+        window.removeEventListener('mousemove', move);
+        window.removeEventListener('mouseup', up);
+      };
+      window.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', up);
     };
-    const up = () => {
-      resize.current = null;
-      window.removeEventListener('mousemove', move);
-      window.removeEventListener('mouseup', up);
-    };
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
   }
 
   if (win.minimized) return null;
@@ -50,18 +89,58 @@ export function Window95({ win, title, icon, externalFocus, children }: {
   return (
     <div
       className={`w95-window ${focused ? 'focused' : ''} ${win.maximized ? 'maximized' : ''}`}
-      style={win.maximized ? undefined : { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z }}
+      style={{ left: win.x, top: win.y, width: win.maximized ? undefined : win.w, height: win.maximized ? undefined : win.h, zIndex: win.z }}
       onMouseDown={() => wm.focus(win.id)}
     >
       <div className="w95-titlebar" onMouseDown={onTitleDown}>
-        <span style={{ width: 16, textAlign: 'center' }}>{icon}</span>
+        {iconUrl ? (
+          <img className="w95-title-ic" src={iconUrl} alt="" draggable={false} />
+        ) : (
+          <span style={{ width: 16, textAlign: 'center' }}>{icon}</span>
+        )}
         <span className="w95-title">{title}</span>
-        <button className="w95-btn w95-tbtn" title="Свернуть" onMouseDown={(e) => { e.stopPropagation(); wm.minimize(win.id); }}>—</button>
-        <button className="w95-btn w95-tbtn" title="Развернуть" onMouseDown={(e) => { e.stopPropagation(); wm.toggleMax(win.id); }}>□</button>
-        <button className="w95-btn w95-tbtn" title="Закрыть" onMouseDown={(e) => { e.stopPropagation(); wm.close(win.id); }}>✕</button>
+        <button
+          className="w95-btn w95-tbtn"
+          title="Свернуть"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => wm.minimize(win.id)}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <rect x="1" y="7.2" width="8" height="1.6" fill="#000" />
+          </svg>
+        </button>
+        <button
+          className="w95-btn w95-tbtn"
+          title={win.maximized ? 'Восстановить' : 'Развернуть'}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => wm.toggleMax(win.id)}
+        >
+          {win.maximized ? (
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <rect x="2.8" y="0.8" width="6.2" height="6.2" fill="none" stroke="#000" strokeWidth="1.4" />
+              <rect x="0.6" y="3" width="6.2" height="6.2" fill="#c0c0c0" stroke="#000" strokeWidth="1.4" />
+            </svg>
+          ) : (
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <rect x="1.2" y="1.2" width="7.6" height="7.6" fill="none" stroke="#000" strokeWidth="1.5" />
+            </svg>
+          )}
+        </button>
+        <button
+          className="w95-btn w95-tbtn"
+          title="Закрыть"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => wm.close(win.id)}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M1.6 1.6 L8.4 8.4 M8.4 1.6 L1.6 8.4" stroke="#000" strokeWidth="1.6" />
+          </svg>
+        </button>
       </div>
       <div className="w95-body">{children}</div>
-      {!win.maximized && <div className="w95-resize" onMouseDown={onResizeDown} />}
+      {!win.maximized && RESIZE_DIRS.map((d) => (
+        <div key={d} className={`w95-rs w95-rs-${d}`} onMouseDown={onResizeStart(d)} />
+      ))}
     </div>
   );
 }

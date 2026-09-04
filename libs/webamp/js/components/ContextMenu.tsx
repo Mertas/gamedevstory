@@ -1,9 +1,13 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
 import classnames from "classnames";
 
 import { useTypedSelector } from "../hooks";
 import * as Selectors from "../selectors";
+
+// Корневой узел webamp (contained-режим): попапы/меню должны монтироваться
+// туда же, где окна, иначе окажутся под ними (в body — под всем приложением).
+export const MenuMountContext = createContext<HTMLElement | null>(null);
 
 interface PortalProps {
   zIndex: number;
@@ -13,6 +17,7 @@ interface PortalProps {
 }
 
 const Portal = (props: PortalProps) => {
+  const mount = useContext(MenuMountContext);
   const node: HTMLDivElement = useMemo(() => {
     const div = document.createElement("div");
     div.className = "wa-webamp-context-menu";
@@ -24,11 +29,11 @@ const Portal = (props: PortalProps) => {
   }, [props.zIndex]);
 
   useEffect(() => {
-    document.body.appendChild(node);
+    (mount ?? document.body).appendChild(node);
     return () => {
-      document.body.removeChild(node);
+      (mount ?? document.body).removeChild(node);
     };
-  }, [node]);
+  }, [node, mount]);
 
   const style: React.CSSProperties = {
     top: props.top,

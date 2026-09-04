@@ -42,6 +42,7 @@ export type ClientAction =
   // M3
   | { type: 'level_up'; staffId: string }
   | { type: 'train'; staffId: string; trainingId: number }
+  | { type: 'chat_message'; text: string }
   | { type: 'change_career'; staffId: string; target: CareerId }
   | { type: 'buy_booster'; booster: string }
   | { type: 'use_booster'; staffId: string; booster: string }
@@ -72,6 +73,8 @@ export class GameServer {
   private listeners = new Set<(s: SessionSnapshot) => void>();
   private phaseGen = new Set<string>();
   private chatThread: ChatThread | null = null; // фазы чата в процессе генерации
+  private pendingPlayer: string | null = null; // вопрос игрока, ждущий свободного чата
+  private pendingPhase: { phase: string; extra?: Record<string, unknown>; openingFor?: string } | null = null;
   private lastAction: { ok: boolean; error?: string } | null = null;
 
   constructor() {
@@ -277,6 +280,24 @@ export class GameServer {
         this.run(trainAction(this.game, msg.staffId, msg.trainingId));
         this.emit();
         return;
+      // игрок пишет в чат → команда отвечает серией реплик (по одной, по очереди)
+      case 'chat_message': {
+        const text = msg.text.trim().slice(0, 400);
+        if (text.length >= 2) {
+          if (this.game.staff.length === 0) {
+            chatSystem(this.game, this.chat, 'Пока некому отвечать — наймите первого сотрудника в окне «Найм».');
+          } else {
+            this.chat.msgs.push({ week: this.game.week, author: 'Вы', avatar: '', text, trigger: 'week' });
+            if (this.chatThread) {
+              this.pendingPlayer = text; // команда занята — ответим после текущей серии
+            } else {
+              this.startPlayerThread(text);
+            }
+          }
+        }
+        this.emit();
+        return;
+      }
       case 'change_career':
         this.run(changeCareerAction(this.game, msg.staffId, msg.target));
         this.emit();
@@ -339,9 +360,23 @@ export class GameServer {
   }
 
   private async generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void> {
+    // чат занят (отвечает игроку / идёт другая фаза) — встаём в очередь
+    if (this.chatThread) {
+      this.pendingPhase = { phase, extra, openingFor };
+      return;
+    }
     // событие фазы → живая серия: реплики по одной, с ответами друг другу
     const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : 5; // ответов после открывающей
     this.chatThread = { phase, extra: extra ?? {}, left, busy: false, nextAt: this.game.week, errors: 0, openingFor };
+    void this.nextReply();
+  }
+
+  // игрок написал в чат: команда отвечает серией из 1..7 реплик (зависит от «объёма» вопроса)
+  private startPlayerThread(text: string): void {
+    const l = text.length;
+    const hi = l < 50 ? 2 : l < 140 ? 4 : 7;
+    const left = 1 + Math.floor(Math.random() * hi);
+    this.chatThread = { phase: 'player', extra: { text }, left, busy: false, nextAt: this.game.week, errors: 0 };
     void this.nextReply();
   }
 
@@ -380,7 +415,19 @@ export class GameServer {
 
   private maybeEndThread(): void {
     const t = this.chatThread;
-    if (t && (t.left <= 0 || t.errors >= 3)) this.chatThread = null;
+    if (!t) return;
+    if (t.left > 0 && t.errors < 3) return;
+    this.chatThread = null;
+    if (this.pendingPlayer) {
+      // сначала ответим на свежий вопрос игрока, потом — отложенные события
+      const text = this.pendingPlayer;
+      this.pendingPlayer = null;
+      this.startPlayerThread(text);
+    } else if (this.pendingPhase) {
+      const p = this.pendingPhase;
+      this.pendingPhase = null;
+      void this.generatePhase(p.phase, p.extra, p.openingFor);
+    }
   }
 
   private lastStaffText(): string | null {
@@ -419,6 +466,7 @@ export class GameServer {
           progress: Math.round(g.progress * 100),
           bugs: Math.round(g.bugs),
           points: Object.fromEntries(Object.entries(g.points).map(([k, v]) => [k, Math.round(v)])),
+          direction: Object.fromEntries(Object.entries(g.direction).map(([k, v]) => [k, Math.round(v)])),
           name: g.name || null,
           plot: g.plot || null,
         }
@@ -431,6 +479,14 @@ export class GameServer {
       fans: Math.round(this.game.fans),
       research: Math.round(this.game.research),
       project,
+      // как игрок распределил очки направления в последнем проекте (и режим) — чтобы
+      // сотрудники могли обсуждать выбор в чате
+      lastProject: {
+        genre: this.game.lastGenreId ? genreById(this.game.lastGenreId)?.name ?? this.game.lastGenreId : null,
+        type: this.game.lastTypeId ? typeById(this.game.lastTypeId)?.name ?? this.game.lastTypeId : null,
+        mode: this.game.lastMode,
+        direction: this.game.lastDirection,
+      },
       staff: this.game.staff.map((s) => ({
         id: s.id,
         name: s.name,
@@ -450,6 +506,7 @@ export class GameServer {
       if (data && typeof data.week === 'number') {
         // защита от легаси-сейвов: продавец ушёл, а пауза осталась
         if (data.pendingEvent?.type === 'salesman' && !data.salesmanHere) data.pendingEvent = null;
+        normalizeLegacyContrib(data);
         return data;
       }
     } catch { /* нет сейва */ }

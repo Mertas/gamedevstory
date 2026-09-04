@@ -99,6 +99,7 @@ describe('M3: продавец и бустеры', () => {
       totalCost: 100, progress: 0.5, bugs: 0, weekStarted: 1, phase: 'dev',
       proposalStaffId: g.staff[1]!.id,
       assignments: { proposal: [g.staff[1]!.id], program: [g.staff[0]!.id], graphics: [], sound: [], debug: [] },
+      contribTotal: {},
       boostOffered: false, boostUsed: false, fame: 10, hype: 10,
       name: '', score: null, judgeScores: [], reviewMessages: [], releaseWeek: null,
       sales: [], totalUnits: 0, totalRevenue: 0, ended: false,

@@ -30,15 +30,31 @@ function gameDate(w: number): string {
   return `${monthName(w)} ${year} г., день ${dayInYear}`;
 }
 
+// все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
+const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
+// дефолтные иконки приложений (win95-набор; подобраны вручную)
+const DEFAULT_ICONS: Record<string, string> = {
+  code: 'w95_16.png', chat: 'w95_14.png', hire: 'w95_45.png', archive: 'w95_37.png',
+  hardware: 'w95_12.png', research: 'w95_35.png', magazines: 'w95_60.png',
+  marketing: 'w95_40.png', contracts: 'w95_39.png', mail: 'w95_17.png', help: 'w95_24.png',
+  winamp: 'winamp.png',
+};
+const ICONS_KEY = 'gds-desk-icons';
+
 export function Desktop() {
   const wm = useWindows();
+  const wmRef = useRef(wm);
+  wmRef.current = wm;
   const game = useGame();
   const chat = useChat();
   const speed = useSpeed();
   const [startOpen, setStartOpen] = useState(false);
+  const startOpenRef = useRef(startOpen);
+  startOpenRef.current = startOpen;
   const fileRef = useRef<HTMLInputElement>(null);
   // Winamp (Webamp) — не wm-окно: свой слой; waHidden = свёрнут в трей; waZ — слой поверх окон или в фоне
   const [waOpen, setWaOpen] = useState(false);
+  const [waEverStarted, setWaEverStarted] = useState(false); // экземпляр Winamp создан хоть раз — живёт дальше (сохраняет окна/позиции)
   const [waHidden, setWaHidden] = useState(false);
   const [waZ, setWaZ] = useState(true); // true — Winamp поверх окон
   useEffect(() => {
@@ -47,12 +63,20 @@ export function Desktop() {
       if (!t) return;
       // клик вне меню рабочего стола — закрыть его
       if (ctxMenuRef.current && !t.closest('.w95-menu')) setCtxMenu(null);
+      // клик вне меню «Пуск» и кнопки «Пуск» — закрыть меню «Пуск»
+      if (startOpenRef.current && !t.closest('.w95-start-menu, .w95-start-btn')) setStartOpen(false);
       // фиксируем активность Winamp ДО этого клика (до любых ререндеров)
       winampWasActive.current = winampActiveRef.current;
       // клик по окнам Winamp — поднять слой; клик мимо (окна/рабочий стол) — опустить в фон.
       // Кнопку Winamp в таскбаре НЕ трогаем вообще — её полностью обрабатывает onClick
       if (t.closest('[data-wa-toggle]')) return;
       setWaZ(Boolean(t.closest('[data-wa-host]')));
+      // клик вне окон, попапов и таск-кнопок приложений (рабочий стол, пустой таскбар,
+      // кнопка «Пуск», трей) — снять фокус со всех окон. Кнопки приложений разрулит
+      // их собственный onClick (фокус активному-свёртывание)
+      if (!t.closest('.w95-window, .w95-menu, .w95-task-btn, [data-wa-host]')) {
+        wmRef.current?.blur();
+      }
     };
     document.addEventListener('mousedown', onDown, true);
     return () => document.removeEventListener('mousedown', onDown, true);
@@ -62,7 +86,20 @@ export function Desktop() {
     const onCtx = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
-      if (t.closest('.w95-d-icon') || t.closest('.w95-menu') || !t.closest('.w95-desktop')) return;
+      const iconEl = t.closest('.w95-d-icon') as HTMLElement | null;
+      // ПКМ по иконке — меню иконки («Открыть», «Сменить иконку…»)
+      if (iconEl) {
+        const id = iconEl.dataset.deskId;
+        if (!id) return;
+        e.preventDefault();
+        setSelIds([id]);
+        setCtxMenu({ x: e.clientX, y: e.clientY, app: id });
+        return;
+      }
+      // меню только на пустом месте рабочего стола: не на окнах,
+      // панели задач, меню «Пуск»/попапах и не на окнах Winamp
+      if (t.closest('.w95-menu') || t.closest('.w95-window')
+        || t.closest('.w95-taskbar') || t.closest('[data-wa-host]') || !t.closest('.w95-desktop')) return;
       e.preventDefault();
       setCtxMenu({ x: e.clientX, y: e.clientY });
     };
@@ -70,7 +107,14 @@ export function Desktop() {
     return () => document.removeEventListener('contextmenu', onCtx, true);
   }, []);
 
-  const openWinamp = () => { setWaOpen(true); setWaHidden(false); setWaZ(true); };
+  const openWinamp = () => { setWaEverStarted(true); setWaOpen(true); setWaHidden(false); setWaZ(true); };
+  // крестик Winamp: полное закрытие (как остальные окна); повторный запуск — по иконке
+  const closeWinamp = () => { setWaOpen(false); setWaHidden(false); setWaZ(false); };
+  // URL иконки приложения: выбранная игроком (localStorage) или дефолтная из кода
+  const iconUrlFor = (appId: string): string | null => {
+    const f = customIcons[appId] ?? DEFAULT_ICONS[appId];
+    return f ? `/icons/${f}` : null;
+  };
   // Winamp «активен» (держит фокус) — окна игры при этом неактивны (серые заголовки, кнопки выпуклые)
   const winampActive = waOpen && !waHidden && waZ;
   const winampActiveRef = useRef(winampActive);
@@ -86,9 +130,22 @@ export function Desktop() {
   const [selIds, setSelIds] = useState<string[]>([]);
   const [selBox, setSelBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const boxRef = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; app?: string } | null>(null);
   const ctxMenuRef = useRef(ctxMenu);
   ctxMenuRef.current = ctxMenu;
+
+  // иконки приложений, выбранные игроком (сменить иконку ПКМ по иконке)
+  const [customIcons, setCustomIcons] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem(ICONS_KEY) ?? '{}') as Record<string, string>; } catch { return {}; }
+  });
+  const [pickFor, setPickFor] = useState<string | null>(null); // для какого приложения открыт выбор иконки
+  const setAppIcon = (appId: string, file: string) => {
+    setCustomIcons((c) => {
+      const next = { ...c, [appId]: file };
+      try { localStorage.setItem(ICONS_KEY, JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
   const dragRef = useRef<{ ids: string[]; start: { x: number; y: number }; bases: Record<string, { x: number; y: number }> } | null>(null);
   const [dragMap, setDragMap] = useState<Record<string, { x: number; y: number }> | null>(null);
   const snapOnRef = useRef(snapOn);
@@ -99,8 +156,8 @@ export function Desktop() {
   useEffect(() => { try { localStorage.setItem('gds-desk-pos', JSON.stringify(deskPos)); } catch { /* */ } }, [deskPos]);
 
   const deskItems = useMemo(() => {
-    const items = APP_DEFS.map((d) => ({ id: d.id, title: d.title, icon: d.icon, kind: 'app', open: () => wm.open(d.id) }));
-    items.push({ id: 'winamp', title: 'Winamp', icon: '🎵', kind: 'media', open: openWinamp });
+    const items = APP_DEFS.map((d) => ({ id: d.id, title: d.title, icon: d.icon, iconFile: DEFAULT_ICONS[d.id], kind: 'app', open: () => wm.open(d.id) }));
+    items.push({ id: 'winamp', title: 'Winamp', icon: '🎵', iconFile: DEFAULT_ICONS.winamp, kind: 'media', open: openWinamp });
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -319,7 +376,11 @@ export function Desktop() {
             }}
             onMouseDown={(e) => onIconDown(e, it.id)}
           >
-            <span style={{ fontSize: 30 }}>{it.icon}</span>
+            {customIcons[it.id] ?? it.iconFile ? (
+              <img className="w95-ic" src={`/icons/${customIcons[it.id] ?? it.iconFile}`} alt="" draggable={false} />
+            ) : (
+              <span style={{ fontSize: 30 }}>{it.icon}</span>
+            )}
             <span>{it.title}</span>
           </div>
         ))}
@@ -331,13 +392,26 @@ export function Desktop() {
         if (!def) return null;
         const C = def.component;
         return (
-          <Window95 key={w.id} win={w} title={def.title} icon={def.icon} externalFocus={winampActive}>
+          <Window95 key={w.id} win={w} title={def.title} icon={def.icon} iconUrl={iconUrlFor(w.id) ?? undefined} externalFocus={winampActive}>
             <C />
           </Window95>
         );
       })}
 
-      {ctxMenu && (
+      {ctxMenu && ('app' in ctxMenu ? (
+        <div className="w95-menu" style={{ left: ctxMenu.x, top: ctxMenu.y - 8 }}>
+          <div className="w95-mi" onClick={() => {
+            const it = sortedIcons.find((x) => x.id === ctxMenu.app);
+            setCtxMenu(null);
+            if (it) { setSelIds([]); it.open(); }
+          }}>
+            <span style={{ width: 16 }}>{''}</span>Открыть
+          </div>
+          <div className="w95-mi" onClick={() => { setPickFor(ctxMenu.app ?? null); setCtxMenu(null); }}>
+            <span style={{ width: 16 }}>{''}</span>Сменить иконку…
+          </div>
+        </div>
+      ) : (
         <div className="w95-menu" style={{ left: ctxMenu.x, top: ctxMenu.y - 8 }}>
           <div className="w95-mi" onClick={() => { realign(); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{''}</span>Упорядочить иконки
@@ -356,9 +430,35 @@ export function Desktop() {
             <span style={{ width: 16 }}>{deskSort === 'default' ? '✓' : ''}</span>Сортировать по порядку
           </div>
         </div>
+      ))}
+
+      {/* выбор иконки приложения (ПКМ по иконке → «Сменить иконку…») */}
+      {pickFor && (
+        <div className="w95-modal" onClick={() => setPickFor(null)}>
+          <div className="w95-modal-box" onClick={(e) => e.stopPropagation()}>
+            <b style={{ marginBottom: 6 }}>
+              Сменить иконку — {sortedIcons.find((x) => x.id === pickFor)?.title ?? pickFor}
+            </b>
+            <div className="w95-modal-grid">
+              {W95_ICONS.map((f) => (
+                <img
+                  key={f}
+                  src={`/icons/${f}`}
+                  alt=""
+                  draggable={false}
+                  className={`w95-pick-ic ${(customIcons[pickFor] ?? DEFAULT_ICONS[pickFor]) === f ? 'picked' : ''}`}
+                  onClick={() => setAppIcon(pickFor, f)}
+                />
+              ))}
+            </div>
+            <button className="w95-btn" style={{ marginTop: 8, alignSelf: 'flex-end' }} onClick={() => setPickFor(null)}>
+              Готово
+            </button>
+          </div>
+        </div>
       )}
 
-      {waOpen && <WebampLayer visible={!waHidden} zTop={waZ} onHidden={() => setWaHidden(true)} />}
+      {waEverStarted && <WebampLayer open={waOpen} visible={!waHidden} zTop={waZ} onHidden={() => setWaHidden(true)} onExit={closeWinamp} />}
 
       {/* панель задач */}
       <div className="w95-taskbar" onMouseDown={(e) => e.stopPropagation()}>
@@ -366,12 +466,13 @@ export function Desktop() {
           className={`w95-btn w95-start-btn ${startOpen ? 'active' : ''}`}
           onClick={() => setStartOpen((v) => !v)}
         >
-          <span>🪟</span> Пуск
+          <img className="w95-start-logo" src="/icons/start-logo.svg" alt="" draggable={false} />
+          <span>Пуск</span>
         </button>
 
         {wm.wins.map((w) => {
           const def = APP_DEFS.find((a) => a.id === w.id);
-          const isActive = !winampActive && !w.minimized && w.z === Math.max(...wm.wins.map((x) => x.z));
+          const isActive = !winampActive && !w.minimized && wm.activeId === w.id;
           return (
             <button
               key={w.id}
@@ -383,7 +484,12 @@ export function Desktop() {
                 else wm.focus(w.id);
               }}
             >
-              {def?.icon} {def?.title}
+              {iconUrlFor(w.id) ? (
+                <img className="w95-task-ic" src={iconUrlFor(w.id) ?? ''} alt="" draggable={false} />
+              ) : (
+                <span className="w95-task-emo">{def?.icon}</span>
+              )}
+              {def?.title}
             </button>
           );
         })}
@@ -398,7 +504,8 @@ export function Desktop() {
               else { setWaHidden(true); }
             }}
           >
-            🎵 Winamp
+            <img className="w95-task-ic" src={iconUrlFor('winamp') ?? '/icons/winamp.png'} alt="" draggable={false} />
+            Winamp
           </button>
         )}
 
@@ -422,7 +529,7 @@ export function Desktop() {
 
       {/* Пуск */}
       {startOpen && (
-        <div className="w95-menu" style={{ left: 2, bottom: 32 }} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="w95-menu w95-start-menu" style={{ left: 2, bottom: 32 }} onMouseDown={(e) => e.stopPropagation()}>
           {APP_DEFS.map((a) => (
             <div key={a.id} className="w95-mi" onClick={() => { wm.open(a.id); setStartOpen(false); }}>
               <span style={{ width: 18, textAlign: 'center' }}>{a.icon}</span> {a.title}

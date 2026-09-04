@@ -173,6 +173,9 @@ export function actionLevelUp(staffId: string) {
 export function actionTrain(staffId: string, trainingId: number) {
   send({ type: 'train', staffId, trainingId });
 }
+export function actionChatMessage(text: string) {
+  send({ type: 'chat_message', text });
+}
 export function actionChangeCareer(staffId: string, target: string) {
   send({ type: 'change_career', staffId, target });
 }

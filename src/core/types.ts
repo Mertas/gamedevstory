@@ -71,6 +71,7 @@ export interface ActiveGame {
   phase: 'proposal' | 'dev' | 'debug' | 'released';
   proposalStaffId: string | null;
   assignments: Partial<Record<Role, string[]>>;
+  contribTotal: Record<string, number>; // суммарный вклад по сотрудникам за проект (для отчёта)
   plot?: string; // краткий сюжет из мастера
   // события
   boostOffered: boolean;
@@ -156,6 +157,11 @@ export interface GameState {
   research: number; // PR
   fans: number;
   directionPoints: number;
+  // последний выбор в визарде (для следующей игры и контекста LLM-чата)
+  lastGenreId: string | null;
+  lastTypeId: string | null;
+  lastMode: Mode;
+  lastDirection: Record<DirectionAxis, number>;
   officeLevel: 1 | 2 | 3;
   staff: Staff[];
   hiredIds: string[]; // кто уже нанят/уволен (для пула)

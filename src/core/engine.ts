@@ -2,7 +2,7 @@
 import { CONFIG, type HireMethodId } from './config';
 import { CONSOLES } from './data/db';
 import { createRng, rngFromState } from './rng';
-import type { GameState, StartProjectInput } from './types';
+import type { DirectionAxis, GameState, StartProjectInput } from './types';
 import {
   fireStaff, hireStaff, hireStaffById, makeStaffFromData, paySalaries, pickAvatar, dailyPower,
 } from './systems/staff';
@@ -27,6 +27,10 @@ export function newGame(seed = 1): GameState {
     research: CONFIG.START_RESEARCH,
     fans: CONFIG.START_FANS,
     directionPoints: CONFIG.START_DIRECTION_POINTS,
+    lastGenreId: null,
+    lastTypeId: null,
+    lastMode: 'normal',
+    lastDirection: { cute: 0, realism: 0, approach: 5, niche: 0, simple: 0, innovation: 0, world: 0, polish: 5 },
     officeLevel: 1,
     staff: [],
     hiredIds: [],
@@ -88,6 +92,15 @@ export function startProjectAction(state: GameState, input: StartProjectInput) {
   const rng = rngFromState(state.rngState, state.seed);
   const res = startProject(state, input);
   state.rngState = rng.state;
+  // запоминаем выборы игрока: подставляются в следующий визард и известны LLM-чату
+  if (res.ok) {
+    state.lastGenreId = input.genreId;
+    state.lastTypeId = input.typeId;
+    state.lastMode = input.mode;
+    const full: Record<DirectionAxis, number> = { cute: 0, realism: 0, approach: 0, niche: 0, simple: 0, innovation: 0, world: 0, polish: 0 };
+    for (const k of Object.keys(input.direction) as DirectionAxis[]) full[k] = input.direction[k] ?? 0;
+    state.lastDirection = full;
+  }
   return res;
 }
 

@@ -385,14 +385,15 @@ export function officeUpgradeInfo(state: GameState): { level: number; cost: numb
     const ready = state.year >= 4 && state.money >= 1000 && state.history.length > 0;
     return { level: 2, cost: 600, ready, reason: 'Год 4+, ≥1000K и хотя бы одна выпущенная игра' };
   }
-  const ready = state.year >= 10 || (state.money >= 3500 && (state.awards.grand > 0 || state.awards.design > 0 || state.awards.music > 0)) || (state.year >= 7 && state.money >= 3500);
-  return { level: 3, cost: 2500, ready, reason: 'Год 10+; или 3500K + награда (7–9 год); или 3500K (10+)' };
+  // офис 3: 7-й год и 3500K на счету (переезд стоит 2500K)
+  const ready = state.year >= 7 && state.money >= 3500;
+  return { level: 3, cost: 2500, ready, reason: 'Нужны 7-й год и ≥3500K на счету' };
 }
 
 export function moveOffice(state: GameState): ActionResult {
   const info = officeUpgradeInfo(state);
   if (!info) return { ok: false, error: 'Уже самый большой офис' };
-  if (!info.ready) return { ok: false, error: `Условия: ${info.reason}` };
+  if (!info.ready) return { ok: false, error: `Переезд пока недоступен: ${info.reason}` };
   if (state.money < info.cost) return { ok: false, error: `Нужно ${info.cost}K` };
   state.money -= info.cost;
   state.officeLevel = info.level as 2 | 3;

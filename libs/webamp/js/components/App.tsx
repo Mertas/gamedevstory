@@ -13,6 +13,7 @@ import * as Actions from "../actionCreators";
 import * as Utils from "../utils";
 import MilkdropWindow from "../components/MilkdropWindow";
 import ContextMenuWrapper from "./ContextMenuWrapper";
+import { MenuMountContext } from "./ContextMenu";
 import MainContextMenu from "./MainWindow/MainContextMenu";
 import WindowManager from "./WindowManager";
 import MainWindow from "./MainWindow";
@@ -146,6 +147,7 @@ export default function App({
 
   return ReactDOM.createPortal(
     <StrictMode>
+      <MenuMountContext.Provider value={parentDomNode}>
       <div onBlur={handleBlur}>
         <Skin />
         <ContextMenuWrapper
@@ -157,6 +159,7 @@ export default function App({
           />
         </ContextMenuWrapper>
       </div>
+      </MenuMountContext.Provider>
     </StrictMode>,
     webampNode
   );

@@ -320,12 +320,30 @@ function DevStatus() {
       </div>
       <table className="w95-table">
         <tbody>
-          {(['proposal', 'program', 'graphics', 'sound', 'debug'] as Role[]).map((r) => (
-            <tr key={r}>
-              <td style={{ width: 140 }}><b>{ROLE_LABELS[r]}</b></td>
-              <td>{roleStaff(r)}</td>
-            </tr>
-          ))}
+          {game.staff.map((s) => {
+            const role = (['proposal', 'program', 'graphics', 'sound', 'debug'] as Role[]).find(
+              (r) => (g.assignments[r] ?? []).includes(s.id),
+            );
+            const pct = Math.max(0, Math.min(1, s.maxPower > 0 ? s.power / s.maxPower : 0));
+            const powerColor = pct > 0.5 ? '#1a7a1a' : pct > 0.25 ? '#b08a00' : '#c00000';
+            return (
+              <tr key={s.id}>
+                <td data-staff-id={s.id} style={{ width: 180 }}>
+                  {s.name}{s.homeWeeks > 0 && <span title={`Дома ещё ${s.homeWeeks} нед.`}> 🏠</span>}
+                  <div className="w95-row" style={{ gap: 4, marginTop: 2 }}>
+                    <div className="w95-staff-power" style={{ width: 80, flex: 'none' }}>
+                      <div style={{ width: `${Math.round(pct * 100)}%`, background: powerColor }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: '#444' }}>
+                      {Math.round(s.power)}/{s.maxPower}{s.homeWeeks > 0 ? ' · дома' : ''}
+                      {g.contribTotal && g.contribTotal[s.id] ? ` · вклад: ${Math.round(g.contribTotal[s.id] ?? 0)}` : ''}
+                    </span>
+                  </div>
+                </td>
+                <td>{role ? <b>{ROLE_LABELS[role]}</b> : <span className="w95-hint">—</span>}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       {(Object.keys(game.boosterPurchases).length > 0 || Object.values(game.boosterPurchases).some((n) => n > 0)) && (
@@ -434,9 +452,14 @@ function ProjectWizard() {
   const [consoleId, setConsoleId] = useState('pc-game');
   const [genreId, setGenreId] = useState<string | null>(null);
   const [typeId, setTypeId] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>('normal');
-  const [direction, setDirection] = useState<Record<DirectionAxis, number>>({
-    cute: 0, realism: 0, approach: 5, niche: 0, simple: 0, innovation: 0, world: 0, polish: 5,
+  const [mode, setMode] = useState<Mode>(() => game.lastMode ?? 'normal');
+  const [direction, setDirection] = useState<Record<DirectionAxis, number>>(() => {
+    const last = game.lastDirection;
+    return {
+      cute: last?.cute ?? 0, realism: last?.realism ?? 0, approach: last?.approach ?? 5,
+      niche: last?.niche ?? 0, simple: last?.simple ?? 0, innovation: last?.innovation ?? 0,
+      world: last?.world ?? 0, polish: last?.polish ?? 5,
+    };
   });
   const [roles, setRoles] = useState<Partial<Record<Role, string | null>>>({});
   const [roleTab, setRoleTab] = useState<Role>('proposal');
@@ -446,6 +469,7 @@ function ProjectWizard() {
   const story = useStoryResult();
   // применить сгенерированное название/сюжет
   useEffect(() => {
+    clearActionError();
     if (!story) return;
     setStoryBusy(false);
     if (story.ok) {
@@ -536,6 +560,31 @@ function ProjectWizard() {
     });
   };
 
+  // порядок ролей для авто-перехода (Сценарий → Программирование → … → Отладка)
+  const ROLE_ORDER: Role[] = ['proposal', 'program', 'graphics', 'sound', 'debug'];
+  // совет подсказки зависит от выбранной роли
+  const ROLE_TIPS: Record<Role, string> = {
+    proposal: 'Сценарист отвечает за сюжет: влияет на Сценарий и шансы наград. Без него игра не начнётся.',
+    program: 'Программист — двигатель разработки: без него не растёт Fun (главная оценка игроков).',
+    graphics: 'Дизайнер поднимает Графику — множитель качества и продаж. Назначайте на 2-3-й игре.',
+    sound: 'Звукорежиссёр даёт очки Звука — влияет на награды и атмосферу.',
+    debug: 'Отладчик снижает баги во время разработки — меньше простоев перед релизом.',
+  };
+
+  const handleStaffClick = (s: { id: string }) => {
+    const cur = roles[roleTab];
+    const val = cur === s.id ? null : s.id;
+    setRole(roleTab, val);
+    if (val) {
+      // назначили — сразу переключаемся на следующую свободную роль
+      const idx = ROLE_ORDER.indexOf(roleTab);
+      for (let i = idx + 1; i < ROLE_ORDER.length; i++) {
+        const nr = ROLE_ORDER[i];
+        if (nr && !roles[nr]) { setRoleTab(nr); break; }
+      }
+    }
+  };
+
   const dirSummary = DIRECTION_AXES.filter((a) => direction[a.id] > 0)
     .map((a) => `${a.label} ${direction[a.id]}`).join(', ') || '—';
 
@@ -591,6 +640,11 @@ function ProjectWizard() {
           {step === 2 && (
             <>
               <b>Жанр</b>
+              {game.lastGenreId && (
+                <div className="w95-hint">
+                  Прошлый раз: <b>{genreById(meta, game.lastGenreId)?.ru ?? game.lastGenreId}</b> — попробуйте что-то новое!
+                </div>
+              )}
               <div className="w95-hint">Открытые жанры ({genres.length}/{meta.genres.length}); остальные — за уровни сотрудников.</div>
               <div className="w95-field" style={{ maxHeight: 260, overflowY: 'auto' }}>
                 {genres.map((gg) => (
@@ -611,6 +665,11 @@ function ProjectWizard() {
           {step === 3 && (
             <>
               <b>Тип</b>
+              {game.lastTypeId && (
+                <div className="w95-hint">
+                  Прошлый раз: <b>{typeById(meta, game.lastTypeId)?.nameRu ?? typeById(meta, game.lastTypeId)?.name ?? game.lastTypeId}</b>
+                </div>
+              )}
               <div className="w95-hint">
                 {genre ? `Комбо с «${genre.ru}»: S — отлично, A — хорошо. ` : ''}
                 Открытые типы ({types.length}/{meta.types.length}); остальные — за уровни и тренинги.
@@ -683,7 +742,7 @@ function ProjectWizard() {
                 1) выберите роль · 2) кликните по сотруднику. Каждый занят на одной роли.
               </div>
               <div className="w95-row" style={{ flexWrap: 'wrap', gap: 2, marginBottom: 2 }}>
-                {(['proposal', 'program', 'graphics', 'sound', 'debug'] as Role[]).map((r) => (
+                {ROLE_ORDER.map((r) => (
                   <button
                     key={r}
                     className={`w95-btn${roleTab === r ? ' active' : ''}`}
@@ -703,12 +762,18 @@ function ProjectWizard() {
                       st={s}
                       selected={roles[roleTab] === s.id}
                       note={busyRole && busyRole !== roleTab ? `сейчас: ${ROLE_LABELS[busyRole]}` : undefined}
-                      onClick={() => setRole(roleTab, roles[roleTab] === s.id ? null : s.id)}
+                      onClick={() => handleStaffClick(s)}
                     />
                   );
                 })}
               </div>
-              {!roles.program && <div className="w95-hint">Совет: назначьте программиста — без него Fun расти не будет.</div>}
+              <div className="w95-hint" style={{ marginTop: 2 }}>
+                💡 {roles[roleTab]
+                  ? (ROLE_ORDER.every((r) => roles[r])
+                    ? 'Команда укомплектована! Можно переходить к «Итогу».'
+                    : `${ROLE_LABELS[roleTab]} назначен. Кликните по карточке следующего сотрудника — роль переключится сама.`)
+                  : ROLE_TIPS[roleTab]}
+              </div>
             </>
           )}
 
@@ -723,7 +788,7 @@ function ProjectWizard() {
                   <tr><td>Режим</td><td>{MODES.find((m) => m.id === mode)?.label}</td></tr>
                   <tr><td>Направление</td><td>{dirSummary}</td></tr>
                   <tr><td>Ответственные</td><td>
-                    Сценарий: {assignedNames('proposal')} · Программирование: {assignedNames('program')}
+                    Сценарий: {assignedNames('proposal')} · Программирование: {assignedNames('program')} · Графика: {assignedNames('graphics')} · Звук: {assignedNames('sound')} · Отладка: {assignedNames('debug')}
                   </td></tr>
                   <tr><td>Стоимость</td><td>
                     <b>{Math.round(cost)}K</b>

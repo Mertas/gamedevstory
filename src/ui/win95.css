@@ -35,7 +35,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 [data-wa-host] .wa-playlist-window,
 [data-wa-host] .wa-playlist-window-shade,
 [data-wa-host] .wa-webamp-context-menu { pointer-events: auto; }
-.w95-d-icon .w95-ic { width: 32px; height: 32px; margin: 0 auto 3px; image-rendering: pixelated; display: block; }
+.w95-d-icon .w95-ic { width: 32px; height: 32px; margin: 0 auto 3px; display: block; }
 .w95-d-icon span { font-size: 11px; line-height: 1.15; display: block; }
 
 /* ── Панель задач ── */
@@ -66,6 +66,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* ── Кнопки / поля (классический бевел) ── */
 .w95-btn {
   font-family: var(--w95-font); font-size: 11px; color: #000;
+  line-height: 14px;
   background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
   padding: 3px 12px; outline: none; cursor: default; white-space: nowrap;
 }
@@ -103,9 +104,20 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-window.focused .w95-titlebar { background: linear-gradient(90deg, var(--w95-navy), #1084d0); }
 .w95-window:not(.focused) .w95-titlebar { background: linear-gradient(90deg, var(--w95-dark), #a0a0a0); }
 .w95-title { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: 2px; }
-.w95-tbtn { width: 16px; height: 14px; font-size: 8px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; font-family: 'Marlett', Tahoma, sans-serif; }
+.w95-tbtn { width: 16px; height: 14px; padding: 0; display: flex; align-items: center; justify-content: center; }
 .w95-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-.w95-resize { position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; cursor: nwse-resize; }
+/* зоны ресайза: все края и углы (единый механизм Window95) */
+.w95-rs { position: absolute; z-index: 6; }
+.w95-rs-n { top: -5px; left: 10px; right: 10px; height: 7px; cursor: n-resize; }
+.w95-rs-s { bottom: -5px; left: 10px; right: 10px; height: 7px; cursor: s-resize; }
+.w95-rs-e { right: -5px; top: 22px; bottom: 10px; width: 7px; cursor: e-resize; }
+.w95-rs-w { left: -5px; top: 10px; bottom: 10px; width: 7px; cursor: w-resize; }
+/* верхние углы — узкие полоски по внешней кромке (не заходят в titlebar),
+   чтобы кнопки заголовка (свернуть/развернуть/закрыть) были кликабельны */
+.w95-rs-nw { top: -6px; left: -6px; width: 16px; height: 6px; cursor: nwse-resize; }
+.w95-rs-ne { top: -6px; right: -6px; width: 16px; height: 6px; cursor: nesw-resize; }
+.w95-rs-se { right: -5px; bottom: -5px; width: 18px; height: 18px; cursor: nwse-resize; }
+.w95-rs-sw { left: -5px; bottom: -5px; width: 16px; height: 16px; cursor: nesw-resize; }
 
 /* ── Таблицы/списки ── */
 .w95-table { width: 100%; border-collapse: collapse; font-size: 11px; background: #fff; }
@@ -160,9 +172,20 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* ── Чат ── */
 .w95-chat { display: flex; flex-direction: column; height: 100%; background: #fff; }
 .w95-chat-msg { display: flex; gap: 6px; padding: 4px 6px; border-bottom: 1px solid #e8e4dc; }
-.w95-chat-msg .w95-avatar { width: 32px; height: 32px; image-rendering: pixelated; border: 1px solid var(--w95-dark); background: #c0c0c0; flex: none; }
+.w95-chat-msg .w95-avatar { width: 32px; height: 32px; border: 1px solid var(--w95-dark); background: #c0c0c0; flex: none; }
 .w95-chat-msg .w95-cname { font-weight: 700; color: #000080; }
 .w95-chat-msg .w95-ctext { white-space: pre-wrap; word-break: break-word; }
+.w95-chat-msg.self { background: #eef3fb; }
+.w95-chat-msg.self .w95-cname { color: #006000; }
+.w95-chat-input { display: flex; gap: 6px; padding: 6px; border-top: 2px solid var(--w95-light); flex: none; }
+
+/* модалка выбора иконки приложения */
+.w95-modal { position: absolute; inset: 0; z-index: 30000; background: rgba(0, 0, 0, .35); display: flex; align-items: center; justify-content: center; }
+.w95-modal-box { background: #c0c0c0; border: 2px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); padding: 10px; display: flex; flex-direction: column; max-width: min(560px, 90vw); }
+.w95-modal-grid { display: grid; grid-template-columns: repeat(12, 38px); gap: 2px; overflow-y: auto; max-height: 300px; padding: 4px; border: 1px solid #808080; background: #d5d5d5; }
+.w95-pick-ic { width: 32px; height: 32px; border: 1px solid transparent; padding: 1px; }
+.w95-pick-ic:hover { background: #e8e8e8; }
+.w95-pick-ic.picked { border: 1px solid #000080; background: #b8c4e8; }
 .w95-chat-msg.system { background: #fffbe0; font-style: italic; }
 .w95-chat-typing { padding: 4px 8px; color: var(--w95-dark); font-style: italic; }
 
@@ -174,7 +197,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-tab { background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); border-bottom: none; padding: 3px 10px; margin-right: 2px; }
 .w95-tab.on { font-weight: 700; position: relative; top: 1px; }
 .w95-panel { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-.w95-row { display: flex; align-items: center; gap: 6px; }
+.w95-row { display: flex; align-items: center; gap: 6px; line-height: 14px; }
 .w95-grid { display: grid; gap: 6px; }
 .w95-hint { color: #404040; font-size: 10px; }
 .w95-legend { display: flex; gap: 10px; font-size: 10px; flex-wrap: wrap; }
@@ -196,7 +219,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 }
 .w95-staff-card.disabled { opacity: 0.45; }
 .w95-staff-avatar { height: 30px; line-height: 30px; font-size: 20px; }
-.w95-staff-avatar img { width: 28px; height: 28px; image-rendering: pixelated; }
+.w95-staff-avatar img { width: 28px; height: 28px; }
 .w95-staff-name { font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w95-staff-sub { font-size: 10px; color: #333; }
 .w95-staff-power { height: 6px; border: 1px solid var(--w95-dark); background: #fff; margin: 4px 4px 1px; }
@@ -205,3 +228,9 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-staff-stats { display: flex; justify-content: center; gap: 4px; font-size: 10px; margin-top: 2px; }
 .w95-staff-note { font-size: 9px; color: #000080; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w95-btn.active { border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); background: #d5d5d5; }
+.w95-start-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px 4px 6px; font-weight: bold; }
+.w95-start-logo { width: 16px; height: 16px; }
+.w95-task-btn { display: inline-flex; align-items: center; gap: 4px; max-width: 160px; overflow: hidden; }
+.w95-task-ic { width: 16px; height: 16px; flex: none; }
+.w95-title-ic { width: 16px; height: 16px; margin: 0 5px 0 2px; vertical-align: -3px; }
+.w95-task-emo { font-size: 12px; }

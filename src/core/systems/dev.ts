@@ -97,6 +97,7 @@ export function startProject(state: GameState, input: StartProjectInput): Action
     phase: 'proposal',
     proposalStaffId: input.proposalStaffId,
     assignments: { proposal: [input.proposalStaffId], ...input.assignments },
+    contribTotal: {},
     boostOffered: false,
     boostUsed: false,
     fame: 10,
@@ -155,13 +156,19 @@ export function devTick(state: GameState, rng: Rng): void {
     return;
   }
 
-  // dev (сценарист пишет сценарий всю разработку — как в оригинале)
+  // dev: работают ВСЕ сотрудники (не в отпуске). Роли дают профильный стат,
+  // сотрудники без роли в проекте — средний по навыкам (универсалы).
   const genreLevel = state.genreLevels[game.genreId] ?? 0;
+  const byRole = (role: Role) => roleContributors(state, game, role);
   const contributors = [
-    ...roleContributors(state, game, 'proposal'),
-    ...roleContributors(state, game, 'program'),
-    ...roleContributors(state, game, 'graphics'),
-    ...roleContributors(state, game, 'sound'),
+    ...byRole('proposal'), ...byRole('program'), ...byRole('graphics'), ...byRole('sound'),
+    // универсалы (без роли в проекте)
+    ...state.staff
+      .filter((s) => s.homeWeeks === 0 && !Object.values(game.assignments).some((ids) => ids.includes(s.id)))
+      .map((s) => {
+        const st = s.stats;
+        return { stat: (st.program + st.scenario + st.graphics + st.sound) / 4, power: s.power };
+      }),
   ];
   const weekly = weeklyPoints(contributors, game.mode, genreLevel);
   const daily = weekly / 7; // тик = день
@@ -170,21 +177,42 @@ export function devTick(state: GameState, rng: Rng): void {
     game.points[k] += gain[k];
   }
 
-  // вклад по сотрудникам (для анимации в UI): роль → атрибут
+  // вклад по сотрудникам (для анимации в UI): доля каждого в приросте атрибута
   const roleAttr: Record<string, 'fun' | 'creativity' | 'graphics' | 'sound'> = {
     proposal: 'creativity', program: 'fun', graphics: 'graphics', sound: 'sound',
   };
+  const totalStat = contributors.reduce((a, c) => a + c.stat, 0) || 1;
   for (const s of state.staff) {
     if (s.homeWeeks > 0) continue; // ушёл домой — вклада нет
+    let stat = 0;
+    for (const r of ['proposal', 'program', 'graphics', 'sound'] as const) {
+      if ((game.assignments[r] ?? []).includes(s.id)) { stat += s.stats[ROLE_STAT[r]]; }
+    }
+    if (stat === 0) {
+      const st = s.stats;
+      stat = (st.program + st.scenario + st.graphics + st.sound) / 4; // универсал
+    }
+    if (stat <= 0) continue;
+    const share = stat / totalStat; // доля сотрудника в общем котле
+    for (const k of ['fun', 'creativity', 'graphics', 'sound'] as const) {
+      const amount = gain[k] * share; // ежедневная доля атрибута
+      if (amount > 0) state.devContrib.push({ staffId: s.id, attr: k, amount });
+    }
+    // роль — дополнительный «профильный» акцент (символы по специализации)
     for (const r of ['proposal', 'program', 'graphics', 'sound'] as const) {
       if ((game.assignments[r] ?? []).includes(s.id)) {
-        const fatigue = s.power >= 5 ? 1 : s.power >= 2 ? 0.7 : 0.4;
         const amount =
-          s.stats[ROLE_STAT[r]] * CONFIG.DEV_STAT_FACTOR * fatigue
+          s.stats[ROLE_STAT[r]] * CONFIG.DEV_STAT_FACTOR * (s.power >= 5 ? 1 : s.power >= 2 ? 0.7 : 0.4)
           * CONFIG.MODE[game.mode].speed * CONFIG.GENRE_LV_QUALITY(genreLevel) / 7;
         state.devContrib.push({ staffId: s.id, attr: roleAttr[r]!, amount });
       }
     }
+  }
+
+  // накопленный вклад за проект (для отчёта после релиза)
+  game.contribTotal ??= {};
+  for (const c of state.devContrib) {
+    game.contribTotal[c.staffId] = (game.contribTotal[c.staffId] ?? 0) + c.amount;
   }
 
   // баги пропорционально прогрессу
@@ -376,12 +404,19 @@ export function releaseGame(state: GameState, rng: Rng, name?: string): ActionRe
   state.activeGame = null;
   state.releasePopupShown = false;
   // попап с оценками (пауза, как у торговца)
+  game.contribTotal ??= {};
+  const topContrib = Object.entries(game.contribTotal)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id, v]) => `${state.staff.find((s) => s.id === id)?.name ?? id} ${Math.round(v)}`)
+    .join(' · ');
   state.pendingEvent = {
     type: 'release_result',
     text:
       `🎉 «${game.name}» выпущена!\n` +
       `Оценки критиков: ${scores.join(' · ')} = ${total}/40\n` +
-      `${total >= CONFIG.HALL_OF_FAME ? '🏆 ЗАЛ СЛАВЫ!' : total >= CONFIG.GRAND_PRIZE_SCORE ? 'Претендент на Гран-при!' : 'Удачи в следующий раз!'}`,
+      `${total >= CONFIG.HALL_OF_FAME ? '🏆 ЗАЛ СЛАВЫ!' : total >= CONFIG.GRAND_PRIZE_SCORE ? 'Претендент на Гран-при!' : 'Удачи в следующий раз!'}` +
+      (topContrib ? `\n\nВклад в разработку:\n${topContrib}` : ''),
   };
   return { ok: true };
 }

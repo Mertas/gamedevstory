@@ -225,7 +225,7 @@
   width: 29px;
 }
 
-.wa-webamp .wa-volume {
+.wa-webamp .wa-main-window .wa-volume {
   position: absolute;
   left: 107px;
   top: 57px;
@@ -234,7 +234,7 @@
   background-position: 0 0;
 }
 
-.wa-webamp .wa-volume input {
+.wa-webamp .wa-main-window .wa-volume input {
   height: 13px;
   /* The input itself, is actually 3px shorter than the background
      * https://twitter.com/LuigiHann/status/959275940688867328
@@ -242,18 +242,18 @@
   width: 65px;
   display: block;
 }
-.wa-webamp .wa-volume input::-webkit-slider-thumb {
+.wa-webamp .wa-main-window .wa-volume input::-webkit-slider-thumb {
   top: 1px;
   height: 11px;
   width: 14px;
 }
-.wa-webamp .wa-volume input::-moz-range-thumb {
+.wa-webamp .wa-main-window .wa-volume input::-moz-range-thumb {
   top: 1px;
   height: 11px;
   width: 14px;
 }
 
-.wa-webamp .wa-balance {
+.wa-webamp .wa-main-window .wa-balance {
   position: absolute;
   left: 177px;
   top: 57px;
@@ -262,12 +262,12 @@
   background-position: 0 0;
 }
 
-.wa-webamp .wa-balance::-webkit-slider-thumb {
+.wa-webamp .wa-main-window .wa-balance::-webkit-slider-thumb {
   top: 1px;
   height: 11px;
   width: 14px;
 }
-.wa-webamp .wa-balance::-moz-range-thumb {
+.wa-webamp .wa-main-window .wa-balance::-moz-range-thumb {
   top: 1px;
   height: 11px;
   width: 14px;
@@ -295,7 +295,7 @@
   left: 23px;
 }
 
-.wa-webamp .wa-position {
+.wa-webamp .wa-main-window .wa-position {
   position: absolute;
   left: 16px;
   top: 72px;
@@ -303,7 +303,7 @@
   height: 10px;
 }
 
-.wa-webamp .wa-position::-webkit-slider-thumb {
+.wa-webamp .wa-main-window .wa-position::-webkit-slider-thumb {
   height: 10px;
   width: 29px;
   /*
@@ -314,7 +314,7 @@
   position: relative;
 }
 
-.wa-webamp .wa-position::-moz-range-thumb {
+.wa-webamp .wa-main-window .wa-position::-moz-range-thumb {
   height: 10px;
   width: 29px;
 }

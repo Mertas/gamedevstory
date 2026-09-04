@@ -112,8 +112,10 @@ export function scrollVolume(e: WheelEvent): Thunk {
   e.preventDefault();
   return (dispatch, getState) => {
     const currentVolume = getState().media.volume;
-    // Using pixels as percentage difference here is a bit arbitrary, but... oh well.
-    return dispatch(setVolume(currentVolume + e.deltaY));
+    // колесо: один «тик» (≈100px) меняет громкость на ~10%, а не на 100
+    const pixels = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY; // строки → пиксели
+    const delta = Math.max(-100, Math.min(100, pixels)) / 10;
+    return dispatch(setVolume(currentVolume + delta));
   };
 }
 

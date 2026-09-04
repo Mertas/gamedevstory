@@ -115,6 +115,8 @@ export function close(): Thunk {
     };
     dispatch({ type: "CLOSE_REQUESTED", cancel });
     if (!defaultPrevented) {
+      // Полное закрытие Winamp (×): музыка останавливается; окна и их положение
+      // сохраняются и восстанавливаются при следующем запуске.
       dispatch({ type: "STOP" });
       dispatch({ type: "CLOSE_WINAMP" });
     }

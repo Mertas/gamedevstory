@@ -42,9 +42,10 @@ const media = (
     case "IS_STOPPED":
       return { ...state, status: PLAYER_MEDIA_STATUS.ENDED };
     case "OPEN_WINAMP":
-      return { ...state, status: PLAYER_MEDIA_STATUS.STOPPED };
+      // Открытие/разворот не сбрасывает статус: трек продолжает играть с того же места.
+      return state;
     case "CLOSE_WINAMP":
-      return { ...state, status: PLAYER_MEDIA_STATUS.CLOSED };
+      return state;
     case "TOGGLE_TIME_MODE":
       const newMode =
         state.timeMode === TIME_MODE.REMAINING
