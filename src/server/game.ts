@@ -10,7 +10,7 @@ import {
   releaseAction, resolveBoostAction, resolveDisasterAction, resolveEventAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, tick, trainAction, useBoosterAction,
 } from '../core/engine';
-import type { GameState, StartProjectInput } from '../core/types';
+import type { GameState, Staff, StartProjectInput } from '../core/types';
 import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 import { buildMessages, parseSingleMessage } from './chatgen';
@@ -63,6 +63,41 @@ interface ChatThread {
   errors: number;
   openingDone?: boolean;
   openingFor?: string; // кто должен открыть серию (новичок представляется)
+}
+
+// ─── легаси: игра начата до введения счётчика вклада — восстановить приблизительно ───
+// Точную историю восстановить нельзя (она не хранилась); оцениваем по текущим очкам
+// проекта и долям сотрудников в «котле» (роль — профильный навык, безролевой — средний).
+function normalizeLegacyContrib(state: GameState): void {
+  const g = state.activeGame;
+  if (!g || g.contribTotal) return;
+  g.contribTotal = {};
+  const sumPoints =
+    (g.points?.fun ?? 0) + (g.points?.creativity ?? 0) + (g.points?.graphics ?? 0) + (g.points?.sound ?? 0);
+  if (sumPoints <= 0) return;
+  // котёл как в devTick: роль даёт профильный навык, безролевой — средний, debug не вкладчик
+  const ROLE_STAT: Record<string, keyof Staff['stats']> = {
+    proposal: 'scenario', program: 'program', graphics: 'graphics', sound: 'sound',
+  };
+  const assignedRoles: Record<string, string[]> = {};
+  for (const [role, ids] of Object.entries(g.assignments ?? {})) for (const id of ids ?? []) (assignedRoles[id] ??= []).push(role);
+  let total = 0;
+  const statOf: Record<string, number> = {};
+  for (const s of state.staff) {
+    const roles = assignedRoles[s.id] ?? [];
+    if (!s.stats) continue;
+    const st = s.stats;
+    let stat = 0;
+    for (const r of roles) {
+      const key = ROLE_STAT[r];
+      if (key) stat += st[key] ?? 0;
+    }
+    if (stat === 0) stat = (st.program + st.scenario + st.graphics + st.sound) / 4; // безролевой-универсал
+    statOf[s.id] = stat;
+    total += stat;
+  }
+  if (total <= 0) return;
+  for (const s of state.staff) g.contribTotal[s.id] = ((sumPoints * (statOf[s.id] ?? 0)) / total) || 0;
 }
 
 export class GameServer {
@@ -529,6 +564,7 @@ export class GameServer {
       if (!data?.game || typeof data.game.week !== 'number') return false;
       this.game = data.game;
       this.chat = data.chat ?? resetChat();
+      normalizeLegacyContrib(this.game);
       this.autosave();
       this.emit();
       return true;

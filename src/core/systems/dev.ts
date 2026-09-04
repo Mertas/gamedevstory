@@ -178,9 +178,6 @@ export function devTick(state: GameState, rng: Rng): void {
   }
 
   // вклад по сотрудникам (для анимации в UI): доля каждого в приросте атрибута
-  const roleAttr: Record<string, 'fun' | 'creativity' | 'graphics' | 'sound'> = {
-    proposal: 'creativity', program: 'fun', graphics: 'graphics', sound: 'sound',
-  };
   const totalStat = contributors.reduce((a, c) => a + c.stat, 0) || 1;
   for (const s of state.staff) {
     if (s.homeWeeks > 0) continue; // ушёл домой — вклада нет
@@ -195,17 +192,8 @@ export function devTick(state: GameState, rng: Rng): void {
     if (stat <= 0) continue;
     const share = stat / totalStat; // доля сотрудника в общем котле
     for (const k of ['fun', 'creativity', 'graphics', 'sound'] as const) {
-      const amount = gain[k] * share; // ежедневная доля атрибута
+      const amount = gain[k] * share; // доля атрибута в приросте очков
       if (amount > 0) state.devContrib.push({ staffId: s.id, attr: k, amount });
-    }
-    // роль — дополнительный «профильный» акцент (символы по специализации)
-    for (const r of ['proposal', 'program', 'graphics', 'sound'] as const) {
-      if ((game.assignments[r] ?? []).includes(s.id)) {
-        const amount =
-          s.stats[ROLE_STAT[r]] * CONFIG.DEV_STAT_FACTOR * (s.power >= 5 ? 1 : s.power >= 2 ? 0.7 : 0.4)
-          * CONFIG.MODE[game.mode].speed * CONFIG.GENRE_LV_QUALITY(genreLevel) / 7;
-        state.devContrib.push({ staffId: s.id, attr: roleAttr[r]!, amount });
-      }
     }
   }
 
@@ -387,6 +375,12 @@ export function releaseGame(state: GameState, rng: Rng, name?: string): ActionRe
     genreId: game.genreId,
     typeId: game.typeId,
     consoleId: game.consoleId,
+    // вклад сотрудников в проект (накапливается с начала игры)
+    contrib: Object.fromEntries(
+      Object.entries(game.contribTotal ?? {})
+        .map(([sid, v]) => [state.staff.find((s) => s.id === sid)?.name ?? sid, Math.round(v)])
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
+    ),
     score: total,
     units: plan.totalUnits,
     revenue: plan.totalRevenue,

@@ -104,6 +104,7 @@ export interface GameRecord {
   attrs: Stats;
   bugs: number;
   awards: string[];
+  contrib?: Record<string, number>; // вклад сотрудников (имя → очки), для отчёта
 }
 
 export interface ConsoleState {

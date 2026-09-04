@@ -334,7 +334,7 @@ export function ArchiveApp() {
       </div>
       <table className="w95-table">
         <thead>
-          <tr><th>Год/нед</th><th>Игра</th><th>Жанр × тип</th><th>Платформа</th><th>Оценка</th><th>Продажи</th><th>Доход</th></tr>
+          <tr><th>Год/нед</th><th>Игра</th><th>Жанр × тип</th><th>Платформа</th><th>Оценка</th><th>Продажи</th><th>Доход</th><th>Вклад</th></tr>
         </thead>
         <tbody>
           {[...game.history].reverse().map((h, i) => (
@@ -346,6 +346,7 @@ export function ArchiveApp() {
               <td><b>{h.score}</b>{h.score >= CONFIG.HALL_OF_FAME ? ' 🏆' : ''}</td>
               <td>{Math.round(h.units)}K</td>
               <td>{Math.round(h.revenue)}K</td>
+              <td>{h.contrib ? Object.entries(h.contrib).map(([n, v]) => `${n} ${v}`).join(' · ') : '—'}</td>
             </tr>
           ))}
         </tbody>

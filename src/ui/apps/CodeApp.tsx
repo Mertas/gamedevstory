@@ -336,7 +336,7 @@ function DevStatus() {
                     </div>
                     <span style={{ fontSize: 10, color: '#444' }}>
                       {Math.round(s.power)}/{s.maxPower}{s.homeWeeks > 0 ? ' · дома' : ''}
-                      {g.contribTotal && g.contribTotal[s.id] ? ` · вклад: ${Math.round(g.contribTotal[s.id] ?? 0)}` : ''}
+                      {g.contribTotal ? ` · вклад: ${Math.round(g.contribTotal[s.id] ?? 0)}` : ''}
                     </span>
                   </div>
                 </td>
