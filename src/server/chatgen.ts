@@ -25,14 +25,9 @@ const PHASE_INSTRUCTIONS: Record<string, string> = {
   fanmail: 'Студия получила письмо от фаната (текст: «%TEXT%»). Один сотрудник открывает обсуждение: живо отреагируйте на письмо сообразно его тону (восторг/недовольство/сдержанно) — ответьте фанату или обсудите с командой, в своём стиле, по делу.',
 };
 
-// персональные личности сотрудников (по id) — важнее характеров по профессиям
-// ПРИМЕЧАНИЕ: GigaChat модерирует жёсткий мат (отказ) — используем мягкую грубость (проверено)
-const STAFF_PERSONAS: Record<string, string> = {
-  'newb-ownerton': 'грубоватый язвительный мужик: ругается мягко («блин», «хреново», «ёлки-палки», «черт возьми»), едко шутит над коллегами, но по-доброму; пишет коротко, просторечно, без канцелярита',
-  'john-gameson': 'спокойный профессионал, говорит сдержанно, по делу, с лёгкой самоиронией',
-  'dee-coder': 'тщеславная драматичная девица в духе Свит Ди из «В Филадельфии всегда солнечно»: считает себя гением и будущей звездой, театрально пафосна, громко драматизирует по пустякам, требует признания своих «невероятных» идей, обижается, когда её не ценят, но по-своему старается',
-  'biggs-porkins': 'на самом деле отличный программист, но по случайности работает звукорежиссёром: ворчит, что сведение звука — не его дело, постоянно съезжает на код, баги и алгоритмы, предлагает рефакторинг, делает звук на отлично, но с видом мученика',
-};
+// персональные личности сотрудников приходят из контентной БД (research/04 → personalities
+// → STAFF.persona → buildContext в game.ts) — ВАЖНЕЕ характеров по профессиям.
+// ПРИМЕЧАНИЕ: GigaChat модерирует жёсткий мат (отказ) — используем мягкую грубость (проверено).
 
 // письмо фаната: текст пишет LLM (движок дал заготовку; GigaChat-модерирует мат — hate без мата)
 export function buildLetterPrompt(letter: {
@@ -62,15 +57,15 @@ export function buildLetterPrompt(letter: {
 }
 
 export function buildMessages(phase: string, context: Record<string, unknown>, replyTo?: string, openingFor?: string): LlmMessage[] {
-  const staff = (context.staff as Array<{ id?: string; name: string; career: string; stats: { program: number; scenario: number; graphics: number; sound: number } }>) ?? [];
+  const staff = (context.staff as Array<{ id?: string; name: string; career: string; stats: { program: number; scenario: number; graphics: number; sound: number }; persona?: string | null }>) ?? [];
   const project = context.project as Record<string, unknown> | null;
   const facts = (context.facts ?? {}) as Record<string, unknown>;
 
   const teamLine = staff.map((s) => `${s.name} (${s.career}, П${s.stats.program}/С${s.stats.scenario}/Г${s.stats.graphics}/З${s.stats.sound})`).join('; ');
 
   const personasLine = staff
-    .filter((s) => s.id && STAFF_PERSONAS[s.id])
-    .map((s) => `${s.name} — ${STAFF_PERSONAS[s.id!]}`)
+    .filter((s) => s.persona)
+    .map((s) => `${s.name} — ${s.persona}`)
     .join('; ');
   const personas = personasLine ? `Личности: ${personasLine}` : '';
 

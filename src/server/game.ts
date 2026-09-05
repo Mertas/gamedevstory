@@ -150,6 +150,7 @@ export class GameServer {
       staff: STAFF.map((s) => ({
         id: s.id, name: s.name, gender: s.gender, salary: s.salary, hireFee: s.hireFee,
         maxPower: s.maxPower, stats: s.stats, careers: s.careers, activeCareer: s.activeCareer, unlock: s.unlock,
+        persona: s.persona,
       })),
       comboGrades: COMBO_GRADES,
       genreOrder: GENRE_ORDER,
@@ -605,6 +606,8 @@ export class GameServer {
         career: s.activeCareer,
         stats: s.stats,
         power: s.power,
+        // личность из контентной БД (research/04 → personalities): используется промптом чата
+        persona: STAFF.find((d) => d.id === s.id)?.persona ?? null,
       })),
       facts: extra ?? {},
     };

@@ -12,6 +12,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const R1 = `${ROOT}research/01_english_wiki_mechanics.md`;
 const R2 = `${ROOT}research/02_formulas_and_numbers.md`;
 const R3 = `${ROOT}research/03_japanese_sources.md`;
+const R4 = `${ROOT}research/04_Личности_сотрудников.md`;
 const DB_PATH = `${ROOT}data/gamedev.db`;
 
 // ---------------- helpers ----------------
@@ -134,6 +135,7 @@ const CONSOLE_MULT: Record<string, number> = {
 const r1 = read(R1);
 const r2 = read(R2);
 const r3 = read(R3);
+const r4 = read(R4);
 
 const bGenres = section(r1, '## Appendix B — Genres (20)', '## Appendix C — Types (79)');
 const bTypes = section(r1, '## Appendix C — Types (79)', '## Appendix D1 — Combo compatibility matrix');
@@ -321,6 +323,21 @@ for (const row of tableRows(bStaff)) {
 }
 if (staff.length !== 45) throw new Error(`staff: ${staff.length}`);
 
+// личности сотрудников (research/04, наш контент [Н]): id → инструкция для LLM-чата
+const bPersonas = section(r4, '## Таблица личностей', '## Конец');
+const staffIds = new Set(staff.map((s) => s.id));
+const personas: { staffId: string; persona: string }[] = [];
+for (const row of tableRows(bPersonas)) {
+  if (row.length < 2 || !row[0] || row[0] === 'id') continue;
+  const id = clean(row[0]);
+  const persona = clean(row[1]);
+  if (!persona) continue;
+  if (!staffIds.has(id)) throw new Error(`persona: неизвестный id «${id}»`);
+  if (personas.some((p) => p.staffId === id)) throw new Error(`persona: дубль id «${id}»`);
+  personas.push({ staffId: id, persona });
+}
+if (personas.length !== 45) throw new Error(`personas: ${personas.length} (нужно 45)`);
+
 // реплики рецензентов
 const messages: { points: number; message: string }[] = [];
 for (const row of tableRows(bMessages)) {
@@ -473,6 +490,9 @@ CREATE TABLE staff (
   career_hw INTEGER NOT NULL, career_hacker INTEGER NOT NULL,
   active_career TEXT NOT NULL, unlock TEXT NOT NULL
 );
+CREATE TABLE personalities (
+  staff_id TEXT PRIMARY KEY, persona TEXT NOT NULL
+);
 CREATE TABLE review_messages (points INTEGER NOT NULL, message TEXT NOT NULL);
 CREATE TABLE contracts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -514,6 +534,7 @@ const insTypes = db.prepare('INSERT INTO types VALUES (?,?,?,?,?,?,?,?)');
 const insCombos = db.prepare('INSERT INTO combos VALUES (?,?,?)');
 const insConsoles = db.prepare('INSERT INTO consoles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
 const insStaff = db.prepare('INSERT INTO staff VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+const insPersonas = db.prepare('INSERT INTO personalities VALUES (?,?)');
 const insMessages = db.prepare('INSERT INTO review_messages VALUES (?,?)');
 const insContracts = db.prepare('INSERT INTO contracts (name,name_ru,name_en,reward_min,reward_max,pr_min,pr_max,weeks,req_program,req_scenario,req_graphics,req_sound,office) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
 const insTrainings = db.prepare('INSERT INTO trainings (name,name_ru,name_en,cost_wan,power,program,scenario,graphics,sound,office) VALUES (?,?,?,?,?,?,?,?,?,?)');
@@ -529,6 +550,7 @@ for (const t of types) insTypes.run(t.id, t.name, TYPES_RU[t.id] ?? t.name, t.po
 for (const c of combos) insCombos.run(c.typeId, c.genreId, c.grade);
 for (const c of consoles) insConsoles.run(c.id, c.name, c.devCost, c.licenseCost, c.company, c.unlockY, c.unlockM, c.unlockW, c.unlockText, c.removedY, c.removedM, c.removedW, c.installBase, c.costMult);
 for (const s of staff) insStaff.run(s.id, s.name, s.gender, s.salary, s.hireFee, s.maxPower, s.stats[0], s.stats[1], s.stats[2], s.stats[3], s.careers.coder, s.careers.writer, s.careers.designer, s.careers.sound, s.careers.director, s.careers.producer, s.careers.hw, s.careers.hacker, s.activeCareer, s.unlock);
+for (const p of personas) insPersonas.run(p.staffId, p.persona);
 for (const m of messages) insMessages.run(m.points, m.message);
 for (const c of contracts) insContracts.run(c.name, CONTRACTS_RU[c.id] ?? null, c.nameEn, c.rewardMin, c.rewardMax, c.prMin, c.prMax, c.weeks, c.reqP, c.reqS, c.reqG, c.reqSo, c.office);
 for (const t of trainings) insTrainings.run(t.name, TRAIN_RU[t.name] ?? null, t.nameEn, t.costWan, t.power, t.program, t.scenario, t.graphics, t.sound, t.office);
