@@ -7,7 +7,7 @@ import type { GameState, StartProjectInput } from '../types';
 import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
 import {
   buyAdAction, dismissSalesmanAction, hireAction, levelUpAction, releaseAction, resolveBoostAction,
-  resolveDisasterAction, resolveEventAction, startProjectAction, trainAction,
+  resolveEventAction, resolveGamedexAction, startProjectAction, trainAction,
 } from '../engine';
 
 export interface PolicyStats {
@@ -36,8 +36,18 @@ export function createPlayer(): ScriptedPlayer {
         if (accept) stats.boostAccepts++;
       }
       if (state.pendingEvent?.type === 'salesman') dismissSalesmanAction(state);
-      if (state.pendingEvent?.type === 'disaster') resolveDisasterAction(state);
-      if (state.pendingEvent?.type === 'boost_result') resolveEventAction(state);
+      // Gamedex: лучший доступный стенд (запас 300K на зарплаты), нет денег — не участвуем
+      if (state.pendingEvent?.type === 'gamedex') {
+        const afford = (Object.entries(CONFIG.GAMEDEX_OPTIONS) as Array<[keyof typeof CONFIG.GAMEDEX_OPTIONS, (typeof CONFIG.GAMEDEX_OPTIONS)[keyof typeof CONFIG.GAMEDEX_OPTIONS]]>)
+          .filter(([id, o]) => id !== 'none' && state.money >= o.cost + 300)
+          .sort((a, b) => b[1].cost - a[1].cost);
+        resolveGamedexAction(state, afford[0] ? afford[0][0] : 'none');
+      }
+      // info-попапы движка (медиа-события, анлоки консолей) и результаты действий
+      if (state.pendingEvent?.type === 'disaster' || state.pendingEvent?.type === 'boost_result'
+        || state.pendingEvent?.type === 'release_result' || state.pendingEvent?.type === 'info') {
+        resolveEventAction(state);
+      }
       if (state.pendingEvent?.type === 'ready_to_release') {
         const res = releaseAction(state);
         if (res.ok) stats.releases++;
@@ -68,10 +78,15 @@ export function createPlayer(): ScriptedPlayer {
         }
       }
 
-      // M4: реклама — дешёвая, когда есть деньги; не чаще раза в неделю
+      // M4: реклама — доступный тип (по деньгам/офису/не исчерпан), не чаще раза в неделю
       if (state.money > 800 && state.activeGame && state.activeGame.phase !== 'released' && state.week % 7 === 0) {
-        const ad = ADS.find((a) => a.id === 1); // журнал, 30K
-        if (ad && state.money > (ad.costWan ?? 0) / 10 + 300) buyAdAction(state, ad.id);
+        const ad = ADS.find(
+          (a) =>
+            state.officeLevel >= (a.office ?? 1) &&
+            (state.adFansGained[a.id] ?? 0) < (CONFIG.AD_FAN_CAPS[a.id] ?? 0) &&
+            state.money > (a.costWan ?? 0) / 10 + 300,
+        );
+        if (ad) buyAdAction(state, ad.id);
       }
 
       // найм: есть место и деньги; в бедности — только дешёвые кандидаты

@@ -1,6 +1,7 @@
 // Система разработки: старт проекта, недельный прогресс, баги, отладка, релиз, сиквелы.
 import { CONFIG } from '../config';
 import { COMBO_GRADES, CONSOLES, GENRES, GENRE_ORDER, MESSAGES, TYPES } from '../data/db';
+import { log } from '../log';
 import {
   debugRate, distributePoints, judgeScore, projectCost, reviewTotal,
   salesPlan, totalBugs, weeklyPoints,
@@ -42,8 +43,10 @@ export function isUnlocked(state: GameState, job: string | null, level: number |
 export function consoleAvailable(state: GameState, consoleId: string): boolean {
   const cs = state.consoles[consoleId];
   if (!cs) return false;
+  // null = консоль ещё не вышла (дата появления в consoleEvents);
+  // раньше null трактовался как «без ограничений» — расходилось с клиентом (shared/meta.ts)
+  if (cs.availableAtWeek === null || cs.availableAtWeek > state.week) return false;
   if (cs.removedAtWeek !== null && cs.removedAtWeek <= state.week) return false;
-  if (cs.availableAtWeek !== null && cs.availableAtWeek > state.week) return false;
   return true;
 }
 
@@ -100,7 +103,8 @@ export function startProject(state: GameState, input: StartProjectInput): Action
     contribTotal: {},
     boostOffered: false,
     boostUsed: false,
-    fame: 10,
+    // известность компании (Gamedex и т.п.) уходит на первый же следующий проект
+    fame: CONFIG.PROJECT_FAME_BASE + state.gamedexFame,
     hype: 10,
     name: input.name?.trim() ?? '',
     plot: input.plot?.trim() ?? '',
@@ -114,6 +118,7 @@ export function startProject(state: GameState, input: StartProjectInput): Action
     ended: false,
   };
   state.activeGame = game;
+  state.gamedexFame = 0; // известность списана на этот проект
   log(state, `Старт разработки: ${genre.name} × ${type.name} (${consoleData.name}, ${input.mode}, ${Math.round(cost)}K, комбо ${game.comboGrade})`);
   return { ok: true };
 }
@@ -355,8 +360,11 @@ export function releaseGame(state: GameState, rng: Rng, name?: string): ActionRe
     combo: game.comboGrade,
     pop: genre.popularity,
     fans: state.fans,
-    fame: 10,
-    hype: 10 + (game.boostUsed ? 10 : 0),
+    // известность/хайп накоплены за разработку: бустеры (+2), успешный буст (+10),
+    // реклама (+5 за кампанию) — реально влияют на продажи через hypeMult
+    // (раньше тут были литералы fame:10/hype:10 — поля писались, но не читались)
+    fame: game.fame,
+    hype: game.hype,
     sequel: isSequel(state, game.genreId, game.typeId),
     consoleMult: consoleData.costMult,
     releaseWeek: state.week,
@@ -422,11 +430,13 @@ export function resolveBoost(state: GameState, rng: Rng, accept: boolean, amount
   if (!ev || ev.type !== 'boost') return { ok: false, error: 'Нет события' };
   state.pendingEvent = null;
   if (!game) return { ok: true };
-  game.boostUsed = true;
+  // отказ = ничего не произошло (раньше boostUsed ставился до проверки — отклонённый
+  // буст давал +хайп при релизе)
   if (!accept) {
     log(state, 'Предложение отклонено');
     return { ok: true };
   }
+  game.boostUsed = true;
   const spend = Math.max(1, Math.round(amount ?? ev.cost));
   if (state.research < spend) return { ok: false, error: 'Не хватает PR' };
   state.research -= spend;
@@ -441,6 +451,7 @@ export function resolveBoost(state: GameState, rng: Rng, accept: boolean, amount
     const gain = rng.int(CONFIG.BOOST_GAIN[0], CONFIG.BOOST_GAIN[1]);
     const key = st ? bestAttr(st) : 'fun';
     game.points[key] += gain;
+    game.hype += CONFIG.BOOST_HYPE_GAIN; // успех повышает ожидания — продажи при релизе
     log(state, `${st?.name ?? 'Сотрудник'} улучшил игру: +${gain} ${key}`);
     state.pendingEvent = {
       type: 'boost_result',
@@ -483,9 +494,4 @@ export function pickMessage(score: number, rng: Rng): string {
   const pool = MESSAGES.filter((m) => m.points === score);
   if (pool.length === 0) return '';
   return pool[rng.int(0, pool.length - 1)]!.message;
-}
-
-function log(state: GameState, text: string): void {
-  state.log.push({ week: state.week, year: state.year, text });
-  if (state.log.length > CONFIG.LOG_CAP) state.log.splice(0, state.log.length - CONFIG.LOG_CAP);
 }

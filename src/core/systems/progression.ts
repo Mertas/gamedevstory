@@ -4,6 +4,7 @@ import { CONFIG } from '../config';
 import {
   ADS, BOOSTER_PRICES, CONTRACTS, GENRES, TRAININGS, TYPES,
 } from '../data/db';
+import { log } from '../log';
 import type { CareerId } from '../data/schema';
 import type { Rng } from '../rng';
 import type {
@@ -15,11 +16,6 @@ const CAREER_RU: Record<CareerId, string> = {
   director: 'Режиссёр', producer: 'Продюсер', hw: 'Инженер железа', hacker: 'Хакер',
 };
 const STAT_RU = { program: 'Программирование', scenario: 'Сценарий', graphics: 'Графика', sound: 'Звук' } as const;
-
-export function log(state: GameState, text: string): void {
-  state.log.push({ week: state.week, year: state.year, text });
-  if (state.log.length > 500) state.log.splice(0, state.log.length - 500);
-}
 
 function staffOf(state: GameState, staffId: string): Staff | undefined {
   return state.staff.find((s) => s.id === staffId);
@@ -193,16 +189,24 @@ export function useBooster(state: GameState, staffId: string, type: string, rng:
   const attr = BOOSTER_ATTR[type];
   if (!attr) return { ok: false, error: 'Неизвестный бустер' };
   const uses = s.boosterUses[type] ?? 0;
+  // ключевая профессия бустера даёт больше очков (research/02 §11);
+  // раньше keyJob вычислялся, но не использовался — все получали «ключевые» 18–22
   const keyJob = s.activeCareer === BOOSTER_KEY_JOB[type];
   let gain: number;
-  if (uses === 0) gain = rng.int(CONFIG.BOOSTER_KEY_GAIN[0]!, CONFIG.BOOSTER_KEY_GAIN[1]!);
-  else if (uses === 1) gain = rng.int(CONFIG.BOOSTER_KEY_GAIN_2[0]!, CONFIG.BOOSTER_KEY_GAIN_2[1]!);
-  else gain = 0;
+  if (uses === 0) {
+    gain = keyJob
+      ? rng.int(CONFIG.BOOSTER_KEY_GAIN[0]!, CONFIG.BOOSTER_KEY_GAIN[1]!)
+      : rng.int(CONFIG.BOOSTER_OTHER_GAIN[0]!, CONFIG.BOOSTER_OTHER_GAIN[1]!);
+  } else if (uses === 1) {
+    gain = keyJob
+      ? rng.int(CONFIG.BOOSTER_KEY_GAIN_2[0]!, CONFIG.BOOSTER_KEY_GAIN_2[1]!)
+      : rng.int(CONFIG.BOOSTER_OTHER_GAIN_2[0]!, CONFIG.BOOSTER_OTHER_GAIN_2[1]!);
+  } else gain = 0;
   s.boosterUses[type] = uses + 1;
   if (gain > 0) {
     g.points[attr] += gain;
     g.hype += 2;
-    log(state, `🧪 ${s.name} применил бустер ${type}: +${gain} ${attr}`);
+    log(state, `🧪 ${s.name} применил бустер ${type}: +${gain} ${attr}${keyJob ? '' : ' (профессия не профильная — эффект ниже)'}`);
   } else {
     log(state, `🧪 Бустер ${type} больше не работает (${s.name})`);
   }
@@ -236,20 +240,29 @@ export function buyCareerManual(state: GameState, staffId: string, target: Caree
 }
 
 // ─── M4: реклама ───
+// Фанаты растут с убыванием до потолка типа (plan/09): прирост = (кап − накоплено) × 0.15 + 50;
+// исчерпанный тип отклоняется (иначе молчаливая пустая трата — «не работает»).
 export function buyAd(state: GameState, adId: number): ActionResult {
   const ad = ADS.find((a) => a.id === adId);
   if (!ad) return { ok: false, error: 'Нет такой рекламы' };
   if (state.officeLevel < (ad.office ?? 1)) return { ok: false, error: `Нужен офис ${ad.office}` };
   const cost = (ad.costWan ?? 0) / 10;
   if (state.money < cost) return { ok: false, error: `Нужно ${cost}K` };
+  const cap = CONFIG.AD_FAN_CAPS[adId] ?? 0;
+  if (cap <= 0) return { ok: false, error: 'У этого вида рекламы нет данных (потолок фанатов)' };
+  const acc = state.adFansGained[adId] ?? 0;
+  if (acc >= cap) return { ok: false, error: 'Фанаты больше не растут — этот способ исчерпан, нужен другой' };
   state.money -= cost;
-  const fans = Math.round(cost * CONFIG.AD_FAN_RATE);
-  state.fans += fans;
+  const gain = Math.min(Math.round((cap - acc) * CONFIG.AD_FAN_GROWTH + CONFIG.AD_FAN_MIN), cap - acc);
+  state.fans += gain;
+  state.adFansGained[adId] = acc + gain;
+  // реклама поднимает ИЗВЕСТНОСТЬ текущей разработки (research/02 §12: fame ↑ via ads;
+  // fame + hype вместе дают множитель продаж при релизе)
   if (state.activeGame && state.activeGame.phase !== 'released') {
-    state.activeGame.hype += CONFIG.AD_HYPE;
+    state.activeGame.fame += CONFIG.AD_FAME_GAIN;
   }
-  state.adsBought[ad.id] = (state.adsBought[ad.id] ?? 0) + 1;
-  log(state, `📣 Реклама «${ad.name}» (−${cost}K): +${fans} фанатов`);
+  state.adsBought[adId] = (state.adsBought[adId] ?? 0) + 1;
+  log(state, `📣 «${ad.nameRu ?? ad.name}» (−${Math.round(cost)}K): +${gain} фанатов`);
   return { ok: true };
 }
 

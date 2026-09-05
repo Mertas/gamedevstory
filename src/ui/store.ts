@@ -35,6 +35,9 @@ const WS_PORT = 3001;
 function connect(): void {
   const ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}/ws`);
   (globalThis as { __gdsWs?: WebSocket }).__gdsWs = ws;
+  // после (пере)подключения сразу синхронизируемся — иначе при паузе (висит событие,
+  // тикер молчит) state не придёт и потерянный клик не вернёт попап решения
+  ws.onopen = () => send({ type: 'get_state' });
   ws.onmessage = (e) => {
     try {
       const d = JSON.parse(String(e.data)) as {
@@ -137,8 +140,8 @@ export function actionResolveBoost(accept: boolean, amount?: number) {
 export function actionDismissSalesman() {
   send({ type: 'resolve_salesman' });
 }
-export function actionResolveDisaster() {
-  send({ type: 'resolve_disaster' });
+export function actionResolveGamedex(option: string) {
+  send({ type: 'resolve_gamedex', option });
 }
 export function actionResolveEvent() {
   send({ type: 'resolve_event' });
@@ -228,6 +231,7 @@ export interface MessageBoxData {
   text?: string;
   body?: React.ReactNode; // произвольное содержимое (вместо/вместе с text)
   buttons: { label: string; onClick: () => void }[];
+  evKey?: string; // ключ события, чей попап показан (пульс сервера не пересоздаёт открытый)
 }
 
 let messageBox: MessageBoxData | null = null;

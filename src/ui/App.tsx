@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { Desktop } from './Desktop';
 import { MessageBox } from './MessageBox';
 import {
-  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, showMessageBox, useSnapshot,
+  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, closeMessageBox,
+  showMessageBox, useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
 import { WindowManagerProvider } from './wm';
 import { CONFIG } from '../core/config';
@@ -14,11 +15,17 @@ function EventWatcher() {
   const ev = snap.game?.pendingEvent;
   // ставка улучшения (PR) — выбирается слайдером
   const [boostAmount, setBoostAmount] = useState(0);
+  const mb = useMessageBox();
   useEffect(() => {
     if (!ev) {
       setBoostAmount(0);
       return;
     }
+    // сервер шлёт state-пульс, пока событие висит: тот же попап не пересоздаём (кнопки под
+    // курсором не должны исчезать), а закрытый (клик потерян из-за обрыва WS) — возвращаем
+    const evKey = JSON.stringify(ev);
+    if (mb && mb.evKey === evKey) return;
+    const popup = (d: Omit<MessageBoxData, 'evKey'>) => showMessageBox(Object.assign(d, { evKey }));
     if (ev.type === 'boost') {
       const staff = snap.game?.staff.find((s) => s.id === ev.staffId);
       setBoostAmount((a) => (a === 0 ? ev.cost : a)); // не сбрасываем выбор игрока
@@ -29,7 +36,7 @@ function EventWatcher() {
         CONFIG.BOOST_SUCCESS_CAP,
         Math.max(0.15, CONFIG.BOOST_SUCCESS_BASE + (amount - ev.cost) * CONFIG.BOOST_RATE_PER_PR + sum / CONFIG.BOOST_SUCCESS_STAT_DIV),
       );
-      showMessageBox({
+      popup({
         title: 'Предложение улучшить игру',
         body: (
           <div>
@@ -56,7 +63,7 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'salesman') {
-      showMessageBox({
+      popup({
         title: 'Продавец Тыквенных Продуктов',
         text: '🛒 Продавец пришёл в офис! Бустеры, Dead Bull и Руководство по смене профессии — во вкладке «Продавец» окна «Найм».',
         buttons: [
@@ -64,8 +71,36 @@ function EventWatcher() {
         ],
       });
     }
+    if (ev.type === 'gamedex') {
+      const money = snap.game?.money ?? 0;
+      const opts = Object.entries(CONFIG.GAMEDEX_OPTIONS).filter(([id]) => id !== 'none');
+      popup({
+        title: '🎪 Gamedex — летняя выставка',
+        body: (
+          <div>
+            <div>Стенд даст известность (стартовый fame <b>следующей</b> игры) и фанатов. Повтор того же стенда подряд — вдвое слабее.</div>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {opts.map(([id, o]) =>
+                money >= o.cost ? (
+                  <button key={id} className="w95-btn" style={{ textAlign: 'left' }} onClick={() => { closeMessageBox(); actionResolveGamedex(id); }}>
+                    {o.label} — {o.cost}K&nbsp;&nbsp;(известность +{o.fame}, фанаты +{o.fans})
+                  </button>
+                ) : (
+                  <div key={id} style={{ color: 'GrayText', fontSize: 12 }}>
+                    {o.label} — {o.cost}K (не хватает {o.cost - money}K)
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        ),
+        buttons: [
+          { label: 'Не участвовать', onClick: () => actionResolveGamedex('none') },
+        ],
+      });
+    }
     if (ev.type === 'disaster') {
-      showMessageBox({
+      popup({
         title: 'Происшествие в студии!',
         text: ev.text,
         buttons: [
@@ -74,7 +109,7 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'boost_result') {
-      showMessageBox({
+      popup({
         title: 'Результат улучшения',
         text: ev.text,
         buttons: [
@@ -83,7 +118,7 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'info') {
-      showMessageBox({
+      popup({
         title: ev.title,
         text: ev.text,
         buttons: [
@@ -92,7 +127,7 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'ready_to_release') {
-      showMessageBox({
+      popup({
         title: 'Игра готова к выпуску!',
         text: ev.text,
         buttons: [
@@ -101,7 +136,7 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'release_result') {
-      showMessageBox({
+      popup({
         title: 'Оценки критиков',
         text: ev.text,
         buttons: [
@@ -109,7 +144,7 @@ function EventWatcher() {
         ],
       });
     }
-  }, [ev, snap.game, boostAmount]);
+  }, [ev, snap.game, boostAmount, mb]);
   return null;
 }
 

@@ -22,6 +22,7 @@ const PHASE_INSTRUCTIONS: Record<string, string> = {
   release: 'Игра выпущена! Обсудите рецензии, продажи и планы на следующий проект.',
   boost: 'Событие в разработке: кто-то предложил улучшение (см. факты). Обсудите результат: получилось или провал.',
   player: 'Босс студии написал в чат: «%TEXT%». Живо ответьте ему в своём стиле — по делу (совет, отчёт, мнение, шутка). Если разговор продолжится — пусть отвечают разные сотрудники по очереди, развивая тему и реагируя друг на друга.',
+  fanmail: 'Студия получила письмо от фаната (текст: «%TEXT%»). Один сотрудник открывает обсуждение: живо отреагируйте на письмо сообразно его тону (восторг/недовольство/сдержанно) — ответьте фанату или обсудите с командой, в своём стиле, по делу.',
 };
 
 // персональные личности сотрудников (по id) — важнее характеров по профессиям
@@ -32,6 +33,33 @@ const STAFF_PERSONAS: Record<string, string> = {
   'dee-coder': 'тщеславная драматичная девица в духе Свит Ди из «В Филадельфии всегда солнечно»: считает себя гением и будущей звездой, театрально пафосна, громко драматизирует по пустякам, требует признания своих «невероятных» идей, обижается, когда её не ценят, но по-своему старается',
   'biggs-porkins': 'на самом деле отличный программист, но по случайности работает звукорежиссёром: ворчит, что сведение звука — не его дело, постоянно съезжает на код, баги и алгоритмы, предлагает рефакторинг, делает звук на отлично, но с видом мученика',
 };
+
+// письмо фаната: текст пишет LLM (движок дал заготовку; GigaChat-модерирует мат — hate без мата)
+export function buildLetterPrompt(letter: {
+  fanName: string; gender: 'M' | 'F'; sentiment: 'love' | 'neutral' | 'hate';
+  gameName: string; score: number; year: number;
+}): LlmMessage[] {
+  const genderWord = letter.gender === 'F' ? 'женщина' : 'мужчина';
+  const tone = letter.sentiment === 'love'
+    ? 'восторженное и благодарное, эмоции через край, но искренне'
+    : letter.sentiment === 'hate'
+      ? 'раздражённое и разочарованное: конкретные претензии, сарказм и ирония, НО без мата и грубостей (письмо приличное, но злое)'
+      : 'сдержанно-доброжелательное, с парой дельных замечаний';
+  return [
+    {
+      role: 'system',
+      content:
+        `Ты — обычный игрок (${genderWord}) в ${letter.year}-м году игровой индустрии, эпоха 8/16-бит. ` +
+        `Напиши письмо в игровую студию от первого лица о только что вышедшей игре. Тон: ${tone}. ` +
+        'Правила: только текст письма, 2–4 предложения, без подписи в конце (имя и так известно), ' +
+        'без markdown, без кавычек-обёртки вокруг всего письма, не упоминай, что ты ИИ.',
+    },
+    {
+      role: 'user',
+      content: `Игра: «${letter.gameName}», оценка критиков ${letter.score}/40. Письмо от ${letter.fanName}.`,
+    },
+  ];
+}
 
 export function buildMessages(phase: string, context: Record<string, unknown>, replyTo?: string, openingFor?: string): LlmMessage[] {
   const staff = (context.staff as Array<{ id?: string; name: string; career: string; stats: { program: number; scenario: number; graphics: number; sound: number } }>) ?? [];
@@ -59,8 +87,8 @@ export function buildMessages(phase: string, context: Record<string, unknown>, r
     : openingFor
       ? `Новичок ${openingFor} только что присоединился к команде. Пусть именно ${openingFor} представится (кто он, что будет делать), в своём стиле.`
       : `Задача: ${
-          phase === 'player'
-            ? PHASE_INSTRUCTIONS.player!.replace('%TEXT%', String((facts.text ?? '').toString().slice(0, 300)))
+          phase === 'player' || phase === 'fanmail'
+            ? PHASE_INSTRUCTIONS[phase]!.replace('%TEXT%', String((facts.text ?? '').toString().slice(0, 300)))
             : PHASE_INSTRUCTIONS[phase] ?? 'Обычный рабочий день.'
         }`;
 

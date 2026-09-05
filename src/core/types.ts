@@ -88,6 +88,7 @@ export interface ActiveGame {
   totalUnits: number;
   totalRevenue: number;
   ended: boolean; // снята с продаж
+  mediaMult?: number; // множитель остатка продаж от медиа-событий (статья/TV/баг), 1 = нет
 }
 
 export interface GameRecord {
@@ -141,10 +142,29 @@ export interface OwnConsoleState {
   progress: number; // недель прошло
 }
 
+// ─── M5: письмо фаната ───
+export interface FanLetter {
+  id: number;
+  week: number; // день получения
+  year: number;
+  gameName: string;
+  score: number; // оценка игры, о которой письмо
+  fanName: string;
+  gender: 'M' | 'F';
+  sentiment: 'love' | 'neutral' | 'hate';
+  fansDelta: number; // эффект уже применён к state.fans
+  text: string; // движковая заготовка; сервер заменяет текстом LLM (llm = true)
+  llm: boolean;
+}
+
+// ─── M5: Gamedex (выставка в июле, офис 2+) ───
+export type GamedexOption = 'none' | 'booth' | 'costumes' | 'girls' | 'star';
+
 export type PendingEvent =
   | { type: 'boost'; staffId: string; cost: number }
   | { type: 'boost_result'; text: string; outcome: 'success' | 'fail' }
   | { type: 'salesman' }
+  | { type: 'gamedex'; year: number }
   | { type: 'disaster'; text: string }
   | { type: 'ready_to_release'; text: string }
   | { type: 'release_result'; text: string }
@@ -153,6 +173,7 @@ export type PendingEvent =
 
 export interface GameState {
   seed: number;
+  saveVersion: number; // версия формата сейва (миграции — src/core/migrate.ts)
   week: number; // 1-based
   money: number; // K
   research: number; // PR
@@ -189,10 +210,18 @@ export interface GameState {
   releasePopupShown: boolean; // попап «игра готова» уже показан для текущей игры
   devContrib: DevContrib[]; // вклад сотрудников за последний тик (UI-анимация)
 
-  // ─── M4 ───
+  // ─── M5: Gamedex ───
+  gamedexHere: boolean; // выставка в городе (1–7 июля, офис 2+)
+  lastGamedex: { year: number; option: GamedexOption } | null; // для «приедается» (ротация)
+  gamedexFame: number; // известность от стендов → к СЛЕДУЮЩЕМУ проекту (списывается на старте)
+
+  // ─── M5 ───
   contracts: ContractState[];
-  adsBought: Record<string, number>;
+  adsBought: Record<string, number>; // сколько раз куплен тип (для UI/истории)
+  adFansGained: Record<string, number>; // накоплено фанатов по типу (потолки/убывание рекламы)
   ownConsole: OwnConsoleState | null;
+  mail: FanLetter[]; // письма фанатов (текст дописывает LLM на сервере)
+  mailId: number; // счётчик id писем
 }
 
 export interface StartProjectInput {

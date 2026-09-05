@@ -1,8 +1,10 @@
-// Движок: создание игры, недельный тик, публичные действия.
+// Движок: создание игры, тик (день), публичные действия.
 import { CONFIG, type HireMethodId } from './config';
 import { CONSOLES } from './data/db';
 import { createRng, rngFromState } from './rng';
-import type { DirectionAxis, GameState, StartProjectInput } from './types';
+import { log } from './log';
+import { SAVE_VERSION } from './migrate';
+import type { DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
 import {
   fireStaff, hireStaff, hireStaffById, makeStaffFromData, paySalaries, pickAvatar, dailyPower,
 } from './systems/staff';
@@ -15,12 +17,17 @@ import {
   tickSalesman, trainStaff, useBooster,
 } from './systems/progression';
 import type { CareerId } from './data/schema';
-import { awardsCeremony, consoleEvents, dailySales, dateToDay, fanDecay } from './systems/market';
+import {
+  awardsCeremony, consoleEvents, dailySales, fanDecay, resolveGamedex, tickGamedex,
+  tickMediaEvents, tryUnlockEventConsoles,
+} from './systems/market';
+import { tickFanLetters } from './systems/mail';
 
 export function newGame(seed = 1): GameState {
   const rng = createRng(seed);
   const state: GameState = {
     seed,
+    saveVersion: SAVE_VERSION,
     week: 1,
     year: 1,
     money: CONFIG.START_MONEY,
@@ -50,9 +57,15 @@ export function newGame(seed = 1): GameState {
     salesmanHere: false,
     boosterPurchases: {},
     unlockedTrainings: [],
+    gamedexHere: false,
+    lastGamedex: null,
+    gamedexFame: 0,
     contracts: [],
     adsBought: {},
+    adFansGained: {},
     ownConsole: null,
+    mail: [],
+    mailId: 0,
     releasePopupShown: false,
     devContrib: [],
   };
@@ -67,23 +80,19 @@ export function newGame(seed = 1): GameState {
     }
   }
 
-  // консоли
+  // консоли: появление по дате выхода обрабатывает consoleEvents (market.ts) —
+  // он же пишет «Слух»/«поступила в продажу»; здесь поле пустое до релиза консоли
   for (const c of CONSOLES) {
     state.consoles[c.id] = {
       licensed: c.licenseCost === 0,
       base: c.installBase,
-      availableAtWeek: Array.isArray(c.unlock) ? dateToDay(c.unlock) : null,
+      availableAtWeek: null,
       removedAtWeek: null,
     };
   }
 
   log(state, 'Компания основана. Денег: 500K. Персонал: 2. Удачи!');
   return state;
-}
-
-function log(state: GameState, text: string): void {
-  state.log.push({ week: state.week, year: state.year, text });
-  if (state.log.length > CONFIG.LOG_CAP) state.log.splice(0, state.log.length - CONFIG.LOG_CAP);
 }
 
 // ---- публичные действия ----
@@ -153,11 +162,6 @@ export function resolveBoostAction(state: GameState, accept: boolean, amount?: n
 
 export function dismissSalesmanAction(state: GameState) {
   dismissSalesman(state);
-}
-
-// закрыть попап катастрофы (блэкаут/поломка) — время продолжит идти
-export function resolveDisasterAction(state: GameState) {
-  if (state.pendingEvent?.type === 'disaster') state.pendingEvent = null;
 }
 
 // закрыть любой информационный попап (результат буста/происшествие/продавец/оценки) — время продолжит идти
@@ -234,6 +238,14 @@ export function startOwnConsoleAction(
   return startOwnConsole(state, name, type, cpu, media);
 }
 
+// Gamedex: выбрать стенд (выставка в июле, офис 2+)
+export function resolveGamedexAction(state: GameState, option: GamedexOption) {
+  const rng = rngFromState(state.rngState, state.seed);
+  const res = resolveGamedex(state, option, rng);
+  state.rngState = rng.state;
+  return res;
+}
+
 // ---- тик ----
 
 export function tick(state: GameState): void {
@@ -249,11 +261,14 @@ export function tick(state: GameState): void {
   }
   dailyPower(state, worked, rng);
 
-  // 2. продажи
+  // 2. продажи + медиа-события после релиза (статья/TV/баг) + письма фанатов
   dailySales(state);
+  tickMediaEvents(state, rng);
+  tickFanLetters(state, rng);
 
   // 3. рынок/консоли
   consoleEvents(state);
+  tryUnlockEventConsoles(state);
   fanDecay(state);
 
   // 4. календарь (1 день = 1 тик; год = 365 дней, старт 1 апреля 1985)
@@ -261,8 +276,9 @@ export function tick(state: GameState): void {
   if (dayInYear === CONFIG.PAYDAY_DAY) paySalaries(state);
   if (dayInYear === CONFIG.AWARDS_DAY) awardsCeremony(state, rng);
 
-  // 5. M3/M4: продавец, контракты, своя консоль
+  // 5. M3/M4/M5: продавец, Gamedex, контракты, своя консоль
   tickSalesman(state);
+  tickGamedex(state);
   tickContracts(state, rng);
   tickOwnConsole(state);
 

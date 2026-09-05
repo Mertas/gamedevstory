@@ -61,7 +61,32 @@ export function consoleAvailable(game: GameState, consoleId: string): boolean {
     && (cs.removedAtWeek === null || cs.removedAtWeek > game.week);
 }
 
+// ─── даты (клиентская копия market.dateLabel; клиент не импортирует core-systems) ───
+const MONTHS_RU = ['апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря', 'января', 'февраля', 'марта'];
+const MONTH_OFFSETS = [0, 30, 61, 91, 122, 153, 183, 214, 244, 275, 306, 334];
+const MONTH_DAYS = [30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 28, 31];
+
+export function dayInYear(week: number): number {
+  return ((week - 1) % 365) + 1; // 365 = CONFIG.YEAR_LENGTH
+}
+
+// «15 июня 1986» (week = игровой день, старт 1 апреля 1985).
+// ВАЖНО: январь–март = конец игрового года → календарный год на 1 больше (4 января игрового
+// года 1 = 4 января 1986, не 1985).
+export function dateLabel(week: number): string {
+  const gameYear = Math.floor((week - 1) / 365);
+  const d = dayInYear(week);
+  for (let m = 0; m < 12; m++) {
+    if (d <= (MONTH_OFFSETS[m] ?? 0) + (MONTH_DAYS[m] ?? 0)) {
+      const year = 1985 + gameYear + (m >= 9 ? 1 : 0); // январь–март (индекс 9–11) — уже следующий год
+      return `${d - (MONTH_OFFSETS[m] ?? 0)} ${MONTHS_RU[m]} ${year}`;
+    }
+  }
+  return `31 марта ${1985 + gameYear + 1}`;
+}
+
 // кандидаты для метода найма (логика как в движке, но на клиентских данных)
+
 export function candidatePool(game: GameState, meta: MetaData, unlock: string[]): string[] {
   return meta.staff
     .filter((d) => !game.hiredIds.includes(d.id))

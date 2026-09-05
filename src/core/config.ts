@@ -1,5 +1,6 @@
 // Все балансные константы — здесь (09_Формулы_и_данные.md, пометки [Н] = наша модель).
 // Калибровка: test/balance.test.ts (M6).
+import type { GamedexOption } from './types';
 
 export type Mode = 'normal' | 'speed' | 'quality' | 'research' | 'budget';
 export type HireMethodId = 'word-of-mouth' | 'magazine' | 'online' | 'vocational' | 'open-house' | 'hollywood';
@@ -67,6 +68,7 @@ export const CONFIG = {
   BOOST_SUCCESS_STAT_DIV: 400,
   BOOST_SUCCESS_CAP: 0.8,
   BOOST_GAIN: [25, 50] as const,
+  BOOST_HYPE_GAIN: 10, // хайп за успешный буст — влияет на продажи при релизе (hypeMult)
   BLACKOUT_CHANCE: 0.003, // 0.04/7/2 — вдвое реже (просьба)
   BLACKOUT_LOSS: 0.3, // −30% всех очков
   BREAKDOWN_CHANCE: 0.00215, // 0.03/7/2 — вдвое реже (просьба)
@@ -174,9 +176,16 @@ export const CONFIG = {
   DEAD_BULL_RESEARCH: 10,
   CAREER_MANUAL_PRICE: [50, 200, 550],
 
-  // ─── M4: реклама (research/02 §12) ───
-  AD_FAN_RATE: 0.1, // фанаты = costK × это
-  AD_HYPE: 5,
+  // ─── M4: реклама (research/02 §12; потолки — plan/09) ───
+  // Фанаты растут с убыванием: у каждого типа свой потолок (ключ = id в БД ads),
+  // прирост за кампанию = (кап − накоплено типом) × AD_FAN_GROWTH + AD_FAN_MIN.
+  // Капы: 1 журнал 2K · 2 интернет 3K · 3 радио 4K · 4 демо 6K · 5 оркестр 8K ·
+  // 6 ТВ 15K · 7 куклы 12K · 8 спонсор ТВ 20K · 9 караван 30K · 10 турнир 60K ·
+  // 11 дирижабль 90K · 12 Луна 150K.
+  AD_FAN_CAPS: { 1: 2000, 2: 3000, 3: 4000, 4: 6000, 5: 8000, 6: 15000, 7: 12000, 8: 20000, 9: 30000, 10: 60000, 11: 90000, 12: 150000 } as Record<number, number>,
+  AD_FAN_GROWTH: 0.15,
+  AD_FAN_MIN: 50,
+  AD_FAME_GAIN: 5, // известность текущей разработки за кампанию (research: реклама ↑ fame)
 
   // ─── M4: контракты (research/03 §8) ───
   CONTRACT_WEEKLY_RATE: 0.05 / 7, // прогресс/день = Σ стат × это (было 0.05 в неделю)
@@ -186,4 +195,40 @@ export const CONFIG = {
   OWN_CONSOLE_WEEKS_BASE: 12,
   OWN_CONSOLE_WEEKS_PER_INDEX: 3,
   OWN_CONSOLE_BASE_GROWTH: 100, // K базы за релиз (общее правило для всех консолей)
+
+  // ─── M5: медиа-события после релиза (plan/09 §2.4) ───
+  MEDIA_CHANCE: 0.12 / 7, // шанс в ДЕНЬ (12%/нед ÷7) на игру в окне
+  MEDIA_WINDOW_DAYS: 56, // первые 8 недель продаж
+  MEDIA_ARTICLE_MULT: 1.08, // «Статья в журнале»: +8% продаж
+  MEDIA_TV_MULT: 1.15, // «TV-сюжет»: +15%
+  MEDIA_BUG_MULT: 0.9, // «Найден баг»: −10% (только если баги на релизе > 0)
+
+  // ─── M5: событийные консоли (анлоки Гран-при; unlock_text в БД [О]) ───
+  GRAND_CONSOLE_JUPITER: 2, // Jupiter 512 — после 2-го Гран-при
+  GRAND_CONSOLE_GAMEJOHN: 5, // GameJohn — 5 Гран-при + 20M копий одной игры
+  GAMEJOHN_UNITS_K: 20000, // 20M копий (units в K)
+
+  // ─── M5: письма фанатов (research: love/hate-письма; [Н]-модель) ───
+  LETTER_CHANCE: 0.07, // шанс письма в день на игру в окне после релиза (~1–2 письма/игра)
+  LETTER_WINDOW_DAYS: 21, // окно: 3 недели после релиза
+  LETTER_LOVE_MIN: 40, // +фанатов за восторженное письмо (оценка ≥ 25)
+  LETTER_LOVE_MAX: 80,
+  LETTER_HATE_MIN: 20, // −фанатов за гневное (оценка ≤ 19)
+  LETTER_HATE_MAX: 60,
+  LETTER_CAP: 50, // храним последние N писем
+
+  // ─── M5: Gamedex (plan/05 §6, research/02 §12; июль, офис 2+) ───
+  // Стенды добавляют ИЗВЕСТНОСТЬ (fame к следующему проекту) + немного фанатов;
+  // повтор той же опции подряд «приедается» (×0.5). Цены в K.
+  GAMEDEX_DAY: 92, // 1 июля (день года от 1 апреля)
+  GAMEDEX_DAY_END: 99, // 8 июля — выставка уезжает (авто-пропуск)
+  PROJECT_FAME_BASE: 10, // стартовая известность проекта (была литералом 10)
+  GAMEDEX_OPTIONS: {
+    none: { cost: 0, fame: 0, fans: 0, label: 'Не участвовать' },
+    booth: { cost: 150, fame: 10, fans: 100, label: 'Обычный стенд' },
+    costumes: { cost: 600, fame: 25, fans: 300, label: 'Талисманы и костюмы' },
+    girls: { cost: 2500, fame: 50, fans: 800, label: 'Промо-команда', newsChance: 0.3, newsFans: 500 },
+    star: { cost: 7000, fame: 100, fans: 2000, label: 'Звезда-гость' },
+  } as Record<GamedexOption, { cost: number; fame: number; fans: number; label: string; newsChance?: number; newsFans?: number }>,
+  GAMEDEX_REPEAT_MULT: 0.5, // повтор той же опции подряд — публика помнит
 };

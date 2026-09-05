@@ -7,13 +7,14 @@ import type { CareerId } from '../core/data/schema';
 import {
   buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   changeCareerAction, dismissSalesmanAction, fireAction, hireAction, hireByIdAction, levelUpAction, moveOfficeAction, newGame,
-  releaseAction, resolveBoostAction, resolveDisasterAction, resolveEventAction, startOwnConsoleAction, startProjectAction,
+  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, tick, trainAction, useBoosterAction,
 } from '../core/engine';
-import type { GameState, Staff, StartProjectInput } from '../core/types';
+import type { GameState, FanLetter, GamedexOption, Staff, StartProjectInput } from '../core/types';
+import { migrateSave } from '../core/migrate';
 import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
-import { buildMessages, parseSingleMessage } from './chatgen';
+import { buildLetterPrompt, buildMessages, parseSingleMessage } from './chatgen';
 import { generateStory, generateWithFallback } from './giga';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -33,7 +34,7 @@ export type ClientAction =
   | { type: 'buy_license'; consoleId: string }
   | { type: 'resolve_boost'; accept: boolean; amount?: number }
   | { type: 'resolve_salesman' }
-  | { type: 'resolve_disaster' }
+  | { type: 'resolve_gamedex'; option: string }
   | { type: 'resolve_event' }
   | { type: 'generate_story'; genreId: string; typeId: string }
   | { type: 'set_speed'; v: number }
@@ -111,10 +112,16 @@ export class GameServer {
   private pendingPlayer: string | null = null; // вопрос игрока, ждущий свободного чата
   private pendingPhase: { phase: string; extra?: Record<string, unknown>; openingFor?: string } | null = null;
   private lastAction: { ok: boolean; error?: string } | null = null;
+  // письма фанатов: текст дописывает LLM (по одному, не чаще раза в игровой день)
+  private letterBusy = false;
+  private letterNextAt = 0;
+  private mailShownId = 0; // последнее письмо, опубликованное в чат
+  private fanReplyQueued = false; // реакция команды ждёт свободного чата
 
   constructor() {
     this.game = this.load();
     this.chat = resetChat();
+    this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
     this.startTicker();
   }
 
@@ -166,14 +173,26 @@ export class GameServer {
   }
 
   // ─── тикер ───
+  private lastPulse = 0; // последний state-пульс при висящем событии (пауза)
   private startTicker(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = setInterval(() => {
-      if (this.speed <= 0 || this.game.bankrupt || this.game.pendingEvent) return;
+      if (this.speed <= 0 || this.game.bankrupt) return;
+      if (this.game.pendingEvent) {
+        // пульс: пока событие ждёт решения, шлём state ~раз в 1.5с. Клиент, потерявший
+        // попап (клик ушёл в оборванный WS), вернёт его; открытый попап не пересоздаётся
+        // (клиент сверяет evKey).
+        if (Date.now() - this.lastPulse >= 1500) {
+          this.lastPulse = Date.now();
+          this.emit();
+        }
+        return;
+      }
       tick(this.game);
       deliverChat(this.game, this.chat);
       this.maybeTriggerPhases();
       if (this.chatThread) void this.nextReply();
+      this.maybeMailLetters();
       this.autosave();
       this.emit();
     }, Math.round(CONFIG.TICK_MS / Math.max(0.5, this.speed)));
@@ -225,6 +244,8 @@ export class GameServer {
       case 'new_game': {
         this.game = newGame(Math.floor(Math.random() * 99991) + 1);
         this.chat = resetChat();
+        this.mailShownId = 0;
+        this.fanReplyQueued = false;
         this.autosave();
         this.emit();
         return;
@@ -292,9 +313,8 @@ export class GameServer {
         dismissSalesmanAction(this.game);
         this.emit();
         return;
-      case 'resolve_disaster':
-        resolveDisasterAction(this.game);
-        this.emit();
+      case 'resolve_gamedex':
+        this.run(resolveGamedexAction(this.game, msg.option as GamedexOption));
         return;
       case 'resolve_event':
         resolveEventAction(this.game);
@@ -401,7 +421,7 @@ export class GameServer {
       return;
     }
     // событие фазы → живая серия: реплики по одной, с ответами друг другу
-    const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : 5; // ответов после открывающей
+    const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : 5; // ответов после открывающей
     this.chatThread = { phase, extra: extra ?? {}, left, busy: false, nextAt: this.game.week, errors: 0, openingFor };
     void this.nextReply();
   }
@@ -463,6 +483,57 @@ export class GameServer {
       this.pendingPhase = null;
       void this.generatePhase(p.phase, p.extra, p.openingFor);
     }
+  }
+
+  // ─── M5: письма фанатов ───
+  // (1) LLM дописывает текст письма; (2) готовое письмо публикуется в ЧАТ целиком, и команда
+  // реагирует серией реплик (фаза 'fanmail'); (3) если чат был занят — реакция откладывается.
+  private maybeMailLetters(): void {
+    // (1) LLM-текст: одно письмо за раз, не чаще раза в игровой день и не во время реплики чата
+    if (!this.letterBusy && this.game.week >= this.letterNextAt && !this.chatThread?.busy) {
+      const pending = this.game.mail.find((m) => !m.llm);
+      if (pending) {
+        this.letterBusy = true;
+        this.letterNextAt = this.game.week + 1;
+        void this.writeLetterText(pending);
+      }
+    }
+    // (2) письмо готово (текст LLM или заготовка) — целиком в чат + реакция команды
+    for (const l of this.game.mail) {
+      if (l.id <= this.mailShownId || !l.llm) continue;
+      this.mailShownId = l.id;
+      const emoji = l.sentiment === 'love' ? '💌' : l.sentiment === 'hate' ? '💔' : '✉️';
+      this.chat.msgs.push({
+        week: l.week, author: `${l.fanName} (фанат)`, avatar: '', text: `${emoji} ${l.text}`, trigger: 'week',
+      });
+      if (this.chatThread || this.pendingPhase || this.pendingPlayer) {
+        this.fanReplyQueued = true; // чат занят — реакция после текущей серии
+      } else {
+        void this.generatePhase('fanmail', { text: l.text, fanName: l.fanName, gameName: l.gameName, sentiment: l.sentiment });
+      }
+      return; // одно письмо за тик
+    }
+    // (3) отложенная реакция на последнее показанное письмо
+    if (this.fanReplyQueued && !this.chatThread && !this.pendingPhase && !this.pendingPlayer) {
+      this.fanReplyQueued = false;
+      const l = this.game.mail.find((x) => x.id === this.mailShownId);
+      if (l) {
+        void this.generatePhase('fanmail', { text: l.text, fanName: l.fanName, gameName: l.gameName, sentiment: l.sentiment });
+      }
+    }
+  }
+
+  private async writeLetterText(letter: FanLetter): Promise<void> {
+    try {
+      const messages = buildLetterPrompt(letter);
+      const { text } = await generateWithFallback(messages, 250);
+      const t = text.trim().replace(/^["«]|["»]$/g, '').slice(0, 700);
+      if (t.length >= 20) letter.text = t; // иначе оставляем заготовку движка
+    } catch { /* GigaChat недоступен — письмо остаётся с заготовкой */ }
+    letter.llm = true;
+    this.letterBusy = false;
+    this.autosave();
+    this.emit();
   }
 
   private lastStaffText(): string | null {
@@ -539,8 +610,7 @@ export class GameServer {
       const raw = fs.readFileSync(SAVE_PATH, 'utf8');
       const data = JSON.parse(raw) as GameState;
       if (data && typeof data.week === 'number') {
-        // защита от легаси-сейвов: продавец ушёл, а пауза осталась
-        if (data.pendingEvent?.type === 'salesman' && !data.salesmanHere) data.pendingEvent = null;
+        migrateSave(data); // версия формата + repair-нормализации (adFansGained, висящая пауза)
         normalizeLegacyContrib(data);
         return data;
       }
@@ -563,7 +633,10 @@ export class GameServer {
       const data = JSON.parse(raw) as { game: GameState; chat: ChatState };
       if (!data?.game || typeof data.game.week !== 'number') return false;
       this.game = data.game;
+      migrateSave(this.game);
       this.chat = data.chat ?? resetChat();
+      this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
+      this.fanReplyQueued = false;
       normalizeLegacyContrib(this.game);
       this.autosave();
       this.emit();

@@ -28,6 +28,9 @@ wss.on('connection', (ws, req) => {
     return;
   }
   ws.send(JSON.stringify({ type: 'meta', data: game.meta() }));
+  // сразу шлём текущее состояние: новый клиент или переподключение на паузе (событие
+  // висит, тикер молчит) иначе не получат state, и попап решения не вернётся
+  ws.send(JSON.stringify({ type: 'state', ...game.snapshot() }));
   const unsub = game.subscribe((snap) => {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'state', ...snap }));
   });

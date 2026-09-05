@@ -192,6 +192,11 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* ── Статус-бар окна ── */
 .w95-statusbar { display: flex; gap: 8px; border-top: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); padding: 2px 4px; font-size: 11px; }
 
+/* Письма фанатов (Почта) */
+.w95-mail-letter { border: 1px solid #a7a394; background: #fff; margin: 4px 2px; padding: 5px 7px; }
+.w95-mail-head { margin-bottom: 3px; }
+.w95-mail-text { white-space: pre-wrap; line-height: 1.35; }
+
 /* ── Мелочи ── */
 .w95-tabs { display: flex; gap: 0; padding: 4px 4px 0; }
 .w95-tab { background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); border-bottom: none; padding: 3px 10px; margin-right: 2px; }

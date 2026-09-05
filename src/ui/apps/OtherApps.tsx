@@ -1,13 +1,14 @@
 // Прочие приложения: Найм, Архив, Железо, Маркетинг, Контракты, Исследования, Журналы, Почта, Справка.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CONFIG } from '../../core/config';
 import type { HireMethodId } from '../../core/config';
-import { candidatePool } from '../../shared/meta';
+import { candidatePool, dateLabel } from '../../shared/meta';
 import {
   actionBuyAd, actionBuyBooster, actionBuyCareerManual, actionBuyDeadBull, actionBuyLicense, actionChangeCareer,
   actionFire, actionHire, actionLevelUp, actionMoveOffice, actionStartOwnConsole,
   actionTakeContract, actionTrain, useGame, useMeta,
 } from '../store';
+import { useWindows } from '../wm';
 
 const METHOD_LABELS: Record<HireMethodId, string> = {
   'word-of-mouth': 'По знакомству ($50K)',
@@ -478,20 +479,34 @@ export function MarketingApp() {
       <b>Реклама</b>
       <table className="w95-table">
         <thead>
-          <tr><th>Способ</th><th>Цена</th><th>Офис</th><th></th></tr>
+          <tr><th>Способ</th><th>Цена</th><th>Офис</th><th>Фанаты (потолок)</th><th></th></tr>
         </thead>
         <tbody>
           {meta.ads.map((a) => {
             const cost = Math.round((a.costWan ?? 0) / 10);
+            const cap = CONFIG.AD_FAN_CAPS[a.id] ?? 0;
+            const got = game.adFansGained?.[a.id] ?? 0;
+            const exhausted = cap > 0 && got >= cap;
+            const noOffice = game.officeLevel < (a.office ?? 1);
+            const poor = game.money < cost || cost === 0;
+            const why = noOffice
+              ? `Нужен офис ${a.office}`
+              : exhausted
+                ? 'Потолок фанатов достигнут — нужен другой способ'
+                : poor
+                  ? `Нужно ${cost}K`
+                  : `+${Math.round((cap - got) * CONFIG.AD_FAN_GROWTH + CONFIG.AD_FAN_MIN)} фанатов за кампанию`;
             return (
               <tr key={a.id}>
                 <td>{a.nameRu ?? a.name}</td>
                 <td>{cost}K</td>
                 <td>{a.office}</td>
+                <td>{cap > 0 ? `${Math.round(got)}/${cap}` : '—'}</td>
                 <td>
                   <button
                     className="w95-btn"
-                    disabled={game.officeLevel < (a.office ?? 1) || game.money < cost || cost === 0}
+                    title={why}
+                    disabled={noOffice || poor || cost === 0 || exhausted}
                     onClick={() => actionBuyAd(a.id)}
                   >
                     Купить
@@ -502,7 +517,11 @@ export function MarketingApp() {
           })}
         </tbody>
       </table>
-      <div className="w95-hint">Реклама даёт фанатов и поднимает ожидание текущей разработки. Gamedex — в разработке.</div>
+      <div className="w95-hint">
+        Каждый способ даёт фанатов с убыванием до своего потолка — исчерпанный способ не работает,
+        нужен другой. Реклама также поднимает известность текущей разработки (продажи при релизе).
+        Gamedex — в разработке.
+      </div>
     </div>
   );
 }
@@ -660,10 +679,45 @@ export function OwnConsolePanel() {
   );
 }
 
+// ─── Почта: письма фанатов (текст пишет LLM на сервере; заготовка — пока не доставлено) ───
 export function MailApp() {
+  const game = useGame();
+  const wm = useWindows();
+  const mail = game.mail ?? [];
+  const mailOpen = wm.wins.some((w) => w.id === 'mail' && !w.minimized);
+  const prevLen = useRef(0);
+  // новое письмо при закрытом окне — подсветка кнопки в таскбаре (снимется при открытии)
+  useEffect(() => {
+    if (mail.length > prevLen.current && !mailOpen) wm.flash('mail');
+    prevLen.current = mail.length;
+  }, [mail.length, mailOpen, wm]);
+
+  if (mail.length === 0) {
+    return (
+      <div className="w95-panel" style={{ height: '100%' }}>
+        <div className="w95-hint">Писем пока нет. Выпускайте игры — фанаты пишут после релизов!</div>
+      </div>
+    );
+  }
   return (
-    <div className="w95-panel">
-      <div className="w95-hint">Письма фанатов — в разработке (M5).</div>
+    <div className="w95-panel" style={{ overflowY: 'auto', height: '100%' }}>
+      {[...mail].reverse().map((l) => {
+        const emoji = l.sentiment === 'love' ? '💌' : l.sentiment === 'hate' ? '💔' : '✉️';
+        const effect = l.fansDelta === 0
+          ? ''
+          : l.fansDelta > 0
+            ? ` · фанаты +${l.fansDelta}`
+            : ` · фанаты ${l.fansDelta}`;
+        return (
+          <div key={l.id} className="w95-mail-letter">
+            <div className="w95-mail-head">
+              {emoji} <b>{l.fanName}</b> — о «{l.gameName}» ({l.score}/40)
+              <span className="w95-hint"> · {dateLabel(l.week)}{effect}</span>
+            </div>
+            <div className="w95-mail-text">{l.text || 'Письмо ещё пишется…'}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }

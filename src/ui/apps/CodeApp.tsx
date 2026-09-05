@@ -328,7 +328,7 @@ function DevStatus() {
             const powerColor = pct > 0.5 ? '#1a7a1a' : pct > 0.25 ? '#b08a00' : '#c00000';
             return (
               <tr key={s.id}>
-                <td data-staff-id={s.id} style={{ width: 180 }}>
+                <td data-staff-id={s.id} style={{ width: '50%' }}>
                   {s.name}{s.homeWeeks > 0 && <span title={`Дома ещё ${s.homeWeeks} нед.`}> 🏠</span>}
                   <div className="w95-row" style={{ gap: 4, marginTop: 2 }}>
                     <div className="w95-staff-power" style={{ width: 80, flex: 'none' }}>

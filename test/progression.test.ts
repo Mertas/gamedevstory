@@ -18,6 +18,23 @@ function gameWithStaff() {
   return g;
 }
 
+// активный проект (как в середине разработки) — для бустеров/рекламы
+function withActiveGame(g: ReturnType<typeof newGame>) {
+  g.money = 5000;
+  g.activeGame = {
+    consoleId: 'pc-game', genreId: 'puzzle', typeId: 'reversi', mode: 'normal',
+    comboGrade: 'S', direction: { cute: 0, realism: 0, approach: 0, niche: 0, simple: 0, innovation: 0, world: 0, polish: 0 }, points: { fun: 0, creativity: 0, graphics: 0, sound: 0 },
+    totalCost: 100, progress: 0.5, bugs: 0, weekStarted: 1, phase: 'dev',
+    proposalStaffId: g.staff[1]!.id,
+    assignments: { proposal: [g.staff[1]!.id], program: [g.staff[0]!.id], graphics: [], sound: [], debug: [] },
+    contribTotal: {},
+    boostOffered: false, boostUsed: false, fame: 10, hype: 10,
+    name: '', score: null, judgeScores: [], reviewMessages: [], releaseWeek: null,
+    sales: [], totalUnits: 0, totalRevenue: 0, ended: false,
+  };
+  return g;
+}
+
 describe('M3: левел-ап', () => {
   it('цена по таблице, статы растут, PR списывается, зарплата ×1.2', () => {
     const g = gameWithStaff();
@@ -89,44 +106,63 @@ describe('M3: карьеры', () => {
 
 describe('M3: продавец и бустеры', () => {
   it('бустер даёт 18–22 очка ключевой профессии при первом применении', () => {
-    const g = gameWithStaff();
+    const g = withActiveGame(gameWithStaff());
     g.salesmanHere = true;
-    g.money = 5000;
-    // стартуем проект, чтобы был activeGame
-    g.activeGame = {
-      consoleId: 'pc-game', genreId: 'puzzle', typeId: 'reversi', mode: 'normal',
-      comboGrade: 'S', direction: { cute: 0, realism: 0, approach: 0, niche: 0, simple: 0, innovation: 0, world: 0, polish: 0 }, points: { fun: 0, creativity: 0, graphics: 0, sound: 0 },
-      totalCost: 100, progress: 0.5, bugs: 0, weekStarted: 1, phase: 'dev',
-      proposalStaffId: g.staff[1]!.id,
-      assignments: { proposal: [g.staff[1]!.id], program: [g.staff[0]!.id], graphics: [], sound: [], debug: [] },
-      contribTotal: {},
-      boostOffered: false, boostUsed: false, fame: 10, hype: 10,
-      name: '', score: null, judgeScores: [], reviewMessages: [], releaseWeek: null,
-      sales: [], totalUnits: 0, totalRevenue: 0, ended: false,
-    };
     expect(buyBooster(g, 'fun').ok).toBe(true);
     const s = g.staff[0]!; // coder = ключевая для fun
     const res = useBooster(g, s.id, 'fun', rng());
     expect(res.ok).toBe(true);
-    const gain = g.activeGame.points.fun;
+    const gain = g.activeGame!.points.fun;
     expect(gain).toBeGreaterThanOrEqual(18);
     expect(gain).toBeLessThanOrEqual(22);
     // третье использование — 0
     useBooster(g, s.id, 'fun', rng());
-    const before = g.activeGame.points.fun;
+    const before = g.activeGame!.points.fun;
     useBooster(g, s.id, 'fun', rng());
-    expect(g.activeGame.points.fun).toBe(before);
+    expect(g.activeGame!.points.fun).toBe(before);
+  });
+
+  it('бустер чужой профессии даёт меньше: 8–11, повторно 1–5', () => {
+    const g = withActiveGame(gameWithStaff());
+    g.salesmanHere = true;
+    const s = g.staff[1]!; // John Gameson, writer — для fun-бустера (ключ coder) чужой
+    expect(buyBooster(g, 'fun').ok).toBe(true);
+    expect(useBooster(g, s.id, 'fun', rng()).ok).toBe(true);
+    const gain1 = g.activeGame!.points.fun;
+    expect(gain1).toBeGreaterThanOrEqual(8);
+    expect(gain1).toBeLessThanOrEqual(11);
+    const before2 = g.activeGame!.points.fun;
+    expect(useBooster(g, s.id, 'fun', rng()).ok).toBe(true);
+    const gain2 = g.activeGame!.points.fun - before2;
+    expect(gain2).toBeGreaterThanOrEqual(1);
+    expect(gain2).toBeLessThanOrEqual(5);
+    // третье использование — 0
+    const before3 = g.activeGame!.points.fun;
+    useBooster(g, s.id, 'fun', rng());
+    expect(g.activeGame!.points.fun).toBe(before3);
   });
 });
 
-describe('M4: реклама', () => {
-  it('даёт фанатов и списывает деньги', () => {
-    const g = gameWithStaff();
+describe('M4: реклама (потолки plan/09)', () => {
+  it('прирост по формуле (кап−накоплено)×0.15+50, с убыванием и потолком', () => {
+    const g = withActiveGame(gameWithStaff()); // активная игра: fame 10, hype 10
     const fans0 = g.fans;
-    const res = buyAd(g, 1); // журнал 300万 = 30K
+    const res = buyAd(g, 1); // журнал: кап 2000, 30K
     expect(res.ok).toBe(true);
-    expect(g.fans).toBeGreaterThan(fans0);
+    expect(g.fans).toBe(fans0 + 350); // (2000−0)×0.15+50
     expect(g.money).toBe(5000 - 30);
+    expect(g.adFansGained[1]).toBe(350);
+    // реклама поднимает ИЗВЕСТНОСТЬ разработки (не hype)
+    expect(g.activeGame!.fame).toBe(15);
+    expect(g.activeGame!.hype).toBe(10);
+    // вторая кампания того же типа — меньше (убывание)
+    expect(buyAd(g, 1).ok).toBe(true);
+    expect(g.adFansGained[1]).toBe(350 + 298); // (2000−350)×0.15+50 = 297.5 → 298
+    // потолок достигнут — отказ без списания денег
+    g.adFansGained[1] = 2000;
+    const moneyBefore = g.money;
+    expect(buyAd(g, 1).ok).toBe(false);
+    expect(g.money).toBe(moneyBefore);
   });
 });
 

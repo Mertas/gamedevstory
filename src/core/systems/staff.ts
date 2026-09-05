@@ -2,6 +2,7 @@
 import { CONFIG, type HireMethodId } from '../config';
 import { STAFF } from '../data/db';
 import { salaryWithLevels } from '../formulas';
+import { log } from '../log';
 import type { Rng } from '../rng';
 import type { ActionResult, GameState, Staff } from '../types';
 
@@ -150,9 +151,4 @@ export function dailyPower(state: GameState, worked: boolean, rng: Rng): void {
       log(state, `${s.name} вымотался и ушёл домой`);
     }
   }
-}
-
-function log(state: GameState, text: string): void {
-  state.log.push({ week: state.week, year: state.year, text });
-  if (state.log.length > CONFIG.LOG_CAP) state.log.splice(0, state.log.length - CONFIG.LOG_CAP);
 }

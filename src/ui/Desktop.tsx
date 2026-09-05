@@ -1,6 +1,5 @@
 // Рабочий стол + панель задач + меню «Пуск».
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CONFIG } from '../core/config';
 import { Window95 } from './Window95';
 import { useWindows } from './wm';
 import { APP_DEFS } from './apps';
@@ -9,26 +8,7 @@ import {
   exportSave, importSave, newGameAction, setSpeed, useChat, useGame, useSpeed,
 } from './store';
 import { typingName } from '../shared/chat';
-
-// реальный календарь: 1 апреля 1985 = день 1
-function monthName(w: number): string {
-  const dayInYear = ((w - 1) % CONFIG.YEAR_LENGTH) + 1;
-  const months = ['апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря', 'января', 'февраля', 'марта'];
-  const offsets = [0, 30, 61, 91, 122, 153, 183, 214, 244, 275, 306, 334];
-  const days = [30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 28, 31];
-  for (let m = 0; m < 12; m++) {
-    if (dayInYear <= (offsets[m] ?? 0) + (days[m] ?? 0)) {
-      return `${dayInYear - (offsets[m] ?? 0)} ${months[m]}`;
-    }
-  }
-  return '31 марта';
-}
-
-function gameDate(w: number): string {
-  const year = Math.floor((w - 1) / CONFIG.YEAR_LENGTH) + 1985;
-  const dayInYear = ((w - 1) % CONFIG.YEAR_LENGTH) + 1;
-  return `${monthName(w)} ${year} г., день ${dayInYear}`;
-}
+import { dateLabel, dayInYear } from '../shared/meta';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -522,7 +502,7 @@ export function Desktop() {
             ))}
           </div>
           <div className="w95-tray-clock">
-            {game.bankrupt ? 'БАНКРОТ' : gameDate(game.week)}
+            {game.bankrupt ? 'БАНКРОТ' : `${dateLabel(game.week)}, день ${dayInYear(game.week)}`}
           </div>
         </div>
       </div>
