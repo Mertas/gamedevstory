@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { Desktop } from './Desktop';
 import { MessageBox } from './MessageBox';
 import {
-  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, closeMessageBox,
-  showMessageBox, useMessageBox, useSnapshot, type MessageBoxData,
+  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, clearDismissedEvKey,
+  closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
 import { WindowManagerProvider } from './wm';
 import { CONFIG } from '../core/config';
@@ -19,11 +19,20 @@ function EventWatcher() {
   useEffect(() => {
     if (!ev) {
       setBoostAmount(0);
+      // аудит 05.09: событие снято сервером — закрыть любой оставшийся попап (например,
+      // «Не участвовать» в Gamedex не закрывал попап локально, и он висел навсегда)
+      closeMessageBox();
+      clearDismissedEvKey();
       return;
     }
     // сервер шлёт state-пульс, пока событие висит: тот же попап не пересоздаём (кнопки под
     // курсором не должны исчезать), а закрытый (клик потерян из-за обрыва WS) — возвращаем
     const evKey = JSON.stringify(ev);
+    // клик уже сделан: попап закрыт локально, событие ещё висит — НЕ переоткрывать (баг «два
+    // клика»); но если за 3с событие не ушло — клик потерян, возвращаем попап (обрыв WS)
+    const d = evDismissed();
+    if (d && d.key === evKey && Date.now() - d.at < EV_DISMISS_MS) return;
+    if (d && d.key !== evKey) clearDismissedEvKey(); // пришло другое событие — сброс
     if (mb && mb.evKey === evKey) return;
     const popup = (d: Omit<MessageBoxData, 'evKey'>) => showMessageBox(Object.assign(d, { evKey }));
     if (ev.type === 'boost') {

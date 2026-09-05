@@ -235,6 +235,12 @@ export interface MessageBoxData {
 }
 
 let messageBox: MessageBoxData | null = null;
+// аудит 05.09 (баг «Оценки критиков не закрываются с 1-го клика»): клик закрывает попап
+// локально, но pendingEvent на сервере ещё висит пару мс — EventWatcher переоткрывал тот же
+// попап (mb=null при ev≠null). Отклонение действует только EV_DISMISS_MS: если за это время
+// сервер не снял событие (клик потерян при обрыве WS) — попап возвращается (пульс 1.5с).
+export const EV_DISMISS_MS = 3000;
+let dismissedEv: { key: string; at: number } | null = null;
 
 export function useMessageBox(): MessageBoxData | null {
   return useSyncExternalStore(subscribe, () => messageBox);
@@ -246,6 +252,16 @@ export function showMessageBox(mb: MessageBoxData): void {
 }
 
 export function closeMessageBox(): void {
+  if (!messageBox) return;
+  if (messageBox.evKey) dismissedEv = { key: messageBox.evKey, at: Date.now() };
   messageBox = null;
   emit();
+}
+
+export function evDismissed(): { key: string; at: number } | null {
+  return dismissedEv;
+}
+
+export function clearDismissedEvKey(): void {
+  dismissedEv = null;
 }
