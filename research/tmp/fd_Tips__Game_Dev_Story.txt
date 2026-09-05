@@ -1,0 +1,58 @@
+{{Game Dev Story}}
+{{Tips}}
+
+== Beginner Tips ==
+*Try to hire new staff when you have more money. (The more staff you have, the faster your game will be completed).
+*Continue to create games (make sure you choose quality or budget), even if a game is on sale.
+*The game depends in you playing Burt's Bouncy Battle.
+Bonus Tips: Try to Save before blackouts :)
+
+(Wow, congrats! You do REALLY love blackouts, huh?)
+==Walkthrough / Strategy==
+
+First thing you should do is hire more staff so you can finish tasks faster. So hire two extra staff members using "Word of Mouth". Your staff of four ideally should have at least a graphics designer, a writer, and a sound engineer. Even if you do not have all of those, this is more or less irrelevant at this point. Use any research points you get to them to level up the writer, graphics designer, and sound engineer 2 levels each, in that order. Do not level them up too much. Do not bother training your initial team too much. Most of them will be replaced with better personnel after your studio gets upgraded and you can hire a team of six people
+
+Console development requires completing at least one game, even with enough cash. Immediately after starting the search for employees, begin a new PC/puzzle/reversi/speed project. Release it the second it is completed, ignoring all bugs. By this time you should have all 4 team members. Next complete another Speed project, but this time on the Microx SX and eliminate all bugs. Wait to license any other consoles until the Game Kid is available. Then license the Game Swan as well when it shows up.
+
+When you have enough money for the most expensive hiring option do it and get 1 producer and 1 director to replace the mostly useless coder and writer. You can even go full hog and hire two producers and two directors which can do the writing, graphics design, sound engineer tasks as your team but this is excessive at this point.
+
+The first games you develop should be the cheapest to develop with the highest impact possible without any initial research like Puzzle/Reversi. You can see the genres and combos in detail in the relevant section in the Wiki.
+
+Release early and often and the money will start piling up especially after you start using the boosts to improve your game quality. Make sure to advertise. Even weak games will sell with enough advertisement.
+
+
+
+After this, you have a lot of options. I am currently playing my fastest game yet where I developed a 32-bit console with CD-ROM 2 years before the release of the Playstatus. I released a 64-bit console with BD-ROM around the time the Playstatus was released. With your own console your game licensing costs are a lot cheaper and if you are ahead of the curve you will get a lot more game sales as the market will be larger than other currently existing consoles. The loss of gamers for not releasing a game for too long can be compensated by two things: release a game immediately before starting R&D on a console and advertise (e.g. TV and/or Blimp Advertising) when releasing the first game on the new console you just developed.
+
+Of course, you cannot develop a new console without having enough skilled personnel. You can develop the 32-bit console relatively easily even with the lower skilled personnel i.e. without hackers but don't try doing a 64-bit console without all three hackers and quite a bit of training or it will take too long. Besides you will need all that development power to develop Game Kid or WonderSwan games in order to raise the capital required for that console which can easily go close to $100 M.
+
+==Walkthrough (alternate)==
+As an addendum to the walkthrough above, another way of creating your own console involves the following strategies. You need $190-million to build the ultimate console with both the Potato Chip and Punch Cards. This also requires 6 Hardware Engineers.
+#Staff: You should have, at the very minimum, the following staff to be trained as Hardware Engineers: Mister X, Sophie Kairo, Cokie Bottleson, Francoise Bloom, and Stephen Jobson. Make sure that both of the Director and Producer stats are unlocked. Of these, get rid of Sophie Kairo after the console is completed. Cokie, on the other hand, is easily worth the $60k yearly salary you'll end up paying with all jobs maxed out.
+#Level Ups: Your aim with the employees is to get them to Hardware Engineer as quickly as possible while using the least number of Career Change Manuals, with the exception for Mister X - give him all the training on every job category to unlock as many game types/genres as possible. For everyone else, remember that the only prerequisites for Hardware Engineer are both Director and Producer jobs at max level, and you ''do not'' need all four basic job types completely maxed for each employee. Example: max out the levels of Sophie Kairo's default job (Lv.1 Director). Use one Career Change Manual to change her job to Designer, level that up, and then use another Manual to change to the Lv.2 Producer you just unlocked. Max that, and you can then use a third Manual to switch to Hardware Engineer.
+#Money: You should have the $190-million to build the dream console, plus at least two years' worth of salaries. Doing so will ensure you have enough funds to finish both the console and the first game release under the new console.
+#Research Points: take a few months off between game releases to perform contracts. In terms of ROI, Tool Development is one of the better paying contracts RP-wise for relatively little work done.
+
+==Game of the Year ==
+If you're aiming for Game of the Year, you need to boost all four elements well over 150 each (200 is preferred). This can be done with a PC game, it doesn't need to be on a console. 
+
+To reach GOTY you need plenty of money, Research Data, Dead Bulls and for the Boosts to be already paid for.  Pay for the most expensive external people to do the design/graphics/sound. Or you can do it in-house; this is easier with two Hackers since one can take a rest while the other works on the next game.  Use Dead Bull to keep the team energy high and have plenty of Research Data handy for the 30 point-chunks needed for each boost. Taking Dead Bull just before a boost or two seems to improve the value of the boost, as well as generating additional Research Data. Throw in a bit of advertising for the fame/hype burst and you'll be there. 
+
+GOTY is easy enough; the last 3-5 years they just keep rolling in. The key is sequels.  Also, try to produce 3-4 Hall of Fame games per year, as it thins out competition for 1st prize.''   ''
+==The Time Traveller Cheat ==
+<span style="font-size:12.0pt;line-height:107%; font-family:" Arial","sans-serif";mso-fareast-font-family:"Times New Roman"; mso-ansi-language:EN-PH;mso-fareast-language:EN-PH;mso-bidi-language:AR-SA">To make your company a less failure one, The time traveller cheat has a way to do that. It only uses the manual save feature. There is an AutoSave but it’s quite not useful within this Cheat Method. The aim of this cheat is to replay the previous settings (the saved one) when a certain failure appears during the gameplay. To do this, you have to save the current best state of the game and when the time a failure arrives, you have to systematically restart the game program and load the saved state to have a better chance to not get the same
+failure. </span>
+===There are certain scenarios to use this cheat:===
+===1. Project Development Scenario===
+:When you are having the plan to make a new game or to take contact projects, save the game immediately. During the development there are certain things that will make the project a failure. One is, you had accidentally chosen the wrong person who will be assigned to a certain task. Other is that, there is another company that has the same genre you are producing with. And if you take contact projects there could be instances that the development cannot be done before the deadline.
+
+===2. Development Boost Scenario=== 
+:When an employee goes near to the manager during a project development, possibly it will propose a boost. Before he/she gets near, try to save the game.  If you think that a certain boost of element is quite not necessary to be done, reloading a saved state can change the boost attempt type. This scenario is partially in conflict with the Project Development Scenario, since your save state is now in the middle of the project development so you can't cancel it completely.
+:
+
+:Another use case would be to reverse a failed boost attempt.
+
+===3. Hiring Scenario===
+: If you try to apply for a hire save the game after you publish the hiring advertisement. When the secretary notifies you the applicants and when viewing them, a large scale of useless applicants, you can use the cheat to change the applicants and soon the secretary notifies you again
+=== 4. Buying Scenario===
+: When the traveling salesman arrives on the building, save the game immediately. When it reaches to the manager it will prompt a trade. If you accidentally bought a useless stuff, use the cheat. It's not quite a thing to buy from the salesman so this scenario is just optional in a sense.

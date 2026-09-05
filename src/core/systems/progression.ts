@@ -6,15 +6,11 @@ import {
 } from '../data/db';
 import { log } from '../log';
 import type { CareerId } from '../data/schema';
+import { CAREER_LABELS } from '../../shared/careers';
 import type { Rng } from '../rng';
 import type {
   ActionResult, GameState, OwnConsoleState, PopupInfo, Staff,
 } from '../types';
-
-const CAREER_RU: Record<CareerId, string> = {
-  coder: 'Кодер', writer: 'Сценарист', designer: 'Дизайнер', sound: 'Звукорежиссёр',
-  director: 'Режиссёр', producer: 'Продюсер', hw: 'Инженер железа', hacker: 'Хакер',
-};
 const STAT_RU = { program: 'Программирование', scenario: 'Сценарий', graphics: 'Графика', sound: 'Звук' } as const;
 
 function staffOf(state: GameState, staffId: string): Staff | undefined {
@@ -22,7 +18,7 @@ function staffOf(state: GameState, staffId: string): Staff | undefined {
 }
 
 // ─── левел-ап ───
-export function levelUpStaff(state: GameState, staffId: string, rng: Rng): ActionResult {
+export function levelUpStaff(state: GameState, staffId: string, _rng: Rng): ActionResult {
   const s = staffOf(state, staffId);
   if (!s) return { ok: false, error: 'Нет такого сотрудника' };
   const career = s.activeCareer;
@@ -56,7 +52,7 @@ export function levelUpStaff(state: GameState, staffId: string, rng: Rng): Actio
       opened.push(`📦 тип «${t.nameRu ?? t.name}»`);
     }
   }
-  const lines: string[] = [`${CAREER_RU[career] ?? career}: Lv${lv} → Lv${newLv}`];
+  const lines: string[] = [`${CAREER_LABELS[career] ?? career}: Lv${lv} → Lv${newLv}`];
   if (gain) {
     for (const k of ['program', 'scenario', 'graphics', 'sound'] as const) {
       const d = { p: gain.p, s: gain.s, g: gain.g, so: gain.so };
@@ -160,7 +156,7 @@ export function boosterPrice(state: GameState, type: string): number | null {
   return row?.price ?? null;
 }
 
-// купить бустер (использование — useBooster)
+// купить бустер (использование — applyBooster)
 export function buyBooster(state: GameState, type: string): ActionResult {
   if (!state.salesmanHere) return { ok: false, error: 'Продавец ушёл' };
   if (!(CONFIG.BOOSTER_TYPES as readonly string[]).includes(type)) return { ok: false, error: 'Неизвестный бустер' };
@@ -181,7 +177,7 @@ const BOOSTER_KEY_JOB: Record<string, CareerId> = {
   fun: 'coder', creativity: 'writer', graphics: 'designer', sound: 'sound',
 };
 
-export function useBooster(state: GameState, staffId: string, type: string, rng: Rng): ActionResult {
+export function applyBooster(state: GameState, staffId: string, type: string, rng: Rng): ActionResult {
   const g = state.activeGame;
   if (!g || g.phase === 'released') return { ok: false, error: 'Нет активной разработки' };
   const s = staffOf(state, staffId);
@@ -267,7 +263,7 @@ export function buyAd(state: GameState, adId: number): ActionResult {
 }
 
 // ─── M4: контракты ───
-export function takeContract(state: GameState, contractId: number, staffIds: string[], rng: Rng): ActionResult {
+export function takeContract(state: GameState, contractId: number, staffIds: string[], _rng: Rng): ActionResult {
   const c = CONTRACTS.find((x) => x.id === contractId);
   if (!c) return { ok: false, error: 'Нет такого контракта' };
   if (state.officeLevel < (c.office ?? 1)) return { ok: false, error: `Нужен офис ${c.office}` };

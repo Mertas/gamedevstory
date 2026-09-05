@@ -1,0 +1,39 @@
+{{Game Dev Story}}
+'''Rival companies''' mostly play a background role in the game, as even when you directly see reference to them, their involvement is mostly random, except in regards to [[consoles (Game Dev Story)|consoles]] being released. Rival companies affect you your company when they release a game similar to one you made (event), appear during annual award ceremonies, and when they release / retire a console.
+
+{| class="wikitable ct firstcolumnleft lastcolumnleft oddrow" style="float:left;"
+|+Companies
+|-
+!Company
+!Consoles
+!Name Pun
+|-
+|Intendro
+|IES, Game Kid, Super IES, Virtual Kid, Game-Box, Intendro DM, Whoops
+|[[wikipedia:Nintendo|Nintendo]]
+|-
+|Karoi Soft
+|Jupiter 512, GameJohn
+|[[wikipedia:Kairosoft|Kairosoft]] - The company that made this game.
+|-
+|Microx
+|Microx SX,Game Swan, Microx 480
+|[[wikipedia:Microsoft|Microsoft]]
+|-
+|Nipon
+|PCC-FQX, NEONGEON, Playdion, Play Popo X
+|[[Wikipedia:NEC|NEC (Nippon)]] / [[wikipedia:Microsoft|SNK]]
+|-
+|Senga
+|Exodus, Play Gear, Uranus, Harpo Drive
+|[[wikipedia:Sega|Sega]]
+|-
+|Sonny
+|
+Playstatus, Mini Status, Playstatus 2
+|[[wikipedia:Sony|Sony]]
+|-
+|Chimpan Games
+|None
+|Unknown
+|}

@@ -99,8 +99,9 @@ export function fireStaff(state: GameState, staffId: string): ActionResult {
   if (i < 0) return { ok: false, error: 'Нет такого сотрудника' };
   const s = state.staff[i]!;
   state.staff.splice(i, 1);
-  // уволенный сохраняет прогресс и может быть нанят снова тем же методом
-  state.hiredIds.push(s.id);
+  // аудит 05.09: уволенный возвращается в пул кандидатов (раньше hiredIds.push() делал
+  // обратное заявленному — повторный найм был невозможен, плюс копились дубли)
+  state.hiredIds = state.hiredIds.filter((id) => id !== s.id);
   log(state, `Уволен: ${s.name}`);
   return { ok: true };
 }

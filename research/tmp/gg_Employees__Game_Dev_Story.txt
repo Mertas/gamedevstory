@@ -1,0 +1,1277 @@
+{{Game Dev Story}}'''Employees''' are the cornerstone of the game, performing every task. They may be leveled or trained, and have unequal skill sets in order to force diversity into your workforce. There are 44 hire-able and 18 outsourced employees in Game Dev Story.
+
+==Employee Statistics==
+There are four main statistics that are used to measure an employee's skill.
+
+*[[File:Program-game dev story.png]] '''Programming:''' General skill. Mostly govern the speed at which fun points are produced during development.
+*[[File:Scenario-game dev story.png]] '''Scenario: '''How good they are at both writing game proposals and adding creativity points during development.
+*[[File:Graphics-game dev story.png]] '''Graphics: '''How good they are at creating graphics and adding graphics points during development.
+*[[File:Sound-game dev story.png]] '''Sound: '''How good they are at composing music and adding sound points during development.
+
+Employees with different job types are usually weighted toward different stats.
+
+==Careers==
+{{Main|Careers (Game Dev Story)}}There are a total of 8 different careers, with different pros and cons. Some require specific unlock conditions, but all employees start off with some job.
+
+More information about careers can be found on the careers page, but a list of careers is:
+*Coder
+*Writer
+*Designer
+*Sound Engineer
+*Director
+*Producer
+*Hardware Engineer
+*Hacker
+
+==Leveling Up==
+Leveling your employees requires Research Data ([[File:Research Data-GameDevStory.png]]) and raises both employee stats and salary. Through the use of the Career Change Manual available from the traveling salesman, you may choose an employee to change careers, and begin leveling them up in each career. Once an employee is level 5 in both Director and Producer, the Hardware Engineer career becomes available to that employee, and you may begin working on Console development. Normally this means having level 5 in all jobs, but employees that start as Director or Producer can circumvent this.
+
+Salaries grow at a compounding rate: each level up multiplies the salary by 1.2. As such, the stat increases from leveling up come at a high cost compared to training; so, the main reason to level characters is to unlock genres and types or switch to a better career.
+
+==Hiring Methods==
+
+{| class="wikitable"
+!Type
+!Cost ($)
+!Unlocked
+!Description
+|-
+|Word of Mouth
+|50.0K
+|{{Initially available}}
+|Ask staff to recommend someone.
+|-
+|Magazine Ad
+|120.0K
+|{{Initially available}}
+|Place an ad in a game magazine.
+|-
+|Online Ad
+|550.0K
+|{{Initially available}}
+|Search from newbies to veterans.
+|-
+|Vocational School
+|800.0K
+|Move to office 2
+|Look for young kids with promise.
+|-
+|Open House
+|1,800.0K
+|Move to office 2
+|Expensive, but effective.
+|-
+|Hollywood Agent
+|3,500.0K
+|Move to office 3
+|Conduct a worldwide search.
+|}
+
+==Training Methods==
+{{Main |Training (Game Dev Story)}}
+[[File:Employee Info-GameDevStory.png|right]]There are many training methods that your employees can use, with more and more being unlocked as you progress through the game. Training drains the employee's power bar. The training methods do stop having effect after a while, so keep this in mind.
+
+==Firing==
+You may fire an employee in Game Dev Story, but this comes with both added benefit and detriment. Firing an employee that has low stats or a high salary opens up room for another employee. Budgetary constraints may also demand a layoff if your employees' salaries are to be paid and you do not have the funds.
+
+If an employee is fired, they retain their salary, trained stats and job levels. They may be hired back through the normal method for that character, listed below. This can be used to great effect- if you develop a console you will need a hardware engineer, who will have an extremely high salary. Once you finish your console, you can replace them with a less costly, better trained employee, and hire the engineer again later if you need to make a new console.
+
+==Employee List==
+Bold career levels indicate the initial career an employee starts out as.
+{{Sticky table start}}
+{| class="wikitable oddrow sortable sticky-table-head sticky-table-col1" style="text-align:center;"
+|+Employees
+|-
+! rowspan="2" |Name
+! rowspan="2" |Gender
+! rowspan="2" |Initial<br />Salary
+! rowspan="2" |Contract<br />Fee ($)
+! rowspan="2" |Max<br />Power
+! colspan="5" |Initial Stats
+! colspan="8" |Initial Careers Levels
+! rowspan="2" |Unlock
+! rowspan="2" |Name Reference
+|-
+!class="sticky-table-none" |[[File:Program-game dev story.png|Program]]
+![[File:Scenario-game dev story.png|Scenario]]
+![[File:Graphics-game dev story.png|Graphics]]
+![[File:Sound-game dev story.png|Sound]]
+!Total
+! style="font-size:80%;" |Coder
+! style="font-size:80%;" |Writer
+! style="font-size:80%;" |Designer
+! style="font-size:80%;" |Snd.&nbsp;Eng.
+! style="font-size:80%;" |Director
+! style="font-size:80%;" |Producer
+! style="font-size:80%;" |Hard.&nbsp;Eng.
+! style="font-size:80%;" |Hacker
+|-
+|John Gameson
+|{{sex|m}}
+|$20.0K
+|$40.0K
+|8
+|3
+|24
+|3
+|6
+|36
+|
+|'''1'''
+|
+|
+|
+|
+|
+|
+|{{ia}}
+| style="text-align: left;" |Refers to "[[Wikipedia:John Jameson|John Jameson]]" whiskey
+|-
+|Newb Ownerton
+|{{sex|m}}
+|$20.0K
+|$40.0K
+|9
+|18
+|8
+|8
+|3
+|37
+|'''1'''
+|
+|
+|
+|
+|
+|
+|
+|{{ia}}
+| style="text-align: left;" |Noob Ownz
+|-
+|S. Presso
+|{{sex|m}}
+|$24.0K
+|$40.0K
+|10
+|2
+|14
+|15
+|6
+|37
+|
+|'''1'''
+|
+|
+|
+|
+|
+|
+|{{ia}}
+| style="text-align: left;" |[[Wikipedia:Espresso|Espresso]] - A joke about [http://www.famousquotes.com/show/1721015/ programmers living on coffee]
+|-
+|Dee Coder
+|{{sex|f}}
+|$28.0K
+|$40.0K
+|13
+|1
+|1
+|36
+|3
+|41
+|
+|
+|'''1'''
+|
+|
+|
+|
+|
+|{{ia}}
+| style="text-align: left;" |[[Wikipedia:Decoder|Decoder]]
+|-
+|Biggs Porkins
+|{{sex|m}}
+|$26.0K
+|$50.0K
+|12
+|15
+|6
+|3
+|7
+|31
+|'''1'''
+|
+|
+|3
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |'''Biggs''' and '''Porkins''' are members of [[Wikipedia:Rogue Squadron|Red Squadron]], from [[Wikipedia:Star Wars Episode IV: A New Hope|Star Wars Episode IV: A New Hope]]
+|-
+|Sam Ulation
+|{{sex|m}}
+|$24.0K
+|$50.0K
+|11
+|24
+|4
+|2
+|2
+|32
+|'''1'''
+|
+|
+|
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Computer simulation|Simulation]]
+|-
+|Amy Less
+|{{sex|f}}
+|$30.0K
+|$60.0K
+|14
+|7
+|19
+|2
+|10
+|38
+|
+|'''1'''
+|
+|2
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |"''Aimless''"
+|-
+|Callie Fornia
+|{{sex|f}}
+|$35.0K
+|$60.0K
+|14
+|15
+|8
+|10
+|13
+|46
+|2
+|
+|
+|'''3'''
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:California|California]] - Location of [[Wikipedia:Silicon Valley|Silicon Valley]]
+|-
+|Holly Cow
+|{{sex|f}}
+|$40.0K
+|$130.0K
+|13
+|13
+|20
+|6
+|14
+|53
+|5
+|
+|2
+|'''1'''
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Holy cow (expression)|Holy Cow]]
+|-
+|Chuck Shultz
+|{{sex|m}}
+|$50.0K
+|$130.0K
+|14
+|10
+|18
+|23
+|6
+|57
+|
+|'''3'''
+|
+|2
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Charles Schulz|Charles Schulz]]
+|-
+|Ann Deroid
+|{{sex|f}}
+|$26.0K
+|$50.0K
+|13
+|3
+|12
+|18
+|26
+|59
+|
+|
+|
+|'''1'''
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Android|Android]]
+|-
+|Gilly Bates
+|{{sex|f}}
+|$30.0K
+|$60.0K
+|13
+|24
+|26
+|4
+|6
+|60
+|'''2'''
+|2
+|
+|
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Bill Gates|Bill Gates]]
+|-
+|Lady Googoo
+|{{sex|f}}
+|$45.0K
+|$130.0K
+|14
+|24
+|18
+|4
+|15
+|61
+|'''2'''
+|3
+|3
+|
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Lady Gaga|Lady Gaga]]
+|-
+|Vincent Vangoo
+|{{sex|m}}
+|$60.0K
+|$240.0K
+|15
+|8
+|8
+|30
+|25
+|71
+|
+|2
+|'''3'''
+|
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Vincent van Gogh|Vincent van Gogh]]
+|-
+|Abraham Malcolm
+|{{sex|m}}
+|$60.0K
+|$180.0K
+|15
+|9
+|20
+|30
+|20
+|79
+|
+|5
+|
+|'''3'''
+|
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Abraham Lincoln|Abraham Lincoln]]
+|-
+|Shigeto Minamoto
+|{{sex|m}}
+|$70.0K
+|$200.0K
+|16
+|24
+|48
+|25
+|10
+|107
+|5
+|2
+|
+|
+|'''1'''
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Shigeru Miyamoto|Shigeru Miyamoto]]
+|-
+|Marla Sharpovich
+|{{sex|f}}
+|$65.0K
+|$200.0K
+|15
+|24
+|7
+|39
+|8
+|78
+|
+|2
+|5
+|
+|2
+|'''2'''
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Maria Sharapova|Maria Sharapova]]
+|-
+|Shirley Ugest
+|{{sex|f}}
+|$85.0K
+|$300.0K
+|16
+|28
+|49
+|6
+|32
+|115
+|3
+|
+|5
+|
+|
+|'''4'''
+|
+|
+|Word of Mouth
+| style="text-align: left;" |"''surely you jest''"
+|-
+|Clementine Jones
+|{{sex|f}}
+|$65.0K
+|$400.0K
+|15
+|36
+|36
+|15
+|5
+|92
+|4
+|3
+|
+|
+|'''1'''
+|
+|
+|
+|Word of Mouth
+| style="text-align: left;" |[[Wikipedia:Reno 911! characters#Deputy Johnson|Clementine Johnson]]
+|-
+|Frank Biller
+|{{sex|m}}
+|$33.3K
+|$500.0K
+|18
+|60
+|24
+|50
+|10
+|144
+|
+|
+|
+|
+|'''2'''
+|
+|
+|
+|Vocational School
+| style="text-align: left;" |[https://en.m.wikipedia.org/wiki/Frank_Miller Frank Miller], American Comic Writer
+|-
+|Dave Lightman
+|{{sex|m}}
+|$70.0K
+|$250.0K
+|17
+|32
+|85
+|9
+|19
+|145
+|5
+|'''4'''
+|0
+|5
+|2
+|
+|
+|
+|Vocational School
+| style="text-align: left;" |David Lightman, main character in [[Wikipedia:WarGames|WarGames]]
+|-
+|Kitty Pawson
+|{{sex|f}}
+|$90.0K
+|$260.0K
+|17
+|7
+|16
+|40
+|104
+|167
+|
+|3
+|5
+|'''3'''
+|
+|
+|
+|
+|Vocational School
+| style="text-align: left;" |(Kitty = cat) "''Cat '''Per'''son''" / [[Wikipedia:Katy Perry|Katy Perry]] / [[Wikipedia:Miss Kittin|Miss Kittin]]
+|-
+|Bob Clockwatcher
+|{{sex|m}}
+|$65.0K
+|$150.0K
+|17
+|47
+|14
+|21
+|88
+|170
+|
+|2
+|'''2'''
+|3
+|
+|
+|
+|
+|Vocational School
+| style="text-align: left;" |[[Wikipedia:Bob Gale|Bob Gale]], co-writer of ''[[Wikipedia:Back to the Future|Back to the Future]]''
+|-
+|Jane Dough
+|{{sex|f}}
+|$99.9K
+|$800.0K
+|19
+|84
+|60
+|15
+|12
+|171
+|5
+|'''3'''
+|1
+|2
+|3
+|1
+|{{∅}}
+|{{∅}}
+|Vocational School
+| style="text-align: left;" |[[Wikipedia:Jane Doe (pseudonym) |Jane Doe]]
+|-
+|Max Torque
+|{{sex|m}}
+|$120.0K
+|$270.0K
+|18
+|28
+|84
+|32
+|32
+|176
+|
+|3
+|5
+|5
+|
+|'''1'''
+|
+|
+|Vocational School
+| style="text-align: left;" |
+|-
+|George Marlin
+|{{sex|m}}
+|$120.0K
+|$300.0K
+|18
+|36
+|120
+|50
+|20
+|226
+|5
+|3
+|3
+|5
+|'''1'''
+|
+|
+|
+|Vocational School
+| style="text-align: left;" |[[Wikipedia:George Carlin|George Carlin]]
+|-
+|John Dough
+|{{sex|m}}
+|$102.4K
+|$300.0K
+|19
+|35
+|16
+|30
+|156
+|237
+|{{∅}}
+|{{∅}}
+|5
+|'''3'''
+|2
+|2
+|{{∅}}
+|{{∅}}
+|Vocational School
+| style="text-align: left;" |[[Wikipedia:John Doe|John Doe]]
+|-
+|Honey Sweety
+|{{sex|f}}
+|$88.8K
+|$580.0K
+|18
+|24
+|56
+|91
+|16
+|187
+|5
+|2
+|3
+|4
+|3
+|'''1'''
+|{{∅}}
+|{{∅}}
+|Vocational School
+| style="text-align: left;" |Honey and Sweetie are [[Wikipedia:Hypocorism|pet names]] (nicknames), and an [[Wikipedia:Idiom|idiom]] is formed using these words; '''"Sweet''' as '''Honey'''"
+|-
+|Charlize Theory
+|{{sex|f}}
+|$120.0K
+|$840.0K
+|20
+|36
+|120
+|30
+|50
+|236
+|3
+|2
+|{{∅}}
+|5
+|'''1'''
+|1
+|{{∅}}
+|{{∅}}
+|Vocational School
+| style="text-align: left;" |[[Wikipedia:Charlize Theron|Charlize Theron]]
+|-
+|Charles Royal
+|{{sex|m}}
+|$130.0K
+|$380.0K
+|20
+|96
+|72
+|50
+|108
+|326
+|2
+|1
+|{{∅}}
+|4
+|'''2'''
+|{{∅}}
+|{{∅}}
+|{{∅}}
+|Vocational School
+| style="text-align: left;" |[[Wikipedia:Charles II of England|King Charles the II]]
+|-
+|[[Sandy Claus]]
+|{{sex|f}}
+|$200.0K
+|$1000.0K
+|20
+|80
+|40
+|92
+|54
+|266
+|5
+|'''2'''
+|1
+|3
+|2
+|
+|
+|
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Santa Claus|Santa Claus]]
+|-
+|Donny Jepp
+|{{sex|m}}
+|$160.0K
+|$700.0K
+|20
+|120
+|132
+|30
+|30
+|312
+|{{∅}}
+|5
+|3
+|{{∅}}
+|'''2'''
+|1
+|{{∅}}
+|{{∅}}
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Johnny Depp|Johnny Depp]]
+|-
+|Mindy Crawford
+|{{sex|f}}
+|$230.0K
+|$1500.0K
+|25
+|72
+|120
+|50
+|120
+|362
+|{{∅}}
+|4
+|3
+|{{∅}}
+|'''1'''
+|2
+|{{∅}}
+|{{∅}}
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Cindy Crawford|Cindy Crawford]]
+|-
+|Bubbles Morgan
+|{{sex|f}}
+|$150.0K
+|$420.0K
+|24
+|59
+|64
+|120
+|120
+|363
+|{{∅}}
+|5
+|'''3'''
+|5
+|{{∅}}
+|{{∅}}
+|{{∅}}
+|{{∅}}
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Barney Bubbles|Barney Bubbles]], [[Wikipedia:Frederick Morgan (painter)|Frederick Morgan]]
+|-
+|Stephen Jobson
+|{{sex|m}}
+|$300.0K
+|$2000.0K
+|29
+|112
+|168
+|130
+|104
+|514
+|5
+|3
+|2
+|5
+|{{∅}}
+|'''1'''
+|{{∅}}
+|{{∅}}
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Steven Jobs|Steve Jobs]] or [[Wikipedia:Steven Johnson|Steven Johnson]]
+|-
+|Cokie Bottleson
+|{{sex|f}}
+|$600.0K
+|$8500.0K
+|30
+|120
+|180
+|140
+|78
+|518
+|'''1'''
+|5
+|1
+|
+|3
+|
+|2
+|
+|Open House & Office 3
+| style="text-align: left;" |"''[[Wikipedia:Coca-Cola|Coke]] Bottle''"
+|-
+|Sophie Kairo
+|{{sex|f}}
+|$350.0K
+|$5500.0K
+|24
+|144
+|96
+|170
+|180
+|590
+|3
+|{{∅}}
+|4
+|5
+|'''1'''
+|2
+|{{∅}}
+|{{∅}}
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Kairosoft|Kairosoft]]
+|-
+|Walt Sidney
+|{{sex|m}}
+|$300.0K
+|$4500.0K
+|30
+|288
+|225
+|234
+|130
+|877
+|
+|2
+|
+|3
+|1
+|
+|5
+|'''1'''
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Walt Disney|Walt Disney]]
+|-
+|Dexter McPhee
+|{{sex|m}}
+|$400.0K
+|$7500.0K
+|20
+|48
+|270
+|260
+|195
+|773
+|
+|4
+|5
+|
+|2
+|3
+|1
+|'''1'''
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:Norton antivirus|Norton]] and [[Wikipedia:McAfee Antivirus|McAfee]]
+|-
+|Francoise Bloom
+|{{sex|f}}
+|$800.0K
+|$8888.8K
+|30
+|357
+|336
+|224
+|168
+|1085
+|5
+|
+|3
+|4
+|
+|2
+|
+|'''1'''
+|Open House & Office 3
+| style="text-align: left;" |[[Wikipedia:The Hacker|The Hacker]]
+|-
+|[[Mister X]]<br />(Mystery Staffer X)
+|{{sex|m}}
+|$100.0K
+|$500.0K
+|24
+|48
+|25
+|4
+|7
+|84
+|'''5'''
+|5
+|2
+|
+|
+|
+|
+|
+|2nd office
+and
+
+Top 10 sales chart  (Vocational School)
+| style="text-align: left;" |None - a [[recurring character]]
+|-
+|[[King Ackbar]]<br />(Mystery Staffer A)
+|{{sex|m}}
+|$150.0K
+|$1500.0K
+|26
+|36
+|61
+|47
+|52
+|196
+|2
+|5
+|5
+|
+|'''2'''
+|
+|
+|
+|2nd office and achieve "Sell 1 Million" (Open House)
+| style="text-align: left;" |[[Wikipedia:Abdullah of Saudi Arabia|King Abdullah]], also [[Wikipedia:admiral ackbar|Admiral Ackbar]]
+|-
+|[[Grizzly Bearington]]<br />(Mystery Staffer B)
+|{{sex|m}}
+|$400.0K
+|$4444.4K
+|27
+|64
+|112
+|104
+|64
+|344
+|
+|1
+|5
+|5
+|
+|'''1'''
+|
+|
+|Win a Game of the Year Award (Hollywood Agent)
+| style="text-align: left;" |[[Wikipedia:grizzly bear|Grizzly Bear]]
+|-
+|[[Chimpan Z|Chimpan Z-Force]]<br />(Mystery Staffer C)
+|{{sex|m}}
+|$600.0K
+|$6553.3K
+|30
+|182
+|182
+|39
+|39
+|442
+|2
+|
+|2
+|4
+|5
+|
+|'''1'''
+|
+|3 Game of the Year Awards (Hollywood Agent)
+| style="text-align: left;" |[[Wikipedia:Chimpanzee|Chimpanzee]]
+|-
+|[[Kairobot]]<br />(Mystery Staffer K)
+|{{sex|m}}
+|$900.0K
+|$6553.6K
+|30
+|320
+|300
+|260
+|260
+|1140
+|3
+|3
+|5
+|2
+|2
+|2
+|5
+|'''5'''
+|5 Game of the Year Awards (Hollywood Agent)
+| style="text-align: left;" |None - [[Kairosoft]]'s mascot
+|}
+{{Sticky table end}}
+
+==Outsourcing==
+When making a game, you may use outside specialists to work on your game (for a price). This can be handy if you don't have an employee early on to do that role, only have one employee that can do it, and want to avoid using them again since it hurts the stats gained, or simply want a higher boost than your employees offer (costs more). When choosing someone to work on the game, contractors are marked by <span style="background:red; color:white; font-weight:bold; padding:1px 7px 1px 3px;">Out</span>.
+
+{{Sticky table start}}
+{| class="wikitable oddrow sortable sticky-table-head sticky-table-col1" style="text-align:center;"
+|+Outsourced Employees
+|- class="hrow"
+! rowspan="2" |Name
+! rowspan="2" |Gen<br />der
+! rowspan="2" |Cost ($)
+! rowspan="2" |Type
+! colspan="4" |Stats
+! rowspan="2" |Unlocked
+! rowspan="2" |Name Reference
+|-
+!class="sticky-table-none" |[[File:Program-game dev story.png]]
+![[File:Scenario-game dev story.png]]
+![[File:Graphics-game dev story.png]]
+![[File:Sound-game dev story.png]]
+|-
+|Josh Slackerville
+|{{sex|m}}
+|$10.0K
+|Writer
+|15
+|24
+|3
+|6
+|{{Initially available}}
+| style="text-align: left;" |
+|-
+|Mark Jersey
+|{{sex|m}}
+|$100.0K
+|Writer
+|16
+|48
+|7
+|7
+|
+| style="text-align: left;" |Mark Blaudschun, sports writer, [http://ajerseyguy.com A Jersey Guy]
+|-
+|Sid Hightower
+|{{sex|m}}
+|$350.0K
+|Writer
+|24
+|78
+|17
+|9
+|
+| style="text-align: left;" |[[wikipedia:Scott Hightower|Scott Hightower]]
+|-
+|Hugh Jative
+|{{sex|m}}
+|$770.0K
+|Writer
+|45
+|158
+|26
+|4
+|
+| style="text-align: left;" |''"fugitive"''
+|-
+|Ima Gamer
+|{{sex|f}}
+|$1,000.0K
+|Writer
+|108
+|234
+|46
+|39
+|
+| style="text-align: left;" |"''I'm a gamer''"
+|-
+|William Tomato
+|{{sex|m}}
+|$2,400.0K
+|Writer
+|120
+|282
+|75
+|24
+|
+| style="text-align: left;" |[[Wikipedia:William Tell|William Tell]]
+|-
+|Steve Kingly
+|{{sex|m}}
+|$10.0K
+|Designer
+|2
+|4
+|24
+|12
+|{{Initially available}}
+| style="text-align: left;" |[[Wikipedia:Stephen King|Stephen King]]
+|-
+|Jake Kirby
+|{{sex|m}}
+|$95.0K
+|Designer
+|7
+|9
+|48
+|25
+|
+| style="text-align: left;" |[[Wikipedia:Jack Kirby|Jack Kirby]]
+|-
+|Quinn Harley
+|{{sex|f}}
+|$320.0K
+|Designer
+|35
+|32
+|69
+|32
+|
+| style="text-align: left;" |[[Wikipedia:Harley Quinn|Harley Quinn]]
+|-
+|Pablo Piccolo
+|{{sex|m}}
+|$640.0K
+|Designer
+|44
+|20
+|172
+|4
+|
+| style="text-align: left;" |[[Wikipedia:Pablo Picasso|Pablo Picasso]]
+|-
+|Art Major
+|{{sex|m}}
+|$950.0K
+|Designer
+|30
+|80
+|246
+|52
+|
+| style="text-align: left;" |Slang for one who specializes in art during higher education.
+|-
+|Kim Poster
+|{{sex|m}}
+|$2,050.0K
+|Designer
+|19
+|33
+|282
+|65
+|
+| style="text-align: left;" |''"impostor"''
+|-
+|B. Toven
+|{{sex|m}}
+|$10.0K
+|Snd. Eng.
+|14
+|16
+|8
+|28
+|{{Initially available}}
+| style="text-align: left;" |[[Wikipedia:Ludwig van Beethoven|Beethoven]]
+|-
+|Moe Zart
+|{{sex|m}}
+|$90.0K
+|Snd. Eng.
+|28
+|16
+|21
+|54
+|
+| style="text-align: left;" |[[Wikipedia:Mozart|Mozart]]
+|-
+|Wolfgang Smith
+|{{sex|m}}
+|$300.0K
+|Snd. Eng.
+|43
+|20
+|24
+|78
+|
+| style="text-align: left;" |[[Wikipedia:Wolfgang Amadeus Mozart|Wolfgang]] - Mozart's first name.
+|-
+|Amadeus&nbsp;Rhodes
+|{{sex|m}}
+|$550.0K
+|Snd. Eng.
+|45
+|28
+|80
+|195
+|
+| style="text-align: left;" |[[wikipedia:Mozart|Amadeus]] - Mozart's second name.
+|-
+|Muse Icalgenious
+|{{sex|f}}
+|$1,100.0K
+|Snd. Eng.
+|84
+|52
+|54
+|244
+|
+| style="text-align: left;" |"''Musical Genius''"
+|-
+|Milk Puddingsky
+|{{sex|f}}
+|$2,800.0K
+|Snd. Eng.
+|178
+|168
+|65
+|301
+|
+| style="text-align: left;" |'''Milk'''y Way - '''pudding''' is a treat, as is the [[wikipedia:Milky Way (chocolate bar)|Milky Way Bar]], and the [[Wikipedia:Milky Way|solar system (Milky Way)]] is in the '''sky'''.
+|}
+{{Sticky table end}}

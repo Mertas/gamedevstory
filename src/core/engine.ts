@@ -14,7 +14,7 @@ import {
 import {
   buyAd, buyBooster, buyCareerManual, buyDeadBull, changeCareer, dismissSalesman,
   levelUpStaff, moveOffice, startOwnConsole, takeContract, tickContracts, tickOwnConsole,
-  tickSalesman, trainStaff, useBooster,
+  tickSalesman, trainStaff, applyBooster,
 } from './systems/progression';
 import type { CareerId } from './data/schema';
 import {
@@ -200,9 +200,9 @@ export function buyBoosterAction(state: GameState, type: string) {
   return buyBooster(state, type);
 }
 
-export function useBoosterAction(state: GameState, staffId: string, type: string) {
+export function applyBoosterAction(state: GameState, staffId: string, type: string) {
   const rng = rngFromState(state.rngState, state.seed);
-  const res = useBooster(state, staffId, type, rng);
+  const res = applyBooster(state, staffId, type, rng);
   state.rngState = rng.state;
   return res;
 }

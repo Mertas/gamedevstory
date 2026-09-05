@@ -1,0 +1,66 @@
+{{Template:Stub}}
+{{Infobox character
+|image   = Mister X.png
+|gender  = Male
+|first   = [[Game Dev Story]]
+|alias    = Andre Cant, Estrada E, Hulk Grogan, King of Tenochtitlan, Mr. X, Wrestler, Event Master, Res Surar
+}}
+'''Mister X''''s defining characteristic is his brightly colored [http://en.wikipedia.org/wiki/Lucha_libre luchador's mask]. This mask is a sky blue, with hot pink marks around his eyes, and a yellow line running down the middle and an opening over his mouth.
+
+Unlike other special characters who often have a very similar design across games, other than his mask Mister X rarely has the same appearance. Even his name widely varies between games. It is common for his character to show an interest in wrestling, video games, or both, or to exhibit skills reflective of these interests.He is not an alien.
+
+==[[Bonbon Cakery]]==
+{{CharacterDetails|alias=Tiger Hoods, Event Master}}
+Appears as:
+*An unlockable staff - Tiger Hoods.
+*A customer of Truck Sales - Event Master (''Event Hall'' Location).
+
+==[[Cafeteria Nipponica]]==
+{{CharacterDetails|alias=Mr. X}}
+[[File:Mr_x-cafeteria_nipponica.png|250px|right]]
+"Mr. X" is a tertiary character who leaves behind signed recipes after events. There is also a masked reviewer who you can invite to your restaurant.
+
+==[[Dream House Days]]==
+Mr. X's iconic mask is obtainable as a piece of [[Clothes (Dream House Days)|clothing]].
+
+==[[Dungeon Village]]==
+{{CharacterDetails|alias=Wrestler}}
+An unlockable "Job" type (user looks like Mister X).
+
+== [[Forest Golf Planner]] ==
+{{CharacterDetails|alias=Hulk Grogan}}He appears as one of the customers of this game, a powerful hitter but bad at control and putting.
+
+==[[Game Dev Story]]==
+Mister X is one of the first special characters to appear to the player and offer his services as an employee. A news article talks of A " Mister X " sabotaging a Game Studio.
+
+==[[High Sea Saga]]==
+Appears as the "Killer" job in High Sea Saga.
+
+==[[Home Run High]]==
+{{CharacterDetails|alias=Res Surar}}
+A group of wrestlers will appear after you win the World Series. Defeating them will have one of the wrestlers join your school.
+
+==[[Mega Mall Story]]==
+{{CharacterDetails|alias=Hulk Grogan|quote=I like video rental stores.}}
+Appears as customer [[Customers (Mega Mall Story)#64|No. 64]]. His name is a pun of [[wikipedia:Hulk_Hogan|Hulk Hogan]].
+
+==[[Pocket Academy]]==
+{{CharacterDetails|alias=Andre Cant}}
+Appears as Andre Cant, a teacher with potentially max stats.
+
+==[[Pocket Harvest]]==
+{{CharacterDetails|alias=billy jean}} Appears as billy jean a farmer with high stamina.
+
+==[[Pocket League Story]]==
+{{CharacterDetails|alias=Estrada E}}
+Can be contracted as a bodybuilder type player named Estrada E.
+
+==[[World Cruise Story]]==
+{{CharacterDetails|alias=King of Tenochtitlan|quote=I would love to take a cruise with you sometime. Farewell.}}
+King of the country of Tenochtitlan.
+
+==Gallery==
+<gallery>
+Mister X and Kairobot at hot springs.gif|Mister X and [[Kairobot]] at hot springs
+</gallery>
+{{Character}}

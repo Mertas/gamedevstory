@@ -1,0 +1,33 @@
+{{Game Dev Story}}
+{{GameTranscript}}
+==Game Guy Magazine==
+===Name of Article===
+<p style="font-weight:normal;">{{Template:Cquote2|Quote Here||||align = }}</p>
+===Game Industry Trends===
+<p style="font-weight:normal;">{{Template:Cquote2|Competition in the game industry continues to heat up as newcomer [name of your company] enters the market. We look forward to seeing what they have in store for us. It will need to be impressive to make an impact in this crowded market.||||align = }}</p>
+===1 Million Units Sold===
+<p style="font-weight:normal;">{{Template:Cquote2|The recently released Exodus has proven to be quite popular, reaching 1 million units sold in a very short period of time. But consoles must continue to sell in order to be considered a success. In many cases, a hit game prompts people to purchase a system. Indeed, a single hit game can greatly change a console's fortunes.||||align = }}</p>
+===Big Sales, Big Office===
+{{Template:Cquote2|Sources say that [name of your company], which should be a familiar name to any game fan by now, has recently moved to new offices. The new offices are in a prime location near a train station and are carpeted with the finest Persian rugs. The president commented that, "It's my job to provide a workplace that brings out the best in our employees." And indeed, it seems to be working--the company as been flooded with applications for work.}}
+===[[Mister X|Masked Man]]?===
+{{Template:Cquote2|According to information acquired by our magazine, a mysterious masked man has recently been seen trying to apply at various video game companies. Our sources indicate that he is simply a hardworking guy in a mask, so companies should certainly give him a second look.}}
+===[[King Ackbar|Missing King]]===
+{{Template:Cquote2|A Middle Eastern oil baron disappeared during a recent trip to consumer electronics district, and hasn't been seen since. One of his servants looked up from the game he was playing long enough to talk to us. "We knew that the king was obsessed with video games. He kept saying that he wanted to work at a game company, but we didn't think he'd actually try and do it!"}}
+===[[Grizzly_Bearington|Beast On The Loose]]===
+{{Template:Cquote2|According to one of our reporters, a dangerous wild animal has recently escaped from a forested area in Kairo Park. While the animal in question has only been sighted from far away, it is said to have long sharp claws and a vicious temperament. Please use caution if you see it. The animal apparently has a fondness for video games, and so may be found if a company starts accepting new applicants.}}
+===[[Chimpan_Z|A Job For Chimpan Z]]===
+{{Template:Cquote2|We have just learned that Mr. Chimpan Z, a resident of an island on Kairo Park, is looking for employment. The recent heatwave has apparently decimated the crop of bananas he was tending on the island, leading him to seek work in video game development. Companies looking for employees may encounter him.}}
+===[[Kairobot|Kairobot]]===
+{{Template:Cquote2|According to one of our sources, Kairobot, a robot from Kairo Park, is trying to join a game company. He told us that he had gained a large amount of experience, and felt it was time for him to take this step. He said that he wanted to use his advanced AI technology to create an amazing simulation game.}}
+===Million-Hit Still Selling===
+{{Template:Cquote2|The popular game (Dungeon+Table) has now sold more than 1 million units. This is the first table game in some time to reach this mark, and has proved quite popular even with people in the game industry. As one retail store owner put it, "It sells out as soon as we put it on the shelves. I've been playing it to try and discover why it's so popular, and now I'm hooked. Now my sales are suffering..." One can only wonder how many units it will end up selling.}}
+
+==Fan Letter==
+===Name of sub article===
+{{Template:Cquote2|Quote here}}
+===Letter from an adult===
+{{Template:Cquote2|Excuse me for writing out of the blue, but I'm a big fan of [name of your company]. I lined up on release day to but the [name of your table game]! I like Table games in general, and I really enjoyed that this one was a Animal game. I've recommended your company to all my friends, so please work hard on your next games.}}
+===Beverly Kane (25)===
+{{Template:Cquote2|I always play your company's games. I especially enjoyed the trivia game you recently released. I never thought combining it with a Golf would work, but it was perfect! I can't wait to see what you come up with next.}}
+===Elem. school student===
+{{Template:Cquote2|Hello! I'm a huge fan of [name your company]! I lined up on release day to buy the (Audio Novel+Robot)! I like Audio Novel games in general, and I really enjoyed that this one was a Robot game. I've recommended your company to all my friends, so please work hard on your next games.}}

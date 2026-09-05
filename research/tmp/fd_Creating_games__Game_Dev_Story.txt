@@ -1,0 +1,73 @@
+{{Game Dev Story}}
+
+Making games is one of the trickiest but most rewarding parts of the game. If you make a great game, you'll make lots of money, and possibly be able to make a sequel and/or win trophies at the annual Awards Ceremony. But if you make a bad game, you might end up with less cash than you put into it.
+
+==The Process==
+===Setup===
+
+====Platform====
+{{Main|Consoles (Game Dev Story)}}
+*A Console Type, CPU, and Media must be chosen to develop the game for.
+
+====Genre & Types====
+{{Main|Genres and types (Game Dev Story)}}
+Genres and types are an important aspect when making a game, as each game can only have one, and the ones you choose can greatly affect sales. These each cost different amounts to develop and each have a different popularity with consumers.
+
+More importantly is that when you combine different genres and types, it is possible to make combos, which can range from "Not good" to "Amazing!". This can be very important to making a top-selling game.
+
+====Direction====
+*You can choose which direction development goes for a game: 
+**Normal: Initial development cost. No focus on speed or quality.
+**Speed: 20% to the initial cost. Sacrifices quality for speed for quicker release.
+**Quality: 30% to the initial development cost: Slower development to benefit more points to development.
+**Research: 50% to the initial development cost. Focuses on gaining research data.
+**Budget+: Doubles the development cost. Combines Speed and Quality to ease the burden of the staff.
+*You will then assign points to what the game will be like:
+**Cuteness: How cute do you want it to be?
+**Realism: How real do you want it to be?
+**Approachability: How easy do you want people to approach this game?
+**Niche Appeal: Can it attract certain people to the game?
+**Simplicity: Is it easy to learn?
+**Innovation: How creative is it?
+**Game World: How detailed do you want the world to be?
+**Polish: How shiny and presentable will your game be?
+***You start with some points, which are increased by 2 when a genre reaches level 2 and level 5.
+*
+
+===Development===
+[[File:Writing Game Proposal-GameDevStory.png|thumb]]
+Flow:
+*'''Writing''' - Writing is started after setup has been done.
+*Event (good genre / type match)
+*'''Art''' - Art is started after your game reaches 40% completion.
+*'''Music''' - Music is started after your game reaches 80% complete. An employee with a high music stat is recommended.
+*'''Bugs''' - After the game is finished, your team will work on bugs. This can be skipped to save time, but it is not advised as it could hurt your sales, as well as losing out on a chance to gain research points [[File:Research Data-GameDevStory.png]].
+
+===Release===
+After a game is released, you will have the option to name it, it will be reviewed by critics, and then copies will start to be sold. If the critics find a bug, your score will drop. The critics can give you 10 points each, for a total of 40. A minimum total of 32 points is needed to have a game inducted into the Hall of Fame.
+
+You will be given an announcement if your game will make the sales charts, and how close to the #1 spot it will be depending on initial sales.
+
+The sales will then go into your funds for the next few months before it wanes and the game is finally taken off the market.
+
+Be warned, however, you may be notified of a game from another company with the same genre that may be on sale the same time you release yours. It will affect your sales at a result.
+
+==Bugs==
+Bugs will occasionally be created alongside Fun, Creativity, Graphics and Sound points by your staff while they are developing a game, creating a console, working on a contract, or just sitting around. Bugs can also be created in large numbers should one of your employees fail a Boost. Bugs are tracked on the right side of the bottom bar alongside the other development points.
+
+After a game is completed, it will enter the Debugging process, wherein your employees will slowly remove all the bugs from the game. The length of the Debugging process depends on the number of bugs present in the game and the skill of your employees.  Higher program stats means bugs are removed faster. If you would like a game to release sooner, you can ship it before the Debugging process is complete by tapping or clicking on the progress tab. However, there is a possibility that reviewers will find the bugs in the game, granting you much lower review scores.
+
+Bugs are not completely negative, however, as every time a bug is is removed, the player is granted 1-3 research points.
+
+==Development Events==
+*Asking to make the game better (At 25% completion).  The cost and rate of success depends on the stats of the employee who is offering to do with work.  Success with give you a boost in one category (typically 25-32 points).  Failure will give you a boost to number of bugs (between 20 and 30) and will decrease the hype/fame for the current game.[[File:Increasing Attribute Permission-GameDevStory.png|thumb]]
+*If the game passes 50 fun/sound/etc., you will get a message saying that the game has a lot of fun/sound/etc.
+* If a game has 100 fun/sound/etc, an event will say that people lining up for your game
+[[File:Fans Lining Up-GameDevStory.png|thumb]]
+*Blackout (will lose between 20-50 points)
+*Equipment Failure (will lose points)[[File:Blackout-GameDevStory.png|thumb]]
+*Similar game released (reduces sales)
+*Games with the same category released too much (will shrink fanbase)
+
+==Sequel==
+If a game gets a review score of 32/40 or above, a sequel can be made out of it. The sequel must be started while the original game is still in the records (i.e. one of the latest 32 games). It can be made for a different console that the original, but the genre and type cannot be changed. It will start with some of the points from the original game, but otherwise the development process for the sequel is the same as any other game. Each game can only be sequeled once; the sequel, if it again gets a review score of 32/40 or above, can itself have a sequel.

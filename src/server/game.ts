@@ -8,7 +8,7 @@ import {
   buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   changeCareerAction, dismissSalesmanAction, fireAction, hireAction, hireByIdAction, levelUpAction, moveOfficeAction, newGame,
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startOwnConsoleAction, startProjectAction,
-  takeContractAction, tick, trainAction, useBoosterAction,
+  takeContractAction, tick, trainAction, applyBoosterAction,
 } from '../core/engine';
 import type { GameState, FanLetter, GamedexOption, Staff, StartProjectInput } from '../core/types';
 import { migrateSave } from '../core/migrate';
@@ -19,6 +19,9 @@ import { generateStory, generateWithFallback } from './giga';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SAVE_PATH = `${ROOT}data/save.json`;
+// аудит 05.09: сейв писался каждый тик неатомарно; теперь — дебаунс по игровым дням
+// + tmp+rename (обрыв процесса не бьёт JSON), битый сейв уходит в .corrupt-бэкап
+const SAVE_DEBOUNCE_DAYS = 10;
 
 export interface SessionSnapshot {
   game: GameState;
@@ -107,7 +110,6 @@ export class GameServer {
   private speed = 1;
   private timer: NodeJS.Timeout | null = null;
   private listeners = new Set<(s: SessionSnapshot) => void>();
-  private phaseGen = new Set<string>();
   private chatThread: ChatThread | null = null; // фазы чата в процессе генерации
   private pendingPlayer: string | null = null; // вопрос игрока, ждущий свободного чата
   private pendingPhase: { phase: string; extra?: Record<string, unknown>; openingFor?: string } | null = null;
@@ -246,7 +248,7 @@ export class GameServer {
         this.chat = resetChat();
         this.mailShownId = 0;
         this.fanReplyQueued = false;
-        this.autosave();
+        this.autosave(true);
         this.emit();
         return;
       }
@@ -365,7 +367,7 @@ export class GameServer {
         return;
       }
       case 'use_booster':
-        this.run(useBoosterAction(this.game, msg.staffId, msg.booster));
+        this.run(applyBoosterAction(this.game, msg.staffId, msg.booster));
         this.emit();
         return;
       case 'buy_dead_bull':
@@ -445,8 +447,9 @@ export class GameServer {
       try {
         await this.fetchOneReply(t, undefined);
         t.left--;
-      } catch {
+      } catch (e) {
         t.errors++;
+        console.error(`[gds] LLM-реплика не удалась (фаза ${t.phase}):`, String(e).slice(0, 200));
       } finally {
         t.busy = false;
         this.maybeEndThread();
@@ -459,8 +462,9 @@ export class GameServer {
       await this.fetchOneReply(t, this.lastStaffText() ?? undefined);
       t.left--;
       t.errors = 0;
-    } catch {
+    } catch (e) {
       t.errors++;
+      console.error(`[gds] LLM-реплика не удалась (фаза ${t.phase}):`, String(e).slice(0, 200));
     } finally {
       t.busy = false;
       t.nextAt = this.game.week + 3; // следующая генерация — после доставки (week+2)
@@ -529,10 +533,12 @@ export class GameServer {
       const { text } = await generateWithFallback(messages, 250);
       const t = text.trim().replace(/^["«]|["»]$/g, '').slice(0, 700);
       if (t.length >= 20) letter.text = t; // иначе оставляем заготовку движка
-    } catch { /* GigaChat недоступен — письмо остаётся с заготовкой */ }
+    } catch (e) {
+      console.error('[gds] LLM-текст письма не получен — остаётся заготовка:', String(e).slice(0, 200));
+    }
     letter.llm = true;
     this.letterBusy = false;
-    this.autosave();
+    this.autosave(true); // LLM-текст письма не должен теряться при дебаунсе
     this.emit();
   }
 
@@ -605,6 +611,8 @@ export class GameServer {
   }
 
   // ─── сейвы ───
+  private lastSaveDay = 0;
+
   private load(): GameState {
     try {
       const raw = fs.readFileSync(SAVE_PATH, 'utf8');
@@ -612,16 +620,32 @@ export class GameServer {
       if (data && typeof data.week === 'number') {
         migrateSave(data); // версия формата + repair-нормализации (adFansGained, висящая пауза)
         normalizeLegacyContrib(data);
+        this.lastSaveDay = data.week;
         return data;
       }
-    } catch { /* нет сейва */ }
+      console.error('[gds] сейв не похож на GameState — начинаем новую игру');
+    } catch (e) {
+      // битый JSON не должен молча стирать партию: сохраняем улику и сообщаем
+      try {
+        if (fs.existsSync(SAVE_PATH)) fs.copyFileSync(SAVE_PATH, `${SAVE_PATH}.corrupt-${Date.now()}`);
+        console.error('[gds] сейв повреждён — бэкап сохранён в data/save.json.corrupt-*; начата новая игра:', String(e).slice(0, 300));
+      } catch {
+        console.error('[gds] сейв повреждён и бэкап не удался:', String(e).slice(0, 300));
+      }
+    }
     return newGame(Math.floor(Math.random() * 99991) + 1);
   }
 
-  private autosave(): void {
+  private autosave(force = false): void {
+    if (!force && this.game.week - this.lastSaveDay < SAVE_DEBOUNCE_DAYS) return;
     try {
-      fs.writeFileSync(SAVE_PATH, JSON.stringify(this.game));
-    } catch { /* не критично */ }
+      const tmp = `${SAVE_PATH}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(this.game));
+      fs.renameSync(tmp, SAVE_PATH); // атомарно: tmp появляется целиком, rename заменяет
+      this.lastSaveDay = this.game.week;
+    } catch (e) {
+      console.error('[gds] автосейв не удался:', String(e).slice(0, 300));
+    }
   }
 
   exportSave(): string {
@@ -632,16 +656,21 @@ export class GameServer {
     try {
       const data = JSON.parse(raw) as { game: GameState; chat: ChatState };
       if (!data?.game || typeof data.game.week !== 'number') return false;
+      // аудит 05.09: импорт затирает текущую партию — бэкап перед перезаписью
+      try {
+        if (fs.existsSync(SAVE_PATH)) fs.copyFileSync(SAVE_PATH, `${SAVE_PATH}.pre-import-${Date.now()}`);
+      } catch { /* бэкап не критичен */ }
       this.game = data.game;
       migrateSave(this.game);
       this.chat = data.chat ?? resetChat();
       this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
       this.fanReplyQueued = false;
       normalizeLegacyContrib(this.game);
-      this.autosave();
+      this.autosave(true);
       this.emit();
       return true;
-    } catch {
+    } catch (e) {
+      console.error('[gds] импорт сейва не удался:', String(e).slice(0, 300));
       return false;
     }
   }

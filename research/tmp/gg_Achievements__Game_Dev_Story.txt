@@ -1,0 +1,160 @@
+{{Game Dev Story}}
+There are currently 32 Achievements, with some achievements only obtainable through starting a new game.
+{| class="wikitable"
+!Name
+!Description
+!How to Obtain
+|-
+|Sell 100K
+|''Make a hit game that sells 100K units.''
+|Self-explanatory
+|-
+|Sell 500K
+|''Make a hit game that sells 500K units.''
+|Self-explanatory
+|-
+|Sell 1 Million
+|''Make a hit game that sells 1 million units.''
+|Self-explanatory
+|-
+|Sell 5 Million
+|''Make a hit game that sells 5 million units.''
+|Self-explanatory
+|-
+|Sell 10 Million
+|''Make a hit game that sells 10 million units.''
+|Self-explanatory
+|-
+|Sell 20 Million
+|''Make a hit game that sells 20 million units.''
+|Self-explanatory
+|-
+|Sell 50 Million
+|''Make a hit game that sells 50 million units.''
+|Self-explanatory
+|-
+|Sell 100 Million
+|''Make a hit game that sells 100 million units.''
+|Self-explanatory
+|-
+|Movin' On Up
+|''Grow to an even bigger office''
+|Accept to move offices for 600K
+|-
+|Hittin' the Big Time
+|''Move to an even bigger office.''
+|Accept to move offices for 1,200K
+|-
+|The Big Show
+|''Make a name for yourself at Gamedex.''
+|Attend an annual Gamedex
+|-
+|Hall of Famer
+|''Get a game into the Hall of Fame.''
+|Achieve a reviewer score of 32+
+|-
+|Fanboy Letter
+|''Get a letter from a male fan.''
+|Increase chance by advertising to a male audience
+|-
+|Fangirl letter
+|''Get a letter from a female fan.''
+|Increase chance by advertising to a female audience
+|-
+|Generate Some Buzz
+|''Generate some buzz by building your fan base''
+|Get a High enough Buzz while developing a game
+|-
+|Idiot Box
+|''Have a game introduced on TV''
+|Get the event where your game is featured on TV
+|-
+|Line Starts Here
+|''Make a game that everyone can't wait to buy.''
+|Get the event 'Fans are lining up already'
+|-
+|Game Expert
+|''Train your employees to unlock every type of game.''
+|Self-explanatory
+|-
+|Genre King
+|''Have your employees master their jobs and unlock every game genre''
+|Level up all type of staff (Writer, hackers...) to level 5
+|-
+|Design God
+|''Win the Best Design Award''
+|Win Best Design at the GGA
+|-
+|Music Man
+|''Win the Best Music Award''
+|Win Best Music at the GGA
+|-
+|Worst of the Worst
+|''Win the Worst Game Award.''
+|Self-explanatory
+|-
+|Close but No Cigar
+|''Win Runner up.''
+|Self-explanatory
+|-
+|Grand Prize Winner!
+|''Win the Grand Prize.''
+|Self-explanatory
+|-
+|Mystery Staffer X
+|''Hire a mysterious masked staff member.''
+|Hire Mister X
+|-
+|Mystery Staffer A
+|''Hire a king with penchant for gaming.''
+|Hire King Ackbar
+|-
+|Mystery Staffer B
+|''A ferocious bear has been spotted around town...''
+|Hire Grizzly Bearington
+|-
+|Mysery Staffer C
+|''Find a genius who'll work for bananas''
+|Hire Chimpan Z-Force
+|-
+|Mystery Staffer K
+|''Find a mysterious super robot''
+|Hire Kairobot
+|-
+|Hardcore hardware
+|''Make your own game console''
+|Self-Explanatory
+|-
+|Mystery Console
+|''A game console so awesome it's like a spaceship or somthing''
+|Unlock the Jupiter 512 console
+|-
+|Holy Grail
+|''Could the rumors be true? A toilet AND a game console?''
+|Unlock the GameJohn Console
+|}
+
+==Steam/Console Achievements==
+{| class="wikitable" style="width:100%;"
+!width="80px"|Icon
+!Achievement
+|-
+|[[File:Achievements - Game Dev Story - Bronze.jpg|80px|center]]
+|<b>Just started a game company.</b><br>Proof of developing the first game.
+|-
+|[[File:Achievements - Game Dev Story - Silver.jpg|80px|center]]
+|<b>Dream of million hit just came true.</b><br>Proof that 1 million copies were sold.
+|-
+|[[File:Achievements - Game Dev Story - Silver.jpg|80px|center]]
+|<b>Global Game Awards winner ! !</b><br>Proof of winning the Global Game Awards.
+|-
+|[[File:Achievements - Game Dev Story - Gold.jpg|80px|center]]
+|<b>What a great game company.</b><br>Proof of running a company for many years.
+|-
+|[[File:Achievements - Game Dev Story - Silver.jpg|80px|center]]
+|<b>All good Job.</b><br>Proof of mastering all occupations.
+|-
+|[[File:Achievements - Game Dev Story - Gold.jpg|80px|center]]
+|<b>The company that Kairobot works !</b><br>Proof of hiring Kairobot.
+|-
+|}

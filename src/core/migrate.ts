@@ -1,7 +1,7 @@
 // Версия формата сейва и миграции.
 // ПРАВИЛО: новое поле GameState = поднять SAVE_VERSION + миграция здесь;
 // load()/importSave() зовут migrateSave() — ручные нормализации в game.ts не плодить.
-import type { GamedexOption, GameState } from './types';
+import type { GameState } from './types';
 
 export const SAVE_VERSION = 4; // 4: Gamedex (gamedexHere/lastGamedex/gamedexFame); 3: письма (mail); 2: реклама; 1 = всё до 04.09.2026
 

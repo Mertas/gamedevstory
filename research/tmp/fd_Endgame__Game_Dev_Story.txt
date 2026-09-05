@@ -1,0 +1,23 @@
+{{Game Dev Story}}
+{{Endgame|year=21|month=1}}
+
+==Score Calculation==
+Your score is simply your '''total capital''' (money), and this is what is used for your "high score". However, the game also lists these stats:
+*Number of released ''games''
+*Total sold ''units''
+*The top-selling game as well as the ''total sales'' of that game.
+[[Category:Needs Score Calculation Information]]
+[[Category:Needs Carryovers Information]]
+
+==Carryovers==
+'''Does carry over'''
+*Genre / type levels (they still need to be unlocked)
+*Number of points to put in direction at the start of developement
+'''Does ''not'' carry over'''
+*Staff & Their levels
+*Genre / type levels, Earned after end game.
+*Genre / type popularity increases from winning awards.
+'''Might carry over (unknown)'''
+*
+[[Category:Needs Score Calculation Information]]
+[[Category:Needs Carryovers Information]]

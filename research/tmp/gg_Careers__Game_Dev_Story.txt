@@ -1,0 +1,141 @@
+{{Underlinked|date=September 2024}}
+{{Game Dev Story}}
+There are a total of 8 different '''careers''', with different pros and cons. Some require specific unlock conditions, but all employees start of with some job. Each career can be leveled up, up to level 5.
+
+Each employee can have levels on all careers, but only one is active at a time. Most employees come with prior experience in one or more careers beside their active career.
+
+== Career List ==
+{| class="wikitable"
+! rowspan="2" |Career
+! rowspan="2" |Prerequisites
+! rowspan="2" |Focus
+! colspan="5" |Skill sets
+! rowspan="2" |Notes
+|-
+! [[File:Fun-game dev story.png|Fun]]
+! [[File:Creativity-game dev story.png|Creativity]]
+! [[File:Graphics-game dev story.png|Graphics]]
+! [[File:Sound-game dev story.png|Sound]]
+! [[File:Bug-game dev story.png|Debugging]]
+|-
+|Coder
+|{{∅}}
+| style="text-align:center;" | Debugging
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+| style="text-align:center;" | ++
+|Focuses on Coding Stat, needed for Director
+|-
+|Writer
+|{{∅}}
+| style="text-align:center;" | Proposal
+| style="text-align:center;" | ++
+| style="text-align:center;" | ++
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+|Focuses on Scenario Stat, needed for Director
+|-
+|Designer
+|{{∅}}
+| style="text-align:center;" | Alpha
+| style="text-align:center;" | +
+| style="text-align:center;" | ++
+| style="text-align:center;" | ++
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+|Focuses on Graphics Stat, needed for Producer
+|-
+|Snd. Eng.
+|{{∅}}
+| style="text-align:center;" | Beta
+| style="text-align:center;" | +
+| style="text-align:center;" | ++
+| style="text-align:center;" | +
+| style="text-align:center;" | ++
+| style="text-align:center;" | +
+|Focuses on Sound Stat, needed for Producer
+|-
+|Director
+|Level 5 Coder and Writer
+| style="text-align:center;" | Proposal &<br />Debugging
+| style="text-align:center;" | +++
+| style="text-align:center;" | +++
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+| style="text-align:center;" | +++
+|Needed for Hardware Engineer
+|-
+|Producer
+|Level 5 Designer and Snd.Eng.
+| style="text-align:center;" | Alpha & Beta
+| style="text-align:center;" | +
+| style="text-align:center;" | +++
+| style="text-align:center;" | +++
+| style="text-align:center;" | +++
+| style="text-align:center;" | +
+|Needed for Hardware Engineer
+|-
+|Hard. Eng.
+|Level 5 Director and Producer
+| style="text-align:center;" | Console Creation
+| style="text-align:center;" | +
+| style="text-align:center;" | +++
+| style="text-align:center;" | +
+| style="text-align:center;" | +
+| style="text-align:center;" | +++
+|Needed to create new consoles.<br />Only Chimpman Z. Force starts with this career.
+|-
+|Hacker
+|Level 5 Hard. Eng.
+| style="text-align:center;" | All
+| style="text-align:center;" | +++
+| style="text-align:center;" | +++
+| style="text-align:center;" | +++
+| style="text-align:center;" | +++
+| style="text-align:center;" | +++
+|Very high stats for everything. The downsides are their cost and that they '''cannot''' be used to create a console.
+|}
+
+===Coder===
+'''Coders''' are one of the four basic staff members, and is also one of the first staff members type the player will have (Newb Ownerton). The Coder cannot be used for anything else than adding statistics points during development.
+
+Coders have high points in '''Program'''.
+
+===Writer===
+'''Writers''' are one of the four basic staff members, and is also one the first staff member types the player has.
+
+Writers are good in '''Scenario''' and can '''write the game proposal'''.
+
+===Designer===
+'''Designers''' are one of the four basic staff members.
+
+They are good at '''Graphics''', and can '''design the game graphics'''.
+
+===Snd. Eng.===
+'''Sound Engineers''' (Snd. Eng.) are one of the four basic staff members.
+
+They are good in '''Sound''', and can '''compose the soundtrack''' for games.
+
+===Director===
+'''Directors''' are one of the '''Tier 2''' staff members; they are a combination of a Writer and a Coder. They have a high '''Contract fee''' and '''Salary'''.
+
+They share skills of Writers and Coders, but also have higher stats in '''Graphics''' and '''Sound'''. They can '''write the game proposal''', like the Writer.
+
+===Producer===
+'''Producers''' are one of the Tier 2 staff members; they are a combination of a designer and a sound engineer
+
+===Hard. Eng.===
+'''Hardware Engineers''' (Hard. Eng.) have high stats for Program and Scenario, but low stats for Sound and Graphics. They are required to [[Consoles (Game Dev Story)#Making Consoles|make your own console]]. Only Chimpan Z-Force starts with this career.
+
+Hardware Engineers''' '''have a special bonus that unlock certain console parts when you have a certain number of them in your team:
+:'''Potato Chip''' (CPU) - must have 4 hardware engineers on your team.
+:'''Punch Card''' (Media) - must have 6 hardware engineers on your team.
+===Hacker===
+'''Hackers''' are the highest performing employee in Game Dev Story; they have the talent of a '''Coder, Writer, Designer, & Snd. Eng'''. Compared to other careers, the salary of a hacker is '''much''' higher.
+==Changing Careers==
+Use a '''Career Change Manual''', sold by the Salesman who visits once a year, to move an employee into a new career. In order to move to one of the 4 advanced careers (Director / Producer / Hardware Engineer / Hacker), the employee must be level 5 in the requisite lower career(s). Otherwise, the change is not allowed, even if the employee already has prior experience (levels) in the target career, and even if another employee is level 5 in the missing requisite career. For example, once an employee is moved off Producer, they cannot be changed back unless and until they themselves have attained level 5 in both Designer and Sound Engineer.
+
+Even if you hire someone with a good career, such as a hacker, they do not necessarily have level 5 in all lower careers, so if you want them to have high stats, you may wish to go back to a lower career and train it. However, beware that they will have to be leveled up in '''all''' lower careers in order to get back to their original career, which comes with a big salary hike.

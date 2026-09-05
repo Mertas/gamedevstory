@@ -1,6 +1,6 @@
 // Приложение «Код»: мастер нового проекта + статус разработки + релиз.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CONFIG, type Mode } from '../../core/config';
+import type { Mode } from '../../core/config';
 import { projectCost } from '../../core/formulas';
 import {
   comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
@@ -9,7 +9,7 @@ import type { DirectionAxis, Role } from '../../core/types';
 import { StaffCard } from '../StaffCard';
 import {
   actionGenerateStory, actionRelease, actionStartProject, actionUseBooster, clearActionError,
-  clearStoryResult, useActionError, useGame, useMeta, useSpeed, useStoryResult,
+  clearStoryResult, useActionError, useGame, useMeta, useStoryResult,
 } from '../store';
 
 const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = [
@@ -51,7 +51,6 @@ export function CodeApp() {
 function DevStatus() {
   const game = useGame();
   const meta = useMeta();
-  const speed = useSpeed();
   const [boosterStaff, setBoosterStaff] = useState('');
   const [fliers, setFliers] = useState<Flier[]>([]);
   const [flashes, setFlashes] = useState<Record<string, number>>({});
@@ -65,17 +64,20 @@ function DevStatus() {
   const spawnSeq = useRef(0); // общий порядковый номер для задержек «по очереди»
   const rootRef = useRef<HTMLDivElement>(null);
   const g = game.activeGame;
-  if (!g) return null;
-  const genre = genreById(meta, g.genreId);
-  const type = typeById(meta, g.typeId);
-  const consoleData = consoleById(meta, g.consoleId);
+  const gKey = g ? `${g.genreId}:${g.typeId}:${g.totalCost}` : '';
+  // ─── аудит 05.09: ВСЕ хуки до раннего return (rules-of-hooks). Раньше useEffect ниже
+  // `if (!g) return null` вызывались условно; тела эффектов теперь с гвардом !g ───
   // мины: 1 мина = 1 баг; аккумулятор дробного прироста багов
   const [mines, setMines] = useState<Flier[]>([]);
   const [bugsFlash, setBugsFlash] = useState(false);
   const lastBugsRef = useRef(0);
   const bugsAccRef = useRef(0);
+  // null-безопасные депсы для эффекта мин (аудит 05.09: правила exhaustive-deps)
+  const bugsDep = g ? g.bugs : 0;
+  const weekStartedDep = g ? g.weekStarted : 0;
   // ─── мины багов: летят от кодера к счётчику «Баги» ───
   useEffect(() => {
+    if (!g) return;
     const bugs = g.bugs ?? 0;
     const delta = bugs - lastBugsRef.current;
     lastBugsRef.current = bugs;
@@ -113,17 +115,19 @@ function DevStatus() {
       }, 2000 + n * 120);
       n++;
     }
-  }, [g, g.bugs, g.weekStarted]);
+  }, [g, bugsDep, weekStartedDep]);
 
   // сброс счётчика при смене проекта и при происшествии (реальное падение очков)
-  const gKey = `${g.genreId}:${g.typeId}:${g.totalCost}`;
   useEffect(() => {
+    if (!g) return;
     const base = { fun: Math.round(g.points.fun), creativity: Math.round(g.points.creativity), graphics: Math.round(g.points.graphics), sound: Math.round(g.points.sound) };
     setVals(base);
     valsRef.current = { ...base };
     flyingRef.current = { fun: 0, creativity: 0, graphics: 0, sound: 0 };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gKey]);
   useEffect(() => {
+    if (!g) return;
     if (game.pendingEvent?.type === 'disaster') {
       const base = { fun: Math.round(g.points.fun), creativity: Math.round(g.points.creativity), graphics: Math.round(g.points.graphics), sound: Math.round(g.points.sound) };
       setVals(base);
@@ -132,42 +136,10 @@ function DevStatus() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.pendingEvent?.type]);
-  const attrs = [
-    { id: 'fun', k: 'Fun', v: Math.round(vals.fun ?? 0), c: '#000080' },
-    { id: 'creativity', k: 'Creativity', v: Math.round(vals.creativity ?? 0), c: '#800080' },
-    { id: 'graphics', k: 'Graphics', v: Math.round(vals.graphics ?? 0), c: '#008000' },
-    { id: 'sound', k: 'Sound', v: Math.round(vals.sound ?? 0), c: '#808000' },
-  ];
-  const roleStaff = (role: Role) => {
-    const ids = g.assignments[role] ?? [];
-    if (!ids.length) return '—';
-    return ids.map((id, i) => {
-      const s = game.staff.find((x) => x.id === id);
-      return (
-        <span key={id}>
-          {i > 0 && ' · '}
-          <span data-staff-id={id} style={{ display: 'inline-block', padding: '0 2px', background: '#ffffcc', borderRadius: 2 }} title={s ? (s.homeWeeks > 0 ? `Отдыхает (POWER ${Math.round(s.power)}/${s.maxPower})` : `POWER ${Math.round(s.power)}/${s.maxPower}`) : undefined}>
-            {s?.name ?? id}
-            {s && (
-              <span style={{ display: 'block', width: 46, height: 3, background: '#c8c8c8', marginTop: 1, borderRadius: 1 }}>
-                <span
-                  style={{
-                    display: 'block', height: '100%', borderRadius: 1,
-                    width: `${Math.max(0, Math.min(100, (s.power / s.maxPower) * 100))}%`,
-                    // отдыхает (ушёл домой) — синяя полоска; иначе уровень бодрости
-                    background: s.homeWeeks > 0 ? '#0000cc' : s.power / s.maxPower >= 0.5 ? '#008000' : s.power / s.maxPower >= 0.25 ? '#cc9900' : '#c00000',
-                  }}
-                />
-              </span>
-            )}
-          </span>
-        </span>
-      );
-    });
-  };
 
   // ─── спавн символов: 1 символ = 1 очко разрыва; распределение по долям вклада ───
   useEffect(() => {
+    if (!g) return;
     const contrib = game.devContrib ?? [];
     if (!contrib.length) return;
     const root = rootRef.current;
@@ -255,6 +227,17 @@ function DevStatus() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.week, game.devContrib]);
+
+  if (!g) return null;
+  const genre = genreById(meta, g.genreId);
+  const type = typeById(meta, g.typeId);
+  const consoleData = consoleById(meta, g.consoleId);
+  const attrs = [
+    { id: 'fun', k: 'Fun', v: Math.round(vals.fun ?? 0), c: '#000080' },
+    { id: 'creativity', k: 'Creativity', v: Math.round(vals.creativity ?? 0), c: '#800080' },
+    { id: 'graphics', k: 'Graphics', v: Math.round(vals.graphics ?? 0), c: '#008000' },
+    { id: 'sound', k: 'Sound', v: Math.round(vals.sound ?? 0), c: '#808000' },
+  ];
 
   // завершение перелёта символа: счётчик +1 (DOM), вспышка бара
   const onFlierDone = (f: Flier) => {
@@ -522,10 +505,9 @@ function ProjectWizard() {
     6: !!roles.proposal,
     7: true,
   };
-  const maxReached = Math.max(...WIZ_STEPS.filter((s) => stepOk[s.id] && s.id < 7).map((s) => s.id), 1);
-  const isDone = (id: number) => stepOk[id] && id < step;
   // первый шаг, который ещё не заполнен (нельзя перепрыгивать через незаполненные)
   const firstMissing = (WIZ_STEPS.find((s) => !stepOk[s.id]) ?? WIZ_STEPS[WIZ_STEPS.length - 1]!).id;
+  const isDone = (id: number) => stepOk[id] && id < step;
 
   const next = () => setStep((s) => Math.min(7, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
@@ -755,7 +737,7 @@ function ProjectWizard() {
               </div>
               <div className="w95-staff-grid">
                 {game.staff.map((s) => {
-                  const busyRole = (Object.entries(roles) as [Role, string][]).find(([k, v]) => v === s.id)?.[0];
+                  const busyRole = (Object.entries(roles) as [Role, string][]).find(([, v]) => v === s.id)?.[0];
                   return (
                     <StaffCard
                       key={s.id}

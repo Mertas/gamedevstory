@@ -61,7 +61,10 @@ async function gigaChat(model: string, messages: LlmMessage[], maxTokens: number
   return content;
 }
 
-async function deepseek(messages: LlmMessage[], maxTokens: number): Promise<string> {
+// DeepSeek-фолбэк ОСТАВЛЕН в коде по решению пользователя («пусть пока только гигачат»),
+// но в generateWithFallback не вызывается. export — чтобы strict-tsconfig не считал его
+// мёртвым (noUnusedLocals), при этом наружу сервера он не отдаётся.
+export async function deepseek(messages: LlmMessage[], maxTokens: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ model: DEEPSEEK_MODEL, messages, temperature: 0.9, max_tokens: maxTokens });
     const req = https.request(`${DEEPSEEK_BASE_URL}/chat/completions`, {
@@ -109,12 +112,13 @@ export async function generateWithFallback(messages: LlmMessage[], maxTokens = 8
 }
 
 export function llmStatus(): { giga: boolean; deepseek: boolean } {
-  return { giga: gigaReady, deepseek: !!DEEPSEEK_API_KEY };
+  // аудит 05.09: deepseek фолбэк отключён в generateWithFallback — не врать в /api/health
+  return { giga: gigaReady, deepseek: false };
 }
 
 // вытащить JSON-объект из ответа LLM (устойчиво к тексту вокруг)
 function extractJsonObject(raw: string): Record<string, unknown> | null {
-  let text = raw.trim().replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  const text = raw.trim().replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
   try {
     const p = JSON.parse(text) as unknown;
     if (p && typeof p === 'object' && !Array.isArray(p)) return p as Record<string, unknown>;

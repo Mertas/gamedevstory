@@ -1,0 +1,24 @@
+{{Game Dev Story}}
+'''Items''' are enhancements that can change the outcome of a game or have certain effects on employees. They are bought from [[Pumpkin Products]] who visits you on M5 W2 annually after your 2nd year. He will also only allow you to buy a maximum of 3 items per visit.
+
+The cost of using an items goes up every time you move to a new office, and the price of each multiple-use item goes up the more of them you own. Due to this, it is recommending to buy as many '''Career Change Manual'''s as you can afford before moving to a new office.
+
+==Multiple Use Items==
+All multiple-use items require [[File:Research Data-GameDevStory.png]] research data to use, (using research data is the only disadvantage as research data is also used to level up characters) which is randomly found when in development of a game. The more Research Data you have stored, the more expensive using these becomes (their effect stays the same). In addition, using multiple boosts over the course of a single project has diminishing returns; the second boost will have roughly half effect, while the third and beyond may do nothing at all.
+
+Even though your staff stops producing game points normally during debugging, you may still use these items during this time- the RP gained from debugging might let you sneak in one last boost!
+
+*Fun Boost, increases [[File:Fun-game dev story.png]] fun points in your game. Select a Coder to use it for best results.
+*Creativity Boost, increases [[File:Creativity-game dev story.png]] creativity points in your game. Select a Writer to use it for best results.
+*Graphics Boost, increases [[File:Graphics-game dev story.png]] graphics points in your game. Select a Designer to use it for best results.
+*Sound Boost, increases [[File:Sound-game dev story.png]] sound points in your game. Select a Sound Engineer to use it for best results.
+*Bug Spray, which removes [[File:Bug-game dev story.png]] bugs from your game making releasing a game faster. Don't forget that you receive research points for de bugging, so factor that into the cost of using this. Still useful for getting your game out in time for the crucial M12W1 sales spike.
+*Self-Help Book, which motivates your staff. Increases game points added on your staff's next couple attempts.
+
+==One-time Use Items==
+These require no research data, but must be bought for each use.
+*Dead Bull, which recharges staff energy and helps gain research data
+*Career Change Manual, which allows an employee to change jobs.
+
+==Trivia==
+*"Dead Bull" is most likely a parody of the energy drink "[[Wikipedia:Red Bull|Red Bull]]".

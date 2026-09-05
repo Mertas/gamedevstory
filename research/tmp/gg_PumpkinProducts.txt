@@ -1,0 +1,84 @@
+{{Infobox character
+|image  = Pumpkin Products.png
+|gender = Male
+|first  = [[Game Dev Story]]
+|alias  = P. Pumpkin, P-Taro, Pumpkin 1, Pumpkin Consulting, Pumpkin P., Salesman, Honey Pumpkin, Kaboemon}}Many games have a merchant, sometimes called Pumpkin P., who shows up as the owner of Pumpkin Products. Pumpkin wears a hat that looks like the top of a pumpkin. He usually sells common items, although it's not uncommon that he'll trade you money or plans for your rare currencies. When the game doesn't support this kind of mechanic, he may appear in another financial role, such as that of a sponsor.
+
+==[[Beastie Bay]]==
+{{CharacterDetails|alias=P. Pumpkin}}In Beastie Bay, Pumpkin Products sells every available item except for super alloy weapons, precious ores, the Kairobeam, grenades, dynamite, scrolls, and certain tomes. The stock is limited at first but increases as investments are made with other islands' trading funds.
+
+==[[Bonbon Cakery]]==
+{{CharacterDetails|alias=Honey Pumpkin}}Sells recipe sets and premium items.
+
+Also houses the [[Bearington]] remodeling service.
+
+==[[Cafeteria Nipponica]]==
+Pumpkin Products sells ingredients.
+
+==[[Dream House Days]]==
+Pumpkin Products sells a variety of [[Items (Dream House Days)|items]] which the player can purchase to supplement tenant or furnishing stats.
+
+==[[Dungeon Village]]==
+He buys and sells items and facilities.
+
+== [[Forest Golf Planner]] ==
+Selling decorations for the golf course and various things for the clubhouse, his shop's contents are updated with every rank up, maxed at level 6.
+
+==[[Game Dev Story]]==
+{{CharacterDetails|alias=Salesman}}Pumpkin Products sells [[Items (Game Dev Story)|items]] that can be used on an employee/employees for a range of effects.
+
+==[[Grand Prix Story]]==
+{{sectionstub}}
+
+==[[Hot Springs Story]]==
+Is in charge of the store, which sells items that can be used to gain items, unlock structures, or increase the max amount of environmental structures.
+
+==[[Legends of Heropolis]]==
+In this game, he was captured along with [[Wairobot]]. After the player rescued both of them, they sell various items for the players to use.
+
+==[[Magazine Mogul]]==
+Same as Game Dev Story (sells items and boosters).
+
+==[[Mega Mall Story]]==
+{{CharacterDetails|alias=Pumpkin Products, Pumpkin 1}}Appears as customer [[Customers (Mega Mall Story)#87|No. 87]].
+
+==[[Ninja Village]]==
+{{CharacterDetails|alias=Kaboemon}}[[File:Kaboemon - ninja village.png|25px|right]]
+Pumpkin Products sells [[Items (Ninja Village)|items]] (Merchant).
+
+==[[Oh! Edo Towns]]==
+{{CharacterDetails|alias=P-Taro}}Leader of the "Pumpkin Products PR" tour.
+
+==[[Pocket Clothier]]==
+{{CharacterDetails|alias=Financial Guru}}Appears as a financial guru and tell you when items are trendy or if a manufacturer is up to something.
+
+==[[Pocket Harvest]]==
+Appears to sell you investments.
+
+==[[Pocket League Story]]==
+{{CharacterDetails|alias=Pumpkin P.}}A possible player for your team.
+
+==[[Pocket League Story 2]]==
+{{CharacterDetails|alias=Pumpkin P}}He sells [[Items (Pocket League Story 2)|items]] (Item Shop). He is also an unlockable [[Players (Pocket League Story 2)|player]] - ''Pumpkin P''.
+
+==[[Pocket Stables]]==
+{{CharacterDetails|alias=Sir Pumpkin}}He will introduce a new race and if you win you will get a new Product or Land Expansion, and usually prize money up to 1.5K.
+
+==[[The Ramen Sensei 2]]==
+He sells soup ingredients, noodle kansui and flour and toppings
+
+==[[The Sushi Spinnery]]==
+{{CharacterDetails|alias=Pumpkin Consulting}}Appears as Pumpkin Consulting. Through him you research new ingredients, abilities, and customer types.
+== [[Social Dev Story]] ==
+{{CharacterDetails|alias=Pumpkin}}He sells [[Items_(Social_Dev_Story)|items]], genres, stamina recovery and item box expansion in the Bargain Shop.
+
+==[[Venture Towns]]==
+At regular intervals, you get a message saying Pumpkin Products is in the neighborhood. A few weeks later, he comes over to buy research points, giving in-game cash in return.
+
+==[[World Cruise Story]]==
+{{CharacterDetails|alias=Pumpkin P.}}
+
+==Trivia==
+*
+
+{{Character}}

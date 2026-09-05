@@ -25,7 +25,12 @@ export function Window95({ win, title, icon, iconUrl, externalFocus, children }:
     drag.current = { dx: e.clientX - win.x, dy: e.clientY - win.y };
     const move = (ev: MouseEvent) => {
       if (!drag.current) return;
-      wm.move(win.id, Math.max(-200, ev.clientX - drag.current.dx), Math.max(0, ev.clientY - drag.current.dy));
+      // аудит 05.09: клэмп как при ресайзе/открытии — окно не уходит за правый/нижний край
+      const vw = window.innerWidth;
+      const vh = window.innerHeight - 30; // рабочая область над таскбаром
+      const x = Math.max(-200, Math.min(ev.clientX - drag.current.dx, vw - 240));
+      const y = Math.max(0, Math.min(ev.clientY - drag.current.dy, vh - 60));
+      wm.move(win.id, x, y);
     };
     const up = () => {
       drag.current = null;
@@ -84,12 +89,19 @@ export function Window95({ win, title, icon, iconUrl, externalFocus, children }:
     };
   }
 
-  if (win.minimized) return null;
-
+  // аудит 05.09: сворачивание НЕ размонтирует детей (display:none вместо return null) —
+  // иначе визард и формы теряют всё локальное состояние
   return (
     <div
       className={`w95-window ${focused ? 'focused' : ''} ${win.maximized ? 'maximized' : ''}`}
-      style={{ left: win.x, top: win.y, width: win.maximized ? undefined : win.w, height: win.maximized ? undefined : win.h, zIndex: win.z }}
+      style={{
+        left: win.x,
+        top: win.y,
+        width: win.maximized ? undefined : win.w,
+        height: win.maximized ? undefined : win.h,
+        zIndex: win.z,
+        display: win.minimized ? 'none' : undefined,
+      }}
       onMouseDown={() => wm.focus(win.id)}
     >
       <div className="w95-titlebar" onMouseDown={onTitleDown}>

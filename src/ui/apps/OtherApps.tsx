@@ -102,7 +102,7 @@ export function HireApp() {
             </select>
             <select className="w95-input" onChange={(e) => { if (careerFor && e.target.value) actionChangeCareer(careerFor, e.target.value); e.target.value = ''; }}>
               <option value="">— новая профессия —</option>
-              {['director', 'producer', 'hw', 'hacker'].map((c) => <option key={c} value={c}>{c}</option>)}
+              {['director', 'producer', 'hw', 'hacker'].map((c) => <option key={c} value={c}>{CAREER_LABELS[c] ?? c}</option>)}
             </select>
             {s && <span className="w95-hint">требования: {Object.entries(CONFIG.CAREER_PREREQ[s.activeCareer] ?? {}).map(([j, lv]) => `${CAREER_LABELS[j] ?? j} Lv${lv}`).join(' + ')}</span>}
           </div>
@@ -309,7 +309,7 @@ function SalesmanPanel() {
                 {game.staff.map((s2) => <option key={s2.id} value={s2.id}>{s2.name}</option>)}
               </select>
               <select className="w95-input" value={manualTarget} onChange={(e) => setManualTarget(e.target.value)}>
-                {['coder', 'writer', 'designer', 'sound', 'director', 'producer', 'hw', 'hacker'].map((c) => <option key={c} value={c}>{c}</option>)}
+                {['coder', 'writer', 'designer', 'sound', 'director', 'producer', 'hw', 'hacker'].map((c) => <option key={c} value={c}>{CAREER_LABELS[c] ?? c}</option>)}
               </select>
               <button className="w95-btn" disabled={!staffId} onClick={() => staffId && actionBuyCareerManual(staffId, manualTarget)}>Купить</button>
             </td>
@@ -323,6 +323,7 @@ function SalesmanPanel() {
 // ─── Архив ───
 export function ArchiveApp() {
   const game = useGame();
+  const meta = useMeta();
   const totalUnits = game.history.reduce((a, h) => a + h.units, 0);
   const totalRev = game.history.reduce((a, h) => a + h.revenue, 0);
   return (
@@ -335,15 +336,16 @@ export function ArchiveApp() {
       </div>
       <table className="w95-table">
         <thead>
-          <tr><th>Год/нед</th><th>Игра</th><th>Жанр × тип</th><th>Платформа</th><th>Оценка</th><th>Продажи</th><th>Доход</th><th>Вклад</th></tr>
+          <tr><th>Дата</th><th>Игра</th><th>Жанр × тип</th><th>Платформа</th><th>Оценка</th><th>Продажи</th><th>Доход</th><th>Вклад</th></tr>
         </thead>
         <tbody>
           {[...game.history].reverse().map((h, i) => (
             <tr key={i}>
-              <td>{Math.floor((h.releaseWeek - 1) / 52) + 1}/{h.releaseWeek}</td>
+              <td>{dateLabel(h.releaseWeek)}</td>
               <td>{h.name}</td>
-              <td>{h.genreId} × {h.typeId}</td>
-              <td>{h.consoleId}</td>
+              {/* аудит 05.09: русские названия вместо сырых id (было h.genreId × h.typeId) */}
+              <td>{meta.genres.find((g) => g.id === h.genreId)?.ru ?? h.genreId} × {meta.types.find((t) => t.id === h.typeId)?.nameRu ?? h.typeId}</td>
+              <td>{meta.consoles.find((c) => c.id === h.consoleId)?.name ?? h.consoleId}</td>
               <td><b>{h.score}</b>{h.score >= CONFIG.HALL_OF_FAME ? ' 🏆' : ''}</td>
               <td>{Math.round(h.units)}K</td>
               <td>{Math.round(h.revenue)}K</td>

@@ -1,0 +1,643 @@
+{
+ "genres": [],
+ "types": [],
+ "training": [],
+ "consoles": [
+  [
+   "PC Game",
+   "10.0K",
+   "",
+   "''None''",
+   "Initially available",
+   "Never",
+   "Forever",
+   ""
+  ],
+  [
+   "Microx SX",
+   "50.0K",
+   "200.0K",
+   "Microx",
+   "Initially available",
+   "",
+   "~6 Years",
+   "MSX"
+  ],
+  [
+   "Exodus",
+   "180.0K",
+   "400.0K",
+   "Senga",
+   "",
+   "",
+   "~ 5 Years",
+   "Sega Genesis - Both are books in the bible."
+  ],
+  [
+   "IES",
+   "300.0K",
+   "800.0K",
+   "Intendro",
+   "",
+   "",
+   "~ 4 Years",
+   "NES"
+  ],
+  [
+   "Game Kid",
+   "250.0K",
+   "550.0K",
+   "Intendro",
+   "",
+   "",
+   "~ 13 Years",
+   "Game Boy"
+  ],
+  [
+   "Play Gear",
+   "450.0K",
+   "1,050.0K",
+   "Senga",
+   "",
+   "",
+   "~ 5 Years",
+   "Game Gear"
+  ],
+  [
+   "PCC-FQX",
+   "300.0K",
+   "680.0K",
+   "Nipon",
+   "",
+   "",
+   "~ 5 Years",
+   "PC-FX"
+  ],
+  [
+   "NEONGEON",
+   "400.0K",
+   "2,200.0K",
+   "Nipon",
+   "",
+   "",
+   "~ 2 Years",
+   "Neo Geo"
+  ],
+  [
+   "Game Swan",
+   "550.0K",
+   "4,500.0K",
+   "Microx",
+   "",
+   "",
+   "~ 10 Years",
+   "Wonder Swan"
+  ],
+  [
+   "Super IES",
+   "600.0K",
+   "5,000.0K",
+   "Intendro",
+   "",
+   "",
+   "~ 4 Years",
+   "Super NES/SNES"
+  ],
+  [
+   "Virtual Kid",
+   "400.0K",
+   "1,800.0K",
+   "Intendro",
+   "",
+   "",
+   "~ 3 Years",
+   "Virtual Boy"
+  ],
+  [
+   "PlayStatus",
+   "650.0K",
+   "10,000.0K",
+   "Sonny",
+   "",
+   "",
+   "~ 8 Years",
+   "PlayStation"
+  ],
+  [
+   "Playdion",
+   "850.0K",
+   "15,000.0K",
+   "Nipon",
+   "",
+   "",
+   "~ 9 Years",
+   "Playdia"
+  ],
+  [
+   "Uranus",
+   "650.0K",
+   "12,000.0K",
+   "Senga",
+   "",
+   "",
+   "~ 9 Years",
+   "Sega Saturn - Both are planets."
+  ],
+  [
+   "Game-Box",
+   "850.0K",
+   "25,000.0K",
+   "Intendro",
+   "",
+   "",
+   "~ 7 Years",
+   "GameCube"
+  ],
+  [
+   "Mini Status",
+   "950.0K",
+   "20,000.0K",
+   "Sonny",
+   "",
+   "Never",
+   "Forever",
+   "PlayStation Portable/PSP"
+  ],
+  [
+   "Intendro DM",
+   "1,000.0K",
+   "35,000.0K",
+   "Intendro",
+   "",
+   "Never",
+   "Forever",
+   "Nintendo DS"
+  ],
+  [
+   "PlayStatus 2",
+   "1,000.0K",
+   "40,000.0K",
+   "Sonny",
+   "",
+   "Never",
+   "Forever",
+   "PlayStation 2"
+  ],
+  [
+   "Microx 480",
+   "1,200.0K",
+   "50,000.0K",
+   "Microx",
+   "",
+   "Never",
+   "Forever",
+   "Xbox 360"
+  ],
+  [
+   "Whoops",
+   "1,600.0K",
+   "80,000.0K",
+   "Intendro",
+   "",
+   "Never",
+   "Forever",
+   "Wii - pun on people accidentally throwing their controllers."
+  ],
+  [
+   "Harpo Drive",
+   "1,300.0K",
+   "90,000.0K",
+   "Senga",
+   "",
+   "Never",
+   "Forever",
+   "MegaDrive or Dreamcast"
+  ],
+  [
+   "Play Popo X",
+   "1,500.0K",
+   "99,999.9K",
+   "Nipon",
+   "",
+   "Never",
+   "Forever",
+   "Playstation 3 -  Probably got sold to Nipon and then the name got changed during the transfer process; It looks like a PlayStation 3 too."
+  ],
+  [
+   "Jupiter 512",
+   "350.0K",
+   "64,000.0K",
+   "Karoisoft",
+   "After your 2nd \"Game of the Year\" Award",
+   "Never",
+   "Forever",
+   "NASA Mars Rover (when released, your assistant says it can be used to explore space, and it has a physical resemblance as well, including the same wheels as the current rover)"
+  ],
+  [
+   "GameJohn",
+   "350.0K",
+   "64,000.0K",
+   "Karoisoft",
+   "After your 5th \"Game of the Year\" Award + 20 millions sales for one game",
+   "Never",
+   "Forever",
+   "A pun on people playing games in the \"John\"."
+  ]
+ ],
+ "achs": [
+  [
+   "Sell 100K",
+   "''Make a hit game that sells 100K units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Sell 500K",
+   "''Make a hit game that sells 500K units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Sell 1 Million",
+   "''Make a hit game that sells 1 million units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Sell 5 Million",
+   "''Make a hit game that sells 5 million units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Sell 10 Million",
+   "''Make a hit game that sells 10 million units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Sell 20 Million",
+   "''Make a hit game that sells 20 million units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Sell 50 Million",
+   "''Make a hit game that sells 50 million units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Sell 100 Million",
+   "''Make a hit game that sells 100 million units.''",
+   "Self-explanatory"
+  ],
+  [
+   "Movin' On Up",
+   "''Grow to an even bigger office''",
+   "Accept to move offices for 600K"
+  ],
+  [
+   "Hittin' the Big Time",
+   "''Move to an even bigger office.''",
+   "Accept to move offices for 1,200K"
+  ],
+  [
+   "The Big Show",
+   "''Make a name for yourself at Gamedex.''",
+   "Attend an annual Gamedex"
+  ],
+  [
+   "Hall of Famer",
+   "''Get a game into the Hall of Fame.''",
+   "Achieve a reviewer score of 32+"
+  ],
+  [
+   "Fanboy Letter",
+   "''Get a letter from a male fan.''",
+   "Increase chance by advertising to a male audience"
+  ],
+  [
+   "Fangirl letter",
+   "''Get a letter from a female fan.''",
+   "Increase chance by advertising to a female audience"
+  ],
+  [
+   "Generate Some Buzz",
+   "''Generate some buzz by building your fan base''",
+   "Get a High enough Buzz while developing a game"
+  ],
+  [
+   "Idiot Box",
+   "''Have a game introduced on TV''",
+   "Get the event where your game is featured on TV"
+  ],
+  [
+   "Line Starts Here",
+   "''Make a game that everyone can't wait to buy.''",
+   "Get the event 'Fans are lining up already'"
+  ],
+  [
+   "Game Expert",
+   "''Train your employees to unlock every type of game.''",
+   "Self-explanatory"
+  ],
+  [
+   "Genre King",
+   "''Have your employees master their jobs and unlock every game genre''",
+   "Level up all type of staff (Writer, hackers...) to level 5"
+  ],
+  [
+   "Design God",
+   "''Win the Best Design Award''",
+   "Win Best Design at the GGA"
+  ],
+  [
+   "Music Man",
+   "''Win the Best Music Award''",
+   "Win Best Music at the GGA"
+  ],
+  [
+   "Worst of the Worst",
+   "''Win the Worst Game Award.''",
+   "Self-explanatory"
+  ],
+  [
+   "Close but No Cigar",
+   "''Win Runner up.''",
+   "Self-explanatory"
+  ],
+  [
+   "Grand Prize Winner!",
+   "''Win the Grand Prize.''",
+   "Self-explanatory"
+  ],
+  [
+   "Mystery Staffer X",
+   "''Hire a mysterious masked staff member.''",
+   "Hire Mister X"
+  ],
+  [
+   "Mystery Staffer A",
+   "''Hire a king with penchant for gaming.''",
+   "Hire King Ackbar"
+  ],
+  [
+   "Mystery Staffer B",
+   "''A ferocious bear has been spotted around town...''",
+   "Hire Grizzly Bearington"
+  ],
+  [
+   "Mysery Staffer C",
+   "''Find a genius who'll work for bananas''",
+   "Hire Chimpan Z-Force"
+  ],
+  [
+   "Mystery Staffer K",
+   "''Find a mysterious super robot''",
+   "Hire Kairobot"
+  ],
+  [
+   "Hardcore hardware",
+   "''Make your own game console''",
+   "Self-Explanatory"
+  ],
+  [
+   "Mystery Console",
+   "''A game console so awesome it's like a spaceship or somthing''",
+   "Unlock the Jupiter 512 console"
+  ],
+  [
+   "Holy Grail",
+   "''Could the rumors be true? A toilet AND a game console?''",
+   "Unlock the GameJohn Console"
+  ]
+ ],
+ "reviews": [
+  [
+   "style=\"text-align:center;\" |A masterpiece!!",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |Amazing! I'm impressed!",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |An amazingly large game!",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |I bought 3 copies myself.",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |It's... so beautiful...!",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |Perfect!",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |The game of the century!",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |This'll go down in history!",
+   "style=\"text-align:center;\" |10"
+  ],
+  [
+   "style=\"text-align:center;\" |A guaranteed hit!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |A rare masterpiece!!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |An instant classic!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |Everybody loved it!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |I can't wait to play more!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |I had a ball with this one!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |I play this one every day!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |I was about to cry!",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |They did a great job.",
+   "style=\"text-align:center;\" |9"
+  ],
+  [
+   "style=\"text-align:center;\" |A little rough, but good.",
+   "style=\"text-align:center;\" |8"
+  ],
+  [
+   "style=\"text-align:center;\" |Best game of the year.",
+   "style=\"text-align:center;\" |8"
+  ],
+  [
+   "style=\"text-align:center;\" |I had a lot of fun with it!",
+   "style=\"text-align:center;\" |8"
+  ],
+  [
+   "style=\"text-align:center;\" |I give it a “buy\".",
+   "style=\"text-align:center;\" |8"
+  ],
+  [
+   "style=\"text-align:center;\" |My pick of the week.",
+   "style=\"text-align:center;\" |8"
+  ],
+  [
+   "style=\"text-align:center;\" |Needs a twist.",
+   "style=\"text-align:center;\" |8"
+  ],
+  [
+   "style=\"text-align:center;\" |I could play this for days.",
+   "style=\"text-align:center;\" |8"
+  ],
+  [
+   "style=\"text-align:center;\" |It's a fun combination.",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |Its content was good.",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |Nice. What's next?",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |Rough around the edges.",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |So close and yet so far...",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |They do good work.",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |They've come a long way.",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |A bit rough, but creative.",
+   "style=\"text-align:center;\" |7"
+  ],
+  [
+   "style=\"text-align:center;\" |It's easy to play, but...",
+   "style=\"text-align:center;\" |6"
+  ],
+  [
+   "style=\"text-align:center;\" |Not for most players.",
+   "style=\"text-align:center;\" |6"
+  ],
+  [
+   "style=\"text-align:center;\" |This is pretty good!",
+   "style=\"text-align:center;\" |6"
+  ],
+  [
+   "style=\"text-align:center;\" |It's for hardcore gamers.",
+   "style=\"text-align:center;\" |6"
+  ],
+  [
+   "style=\"text-align:center;\" |It all needs more work.",
+   "style=\"text-align:center;\" |6"
+  ],
+  [
+   "style=\"text-align:center;\" |Needs more polish.",
+   "style=\"text-align:center;\" |6"
+  ],
+  [
+   "style=\"text-align:center;\" |Good overall.",
+   "style=\"text-align:center;\" |5"
+  ],
+  [
+   "style=\"text-align:center;\" |Close. Try Harder.",
+   "style=\"text-align:center;\" |5"
+  ],
+  [
+   "style=\"text-align:center;\" |Some people may like it.",
+   "style=\"text-align:center;\" |5"
+  ],
+  [
+   "style=\"text-align:center;\" |Title screen wasn't bad...",
+   "style=\"text-align:center;\" |5"
+  ],
+  [
+   "style=\"text-align:center;\" |Too short.",
+   "style=\"text-align:center;\" |5"
+  ],
+  [
+   "style=\"text-align:center;\" |Good idea. I enjoyed it.",
+   "style=\"text-align:center;\" |5"
+  ],
+  [
+   "style=\"text-align:center;\" |Look forward to a sequel.",
+   "style=\"text-align:center;\" |5"
+  ],
+  [
+   "style=\"text-align:center;\" |I like this kind of game.",
+   "style=\"text-align:center;\" |4"
+  ],
+  [
+   "style=\"text-align:center;\" |Rethink the combination.",
+   "style=\"text-align:center;\" |4"
+  ],
+  [
+   "style=\"text-align:center;\" |They worked hard on it.",
+   "style=\"text-align:center;\" |4"
+  ],
+  [
+   "style=\"text-align:center;\" |Needs work, technically.",
+   "style=\"text-align:center;\" |4"
+  ],
+  [
+   "style=\"text-align:center;\" |This shows promise!",
+   "style=\"text-align:center;\" |4"
+  ],
+  [
+   "style=\"text-align:center;\" |Good job.",
+   "style=\"text-align:center;\" |4"
+  ],
+  [
+   "style=\"text-align:center;\" |Still needs work.",
+   "style=\"text-align:center;\" |4"
+  ],
+  [
+   "style=\"text-align:center;\" |The idea isn't bad, but...",
+   "style=\"text-align:center;\" |3"
+  ],
+  [
+   "style=\"text-align:center;\" |Not bad. But not good.",
+   "style=\"text-align:center;\" |3"
+  ],
+  [
+   "style=\"text-align:center;\" |It went right to the trash.",
+   "style=\"text-align:center;\" |3"
+  ],
+  [
+   "style=\"text-align:center;\" |Why'd they do this to us?",
+   "style=\"text-align:center;\" |3"
+  ],
+  [
+   "style=\"text-align:center;\" |Oh dear...",
+   "style=\"text-align:center;\" |3"
+  ],
+  [
+   "style=\"text-align:center;\" |They need more practice.",
+   "style=\"text-align:center;\" |3"
+  ]
+ ]
+}

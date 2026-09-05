@@ -8,7 +8,7 @@ import { advanceWeeks, newGame, releaseAction, resolveBoostAction, resolveEventA
 import { createRng } from '../src/core/rng';
 import { resolveBoost } from '../src/core/systems/dev';
 import { consoleAvailable } from '../src/core/systems/dev';
-import { dateToDay, dailySales, tickMediaEvents, tryUnlockEventConsoles, dateLabel as coreDateLabel } from '../src/core/systems/market';
+import { dateToDay, dailySales, tickMediaEvents, dateLabel as coreDateLabel } from '../src/core/systems/market';
 import { tickFanLetters } from '../src/core/systems/mail';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { dateLabel as sharedDateLabel } from '../src/shared/meta';
@@ -123,6 +123,18 @@ describe('буст-событие: семантика приёма/отказа'
     expect(successHype).toBe(10 + CONFIG.BOOST_HYPE_GAIN);
     expect(failHype).toBe(10); // провал ожидания не повышает
     expect(failBugs).toBeGreaterThan(0);
+  });
+  it('нехватка PR не съедает событие и не ставит boostUsed (аудит 05.09)', () => {
+    const g = newGame(7);
+    g.research = 5;
+    const ag = debugGame(g, 10);
+    g.pendingEvent = { type: 'boost', staffId: g.staff[0]!.id, cost: 10 };
+    const res = resolveBoostAction(g, true, 100); // просим больше, чем есть
+    expect(res.ok).toBe(false);
+    expect(g.pendingEvent?.type).toBe('boost'); // событие осталось — игрок может выбрать меньше
+    expect(g.research).toBe(5);
+    expect(ag.boostUsed).toBe(false);
+    expect(ag.hype).toBe(10);
   });
 });
 

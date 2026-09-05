@@ -1,0 +1,4474 @@
+{{Game Dev Story}}
+{{tocright}}
+'''Genres and types''' are an important aspect when [[Creating games (Game Dev Story)|making a game]], as each game can only have one of each, and which ones you choose can greatly affect sales. Genres and types all have unique "popularity" with consumers, and the cost to produce a game in any genre or type varies. The key to using genre and types effectively is to [[#Combinations|combine]] complimentary subjects to create combos. Each combo receives a basic rating, ranging from "Not good" to "Amazing!", to measure how  successful your combo is. This plays a key role in making a top-selling game.
+
+'''Genres''' are unlocked by leveling up [[Employees (Game Dev Story)|employees]] to a specific level or higher in a specific [[Careers (Game Dev Story)|career]]. You can also hire someone who already has obtained this level to unlock it. Unlocking '''types''' requires employees at or above a certain level to use specific [[Training (Game Dev Story)|training methods]]. 
+
+==Genres==
+{{Sticky table start}}
+{| class="wikitable oddrow sortable sticky-table-head" style="text-align:center;"
+|- class="hrow"
+! rowspan="2" |No.
+! rowspan="2" | Genre
+! rowspan="2" | Popularity
+! colspan="2" | Unlock Condition
+|- class="hrow"
+! Job
+! Level
+|-
+|1
+|RPG
+|A
+|Writer
+|5
+|-
+|2
+|Simulation
+|A
+|Coder
+|4
+|-
+|3
+|Sim RPG
+|A
+|Director
+|1
+|-
+|4
+|Table
+|B
+| colspan="2" | {{ia}}
+|-
+|5
+|Action
+|B
+|Writer
+|3
+|-
+|6
+|Adventure
+|C
+| colspan="2" | {{ia}}
+|-
+|7
+|Shooter
+|C
+|Writer
+|3
+|-
+|8
+|Action RPG
+|A
+|Producer
+|3
+|-
+|9
+|Racing
+|B
+|Snd. Eng.
+|3
+|-
+|10
+|Online RPG
+|A
+|Producer
+|5
+|-
+|11
+|Online Sim
+|A
+|Hacker
+|5
+|-
+|12
+|Trivia
+|C
+| colspan="2" | {{ia}}
+|-
+|13
+|Life
+|B
+|Designer
+|3
+|-
+|14
+|Board
+|B
+|Producer
+|1
+|-
+|15
+|Puzzle
+|B
+| colspan="2" | {{ia}}
+|-
+|16
+|Music
+|A
+|Director
+|5
+|-
+|17
+|Audio Novel
+|B
+|Director
+|2
+|-
+|18
+|Motion
+|A
+|Hard. Eng.
+|4
+|-
+|19
+|Educational
+|C
+| colspan="2" | {{ia}}
+|-
+|20
+|Card Game
+|A
+|Hard. Eng.
+|3
+|}
+{{Sticky table end}}
+
+==Types==
+Game types are unlocked when an employee with a specific job uses a specific training technique.
+{{Sticky table start}}
+{| class="wikitable oddrow sortable sticky-table-head"  style="text-align:center;"
+|- class="hrow"
+! rowspan="2" |No.
+! rowspan="2" | Type
+! rowspan="2" | Popularity
+! colspan="3" | Unlock Condition
+|- class="hrow"
+! Job
+! style="font-size:70%;" |Min Lvl
+! Training
+|-
+|1
+|Sports
+|C
+|Coder
+|1
+|Jogging
+|-
+|2
+|Exploration
+|C
+|Coder
+|2
+|Movie
+|-
+|3
+|Martial Arts
+|C
+|Director
+|1
+|Movie
+|-
+|4
+|Fantasy
+|A
+|Writer
+|2
+|Reading
+|-
+|5
+|Virtual Pet
+|A
+|Coder
+|2
+|Pinball
+|-
+|6
+|Samurai
+|A
+|Writer
+|4
+|Movie
+|-
+|7
+|Dungeon
+|B
+|Coder
+|2
+|Game
+|-
+|8
+|Romance
+|A
+|Writer
+|2
+|Reading
+|-
+|9
+|Pirate
+|B
+| colspan="3" | {{Initially available}}
+|-
+|10
+|Comedy
+|C
+|Producer
+|1
+|Movie
+|-
+|11
+|Horror
+|C
+|Writer
+|3
+|Net Surf
+|-
+|12
+|Word
+|A
+|Director
+|3
+|Lab Study
+|-
+|13
+|Train
+|B
+|Designer
+|2
+|Stroll
+|-
+|14
+|Animal
+|B
+| colspan="3" | {{Initially available}}
+|-
+|15
+|Robot
+|C
+| colspan="3" | {{Initially available}}
+|-
+|16
+|Airplane
+|B
+|Coder
+|1
+|Museum
+|-
+|17
+|Conv. Store
+|C
+|Coder
+|3
+|Stroll
+|-
+|18
+|Historical
+|C
+| colspan="3" | {{Initially available}}
+|-
+|19
+|Bookstore
+|A
+|Snd. Eng.
+|3
+|Stroll
+|-
+|20
+|Comics
+|A
+|Hard. Eng.
+|1
+|Reading
+|-
+|21
+|Art
+|B
+|Designer
+|1
+|Movie
+|-
+|22
+|Movies
+|A
+|Writer
+|1
+|Movie
+|-
+|23
+|Game Co.
+|A
+|Coder
+|5
+|Game
+|-
+|24
+|Egypt
+|C
+|Producer
+|1
+|Long Trip
+|-
+|25
+|Town
+|A
+|Producer
+|2
+|Museum
+|-
+|26
+|Architecture
+|A
+|Director
+|1
+|Long Trip
+|-
+|27
+|Lawyer
+|A
+|Director
+|1
+|Net Surf
+|-
+|28
+|Medieval
+|C
+|Hard. Eng.
+|2
+|Movie
+|-
+|29
+|Monster
+|C
+|Designer
+|1
+|Meditate
+|-
+|30
+|Hunting
+|A
+|Designer
+|3
+|Game
+|-
+|31
+|High School
+|B
+|Coder
+|3
+|Stroll
+|-
+|32
+|Junior High
+|C
+|Writer
+|1
+|College
+|-
+|33
+|War
+|B
+|Snd. Eng.
+|1
+|Concert
+|-
+|34
+|Ninja
+|B
+| colspan="3" | {{Initially available}}
+|-
+|35
+|Cutie
+|A
+|Designer
+|3
+|Concert
+|-
+|36
+|Ogre
+|C
+|Writer
+|5
+|Meditate
+|-
+|37
+|Fashion
+|B
+|Director
+|2
+|College
+|-
+|38
+|Detective
+|B
+|Writer
+|2
+|Reading
+|-
+|39
+|Mystery
+|B
+|Writer
+|1
+|Reading
+|-
+|40
+|Cowboy
+|B
+|Producer
+|1
+|Short Trip
+|-
+|41
+|Horseshoes
+|C
+|Director
+|2
+|Pinball
+|-
+|42
+|President
+|B
+|Hard. Eng.
+|2
+|Lab Study
+|-
+|43
+|Stocks
+|C
+|Coder
+|4
+|Lab Study
+|-
+|44
+|Cartoon
+|B
+|Writer
+|3
+|Anime
+|-
+|45
+|Cosplay
+|B
+|Writer
+|5
+|Anime
+|-
+|46
+|Pop Star
+|C
+|Director
+|1
+|Museum
+|-
+|47
+|Swimsuit
+|A
+|Hacker
+|2
+|Anime
+|-
+|48
+|Mini-skirt
+|A
+|Hacker
+|5
+|Short Trip
+|-
+|49
+|Mushroom
+|C
+|Hacker
+|2
+|Short Trip
+|-
+|50
+|Poncho
+|B
+|Hacker
+|1
+|Long Trip
+|-
+|51
+|Chess
+|C
+|Coder
+|2
+|Stroll
+|-
+|52
+|Checkers
+|C
+|Snd. Eng.
+|1
+|Anime
+|-
+|53
+|Mahjong
+|B
+|Coder
+|1
+|Pinball
+|-
+|54
+|Reversi
+|C
+| colspan="3" | {{Initially available}}
+|-
+|55
+|Dance
+|B
+|Writer
+|2
+|Concert
+|-
+|56
+|Drums
+|B
+|Producer
+|1
+|Reading
+|-
+|57
+|Fitness
+|A
+|Snd. Eng.
+|1
+|Meditate
+|-
+|58
+|Wrestling
+|C
+|Writer
+|1
+|Game
+|-
+|59
+|Basketball
+|B
+|Writer
+|2
+|Jogging
+|-
+|60
+|Skiing
+|C
+|Producer
+|1
+|Jogging
+|-
+|61
+|Snowboard
+|B
+|Director
+|1
+|Jogging
+|-
+|62
+|Golf
+|B
+| colspan="3" | {{Initially available}}
+|-
+|63
+|Swimming
+|C
+|Snd. Eng.
+|1
+|Meditate
+|-
+|64
+|Volleyball
+|C
+|Designer
+|2
+|Jogging
+|-
+|65
+|Motorsport
+|B
+|Writer
+|3
+|Net Surf
+|-
+|66
+|Soccer
+|B
+|Designer
+|2
+|Jogging
+|-
+|67
+|Ping Pong
+|C
+|Coder
+|2
+|Jogging
+|-
+|68
+|Sumo
+|B
+|Director
+|1
+|Stroll
+|-
+|69
+|Baseball
+|A
+|Coder
+|3
+|Stroll
+|-
+|70
+|Wrestling
+|C
+|Snd. Eng.
+|1
+|Stroll
+|-
+|71
+|Marathon
+|C
+| colspan="3" | {{Initially available}}
+|-
+|72
+|F1 Racing
+|B
+|Coder
+|2
+|Long Trip
+|-
+|73
+|Pinball
+|C
+|Writer
+|1
+|Pinball
+|-
+|74
+|Slots
+|C
+|Writer
+|3
+|Pinball
+|-
+|75
+|Dating
+|A
+|Designer
+|3
+|Anime
+|-
+|76
+|Harbor
+|A
+|Coder
+|1
+|Short Trip
+|-
+|77
+|Time Travel
+|B
+|Producer
+|1
+|Meditiate
+|-
+|78
+|Spy
+|B
+|Director
+|1
+|Long Trip
+|-
+|79
+|Celebrity
+|B
+|Coder
+|2
+|Concert
+|}
+{{Sticky table end}}
+{{Clear}}
+
+===Grid View===
+The numbers in parenthesis or brackets are the required worker level for the training method to work.
+{{Sticky table start}}
+{| class="wikitable oddrow sortable sticky-table-head sticky-table-col1" style="text-align:center;"
+!
+! Coder
+! Writer
+! Designer
+! Sound Engineer
+! Director
+! Producer
+! Hardware Engineer
+! Hacker
+|-
+! Stroll
+|Chess (2)<br />Conv.Store (3)<br />High.School (3)<br />Baseball (3)
+|
+|Train (2)
+|Bookstore (1)
+Wrestling (3)
+|Sumo (1)
+|
+|
+|
+|-
+!Reading
+|
+|Fantasy (1)<br />Detective (2)<br />Romance (2)
+Mystery (2)
+|
+|
+|
+|Drums (1)
+|Comics (1)
+|
+|-
+!Movie
+| Exploration (2)
+|Movies (1)<br />Samurai (2)
+|Art (1)
+|
+|Martial Arts (1)
+|Comedy (1)
+|Medieval (2)
+|
+|-
+!Anime
+|
+|Cartoon (3)<br />Cosplay (5)
+| Dating (3)
+|Checkers(1)
+|
+|
+|
+|Swimsuit(2)
+|-
+!Game
+|Dungeon (2)<br />Game Co. (5)
+|Wrestling (1)
+|Hunting (3)
+|
+|
+|
+|
+|
+|-
+!Jogging
+|
+Sports (1)<br />Ping Pong (2)
+|Basketball (2)
+|Volleyball (2)<br />Soccer (2)
+|
+|Snowboard (1)
+|Skiing (1)
+|
+|
+|-
+!Pinball
+|
+Mahjong (1)<br />Virtual Pet (2)
+|Pinball (1)<br />Slots (3) 
+|
+|
+|Horseshoes (2)
+|
+|
+|
+|-
+!Meditate
+|
+|Ogre (2)
+|Monster (1)
+| Fitness (1)<br />Swimming (1)
+|
+|Time Travel (1)
+|
+|
+|-
+!Concert
+|Celebrity (2)
+|Dance (2)
+|Cutie (3)
+|War (1)
+|
+|
+|
+|
+|-
+!Net Surf
+|
+|Horror (3)<br />Motorsport (3)
+|
+|
+| Lawyer (1)
+|
+|
+|
+|-
+!Museum
+|Airplane (1)
+|
+|
+|
+|Pop Star (1)
+|Town (2)
+|
+|
+|-
+!College
+|
+|Junior High (1)
+|
+|
+| Fashion (2)
+|
+|
+|
+|-
+!Lab Study 
+|Stocks (4)
+|
+|
+|
+|Word (3) 
+|
+|President (2)
+|
+|-
+!Short Trip
+|Harbor (1)
+|
+|
+|
+|
+|Cowboy (1)
+|
+|Mushroom (2)<br />Mini-skirt (5)
+|-
+!Long Trip
+| F1 Racing (2)
+|
+|
+|
+|Architecture (1)<br />Spy (1)
+|Egypt (1)
+|
+| Poncho (1)
+|}
+{{Sticky table end}}
+
+==Combinations<ref>https://wikiwiki.jp/kairoparknew/gamedev/08</ref>==
+
+As you develop new games with the same genre or type, you will level up the skill of that genre or type. 
+
+Before you have used a specific combination, it will say "First Try".
+
+The combo with the genres Sim RPG (3), Educational (19), and Card Game (20) is always 'Nothing'. The same happens with the types Harbor (76), Time Travel (77), Spy (78), and Celebrity (79). It's unclear whether this is a feature or a bug.
+
+=== Grade of the Combo ===
+The following table shows grade of the combo, symbols of each grade which are used in subsequent tables, and quotes after choosing combo with each grade.
+{| class="wikitable oddrow" style="text-align:center;"
+|+
+!Symbol
+!Grade
+!Quote
+|-
+|S
+|Amazing!
+|"What a great combination!! Your staff is very excited to get to work on this one!"
+|-
+|A
+|Creative.
+|"That's a bizarre combination... I wonder how this will turn out..."
+|-
+|B
+|Not Bad
+|"This should be a popular combination. I'm looking forward to seeing it finished."
+|-
+|C
+|Nothing
+|"At last, it's time to start game development. Good luck!"
+|-
+|D
+|Hmm...
+|"That's a bit of an odd combination. I'm sure you can pull it off, but..."
+|-
+|F
+|Not Good
+|"That genre and type don't go together at all... I hope it sells..."
+|}
+
+=== Compatibility Table Sorted by Types ===
+{{Sticky table start}}
+{| class="wikitable oddrow sortable sticky-table-head sticky-table-col2" style="text-align:center;"
+|+
+!No.
+!Types
+!data-sort-type="number" |RPG
+!data-sort-type="number" |Simulation
+!data-sort-type="number" |<span style="color:red">Sim RPG</span>
+!data-sort-type="number" |Table
+!data-sort-type="number" |Action
+!data-sort-type="number" |Adventure
+!data-sort-type="number" |Shooter
+!data-sort-type="number" |Action RPG
+!data-sort-type="number" |Racing
+!data-sort-type="number" |Online RPG
+!data-sort-type="number" |Online Sim
+!data-sort-type="number" |Trivia
+!data-sort-type="number" |Life
+!data-sort-type="number" |Board
+!data-sort-type="number" |Puzzle
+!data-sort-type="number" |Music
+!data-sort-type="number" |Audio Novel
+!data-sort-type="number" |Motion
+!data-sort-type="number" |<span style="color:red">Educational</span>
+!data-sort-type="number" |<span style="color:red">Card Game</span>
+|-
+|1
+|Sports
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|2
+|Exploration
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|3
+|Martial Arts
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|4
+|Fantasy
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|5
+|Virtual Pet
+|data-sort-value="1"|F
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|6
+|Samurai
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|7
+|Dungeon
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|8
+|Romance
+|data-sort-value="2"|D
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|9
+|Pirate
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|10
+|Comedy
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|11
+|Horror
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|12
+|Word
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|13
+|Train
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|14
+|Animal
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|15
+|Robot
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|16
+|Airplane
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|17
+|Conv. Store
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|18
+|Historical
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|19
+|Bookstore
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|20
+|Comics
+|data-sort-value="1"|F
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|21
+|Art
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|22
+|Movies
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|23
+|Game Co.
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|24
+|Egypt
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|25
+|Town
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|26
+|Architecture
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|27
+|Lawyer
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|28
+|Medieval
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|29
+|Monster
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|30
+|Hunting
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|31
+|High School
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|32
+|Junior High
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|33
+|War
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|34
+|Ninja
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|35
+|Cutie
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|36
+|Ogre
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|37
+|Fashion
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|38
+|Detective
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|39
+|Mystery
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|40
+|Cowboy
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|41
+|Horseshoes
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|42
+|President
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|43
+|Stocks
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|44
+|Cartoon
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|45
+|Cosplay
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|46
+|Pop Star
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|47
+|Swimsuit
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|48
+|Mini-skirt
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|49
+|Mushroom
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|50
+|Poncho
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|51
+|Chess
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|52
+|Checkers
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|53
+|Mahjong
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|54
+|Reversi
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|55
+|Dance
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|56
+|Drums
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|57
+|Fitness
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|58
+|Pro Wrestling
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|59
+|Basketball
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="1"|F
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|60
+|Skiing
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|61
+|Snowboard
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|62
+|Golf
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|63
+|Swimming
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|64
+|Volleyball
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|65
+|Motorsport
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|66
+|Soccor
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|67
+|Ping Pong
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|68
+|Sumo
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|69
+|Baseball
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|70
+|Wrestling
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|71
+|Marathon
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|72
+|F1 Racing
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|73
+|Pinball
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|74
+|Slots
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|75
+|Dating
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|76
+|<span style="color:red">Harbor</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|77
+|<span style="color:red">Time Travel</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|78
+|<span style="color:red">Spy</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|79
+|<span style="color:red">Celebrity</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|}
+{{Sticky table end}}
+
+=== Compatibility Table Sorted by Genres ===
+{{Sticky table start}}
+{| class="wikitable oddrow sortable sticky-table-head sticky-table-col2" style="text-align:center;"
+!No.
+!Genres
+!data-sort-type="number" |Sports
+!data-sort-type="number" |Exploration
+!data-sort-type="number" |Martial Arts
+!data-sort-type="number" |Fantasy
+!data-sort-type="number" |Virtual Pet
+!data-sort-type="number" |Samurai
+!data-sort-type="number" |Dungeon
+!data-sort-type="number" |Romance
+!data-sort-type="number" |Pirate
+!data-sort-type="number" |Comedy
+!data-sort-type="number" |Horror
+!data-sort-type="number" |Word
+!data-sort-type="number" |Train
+!data-sort-type="number" |Animal
+!data-sort-type="number" |Robot
+!data-sort-type="number" |Airplane
+!data-sort-type="number" |Conv. Store
+!data-sort-type="number" |Historical
+!data-sort-type="number" |Bookstore
+!data-sort-type="number" |Comics
+!data-sort-type="number" |Art
+!data-sort-type="number" |Movies
+!data-sort-type="number" |Game Co.
+!data-sort-type="number" |Egypt
+!data-sort-type="number" |Town
+!data-sort-type="number" |Architecture
+!data-sort-type="number" |Lawyer
+!data-sort-type="number" |Medieval
+!data-sort-type="number" |Monster
+!data-sort-type="number" |Hunting
+!data-sort-type="number" |High School
+!data-sort-type="number" |Junior High
+!data-sort-type="number" |War
+!data-sort-type="number" |Ninja
+!data-sort-type="number" |Cutie
+!data-sort-type="number" |Ogre
+!data-sort-type="number" |Fashion
+!data-sort-type="number" |Detective
+!data-sort-type="number" |Mystery
+!data-sort-type="number" |Cowboy
+!data-sort-type="number" |Horseshoes
+!data-sort-type="number" |President
+!data-sort-type="number" |Stocks
+!data-sort-type="number" |Cartoon
+!data-sort-type="number" |Cosplay
+!data-sort-type="number" |Pop Star
+!data-sort-type="number" |Swimsuit
+!data-sort-type="number" |Mini-skirt
+!data-sort-type="number" |Mushroom
+!data-sort-type="number" |Poncho
+!data-sort-type="number" |Chess
+!data-sort-type="number" |Checkers
+!data-sort-type="number" |Mahjong
+!data-sort-type="number" |Reversi
+!data-sort-type="number" |Dance
+!data-sort-type="number" |Drums
+!data-sort-type="number" |Fitness
+!data-sort-type="number" |Pro Wrestling
+!data-sort-type="number" |Basketball
+!data-sort-type="number" |Skiing
+!data-sort-type="number" |Snowboard
+!data-sort-type="number" |Golf
+!data-sort-type="number" |Swimming
+!data-sort-type="number" |Volleyball
+!data-sort-type="number" |Motorsport
+!data-sort-type="number" |Soccor
+!data-sort-type="number" |Ping Pong
+!data-sort-type="number" |Sumo
+!data-sort-type="number" |Baseball
+!data-sort-type="number" |Wrestling
+!data-sort-type="number" |Marathon
+!data-sort-type="number" |F1 Racing
+!data-sort-type="number" |Pinball
+!data-sort-type="number" |Slots
+!data-sort-type="number" |Dating
+!data-sort-type="number" |<span style="color:red">Harbor</span>
+!data-sort-type="number" |<span style="color:red">Time Travel</span>
+!data-sort-type="number" |<span style="color:red">Spy</span>
+!data-sort-type="number" |<span style="color:red">Celebrity</span>
+|-
+|1
+|RPG
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|2
+|Simulation
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|3
+|<span style="color:red">Sim RPG</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|4
+|Table
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|5
+|Action
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|6
+|Adventure
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|7
+|Shooter
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|8
+|Action RPG
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|9
+|Racing
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|10
+|Online RPG
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|11
+|Online Sim
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|12
+|Trivia
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|13
+|Life
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|14
+|Board
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|15
+|Puzzle
+|data-sort-value="5"|A
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|16
+|Music
+|data-sort-value="1"|F
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="1"|F
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|17
+|Audio Novel
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="2"|D
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|18
+|Motion
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="1"|F
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="5"|A
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="2"|D
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="6"|S
+|data-sort-value="4"|B
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="3"|C
+|data-sort-value="5"|A
+|data-sort-value="3"|C
+|data-sort-value="4"|B
+|data-sort-value="6"|S
+|data-sort-value="6"|S
+|data-sort-value="5"|A
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|19
+|<span style="color:red">Educational</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|-
+|20
+|<span style="color:red">Card Game</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|data-sort-value="3"|<span style="color:red">C</span>
+|}
+{{Sticky table end}}
+==Trivia==
+*Space and Jumprope are inaccessible in the game as there is an unused training method, Retreat. They would have been unlocked by the designer and the coder by going to the Retreat. This can be seen in the game's code. [http://uk.gamespot.com/game-dev-story/forum/space-and-jumprope-game-types-58786889/ [1]]

@@ -11,12 +11,10 @@ data/
 # Музыка (пользовательские файлы)
 public/music/
 music/
-research/
-plan/
-tools/
 
 # Логи и временное
 *.log
 *.tmp
 .DS_Store
 Thumbs.db
+.dsh-shots/

@@ -98,7 +98,7 @@ export const CONFIG = {
   PRICE_MULT_SOFT: 0.15, // смягчение ценового множителя: 1 + (mult−1)×это
   COMBO_MULT: { S: 1.5, A: 1.3, B: 1.1, C: 1.0, D: 0.8, F: 0.5 },
   POP_MULT: { A: 1.2, B: 1.0, C: 0.85 } as Record<string, number>,
-  FAN_MULT_DIV: 100,
+  FAN_MULT_DIV: 2000, // аудит 05.09: было 100 → кап ~10K фанатов делал верхние AD_FAN_CAPS (до 150K) мёртвыми
   FAN_MULT_CAP: 3.0,
   HYPE_MULT_BASE: 0.8,
   HYPE_MULT_CAP: 1.8,
@@ -129,7 +129,7 @@ export const CONFIG = {
   LOG_CAP: 500,
 
   // исследования
-  RESEARCH_DEV_RATE: 0.0072, // PR/день = очки_дня × это (было 0.05 в неделю)
+  RESEARCH_DEV_RATE: 0.05, // PR/день = очки_дня × это (0.5×очки_недели×0.1 из plan/09 §10; аудит 05.09: было 0.0072 — двойное ÷7)
   RESEARCH_MODE_MULT: 1.5,
   BOOST_COST_DIV: 10,
   BOOST_COST_MIN: 10,

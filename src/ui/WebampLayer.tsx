@@ -3,7 +3,7 @@
 // весь DOM winamp (окна, плейлист, эквалайзер, визуализации, меню) живёт
 // внутри .w95-desktop как и остальные окна. Управление — обычные пропсы:
 // zTop — слой поверх окон игры / в фоне; visible — свёрнут в трей.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import Webamp from 'webamp-internal';
 
 interface Props {

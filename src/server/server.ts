@@ -4,7 +4,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
-import { PORT, gigaReady } from './config';
+import { PORT, HOST, gigaReady } from './config';
 import { GameServer, type ClientAction } from './game';
 import { llmStatus } from './giga';
 
@@ -14,8 +14,8 @@ const DIST = path.join(ROOT, 'dist');
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
-const server = app.listen(PORT, () => {
-  console.log(`[gds] сервер на :${PORT}; GigaChat: ${gigaReady ? 'подключён' : 'НЕТ ключей (чат будет молчать)'}`);
+const server = app.listen(PORT, HOST, () => {
+  console.log(`[gds] сервер на http://${HOST}:${PORT}; GigaChat: ${gigaReady ? 'подключён' : 'НЕТ ключей (чат будет молчать)'}`);
 });
 
 const game = new GameServer();
@@ -41,6 +41,7 @@ wss.on('connection', (ws, req) => {
       const ar = game.actionResult();
       if (ar && !ar.ok) ws.send(JSON.stringify({ type: 'action_result', error: ar.error }));
     } catch (e) {
+      console.error('[gds] WS-сообщение не обработано:', String(e).slice(0, 300));
       ws.send(JSON.stringify({ type: 'action_result', error: String(e).slice(0, 200) }));
     }
   });

@@ -1,0 +1,27 @@
+{{Game Dev Story}}
+{{GameTranscript}}
+==Game Guy Magazine==
+===Name of Article===
+{{Cquote2|style=font-weight:normal;|Quote Here||||align = }}
+===Game Industry Trends===
+{{Cquote2|style=font-weight:normal;|Competition in the game industry continues to heat up as newcomer [name of your company] enters the market. We look forward to seeing what they have in store for us. It will need to be impressive to make an impact in this crowded market.||||align = }}
+===1 Million Units Sold===
+{{Cquote2|style=font-weight:normal;|The recently released Exodus has proven to be quite popular, reaching 1 million units sold in a very short period of time. But consoles must continue to sell in order to be considered a success. In many cases, a hit game prompts people to purchase a system. Indeed, a single hit game can greatly change a console's fortunes.||||align = }}
+===Big Sales, Big Office===
+{{Cquote2|Sources say that [name of your company], which should be a familiar name to any game fan by now, has recently moved to new offices. The new offices are in a prime location near a train station and are carpeted with the finest Persian rugs. The president commented that, "It's my job to provide a workplace that brings out the best in our employees." And indeed, it seems to be working--the company as been flooded with applications for work.}}
+===[[Mister X|Masked Man]]?===
+{{Cquote2|According to information acquired by our magazine, a mysterious masked man has recently been seen trying to apply at various video game companies. Our sources indicate that he is simply a hardworking guy in a mask, so companies should certainly give him a second look.}}
+===[[King Ackbar|Missing King]]===
+{{Cquote2|A Middle Eastern oil baron disappeared during a recent trip to consumer electronics district, and hasn't been seen since. One of his servants looked up from the game he was playing long enough to talk to us. "We knew that the king was obsessed with video games. He kept saying that he wanted to work at a game company, but we didn't think he'd actually try and do it!"}}
+===Million-Hit Still Selling===
+{{Cquote2|The popular game (Dungeon+Table) has now sold more than 1 million units. This is the first table game in some time to reach this mark, and has proved quite popular even with people in the game industry. As one retail store owner put it, "It sells out as soon as we put it on the shelves. I've been playing it to try and discover why it's so popular, and now I'm hooked. Now my sales are suffering..." One can only wonder how many units it will end up selling.}}
+
+==Fan Letter==
+===Name of sub article===
+{{Cquote2|Quote here}}
+===Letter from an adult===
+{{Cquote2|Excuse me for writing out of the blue, but I'm a big fan of [name of your company]. I lined up on release day to but the [name of your table game]! I like Table games in general, and I really enjoyed that this one was a Animal game. I've recommended your company to all my friends, so please work hard on your next games.}}
+===Beverly Kane (25)===
+{{Cquote2|I always play your company's games. I especially enjoyed the trivia game you recently released. I never thought combining it with a Golf would work, but it was perfect! I can't wait to see what you come up with next.}}
+===Elem. school student===
+{{Cquote2|Hello! I'm a huge fan of [name your company]! I lined up on release day to buy the (Audio Novel+Robot)! I like Audio Novel games in general, and I really enjoyed that this one was a Robot game. I've recommended your company to all my friends, so please work hard on your next games.}}

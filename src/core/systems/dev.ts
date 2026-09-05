@@ -322,7 +322,7 @@ function topContributor(state: GameState, game: ActiveGame): Staff | null {
 }
 
 // релиз: рецензии, уровни жанров/типов, план продаж
-export function releaseGame(state: GameState, rng: Rng, name?: string): ActionResult {
+export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionResult {
   const game = state.activeGame;
   if (!game || game.phase !== 'debug') return { ok: false, error: 'Игра не готова к релизу' };
 
@@ -428,17 +428,20 @@ export function resolveBoost(state: GameState, rng: Rng, accept: boolean, amount
   const ev = state.pendingEvent;
   const game = state.activeGame;
   if (!ev || ev.type !== 'boost') return { ok: false, error: 'Нет события' };
-  state.pendingEvent = null;
-  if (!game) return { ok: true };
   // отказ = ничего не произошло (раньше boostUsed ставился до проверки — отклонённый
   // буст давал +хайп при релизе)
   if (!accept) {
+    state.pendingEvent = null;
     log(state, 'Предложение отклонено');
     return { ok: true };
   }
-  game.boostUsed = true;
+  // аудит 05.09: валидация ДО мутаций — при нехватке PR событие остаётся висеть,
+  // boostUsed не выставляется (раньше событие терялось и игра помечалась «бустилась»)
   const spend = Math.max(1, Math.round(amount ?? ev.cost));
   if (state.research < spend) return { ok: false, error: 'Не хватает PR' };
+  state.pendingEvent = null;
+  if (!game) return { ok: true };
+  game.boostUsed = true;
   state.research -= spend;
   const st = state.staff.find((s) => s.id === ev.staffId);
   const sum = st ? st.stats.program + st.stats.scenario + st.stats.graphics + st.stats.sound : 0;

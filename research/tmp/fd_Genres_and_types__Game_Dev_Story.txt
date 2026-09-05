@@ -1,0 +1,1120 @@
+{{Game Dev Story}}
+{{tocright}}
+'''Genres and types''' are an important aspect when [[Creating games (Game Dev Story)|making a game]], as each game can only have one of each, and which ones you choose can greatly affect sales. Genres and types all have unique "popularity" with consumers, and the cost to produce a game in any genre or type varies. The key to using genre and types effectively is to [[#Combinations|combine]] complimentary subjects to create combos. Each combo receives a basic rating, ranging from "Not good" to "Amazing!", to measure how  successful your combo is. This plays a key role in making a top-selling game.
+
+'''Genres''' are unlocked by leveling up [[Employees (Game Dev Story)|employees]] to a specific level or higher in a specific [[Careers (Game Dev Story)|career]]. You can also hire someone who already has obtained this level to unlock it. Unlocking '''types''' requires employees at or above a certain level to use specific [[Training (Game Dev Story)|training methods]]. 
+
+==Genres==
+{| class="wikitable sortable oddrow"
+|- class="hrow"
+! rowspan="2" | Genre
+! rowspan="2" | Popularity
+! colspan="2" | Unlock Condition
+|- class="hrow"
+! Job
+! Level
+|-
+|RPG
+| style="text-align: center;" |A
+| style="text-align: center;" |Writer
+| style="text-align: center;" |5
+|-
+|Simulation
+| style="text-align: center;" |A
+| style="text-align: center;" |Coder
+| style="text-align: center;" |4
+|-
+|Sim RPG
+| style="text-align: center;" |A
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+|-
+|Table
+| style="text-align: center;" |B
+| colspan="2" | {{ia}}
+|-
+|Action
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |3
+|-
+|Adventure
+| style="text-align: center;" |C
+| colspan="2" | {{ia}}
+|-
+|Shooter
+| style="text-align: center;" |C
+| style="text-align: center;" |Writer
+| style="text-align: center;" |3
+|-
+|Action RPG
+| style="text-align: center;" |A
+| style="text-align: center;" |Producer
+| style="text-align: center;" |3
+|-
+|Racing
+| style="text-align: center;" |B
+| style="text-align: center;" |Snd. Eng.
+| style="text-align: center;" |3
+|-
+|Online RPG
+| style="text-align: center;" |A
+| style="text-align: center;" |Producer
+| style="text-align: center;" |5
+|-
+|Online Sim
+| style="text-align: center;" |A
+| style="text-align: center;" |Hacker
+| style="text-align: center;" |5
+|-
+|Trivia
+| style="text-align: center;" |C
+| colspan="2" | {{ia}}
+|-
+|Life
+| style="text-align: center;" |B
+| style="text-align: center;" |Designer
+| style="text-align: center;" |3
+|-
+|Board
+| style="text-align: center;" |B
+| style="text-align: center;" |Producer
+| style="text-align: center;" |1
+|-
+|Puzzle
+| style="text-align: center;" |A
+| colspan="2" | {{ia}}
+|-
+|Music
+| style="text-align: center;" |B
+| style="text-align: center;" |Director
+| style="text-align: center;" |5
+|-
+|Audio Novel
+| style="text-align: center;" |B
+| style="text-align: center;" |Director
+| style="text-align: center;" |2
+|-
+|Motion
+| style="text-align: center;" |A
+| style="text-align: center;" |Hard. Eng.
+| style="text-align: center;" |4
+|-
+|Educational
+| style="text-align: center;" |C
+| colspan="2" | {{ia}}
+|-
+|Card Game
+| style="text-align: center;" |A
+| style="text-align: center;" |Hard. Eng.
+| style="text-align: center;" |3
+|}
+==Types==
+Game types are unlocked when an employee with a specific job uses a specific training technique.
+{| class="wikitable sortable oddrow"
+|- class="hrow"
+! rowspan="2" | Type
+! rowspan="2" | Popul<br />-arity
+! colspan="3" | Unlock Condition
+|- class="hrow"
+! Job
+! style="font-size:70%;" |Min Lvl
+! Training
+|-
+|Sports
+| style="text-align: center;" |C
+| style="text-align: center;" |Coder
+| style="text-align: center;" |1
+| style="text-align: center;" |Jogging
+|-
+|Exploration
+| style="text-align: center;" |C
+| style="text-align: center;" |Coder
+| style="text-align: center;" |2
+| style="text-align: center;" |Movie
+|-
+|Martial Arts
+| style="text-align: center;" |C
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+| style="text-align: center;" |Movie
+|-
+|Fantasy
+| style="text-align: center;" |A
+| style="text-align: center;" |Writer
+| style="text-align: center;" |2
+| style="text-align: center;" |Reading
+|-
+|Virtual Pet
+| style="text-align: center;" |A
+| style="text-align: center;" |Coder
+| style="text-align: center;" |2
+| style="text-align: center;" |Pinball
+|-
+|Samurai
+| style="text-align: center;" |A
+| style="text-align: center;" |Writer
+| style="text-align: center;" |4
+| style="text-align: center;" |Movie
+|-
+|Dungeon
+| style="text-align: center;" |B
+| style="text-align: center;" |Coder
+| style="text-align: center;" |2
+| style="text-align: center;" |Game
+|-
+|Romance
+| style="text-align: center;" |A
+| style="text-align: center;" |Writer
+| style="text-align: center;" |2
+| style="text-align: center;" |Reading
+|-
+|Pirate
+| style="text-align: center;" |B
+| colspan="3" | {{Initially available}}
+|-
+|Comedy
+| style="text-align: center;" |C
+| style="text-align: center;" |Producer
+| style="text-align: center;" |1
+| style="text-align: center;" |Movie
+|-
+|Horror
+| style="text-align: center;" |C
+| style="text-align: center;" |Writer
+| style="text-align: center;" |3
+| style="text-align: center;" |Net Surf
+|-
+|Word
+| style="text-align: center;" |A
+| style="text-align: center;" |Director
+| style="text-align: center;" |3
+| style="text-align: center;" |Lab Study
+|-
+|Train
+| style="text-align: center;" |B
+| style="text-align: center;" |Designer
+| style="text-align: center;" |2
+| style="text-align: center;" |Stroll
+|-
+|Animal
+| style="text-align: center;" |B
+| colspan="3" | {{Initially available}}
+|-
+|Robot
+| style="text-align: center;" |C
+| colspan="3" | {{Initially available}}
+|-
+|Airplane
+| style="text-align: center;" |B
+| style="text-align: center;" |Coder
+| style="text-align: center;" |1
+| style="text-align: center;" |Museum
+|-
+|Conv. Store
+| style="text-align: center;" |C
+| style="text-align: center;" |Coder
+| style="text-align: center;" |3
+| style="text-align: center;" |Stroll
+|-
+|Historical
+| style="text-align: center;" |C
+| colspan="3" | {{Initially available}}
+|-
+|Bookstore
+| style="text-align: center;" |A
+| style="text-align: center;" |Snd. Eng.
+| style="text-align: center;" |3
+| style="text-align: center;" |Stroll
+|-
+|Comics
+| style="text-align: center;" |A
+| style="text-align: center;" |Hard. Eng.
+| style="text-align: center;" |1
+| style="text-align: center;" |Reading
+|-
+|Art
+| style="text-align: center;" |B
+| style="text-align: center;" |Designer
+| style="text-align: center;" |1
+| style="text-align: center;" |Movie
+|-
+|Movies
+| style="text-align: center;" |A
+| style="text-align: center;" |Writer
+| style="text-align: center;" |1
+| style="text-align: center;" |Movie
+|-
+|Game Co.
+| style="text-align: center;" |A
+| style="text-align: center;" |Coder
+| style="text-align: center;" |5
+| style="text-align: center;" |Game
+|-
+|Egypt
+| style="text-align: center;" |C
+| style="text-align: center;" |Producer
+| style="text-align: center;" |1
+| style="text-align: center;" |Long Trip
+|-
+|Town
+| style="text-align: center;" |A
+| style="text-align: center;" |Producer
+| style="text-align: center;" |2
+| style="text-align: center;" |Museum
+|-
+|Architecture
+| style="text-align: center;" |A
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+| style="text-align: center;" |Long Trip
+|-
+|Lawyer
+| style="text-align: center;" |A
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+| style="text-align: center;" |Net Surf
+|-
+|Medieval
+| style="text-align: center;" |C
+| style="text-align: center;" |Hard. Eng.
+| style="text-align: center;" |2
+| style="text-align: center;" |Movie
+|-
+|Monster
+| style="text-align: center;" |C
+| style="text-align: center;" |Designer
+| style="text-align: center;" |1
+| style="text-align: center;" |Meditate
+|-
+|Hunting
+| style="text-align: center;" |A
+| style="text-align: center;" |Designer
+| style="text-align: center;" |3
+| style="text-align: center;" |Game
+|-
+|High School
+| style="text-align: center;" |B
+| style="text-align: center;" |Coder
+| style="text-align: center;" |3
+| style="text-align: center;" |Stroll
+|-
+|Junior High
+| style="text-align: center;" |C
+| style="text-align: center;" |Writer
+| style="text-align: center;" |1
+| style="text-align: center;" |College
+|-
+|War
+| style="text-align: center;" |B
+| style="text-align: center;" |Snd. Eng.
+| style="text-align: center;" |1
+| style="text-align: center;" |Concert
+|-
+|Ninja
+| style="text-align: center;" |B
+| colspan="3" | {{Initially available}}
+|-
+|Cutie
+| style="text-align: center;" |A
+| style="text-align: center;" |Designer
+| style="text-align: center;" |3
+| style="text-align: center;" |Concert
+|-
+|Ogre
+| style="text-align: center;" |C
+| style="text-align: center;" |Writer
+| style="text-align: center;" |5
+| style="text-align: center;" |Meditate
+|-
+|Fashion
+| style="text-align: center;" |B
+| style="text-align: center;" |Director
+| style="text-align: center;" |2
+| style="text-align: center;" |College
+|-
+|Detective
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |2
+| style="text-align: center;" |Reading
+|-
+|Mystery
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |1
+| style="text-align: center;" |Reading
+|-
+|Cowboy
+| style="text-align: center;" |B
+| style="text-align: center;" |Producer
+| style="text-align: center;" |1
+| style="text-align: center;" |Short Trip
+|-
+|Horseshoes
+| style="text-align: center;" |C
+| style="text-align: center;" |Director
+| style="text-align: center;" |2
+| style="text-align: center;" |Pinball
+|-
+|President
+| style="text-align: center;" |B
+| style="text-align: center;" |Hard. Eng.
+| style="text-align: center;" |2
+| style="text-align: center;" |Lab Study
+|-
+|Stocks
+| style="text-align: center;" |C
+| style="text-align: center;" |Coder
+| style="text-align: center;" |4
+| style="text-align: center;" |Lab Study
+|-
+|Cartoon
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |3
+| style="text-align: center;" |Anime
+|-
+|Cosplay
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |5
+| style="text-align: center;" |Anime
+|-
+|Pop Star
+| style="text-align: center;" |C
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+| style="text-align: center;" |Museum
+|-
+|Swimsuit
+| style="text-align: center;" |A
+| style="text-align: center;" |Hacker
+| style="text-align: center;" |2
+| style="text-align: center;" |Anime
+|-
+|Mini-skirt
+| style="text-align: center;" |A
+| style="text-align: center;" |Hacker
+| style="text-align: center;" |5
+| style="text-align: center;" |Short Trip
+|-
+|Mushroom
+| style="text-align: center;" |C
+| style="text-align: center;" |Hacker
+| style="text-align: center;" |2
+| style="text-align: center;" |Short Trip
+|-
+|Poncho
+| style="text-align: center;" |B
+| style="text-align: center;" |Hacker
+| style="text-align: center;" |1
+| style="text-align: center;" |Long Trip
+|-
+|Chess
+| style="text-align: center;" |C
+| style="text-align: center;" |Coder
+| style="text-align: center;" |2
+| style="text-align: center;" |Stroll
+|-
+|Checkers
+| style="text-align: center;" |C
+| style="text-align: center;" |Snd. Eng.
+| style="text-align: center;" |1
+| style="text-align: center;" |Anime
+|-
+|Mahjong
+| style="text-align: center;" |B
+| style="text-align: center;" |Coder
+| style="text-align: center;" |1
+| style="text-align: center;" |Pinball
+|-
+|Reversi
+| style="text-align: center;" |C
+| colspan="3" | {{Initially available}}
+|-
+|Dance
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |2
+| style="text-align: center;" |Concert
+|-
+|Drums
+| style="text-align: center;" |B
+| style="text-align: center;" |Producer
+| style="text-align: center;" |1
+| style="text-align: center;" |Reading
+|-
+|Fitness
+| style="text-align: center;" |A
+| style="text-align: center;" |Snd. Eng.
+| style="text-align: center;" |1
+| style="text-align: center;" |Meditate
+|-
+|Wrestling
+| style="text-align: center;" |C
+| style="text-align: center;" |Writer
+| style="text-align: center;" |1
+| style="text-align: center;" |Game
+|-
+|Basketball
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |2
+| style="text-align: center;" |Jogging
+|-
+|Skiing
+| style="text-align: center;" |C
+| style="text-align: center;" |Producer
+| style="text-align: center;" |1
+| style="text-align: center;" |Jogging
+|-
+|Snowboard
+| style="text-align: center;" |B
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+| style="text-align: center;" |Jogging
+|-
+|Golf
+| style="text-align: center;" |B
+| colspan="3" | {{Initially available}}
+|-
+|Swimming
+| style="text-align: center;" |C
+| style="text-align: center;" |Snd. Eng.
+| style="text-align: center;" |1
+| style="text-align: center;" |Meditate
+|-
+|Volleyball
+| style="text-align: center;" |C
+| style="text-align: center;" |Designer
+| style="text-align: center;" |2
+| style="text-align: center;" |Jogging
+|-
+|Motorsport
+| style="text-align: center;" |B
+| style="text-align: center;" |Writer
+| style="text-align: center;" |3
+| style="text-align: center;" |Net Surf
+|-
+|Soccer
+| style="text-align: center;" |B
+| style="text-align: center;" |Designer
+| style="text-align: center;" |2
+| style="text-align: center;" |Jogging
+|-
+|Ping Pong
+| style="text-align: center;" |C
+| style="text-align: center;" |Coder
+| style="text-align: center;" |2
+| style="text-align: center;" |Jogging
+|-
+|Sumo
+| style="text-align: center;" |B
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+| style="text-align: center;" |Stroll
+|-
+|Baseball
+| style="text-align: center;" |A
+| style="text-align: center;" |Coder
+| style="text-align: center;" |3
+| style="text-align: center;" |Stroll
+|-
+|Wrestling
+| style="text-align: center;" |C
+| style="text-align: center;" |Snd. Eng.
+| style="text-align: center;" |1
+| style="text-align: center;" |Stroll
+|-
+|Marathon
+| style="text-align: center;" |C
+| colspan="3" | {{Initially available}}
+|-
+|F1 Racing
+| style="text-align: center;" |B
+| style="text-align: center;" |Coder
+| style="text-align: center;" |2
+| style="text-align: center;" |Long Trip
+|-
+|Pinball
+| style="text-align: center;" |C
+| style="text-align: center;" |Writer
+| style="text-align: center;" |1
+| style="text-align: center;" |Pinball
+|-
+|Slots
+| style="text-align: center;" |C
+| style="text-align: center;" |Writer
+| style="text-align: center;" |3
+| style="text-align: center;" |Pinball
+|-
+|Dating
+| style="text-align: center;" |A
+| style="text-align: center;" |Designer
+| style="text-align: center;" |3
+| style="text-align: center;" |Anime
+|-
+|Harbor
+| style="text-align: center;" |A
+| style="text-align: center;" |Coder
+| style="text-align: center;" |1
+| style="text-align: center;" |Short Trip
+|-
+|Time Travel
+| style="text-align: center;" |B
+| style="text-align: center;" |Producer
+| style="text-align: center;" |1
+| style="text-align: center;" |Meditiate
+|-
+|Spy
+| style="text-align: center;" |B
+| style="text-align: center;" |Director
+| style="text-align: center;" |1
+| style="text-align: center;" |Long Trip
+|-
+|Celebrity
+| style="text-align: center;" |B
+| style="text-align: center;" |Coder
+| style="text-align: center;" |2
+| style="text-align: center;" |Concert
+|}
+{{Clear}}
+
+===Grid View===
+The numbers in parenthesis or brackets are the required worker level for the training method to work.
+{| class="wikitable centertext"
+!
+! Coder
+! Writer
+! Designer
+! Sound Engineer
+! Director
+! Producer
+! Hardware Engineer
+! Hacker
+|-
+! Stroll
+|Chess (2,C)<br />Conv.Store (3,C)<br />High.School (3,B)<br />Baseball (3,A)
+|
+|Train (2,B)
+|Bookstore (1,C)
+Wrestling (3,A)
+|Sumo (1,B)
+|
+|
+|
+|-
+!Reading
+|
+|Fantasy (1,B)<br />Detective (2,A)<br />Romance (2,B)
+
+Mystery (2,A)
+|
+|
+|
+|Drums (1,B)
+|Comics (1,A)
+|
+|-
+!Movie
+| Exploration (2,C)
+|Movies (1,A)<br />Samurai (2,A)
+|Art (1,B)
+|
+|Martial Arts (1,C)
+|Comedy (1,C)
+|Medieval (2,C)
+|
+|-
+!Anime
+|
+|Cartoon (3,B)<br />Cosplay (5,B)
+| Dating (3,A)
+|Checkers(1,C)
+|
+|
+|
+|Swimsuit(2,A)
+|-
+!Game
+|Dungeon (2,B)<br />Game Co. (5,A)
+|Wrestling (1,C)
+|Hunting (3,A)
+|
+|
+|
+|
+|
+|-
+!Jogging
+|
+Sports (1,C)<br />Ping Pong (2,C)
+|Basketball (2,B)
+|Volleyball (2,C)<br />Soccer (2,B)
+|
+|Snowboard (1,B)
+|Skiing (1,C)
+|
+|
+|-
+!Pinball
+|
+Mahjong (1,B)<br />Virtual Pet (2,A)
+|Pinball (1,C)<br />Slots (3,C) 
+|
+|
+|Horseshoes (2,C)
+|
+|
+|
+|-
+!Meditate
+|
+|Ogre (2,C)
+|Monster (1,C)
+| Fitness (1,A)<br />Swimming (1,C)
+|
+|Time Travel (1,B)
+|
+|
+|-
+!Concert
+|Celebrity (2,B)
+|Dance (2,B)
+|Cutie (3,A)
+|War (1,B)
+|
+|
+|
+|
+|-
+!Net Surf
+|
+|Horror (3,C)<br />Motorsport (3,B)
+|
+|
+| Lawyer (1,A)
+|
+|
+|
+|-
+!Museum
+|Airplane (1,B)
+|
+|
+|
+|Pop Star (1,C)
+|Town (2,A)
+|
+|
+|-
+!College
+|
+|Junior High (1,C)
+|
+|
+| Fashion (2,B)
+|
+|
+|
+|-
+!Lab Study 
+|Stocks (4,C)
+|
+|
+|
+|Word (3,A) 
+|
+|President (2,B)
+|
+|-
+!Short Trip
+|Harbor (1,A)
+|
+|
+|
+|
+|Cowboy (1,B)
+|
+|Mushroom (2,C)<br />Mini-skirt (5,A)
+|-
+!Long Trip
+| F1 Racing (2,B)
+|
+|
+|
+|Architecture (1,A)<br />Spy (1,B)
+|Egypt (1,C)
+|
+| Poncho (1,B)
+|}
+
+==Combinations==
+
+Listings not below have no combination ("Nothing"). Before you have used a specific combination before, it will say "First Try".
+
+=== Amazing! ===
+{| class="wikitable sortable oddrow"
+|+Amazing! Combinations
+|- class="hrow"
+!Genre
+!
+!Type
+|-
+!RPG
+!A
+| style="text-align: center;" |Fantasy(A) {{*}} Mushroom {{*}} Ogre 
+|-
+!Simulation
+!A
+| style="text-align: center;" |Architecture(A) {{*}} Bookstore(A) {{*}} Cartoon {{*}} Comics(A) {{*}} Cutie(A) {{*}} F1 Racing
+{{*}} Game Co.(A) {{*}} Motorsport {{*}} Movies(A) {{*}} Mushroom {{*}} Pop Star {{*}} Romance(A) {{*}} Soccer {{*}} Town(A) {{*}} Train {{*}} Virtual Pet(A)
+|-
+! Sim RPG 
+!A
+| style="text-align: center;" |Spy (direction point 8, 7, 7, 8, 9, 7, 7, 8)
+|-
+!Table 
+!B
+| style="text-align: center;" | Mahjong {{*}} Poncho
+|-
+! Action
+!B
+| style="text-align: center;" |Basketball {{*}} Historical {{*}} Horror {{*}} Ninja {{*}} Ogre {{*}} Sumo
+|-
+!Adventure
+!C
+| style="text-align: center;" |Cartoon {{*}} Cowboy {{*}} Detective {{*}} Mystery
+|-
+!Shooter 
+!C
+| style="text-align: center;" |Horseshoes {{*}} Robot
+|-
+!Action RPG
+!A
+| style="text-align: center;" |Hunting(A) '''•''' Poncho
+|-
+!Racing
+!B
+| style="text-align: center;" |Motorsport {{*}} Snowboard
+|-
+!Online RPG
+!A
+| style="text-align: center;" |Medieval
+|-
+!Online Sim
+!A
+| style="text-align: center;" | Architecture(A) {{*}} Conv. Store {{*}} Game Co.(A) {{*}} Mushroom {{*}} Pop Star {{*}} Stocks {{*}} Swimming {{*}} Virtual Pet(A)
+|-
+! Trivia
+!C
+| style="text-align: center;" |Comedy {{*}} Cosplay {{*}} Mini-skirt(A) {{*}} Sumo
+|-
+!Life
+!B
+| style="text-align: center;" |Animal {{*}} Comics(A) {{*}} Dating(A) {{*}} F1 Racing {{*}} Game Co.(A) {{*}} Mushroom {{*}} Ping Pong {{*}} Pop Star {{*}} Soccer {{*}} Town(A) {{*}} Word(A) {{*}} Wrestling
+|-
+!Board
+!B
+| style="text-align: center;" |Chess
+|-
+!Puzzle
+!A
+| style="text-align: center;" |Checkers {{*}} Reversi
+|-
+! Music
+!B
+| style="text-align: center;" |Dance {{*}} Drums
+|-
+!Audio Novel
+!B
+| style="text-align: center;" | Cowboy {{*}} Cutie(A) {{*}} Dating(A) {{*}} Detective {{*}} Horror {{*}} Movies(A) {{*}} Romance(A)
+|-
+!Motion
+!A
+| style="text-align: center;" | Dance {{*}} Drums {{*}} Fitness(A) {{*}} Pinball {{*}} Pop Star {{*}} Skiing {{*}} Slots {{*}} Snowboard {{*}} Volleyball
+|-
+! Educational
+! C
+| style="text-align: center;" |
+|-
+!Card Game
+!A
+| style="text-align: center;" |Checkers (direction point 8, 7, 7, 8, 9, 7, 7, 8)
+|}
+
+===Creative ===
+{| class="wikitable sortable oddrow"
+|+Creative Combinations
+|- class="hrow"
+!Genre
+!Type
+|-
+!RPG
+| style="text-align: center;" |Architecture {{*}} Art {{*}} Cosplay {{*}} Dance {{*}} F1 Racing {{*}} Golf {{*}} Horror {{*}} Sumo {{*}} Train {{*}} Virtual Pet
+|-
+!Simulation 
+| style="text-align: center;" |Mini-skirt {{*}} Sports {{*}} Swimming
+|-
+!Sim RPG
+| style="text-align: center;" |
+|-
+!Table
+| style="text-align: center;" |Fashion {{*}} Martial Arts 
+|-
+!Action
+| style="text-align: center;" |Comedy {{*}} Dance {{*}} Dating {{*}} Detective {{*}} Golf {{*}} Lawyer {{*}} Pinball {{*}} Train
+|-
+!Adventure
+| style="text-align: center;" |Comedy {{*}} Cosplay {{*}} Horseshoes {{*}} Martial Arts {{*}} Mini-skirt {{*}} Ninja {{*}} Ping Pong {{*}} Train
+|-
+!Shooter
+| style="text-align: center;" |F1 Racing {{*}} Fantasy {{*}} Historical {{*}} Hunting {{*}} Lawyer {{*}} Mahjong {{*}} Martial Arts {{*}} Mushroom {{*}} Virtual Pet {{*}} Wrestling 
+|-
+!Action RPG
+| style="text-align: center;" |Basketball {{*}} Dance {{*}} Volleyball
+|-
+!Racing
+| style="text-align: center;" |Baseball {{*}} Checkers {{*}} Cosplay {{*}} Cowboy {{*}} Cutie {{*}} Dating {{*}} Dungeon {{*}} Fitness {{*}} Game Co. {{*}} Mini-skirt {{*}} Monster {{*}} Mushroom {{*}} Ogre {{*}} President {{*}} Samurai {{*}} Train 
+|-
+! Online RPG
+| style="text-align: center;" |Exploration {{*}} Swimsuit
+|-
+!Online Sim
+| style="text-align: center;" |Poncho {{*}} Reversi
+|-
+!Trivia
+| style="text-align: center;" |Pirate {{*}} Romance {{*}} Swimsuit
+|-
+!Life
+| style="text-align: center;" |Art {{*}} Fantasy
+|-
+! Board
+| style="text-align: center;" |Horseshoes {{*}} Snowboard
+|-
+!Puzzle
+| style="text-align: center;" |Art {{*}} Egypt {{*}} Fantasy {{*}} Fashion {{*}} Sports
+|-
+!Music 
+| style="text-align: center;" |Basketball {{*}} Checkers {{*}} Conv. Store {{*}} Cowboy {{*}} Cutie {{*}} Dating {{*}} Detective {{*}} F1 Racing {{*}} Horseshoes {{*}} Mahjong {{*}} Ping Pong {{*}} Swimsuit {{*}} Wrestling
+|-
+!Audio Novel
+| style="text-align: center;" |Animal {{*}} Baseball {{*}} Martial Arts {{*}} Mini-skirt {{*}} Swimming {{*}} Town
+|-
+!Motion 
+| style="text-align: center;" |Architecture {{*}} Bookstore {{*}} Cartoon {{*}} Comedy {{*}} Cosplay {{*}} Cutie {{*}} Dating {{*}} Horseshoes {{*}} Monster {{*}} Mystery {{*}} Ogre {{*}} Romance {{*}} Sports {{*}} Stocks {{*}} Swimsuit {{*}} Virtual Pet {{*}} Word {{*}} Wrestling
+|-
+!Educational
+| style="text-align: center;" |History
+|-
+!Card Game
+| style="text-align: center;" |
+|}
+
+===Not Bad ===
+{| class="wikitable sortable oddrow"
+|+Not Bad Combinations
+|- class="hrow"
+!Genre
+!Type
+|-
+!RPG
+| style="text-align: center;" |Cartoon {{*}} Cowboy {{*}} Dungeon {{*}} Egypt {{*}} Exploration {{*}} Marathon {{*}} Medieval {{*}} Mystery 
+|-
+! Simulation 
+| style="text-align: center;" |Airplane {{*}} Animal {{*}} Baseball {{*}} Comedy {{*}} Conv. Store {{*}} Cowboy {{*}} Dating {{*}} Egypt {{*}} High School {{*}} Historical {{*}} Hunting {{*}} Junior High {{*}} Lawyer {{*}} Mahjong {{*}} Pinball {{*}} Pirate {{*}} President {{*}} Samurai {{*}} Slots {{*}} Stocks {{*}} Volleyball {{*}} Word
+|-
+!Sim RPG
+| style="text-align: center;" |
+|-
+!Table
+| style="text-align: center;" |Checkers {{*}} Chess {{*}} Dungeon {{*}} Fantasy {{*}} Medieval {{*}} Pinball {{*}} Reversi {{*}} Slots {{*}} War {{*}} Word
+|-
+!Action
+| style="text-align: center;" |Airplane {{*}} Baseball {{*}} Cartoon {{*}} Cowboy {{*}} Drums {{*}} Dungeon {{*}} Exploration {{*}} F1 Racing {{*}} High School {{*}} Junior High {{*}} Marathon {{*}} Martial Arts {{*}} Motorsport {{*}} Ping Pong {{*}} Robot {{*}} Samurai {{*}} Skiing {{*}} Soccer {{*}} Sports {{*}} Swimming {{*}} Wrestling
+|-
+!Adventure
+| style="text-align: center;" |Art {{*}} Cutie {{*}} Dating {{*}} Egypt {{*}} Fantasy {{*}} Horror {{*}} Medieval {{*}} Romance {{*}} Sumo {{*}} Volleyball
+|-
+!Shooter
+| style="text-align: center;" |Airplane {{*}} Dungeon {{*}} Fashion {{*}} Golf {{*}} Monster {{*}} Ninja {{*}} War
+|-
+!Action RPG
+| style="text-align: center;" |Cartoon {{*}} Cowboy {{*}} Exploration {{*}} Fantasy {{*}} Medieval
+|-
+!Racing
+| style="text-align: center;" |Airplane {{*}} F1 Racing {{*}} Golf {{*}} Marathon {{*}} Skiing {{*}} Sports {{*}} Swimming {{*}} Virtual Pet
+|-
+! Online RPG
+| style="text-align: center;" |Dungeon {{*}} Fantasy {{*}} Historical {{*}} Hunting 
+|-
+!Online Sim
+| style="text-align: center;" |Bookstore {{*}} Historical {{*}} Motorsport {{*}} Samurai {{*}} War {{*}} Wrestling
+|-
+!Trivia
+| style="text-align: center;" |Cartoon {{*}} Chess {{*}} Comics {{*}} Cowboy {{*}} Cutie {{*}} Dating {{*}} Egypt {{*}} F1 Racing {{*}} Fitness {{*}} Golf {{*}} Lawyer {{*}} Monster {{*}} Movies {{*}} Mushroom {{*}} Ninja {{*}} Pop Star {{*}} Robot {{*}} Snowboard {{*}} Soccer {{*}} Train
+|-
+!Life
+| style="text-align: center;" |Baseball {{*}} Basketball {{*}} Comedy {{*}} Conv. Store {{*}} Cosplay {{*}} Cutie {{*}} Dance {{*}} Detective {{*}} Motorsport {{*}} Movies {{*}} President {{*}} Sports {{*}} Sumo {{*}} Swimming {{*}} Wrestling 
+|-
+!Board
+| style="text-align: center;" |Baseball {{*}} Cartoon {{*}} Checkers {{*}} Dungeon {{*}} Mahjong {{*}} Medieval {{*}} Ping Pong {{*}} Reversi {{*}} Samurai {{*}} Slots {{*}} Train
+|-
+!Puzzle 
+| style="text-align: center;" |Chess {{*}} Mahjong {{*}} Slots {{*}} Word
+|-
+!Music
+| style="text-align: center;" |Movies {{*}} Pop Star {{*}} Snowboard
+|-
+!Audio Novel
+| style="text-align: center;" |Fashion {{*}} High School {{*}} Historical {{*}} Junior High {{*}} Mystery {{*}} Pop Star {{*}} Sumo {{*}} War
+|-
+!Motion
+| style="text-align: center;" |Basketball {{*}} F1 Racing {{*}} Horror {{*}} Motorsport {{*}} President
+|-
+!Educational
+| style="text-align: center;" |
+|-
+!Card Game
+| style="text-align: center;" |
+|}
+
+===Hmm...===
+{| class="wikitable sortable oddrow"
+|+Hmm... Combinations
+|- class="hrow"
+!Genre
+!Type
+|-
+!RPG
+| style="text-align: center;" |Basketball {{*}} Conv. Store {{*}} Hunting {{*}} Romance {{*}} Wrestling
+|-
+!Simulation
+| style="text-align: center;" |Martial Arts {{*}} Mystery
+|-
+! Sim RPG
+| style="text-align: center;" |Wrestling
+|-
+!Table
+| style="text-align: center;" |Art {{*}} Egypt {{*}} Horror {{*}} Monster {{*}} President {{*}} Snowboard{{*}} Wrestling 
+|-
+!Action
+| style="text-align: center;" |Architecture {{*}} Checkers {{*}} Comics {{*}} Conv. Store {{*}} Cosplay {{*}} Pop Star {{*}} Stocks {{*}} Town {{*}} Volleyball
+|-
+!Adventure
+| style="text-align: center;" |Game Co. {{*}} Motorsport
+|-
+!Shooter
+| style="text-align: center;" |Animal {{*}} Bookstore {{*}} Chess {{*}} Cutie {{*}} Dance {{*}} Exploration {{*}} High School {{*}} Junior High {{*}} Ogre {{*}} Ping Pong {{*}} Samurai {{*}} Soccer {{*}} Sports {{*}} Stocks {{*}} Sumo 
+|-
+! Action RPG
+| style="text-align: center;" |Baseball {{*}} Romance 
+|-
+!Racing
+| style="text-align: center;" |Art {{*}} Bookstore {{*}} Comics {{*}} Movies {{*}} Ninja {{*}} War
+|-
+!Online RPG
+| style="text-align: center;" |Animal {{*}} President {{*}} Samurai {{*}} Slots {{*}} Town
+|-
+!Online Sim
+| style="text-align: center;" |Animal {{*}} President {{*}} Word
+|-
+!Trivia
+| style="text-align: center;" |
+|-
+!Life
+| style="text-align: center;" |Airplane {{*}} Dungeon {{*}} Horror {{*}} Ogre {{*}} Stocks
+|-
+!Board
+| style="text-align: center;" |Architecture {{*}} High School {{*}} Historical {{*}} Hunting {{*}} Junior High {{*}} Mystery {{*}} Virtual Pet
+|-
+!Puzzle
+| style="text-align: center;" |Basketball {{*}} Dungeon {{*}} Exploration {{*}} Historical {{*}} Horror {{*}} Marathon {{*}} Martial Arts {{*}} Monster {{*}} Mystery {{*}} Pirate {{*}} Robot {{*}} Romance {{*}} Volleyball {{*}} War 
+|-
+!Music
+| style="text-align: center;" |Art {{*}} Bookstore {{*}} Dungeon {{*}} Fantasy {{*}} Game Co. {{*}} Hunting {{*}} Lawyer {{*}} Swimming {{*}} Virtual Pet
+|-
+!Audio Novel 
+| style="text-align: center;" |Chess {{*}} Lawyer {{*}} Ogre {{*}} Pirate {{*}} Sports 
+|-
+!Motion
+| style="text-align: center;" |Art {{*}} Mushroom 
+|-
+!Educational
+| style="text-align: center;" |
+|-
+!Card Game
+| style="text-align: center;" |
+|}
+
+===Not Good===
+{| class="wikitable sortable oddrow"
+|+Not Good Combinations
+|- class="hrow"
+!Genre
+!Type
+|-
+!RPG
+| style="text-align: center;" |Airplane {{*}} Checkers {{*}} Chess {{*}} Comedy {{*}} Comics {{*}} Stocks
+|-
+!Simulation
+| style="text-align: center;" |
+|-
+!Sim RPG
+| style="text-align: center;" |
+|-
+!Table
+| style="text-align: center;" |Basketball {{*}} Cosplay {{*}} Detective {{*}} Pirate
+|-
+!Action 
+| style="text-align: center;" |Romance 
+|-
+!Adventure
+| style="text-align: center;" |Airplane {{*}} Architecture {{*}} Marathon {{*}} Stocks {{*}} War
+|-
+!Shooter 
+| style="text-align: center;" |Baseball {{*}} Checkers {{*}} Comics {{*}} Conv. Store {{*}} Detective {{*}} Marathon {{*}} Movies {{*}} Pirate {{*}} Pop Star {{*}} President {{*}} Slots {{*}} Town
+|-
+!Action RPG
+| style="text-align: center;" |Art {{*}} Sports {{*}} Swimming {{*}} Word
+|-
+!Racing
+| style="text-align: center;" |Architecture {{*}} Cartoon {{*}} Detective {{*}} Fantasy {{*}} High School {{*}} Historical {{*}} Horror {{*}} Junior High {{*}} Lawyer {{*}} Mahjong {{*}} Martial Arts {{*}} Pinball {{*}} Ping Pong {{*}} Pirate {{*}} Pop Star {{*}} Reversi {{*}} Romance {{*}} Soccer {{*}} Stocks {{*}} Sumo {{*}} Word {{*}} Wrestling
+|-
+!Online RPG
+| style="text-align: center;" |Motorsport {{*}} Mystery {{*}} Word
+|-
+!Online Sim
+| style="text-align: center;" |Martial Arts {{*}} Pirate 
+|-
+! Trivia
+| style="text-align: center;" |Dungeon {{*}} Ogre
+|-
+!Life
+| style="text-align: center;" |
+|-
+!Board
+| style="text-align: center;" |Airplane {{*}} Mushroom
+|-
+!Puzzle
+| style="text-align: center;" |F1 Racing {{*}} Motorsport {{*}} Ninja {{*}} Skiing {{*}} Stocks {{*}} Town
+|-
+!Music
+| style="text-align: center;" |Chess {{*}} Comics {{*}} Cosplay {{*}} Exploration {{*}} Historical {{*}} Horror {{*}} Mushroom {{*}} Samurai {{*}} Sports {{*}} Stocks 
+|-
+! Audio Novel
+| style="text-align: center;" |Airplane {{*}} Reversi {{*}} Stocks 
+|-
+! Motion
+| style="text-align: center;" |Dungeon {{*}} Fantasy {{*}} Game Co.
+|-
+!Educational
+| style="text-align: center;" |
+|-
+!Card Game
+| style="text-align: center;" |
+|}
+
+==Trivia==
+*Space and Jumprope are inaccessible in the game as there is an unused training method, Retreat. They would have been unlocked by the designer and the coder by going to the Retreat. This can be seen in the game's code. [http://uk.gamespot.com/game-dev-story/forum/space-and-jumprope-game-types-58786889/ [1]]

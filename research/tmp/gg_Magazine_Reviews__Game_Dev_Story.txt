@@ -1,0 +1,102 @@
+{{Game Dev Story}}
+
+Once the production of a game is completed, your game will be reviewed based on it total points and playability. Also how it appeals to different audiences which in one of the causes to have different judges to have different reviews. Below is the messages shown once a judge has reviewed you game.
+
+==Review Message==
+{| class="wikitable" cellspacing="1" cellpadding="1" border="1"
+|-
+! scope="col" style="text-align:center;"|'''Message'''
+! scope="col" style="text-align:center;"|'''Points'''
+|-
+| style="text-align:center;" |A masterpiece!!
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |Amazing! I'm impressed!
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |An amazingly large game!
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |I bought 3 copies myself.
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |It's... so beautiful...!
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |Perfect!
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |The game of the century!
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |This'll go down in history!
+| style="text-align:center;" |10
+|-
+| style="text-align:center;" |A guaranteed hit!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |A rare masterpiece!!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |An instant classic!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |Everybody loved it!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |I can't wait to play more!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |I had a ball with this one!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |I play this one every day!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |I was about to cry!
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |They did a great job.
+| style="text-align:center;" |9
+|-
+| style="text-align:center;" |A little rough, but good.
+| style="text-align:center;" |8
+|-
+| style="text-align:center;" |Best game of the year.
+| style="text-align:center;" |8
+|-
+| style="text-align:center;" |I had a lot of fun with it!
+| style="text-align:center;" |8
+|-
+| style="text-align:center;" |I give it a “buy".
+| style="text-align:center;" |8
+|-
+| style="text-align:center;" |My pick of the week.
+| style="text-align:center;" |8
+|-
+| style="text-align:center;" |Needs a twist.
+| style="text-align:center;" |8
+|-
+| style="text-align:center;" |It's a fun combination.
+| style="text-align:center;" |7
+|-
+| style="text-align:center;" |Its content was good.
+| style="text-align:center;" |7
+|-
+| style="text-align:center;" |Nice. What's next?
+| style="text-align:center;" |7
+|-
+| style="text-align:center;" |Rough around the edges.
+| style="text-align:center;" |7
+|-
+| style="text-align:center;" |So close and yet so far.
+| style="text-align:center;" |7
+|}
+
+==Trivia==
+{{Empty section|date=September 2024}}
+
+==Gallery==
+
+
+{{stub}}

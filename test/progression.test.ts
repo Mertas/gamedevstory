@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import {
   buyAd, buyBooster, changeCareer, levelUpStaff, startOwnConsole, takeContract,
-  trainStaff, useBooster,
+  trainStaff, applyBooster,
 } from '../src/core/systems/progression';
 import { isUnlocked } from '../src/core/systems/dev';
 import { createRng } from '../src/core/rng';
@@ -110,15 +110,15 @@ describe('M3: продавец и бустеры', () => {
     g.salesmanHere = true;
     expect(buyBooster(g, 'fun').ok).toBe(true);
     const s = g.staff[0]!; // coder = ключевая для fun
-    const res = useBooster(g, s.id, 'fun', rng());
+    const res = applyBooster(g, s.id, 'fun', rng());
     expect(res.ok).toBe(true);
     const gain = g.activeGame!.points.fun;
     expect(gain).toBeGreaterThanOrEqual(18);
     expect(gain).toBeLessThanOrEqual(22);
     // третье использование — 0
-    useBooster(g, s.id, 'fun', rng());
+    applyBooster(g, s.id, 'fun', rng());
     const before = g.activeGame!.points.fun;
-    useBooster(g, s.id, 'fun', rng());
+    applyBooster(g, s.id, 'fun', rng());
     expect(g.activeGame!.points.fun).toBe(before);
   });
 
@@ -127,18 +127,18 @@ describe('M3: продавец и бустеры', () => {
     g.salesmanHere = true;
     const s = g.staff[1]!; // John Gameson, writer — для fun-бустера (ключ coder) чужой
     expect(buyBooster(g, 'fun').ok).toBe(true);
-    expect(useBooster(g, s.id, 'fun', rng()).ok).toBe(true);
+    expect(applyBooster(g, s.id, 'fun', rng()).ok).toBe(true);
     const gain1 = g.activeGame!.points.fun;
     expect(gain1).toBeGreaterThanOrEqual(8);
     expect(gain1).toBeLessThanOrEqual(11);
     const before2 = g.activeGame!.points.fun;
-    expect(useBooster(g, s.id, 'fun', rng()).ok).toBe(true);
+    expect(applyBooster(g, s.id, 'fun', rng()).ok).toBe(true);
     const gain2 = g.activeGame!.points.fun - before2;
     expect(gain2).toBeGreaterThanOrEqual(1);
     expect(gain2).toBeLessThanOrEqual(5);
     // третье использование — 0
     const before3 = g.activeGame!.points.fun;
-    useBooster(g, s.id, 'fun', rng());
+    applyBooster(g, s.id, 'fun', rng());
     expect(g.activeGame!.points.fun).toBe(before3);
   });
 });

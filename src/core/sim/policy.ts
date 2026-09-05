@@ -1,10 +1,10 @@
 // Скриптованный игрок («разумная» политика) — для баланс-тестов и CLI-прогона.
 // Стратегия: дешёвые S-комбо, ротация ролей, найм при деньгах, отладка до ≤5 багов.
-import { CONFIG, type HireMethodId } from '../config';
+import { CONFIG } from '../config';
 import { ADS, TRAININGS } from '../data/db';
 import { CONSOLES, GENRES, TYPES } from '../data/db';
 import type { GameState, StartProjectInput } from '../types';
-import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
+import { comboGrade, consoleAvailable } from '../systems/dev';
 import {
   buyAdAction, dismissSalesmanAction, hireAction, levelUpAction, releaseAction, resolveBoostAction,
   resolveEventAction, resolveGamedexAction, startProjectAction, trainAction,
@@ -30,8 +30,10 @@ export function createPlayer(): ScriptedPlayer {
     turn(state: GameState, stats: PolicyStats): void {
       // буст — принимаем с разумной ставкой (до 30 PR), продавца — прогоняем
       if (state.pendingEvent?.type === 'boost') {
-        const amount = Math.min(state.research, 30);
-        const accept = state.research >= amount;
+        // аудит 05.09: ставка должна быть ≤ research И ≥ 1, иначе resolveBoost
+        // оставляет событие висеть (валидация до мутаций) и политика зацикливается
+        const amount = Math.min(Math.floor(state.research), 30);
+        const accept = amount >= 1;
         resolveBoostAction(state, accept, amount);
         if (accept) stats.boostAccepts++;
       }
@@ -239,8 +241,6 @@ export function startNextProject(
   if (state.bankrupt) return;
   const combo = pickBestCombo(state, lastCombo);
   if (!combo) return;
-  const g = genreById(combo.genreId);
-  const t = typeById(combo.typeId);
   const consoleData = bestConsole(state);
   if (!consoleAvailable(state, consoleData.id)) return;
 

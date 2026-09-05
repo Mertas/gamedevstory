@@ -1,0 +1,40 @@
+Game Dev Story Hiring, Contracts & Training
+
+Game Basics
+
+Hiring & Training
+
+Hall of Fame
+
+Special Events
+
+Amazing Games
+
+Hire More Staff
+
+The best way to insure your early hires are worth bringing on is by hiring a designer and a sound engineer. That way, you will be able to have someone on staff for each required game development area.
+
+ 
+
+Complete Contracts
+
+To be sure you will succeed in these contracts, make sure to select contracts that have a later deadline, and that require the least amount of points needed to complete them. You will start to see how quickly your staff completes these tasks, and you will then be able to better judge what contracts are fitting from your staff to complete. Best bet is not to accept and job that has less than a 10 week deadline. 
+
+Completing Contracts will also earn research data. That research data can be used to level up your current staff. Leveling up your staff can lead to better performance by your staff. The caveat to that is leveling up your staff will also give them a raise.
+
+Training/Upgrading Staff
+
+Up until upgrading your office to the largest available (8 workers), you will not have the greatest employees available for hire. You will be able to upgrade the quality of your staff by hiring new staff much easier than training your current staff.
+
+Tip: Hardware Engineer
+
+ To get a Hardware Engineer, you will need to upgrade one of your staff members to maximum in each job type, until Hardware Engineer is available. Once you change your employee's job to Hardware Engineer, the option to develop a console will e opened.
+
+Career Change Manual
+
+The number needed would depend of the employee you choose to level up. You will need to be Level 5 in every job except Hacker (which doesn't unlock until after you master hardware engineer) type to unlock Hardware Engineer.
+
+Tip: Hackers
+
+ Hackers are the best team members, but are not as effective when working on a specific focus during development. It is good to hire them as staff members, but you will want directors, producers, and other design-specific experts to handle development when alpha and beta versions of your game are completed.
+
