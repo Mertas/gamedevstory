@@ -796,12 +796,15 @@ export class GameServer {
       }
       console.error('[gds] сейв не похож на GameState — начинаем новую игру');
     } catch (e) {
-      // битый JSON не должен молча стирать партию: сохраняем улику и сообщаем
-      try {
-        if (fs.existsSync(SAVE_PATH)) fs.copyFileSync(SAVE_PATH, `${SAVE_PATH}.corrupt-${Date.now()}`);
-        console.error('[gds] сейв повреждён — бэкап сохранён в data/save.json.corrupt-*; начата новая игра:', String(e).slice(0, 300));
-      } catch {
-        console.error('[gds] сейв повреждён и бэкап не удался:', String(e).slice(0, 300));
+      // битый JSON не должен молча стирать партию: сохраняем улику и сообщаем;
+      // отсутствие файла — обычный первый запуск, это НЕ повреждение
+      if (fs.existsSync(SAVE_PATH)) {
+        try {
+          fs.copyFileSync(SAVE_PATH, `${SAVE_PATH}.corrupt-${Date.now()}`);
+          console.error('[gds] сейв повреждён — бэкап сохранён в data/save.json.corrupt-*; начата новая игра:', String(e).slice(0, 300));
+        } catch {
+          console.error('[gds] сейв повреждён и бэкап не удался:', String(e).slice(0, 300));
+        }
       }
     }
     return newGame(Math.floor(Math.random() * 99991) + 1);
