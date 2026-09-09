@@ -5,23 +5,16 @@ import { projectCost } from '../../core/formulas';
 import {
   comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
 } from '../../shared/meta';
-import type { DirectionAxis, Role } from '../../core/types';
+import { DIRECTION_LABELS, DIRECTION_ORDER, type DirectionAxis, type Role } from '../../core/types';
 import { StaffCard } from '../StaffCard';
 import {
   actionGenerateStory, actionRelease, actionStartProject, actionUseBooster, clearActionError,
   clearStoryResult, useActionError, useGame, useMeta, useStoryResult,
 } from '../store';
 
-const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = [
-  { id: 'cute', label: 'Милый' },
-  { id: 'realism', label: 'Реализм' },
-  { id: 'approach', label: 'Доступность' },
-  { id: 'niche', label: 'Нишевость' },
-  { id: 'simple', label: 'Простота' },
-  { id: 'innovation', label: 'Инновация' },
-  { id: 'world', label: 'Игровой мир' },
-  { id: 'polish', label: 'Полировка' },
-];
+const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = DIRECTION_ORDER.map((id) => ({
+  id, label: DIRECTION_LABELS[id],
+}));
 
 const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: 'normal', label: 'Обычный', hint: 'стоимость ×1' },

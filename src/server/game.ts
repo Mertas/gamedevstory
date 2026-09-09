@@ -10,13 +10,13 @@ import {
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, tick, trainAction, applyBoosterAction,
 } from '../core/engine';
-import type { GameState, FanLetter, GamedexOption, Staff, StartProjectInput } from '../core/types';
+import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type GamedexOption, type Staff, type StartProjectInput } from '../core/types';
 import { isValidGameState, migrateSave } from '../core/migrate';
 import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 import { buildLetterPrompt, buildMessages, buildDecisionPrompt, parseDecision, parseSingleMessage } from './chatgen';
 import { generateStory, generateWithFallback, type LlmFn } from './giga';
-import { buildDecisionContext, createAutopilotPolicy, validateDecision, autopilotProjectInput } from './autopilot';
+import { buildDecisionContext, createAutopilotPolicy, fitDirection, validateDecision, autopilotProjectInput } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -26,6 +26,12 @@ const SAVE_PATH = `${ROOT}data/save.json`;
 const SAVE_DEBOUNCE_DAYS = 10;
 // аудит 09.09 (SRV-01): скорость — конечное число в [0..MAX_SPEED]; иначе Math.round(1000/v)=0 → тик каждую 1 мс
 const MAX_SPEED = 8;
+
+/** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
+function dirSummary(direction: Record<string, number>): string {
+  const parts = DIRECTION_ORDER.filter((a) => (direction[a] ?? 0) > 0).map((a) => `${DIRECTION_LABELS[a]} ${direction[a]}`);
+  return parts.length ? `Упор: ${parts.join(', ')}.` : 'Без упора в направлении.';
+}
 
 export interface SessionSnapshot {
   game: GameState;
@@ -605,9 +611,16 @@ export class GameServer {
     };
     try {
       const ctx = buildDecisionContext(this.game);
-      const { text } = await this.llm(buildDecisionPrompt(ctx), 800);
+      // упор решает чат: решению отдаём последние реплики обсуждения (autopilot_discuss)
+      const discussion = this.chat.msgs
+        .filter((m) => !m.system)
+        .slice(-12)
+        .map((m) => `${m.author}: ${m.text.slice(0, 300)}`)
+        .join('\n');
+      const { text } = await this.llm(buildDecisionPrompt(ctx, discussion), 800);
       if (cancelled()) return;
       const plan = parseDecision(text);
+      if (plan) fitDirection(plan, this.game.directionPoints); // LLM иногда тратит больше очков, чем есть
       const err = plan ? validateDecision(plan, this.game) : 'не удалось разобрать JSON';
       if (err || !plan) {
         console.error('[gds] автопилот: решение LLM отклонено, фолбэк:', err ?? 'null');
@@ -621,7 +634,7 @@ export class GameServer {
         const type = typeById(plan.typeId);
         const con = consoleById(plan.consoleId);
         if (cancelled()) return;
-        chatSystem(this.game, this.chat, `📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}.`);
+        chatSystem(this.game, this.chat, `📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
         announce(plan);
       }
     } catch (e) {

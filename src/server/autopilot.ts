@@ -33,6 +33,15 @@ export function validateDecision(plan: AutopilotPlan, state: GameState): string 
   if (!state.consoles[plan.consoleId]?.licensed) return `консоль ${plan.consoleId} не куплена`;
   if (!consoleAvailable(state, plan.consoleId)) return `консоль ${plan.consoleId} недоступна`;
   if (!(plan.mode in CONFIG.MODE)) return `неизвестный режим ${plan.mode}`;
+  // упор направления: только известные оси, целые 0..8, сумма в пределах бюджета игры
+  const dirAxes = new Set(['cute', 'realism', 'approach', 'niche', 'simple', 'innovation', 'world', 'polish']);
+  let dirSpent = 0;
+  for (const [axis, v] of Object.entries(plan.direction ?? {})) {
+    if (!dirAxes.has(axis)) return `неизвестная ось направления ${axis}`;
+    if (!Number.isInteger(v) || v < 0 || v > 8) return `ось ${axis}: нужно целое 0..8 (дано ${String(v)})`;
+    dirSpent += v;
+  }
+  if (dirSpent > state.directionPoints) return `очки направления перерасходованы (${dirSpent} > ${state.directionPoints})`;
   if (!state.staff.some((s) => s.id === plan.proposalStaffId)) return `нет сотрудника ${plan.proposalStaffId}`;
   const known = new Set(state.staff.map((s) => s.id));
   // одна роль на человека: сценарист тоже занят (движок добавит его в proposal сам),
@@ -51,7 +60,7 @@ export function validateDecision(plan: AutopilotPlan, state: GameState): string 
   return null;
 }
 
-/** Контекст для LLM-решения: команда, деньги, открытые жанры/типы, топ комбо, консоли. */
+/** Контекст для LLM-решения: команда, деньги, открытые жанры/типы, топ комбо, консоли, бюджет упора. */
 export function buildDecisionContext(state: GameState): {
   team: string;
   money: number;
@@ -61,6 +70,7 @@ export function buildDecisionContext(state: GameState): {
   types: string;
   combos: string;
   consoles: string;
+  directionPoints: number;
 } {
   const unlockedGenres = GENRES.filter((g) => {
     if (g.unlockJob && g.unlockLevel) {
@@ -97,7 +107,23 @@ export function buildDecisionContext(state: GameState): {
     types: unlockedTypes.map((t) => `${t.id}="${t.nameRu ?? t.name}"`).join(', '),
     combos: combos.slice(0, 12).map((c) => c.line).join('; '),
     consoles: licensed.map((c) => `${c.id}="${c.name}"`).join(', '),
+    directionPoints: state.directionPoints,
   };
+}
+
+/** Ужать упор под бюджет игры: LLM иногда тратит больше очков, чем есть.
+ *  Снимаем по одному с самой большой оси — топ-оси (сам упор) сохраняются. */
+export function fitDirection(plan: AutopilotPlan, directionPoints: number): void {
+  const dir = plan.direction ?? {};
+  const axes = Object.keys(dir);
+  let spent = Object.values(dir).reduce((a, b) => a + b, 0);
+  while (spent > directionPoints && axes.length) {
+    let top = axes[0]!;
+    for (const a of axes) if ((dir[a] ?? 0) > (dir[top] ?? 0)) top = a;
+    if ((dir[top] ?? 0) <= 0) break;
+    dir[top] = (dir[top] ?? 0) - 1;
+    spent--;
+  }
 }
 
 /** Политика автопилота: резолвит события и выпускает готовые игры, НО не стартует

@@ -105,6 +105,54 @@ describe('GameServer: автопилот и чат', () => {
     expect(srv.snapshot().game.activeGame).toBeNull(); // проект не стартовал
   });
 
+  it('упор направления: решение LLM видит обсуждение чата, упор из плана доходит до хореографии', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    let decisionUser = '';
+    let resolveDecision: ((text: string) => void) | undefined;
+    let replies = 0;
+    const llm: LlmFn = async (messages) => {
+      const sys = messages[0]?.content ?? '';
+      if (sys.includes('старший сотрудник')) {
+        decisionUser = messages[1]?.content ?? '';
+        return new Promise<{ text: string; model: string }>((resolve) => {
+          resolveDecision = (text) => resolve({ text, model: 'fake' });
+        });
+      }
+      if (sys.includes('обычный игрок')) return { text: 'Классная игра!', model: 'fake' }; // письма фанатов — не JSON
+      // обсуждение команды: живые реплики с явным упором (авторы чередуются)
+      const staff = srv!.snapshot().game.staff;
+      const author = staff[replies % staff.length]!.name;
+      replies++;
+      return { text: JSON.stringify({ message: { author, text: 'Предлагаю упор на нишевость и инновации!' } }), model: 'fake' };
+    };
+    srv = makeServer(llm);
+    srv.snapshot().game.money = 1e6;
+    const steps: AutopilotStep[] = [];
+    srv.subscribeSteps((s) => steps.push(s));
+    srv.handle({ type: 'set_speed', v: 8 });
+
+    for (let i = 0; i < 160 && !resolveDecision; i++) await vi.advanceTimersByTimeAsync(500);
+    expect(resolveDecision).toBeTypeOf('function'); // LLM-решение уже в полёте
+    // обсуждение из чата реально попало в промпт решения + бюджет направления из партии
+    expect(decisionUser).toContain('Обсуждение команды');
+    expect(decisionUser).toContain('нишевость и инновации');
+    expect(decisionUser).toContain(`Очки направления: ${srv.snapshot().game.directionPoints}`);
+
+    const base = autopilotProjectInput(srv.snapshot().game);
+    expect(base).not.toBeNull();
+    resolveDecision!(JSON.stringify({ ...base, direction: { niche: 6, innovation: 4 } }));
+    await vi.advanceTimersByTimeAsync(2000);
+
+    const step = steps.find((s) => s.kind === 'plan');
+    expect(step).toBeTruthy();
+    if (step?.kind === 'plan') {
+      expect(step.plan.direction).toMatchObject({ niche: 6, innovation: 4 }); // упор чата доехал до хореографии
+      expect(Object.values(step.plan.direction).reduce((a, b) => a + b, 0)).toBe(srv.snapshot().game.directionPoints);
+    }
+    // игрок видит в чате, на что решила сделать упор команда
+    expect(srv.snapshot().chat.msgs.some((m) => m.text.includes('Упор:') && m.text.includes('Нишевость 6'))).toBe(true);
+  });
+
   it('SRV-11: второй вопрос игрока не затирает первый (FIFO)', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0); // серия = 1 реплика на вопрос — детерминированно
     const llm: LlmFn = async (messages) => {

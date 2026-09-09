@@ -8,7 +8,7 @@
 // - click: курсор летит к [data-autopilot=target] и нажимает кнопку
 import { useEffect, useRef, useState } from 'react';
 import { takeAutopilotStep, useAutopilot } from './store';
-import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
+import { planDirClicks, type AutopilotPlan, type AutopilotStep } from '../shared/autopilot';
 import { useWindows } from './wm';
 
 const FLY_MS = 800; // дальний полёт
@@ -136,16 +136,12 @@ export function AutopilotCursor() {
       await clickTarget('wiz-step-4');
       await clickTarget(`wiz-mode-${plan.mode}`);
       await clickTarget('wiz-step-5');
-      // направление: сначала обнулить все оси (визард стартует с lastDirection), потом + до плана
-      for (const ax of DIR_AXES) {
-        for (let guard = 0; guard < 12; guard++) {
-          if (readDirValue(ax) <= 0) break;
-          await clickTarget(`wiz-dir-${ax}-minus`);
-        }
-      }
-      for (const ax of DIR_AXES) {
-        const want = Math.max(0, Math.round(plan.direction[ax] ?? 0));
-        for (let i = 0; i < want; i++) await clickTarget(`wiz-dir-${ax}-plus`);
+      // направление: дельта-клики от прошлого проекта (визард стартует с lastDirection) до плана.
+      // Порядок и число кликов считает planDirClicks (сначала «−», потом «+»); совпало — кликов нет.
+      const curDir: Record<string, number> = {};
+      for (const ax of DIR_AXES) curDir[ax] = readDirValue(ax);
+      for (const { axis, sign } of planDirClicks(curDir, plan.direction, DIR_AXES)) {
+        await clickTarget(`wiz-dir-${axis}-${sign > 0 ? 'plus' : 'minus'}`);
       }
       await clickTarget('wiz-step-6');
       const rolePlan: Array<[string, string | undefined]> = [

@@ -24,6 +24,15 @@ export interface DevContrib {
   amount: number;
 }
 
+// подписи осей направления (визард + системные сообщения чата — единый источник)
+export const DIRECTION_LABELS: Record<DirectionAxis, string> = {
+  cute: 'Милый', realism: 'Реализм', approach: 'Доступность', niche: 'Нишевость',
+  simple: 'Простота', innovation: 'Инновация', world: 'Игровой мир', polish: 'Полировка',
+};
+
+// порядок осей в визарде/сводках
+export const DIRECTION_ORDER: DirectionAxis[] = ['cute', 'realism', 'approach', 'niche', 'simple', 'innovation', 'world', 'polish'];
+
 // веса осей направления → атрибуты (09 §2.3)
 export const DIRECTION_WEIGHTS: Record<DirectionAxis, Stats> = {
   cute: { fun: 0.4, creativity: 0, graphics: 0.6, sound: 0 },

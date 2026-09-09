@@ -1,8 +1,9 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it } from 'vitest';
 import { newGame, tick } from '../src/core/engine';
-import { createAutopilotPolicy, validateDecision } from '../src/server/autopilot';
+import { createAutopilotPolicy, fitDirection, validateDecision } from '../src/server/autopilot';
 import { autopilotProjectInput } from '../src/core/sim/policy';
+import { planDirClicks } from '../src/shared/autopilot';
 import type { AutopilotPlan } from '../src/shared/autopilot';
 import type { GameState } from '../src/core/types';
 
@@ -93,6 +94,88 @@ describe('автопилот: назначение ролей — одна ро�
     ];
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).not.toContain(input.proposalStaffId);
+  });
+});
+
+describe('автопилот: упор направления (решает LLM/чат, бюджет — из партии)', () => {
+  it('перерасход очков направления отклоняется', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    plan.direction = { niche: 8, innovation: 8 }; // 16 > бюджета (10)
+    expect(validateDecision(plan, g)).toContain('перерасходованы');
+  });
+
+  it('ось вне диапазона 0..8 отклоняется', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    plan.direction = { niche: 9 };
+    expect(validateDecision(plan, g)).toContain('0..8');
+  });
+
+  it('неизвестная ось отклоняется', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    plan.direction = { vibes: 3 };
+    expect(validateDecision(plan, g)).toContain('неизвестная ось');
+  });
+
+  it('свой упор (нишевость + инновация) проходит — не обязан копировать доступность/полировку', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    plan.direction = { niche: 6, innovation: 4 };
+    expect(validateDecision(plan, g)).toBeNull();
+  });
+
+  it('fitDirection ужимает перерасход до бюджета, сохраняя топ-оси упора', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    plan.direction = { niche: 8, innovation: 8 };
+    fitDirection(plan, g.directionPoints); // 10
+    expect(Object.values(plan.direction).reduce((a, b) => a + b, 0)).toBe(g.directionPoints);
+    expect(plan.direction.niche).toBe(5);
+    expect(plan.direction.innovation).toBe(5);
+    expect(validateDecision(plan, g)).toBeNull(); // после ужатия решение проходит целиком
+  });
+
+  it('fitDirection не трогает упор в пределах бюджета', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    const before = { ...plan.direction };
+    fitDirection(plan, g.directionPoints);
+    expect(plan.direction).toEqual(before);
+  });
+});
+
+describe('хореография направления (клиент): planDirClicks', () => {
+  const AXES = ['cute', 'realism', 'approach', 'niche', 'simple', 'innovation', 'world', 'polish'];
+
+  it('план совпал с прошлым проектом — кликов НЕТ (жалоба «сброс до нуля и поднял те же»)', () => {
+    expect(planDirClicks({ approach: 5, polish: 5 }, { approach: 5, polish: 5 }, AXES)).toEqual([]);
+  });
+
+  it('смена упора: сначала все «−» (освободить бюджет), потом «+» на новые оси', () => {
+    const clicks = planDirClicks({ approach: 5, polish: 5 }, { niche: 6, innovation: 4 }, AXES);
+    expect(clicks).toHaveLength(20);
+    expect(clicks.slice(0, 10).every((c) => c.sign === -1)).toBe(true);
+    expect(clicks.slice(10).every((c) => c.sign === 1)).toBe(true);
+    expect(clicks.slice(0, 10).every((c) => c.axis === 'approach' || c.axis === 'polish')).toBe(true);
+    expect(clicks.slice(10).map((c) => c.axis).join(',')).toBe('niche,niche,niche,niche,niche,niche,innovation,innovation,innovation,innovation');
+  });
+
+  it('ни одна ось не ходит «вниз и обратно вверх» за один проход', () => {
+    const clicks = planDirClicks({ approach: 5, polish: 5, cute: 2 }, { niche: 6, cute: 4 }, AXES);
+    const signs = new Map<string, Set<number>>();
+    for (const c of clicks) {
+      if (!signs.has(c.axis)) signs.set(c.axis, new Set());
+      signs.get(c.axis)!.add(c.sign);
+    }
+    for (const set of signs.values()) expect(set.size).toBe(1);
+    expect(clicks.filter((c) => c.axis === 'cute')).toEqual([{ axis: 'cute', sign: 1 }, { axis: 'cute', sign: 1 }]);
+  });
+
+  it('оси вне плана обнуляются, лишние ключи игнорируются', () => {
+    const clicks = planDirClicks({ world: 3 }, { vibes: 4 }, AXES);
+    expect(clicks).toEqual([{ axis: 'world', sign: -1 }, { axis: 'world', sign: -1 }, { axis: 'world', sign: -1 }]);
   });
 });
 
