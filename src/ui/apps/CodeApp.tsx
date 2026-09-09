@@ -788,6 +788,7 @@ function ProjectWizard() {
                   <button
                     className="w95-btn"
                     disabled={!genreId || !typeId || storyBusy}
+                    data-autopilot="wiz-story-gen"
                     onClick={() => {
                       setStoryBusy(true);
                       clearActionError();

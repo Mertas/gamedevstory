@@ -487,6 +487,7 @@ export class GameServer {
         this.decidedThisIdle = false;
         this.pendingDecision = false;
         chatSystem(g, this.chat, '🕵️ Команда заметила, что босс пропал. Берём дело в свои руки!');
+        this.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
         this.emit();
       }
       return;
@@ -521,6 +522,7 @@ export class GameServer {
       !this.deciding && !this.pendingDecision && !this.decidedThisIdle
     ) {
       this.decidedThisIdle = true;
+      this.emitStep({ kind: 'open', app: 'chat' }); // после релиза — новое обсуждение тоже видно
       void this.generatePhase('autopilot_discuss');
       this.pendingDecision = true;
     }
@@ -545,9 +547,9 @@ export class GameServer {
     this.deciding = true;
     const announce = (plan: AutopilotPlan): void => {
       this.pendingPlan = plan;
-      // клиентская хореография визарда — десятки реальных кликов мыши (~15–35с);
-      // фолбэк стартует сам только если клиента нет/завис
-      this.pendingPlanDeadline = Date.now() + 60000;
+      // клиентская хореография визарда — десятки реальных кликов (~15–35с) + генерация
+      // сюжета (до 25с ожидания LLM); фолбэк стартует сам только если клиента нет/завис
+      this.pendingPlanDeadline = Date.now() + 120000;
       this.emitStep({ kind: 'open', app: 'code' });
       // «plan» включает ВСЮ хореографию визарда, включая финальный клик «Начать»
       this.emitStep({ kind: 'plan', plan });

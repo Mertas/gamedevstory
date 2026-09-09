@@ -148,6 +148,19 @@ export function AutopilotCursor() {
         await clickCard(staffId);
       }
       await clickTarget('wiz-step-7');
+      // название и сюжет: мышь жмёт «Сгенерировать» и ЖДЁТ ответ GigaChat (title заполнен)
+      setLabel('Генерирую название и сюжет');
+      const titleInput = () =>
+        document.querySelector<HTMLInputElement>('input[placeholder*="Название игры"]');
+      if (!(titleInput()?.value ?? '').trim()) {
+        await clickTarget('wiz-story-gen');
+        const started = performance.now();
+        for (;;) {
+          if ((titleInput()?.value ?? '').trim()) break;
+          if (performance.now() - started >= 25000) break; // LLM не ответил — стартуем без названия
+          await sleep(500);
+        }
+      }
       setLabel('Начинаю разработку');
       await clickTarget('wizard-start', false); // финальный дальний клик
     };
