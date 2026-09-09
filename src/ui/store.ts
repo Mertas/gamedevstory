@@ -5,7 +5,7 @@ import type { HireMethodId } from '../core/config';
 import type { GameState, StartProjectInput } from '../core/types';
 import type { ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
-import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
+import type { AutopilotStep } from '../shared/autopilot';
 
 export interface Snapshot {
   game: GameState | null;
@@ -141,18 +141,6 @@ export function takeAutopilotStep(): AutopilotStep | null {
   const s = autopilotQueue.shift() ?? null;
   emit();
   return s;
-}
-
-let autopilotPlan: AutopilotPlan | null = null;
-
-export function setAutopilotPlan(plan: AutopilotPlan | null): void {
-  autopilotPlan = plan;
-  emit();
-}
-
-export function useAutopilotPlan(): AutopilotPlan | null {
-  useSyncExternalStore(subscribe, () => autopilotPlan);
-  return autopilotPlan;
 }
 
 export function actionTakeControl() {

@@ -545,10 +545,12 @@ export class GameServer {
     this.deciding = true;
     const announce = (plan: AutopilotPlan): void => {
       this.pendingPlan = plan;
-      this.pendingPlanDeadline = Date.now() + 3000; // 3с на хореографию клиента
+      // клиентская хореография визарда — десятки реальных кликов мыши (~15–35с);
+      // фолбэк стартует сам только если клиента нет/завис
+      this.pendingPlanDeadline = Date.now() + 60000;
       this.emitStep({ kind: 'open', app: 'code' });
+      // «plan» включает ВСЮ хореографию визарда, включая финальный клик «Начать»
       this.emitStep({ kind: 'plan', plan });
-      this.emitStep({ kind: 'click', target: 'wizard-start', label: 'Начать разработку' });
     };
     try {
       const ctx = buildDecisionContext(this.game);
@@ -607,7 +609,7 @@ export class GameServer {
       return;
     }
     // событие фазы → живая серия: реплики по одной, с ответами друг другу
-    const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : 5; // ответов после открывающей
+    const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : phase === 'autopilot_discuss' ? 3 : phase === 'boss_back' ? 4 : 5; // ответов после открывающей
     this.chatThread = { phase, extra: extra ?? {}, left, busy: false, nextAt: this.game.week, errors: 0, openingFor };
     void this.nextReply();
   }

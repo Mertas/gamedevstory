@@ -6,11 +6,10 @@ import {
   comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
 } from '../../shared/meta';
 import type { DirectionAxis, Role } from '../../core/types';
-import type { AutopilotPlan } from '../../shared/autopilot';
 import { StaffCard } from '../StaffCard';
 import {
   actionGenerateStory, actionRelease, actionStartProject, actionUseBooster, clearActionError,
-  clearStoryResult, useActionError, useAutopilotPlan, useGame, useMeta, useStoryResult,
+  clearStoryResult, useActionError, useGame, useMeta, useStoryResult,
 } from '../store';
 
 const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = [
@@ -452,26 +451,6 @@ function ProjectWizard() {
   const [plot, setPlot] = useState('');
   const [storyBusy, setStoryBusy] = useState(false);
   const story = useStoryResult();
-  // ─── автопилот (plan/14): заполнить визард решением команды, курсор нажмёт «Начать» ───
-  const autopilotPlan = useAutopilotPlan();
-  const planAppliedRef = useRef<AutopilotPlan | null>(null);
-  useEffect(() => {
-    if (!autopilotPlan || planAppliedRef.current === autopilotPlan) return;
-    planAppliedRef.current = autopilotPlan;
-    setConsoleId(autopilotPlan.consoleId);
-    setGenreId(autopilotPlan.genreId);
-    setTypeId(autopilotPlan.typeId);
-    setMode(autopilotPlan.mode);
-    setDirection({ ...autopilotPlan.direction } as Record<DirectionAxis, number>);
-    setRoles({
-      proposal: autopilotPlan.proposalStaffId,
-      program: autopilotPlan.assignments.program[0] ?? null,
-      graphics: autopilotPlan.assignments.graphics[0] ?? null,
-      sound: autopilotPlan.assignments.sound[0] ?? null,
-      debug: autopilotPlan.assignments.debug[0] ?? null,
-    });
-    setStep(7);
-  }, [autopilotPlan]);
   // применить сгенерированное название/сюжет
   useEffect(() => {
     clearActionError();
@@ -606,6 +585,7 @@ function ProjectWizard() {
             <div
               key={s.id}
               onClick={() => goTo(s.id)}
+              data-autopilot={`wiz-step-${s.id}`}
               className={`w95-row ${s.id === step ? 'w95-step-active' : ''}`}
               style={{
                 padding: '3px 4px', cursor: 'pointer', fontSize: 11,
@@ -628,7 +608,7 @@ function ProjectWizard() {
               <div className="w95-hint">Лицензии на консоли покупаются в окне «Железо».</div>
               <div className="w95-field">
                 {consoles.map((c) => (
-                  <div key={c.id} className="w95-li" style={{ padding: '2px 4px' }} onClick={() => setConsoleId(c.id)}>
+                  <div key={c.id} className="w95-li" style={{ padding: '2px 4px' }} onClick={() => setConsoleId(c.id)} data-autopilot={`wiz-console-${c.id}`}>
                     <label className="w95-row">
                       <input type="radio" checked={consoleId === c.id} onChange={() => setConsoleId(c.id)} />
                       <b>{c.name}</b>
@@ -652,7 +632,7 @@ function ProjectWizard() {
               <div className="w95-hint">Открытые жанры ({genres.length}/{meta.genres.length}); остальные — за уровни сотрудников.</div>
               <div className="w95-field" style={{ maxHeight: 260, overflowY: 'auto' }}>
                 {genres.map((gg) => (
-                  <div key={gg.id} className="w95-li" style={{ padding: '1px 4px' }}>
+                  <div key={gg.id} className="w95-li" style={{ padding: '1px 4px' }} data-autopilot={`wiz-genre-${gg.id}`}>
                     <label className="w95-row">
                       <input type="radio" checked={genreId === gg.id} onChange={() => setGenreId(gg.id)} />
                       {gg.ru} <span className="w95-hint">(база {gg.costWan / 10}K)</span>
@@ -682,7 +662,7 @@ function ProjectWizard() {
                 {types.map((t) => {
                   const cg = genre ? comboGrade(meta, genre.id, t.id) : null;
                   return (
-                    <div key={t.id} className="w95-li" style={{ padding: '1px 4px' }}>
+                    <div key={t.id} className="w95-li" style={{ padding: '1px 4px' }} data-autopilot={`wiz-type-${t.id}`}>
                       <label className="w95-row">
                         <input type="radio" checked={typeId === t.id} onChange={() => setTypeId(t.id)} />
                         {t.nameRu ?? t.name}
@@ -704,7 +684,7 @@ function ProjectWizard() {
               <b>Режим разработки</b>
               <div className="w95-field">
                 {MODES.map((m) => (
-                  <div key={m.id} className="w95-li" style={{ padding: '1px 4px' }}>
+                  <div key={m.id} className="w95-li" style={{ padding: '1px 4px' }} data-autopilot={`wiz-mode-${m.id}`}>
                     <label className="w95-row">
                       <input type="radio" checked={mode === m.id} onChange={() => setMode(m.id)} />
                       <b>{m.label}</b> <span className="w95-hint">{m.hint}</span>
@@ -726,10 +706,10 @@ function ProjectWizard() {
                   <div key={ax.id} className="w95-row" style={{ justifyContent: 'space-between' }}>
                     <span>{ax.label}</span>
                     <span className="w95-row">
-                      <button className="w95-btn" style={{ minWidth: 22, padding: '0 6px' }}
+                      <button className="w95-btn" style={{ minWidth: 22, padding: '0 6px' }} data-autopilot={`wiz-dir-${ax.id}-minus`}
                         onClick={() => setDirection((d) => ({ ...d, [ax.id]: Math.max(0, d[ax.id] - 1) }))}>−</button>
-                      <b style={{ minWidth: 16, textAlign: 'center' }}>{direction[ax.id]}</b>
-                      <button className="w95-btn" style={{ minWidth: 22, padding: '0 6px' }}
+                      <b style={{ minWidth: 16, textAlign: 'center' }} data-autopilot-dir-value={ax.id}>{direction[ax.id]}</b>
+                      <button className="w95-btn" style={{ minWidth: 22, padding: '0 6px' }} data-autopilot={`wiz-dir-${ax.id}-plus`}
                         disabled={dirLeft <= 0}
                         onClick={() => setDirection((d) => ({ ...d, [ax.id]: d[ax.id] + 1 }))}>+</button>
                     </span>
@@ -751,6 +731,7 @@ function ProjectWizard() {
                     key={r}
                     className={`w95-btn${roleTab === r ? ' active' : ''}`}
                     onClick={() => setRoleTab(r)}
+                    data-autopilot={`wiz-role-${r}`}
                     title={roles[r] ? game.staff.find((s) => s.id === roles[r])?.name : '—'}
                   >
                     {ROLE_LABELS[r]}: {roles[r] ? game.staff.find((s) => s.id === roles[r])?.name?.split(' ')[0] : '—'}
