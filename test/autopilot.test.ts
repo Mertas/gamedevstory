@@ -70,6 +70,15 @@ describe('автопилот: политика-обёртка', () => {
     expect(g.pendingEvent).toBeNull();
   });
 
+  it('SRV-04: с висящим событием и без активной игры проект НЕ стартует (раньше стартовал мимо чата)', () => {
+    const g = fresh();
+    g.pendingEvent = { type: 'info', title: 'Тест', text: 'проверка SRV-04' };
+    const ap = createAutopilotPolicy();
+    ap.turn(g);
+    expect(g.pendingEvent).toBeNull(); // событие зарезолвлено
+    expect(g.activeGame).toBeNull(); // но проект политика сама не начала
+  });
+
   it('резолвит буст-событие целиком за один ход (приём → результат → закрыт)', () => {
     const g = fresh();
     g.research = 50;

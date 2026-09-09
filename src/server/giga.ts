@@ -2,17 +2,20 @@
 // Паттерн из LLMKing/src/server/models.ts: самоподписанный TLS Сбера — rejectUnauthorized:false.
 import * as crypto from 'crypto';
 import * as https from 'https';
-import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET, LLM_TIMEOUT_MS, gigaReady } from './config';
+import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET, LLM_TIMEOUT_MS, LLM_TOTAL_MS, gigaReady } from './config';
 
 export const GIGA_BASE = 'https://gigachat.devices.sberbank.ru/api/v1';
 const GIGA_MODELS = ['GigaChat-2-Max', 'GigaChat-2-Pro', 'GigaChat-2'];
 
-interface LlmMessage { role: 'system' | 'user' | 'assistant'; content: string }
+export interface LlmMessage { role: 'system' | 'user' | 'assistant'; content: string }
+
+/** LLM-функция (LLM-05): инъекция fake-LLM в тестах вместо GigaChat */
+export type LlmFn = (messages: LlmMessage[], maxTokens: number) => Promise<{ text: string; model: string }>;
 
 let gigaToken: string | null = null;
 let gigaExp = 0;
 
-function gigaPost(url: string, headers: Record<string, string>, body: string): Promise<Record<string, unknown>> {
+function gigaPost(url: string, headers: Record<string, string>, body: string, timeoutMs = LLM_TIMEOUT_MS): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const req = https.request(url, { method: 'POST', headers, rejectUnauthorized: false }, (res) => {
       const chunks: Buffer[] = [];
@@ -23,7 +26,7 @@ function gigaPost(url: string, headers: Record<string, string>, body: string): P
       });
     });
     req.on('error', reject);
-    req.setTimeout(LLM_TIMEOUT_MS, () => req.destroy(new Error('GigaChat: timeout')));
+    req.setTimeout(timeoutMs, () => req.destroy(new Error('GigaChat: timeout')));
     req.write(body);
     req.end();
   });
@@ -49,13 +52,13 @@ async function gigaTokenOrThrow(): Promise<string> {
   return refreshGigaToken();
 }
 
-async function gigaChat(model: string, messages: LlmMessage[], maxTokens: number): Promise<string> {
+async function gigaChat(model: string, messages: LlmMessage[], maxTokens: number, timeoutMs = LLM_TIMEOUT_MS): Promise<string> {
   const token = await gigaTokenOrThrow();
   const d = await gigaPost(`${GIGA_BASE}/chat/completions`, {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'Authorization': `Bearer ${token}`,
-  }, JSON.stringify({ model, messages, temperature: 0.9, max_tokens: maxTokens }));
+  }, JSON.stringify({ model, messages, temperature: 0.9, max_tokens: maxTokens }), timeoutMs);
   const content = (d.choices as Array<{ message?: { content?: unknown } }> | undefined)?.[0]?.message?.content;
   if (typeof content !== 'string' || !content.trim()) throw new Error(`GigaChat ${model}: пустой ответ`);
   return content;
@@ -97,15 +100,20 @@ export async function deepseek(messages: LlmMessage[], maxTokens: number): Promi
 export async function generateWithFallback(messages: LlmMessage[], maxTokens = 800): Promise<{ text: string; model: string }> {
   if (!gigaReady) throw new Error('GigaChat недоступен: проверьте .env (GIGACHAT_CLIENT_ID/SECRET)');
   let lastErr: unknown = null;
+  // LLM-01: общий дедлайн на каскад — чат не должен «замирать» на минуты
+  const deadline = Date.now() + LLM_TOTAL_MS;
   // 2 прохода: GigaChat иногда разово отвечает пустотой (rate limit) — повторяем
   for (let attempt = 0; attempt < 2; attempt++) {
     for (const model of GIGA_MODELS) {
+      const left = deadline - Date.now();
+      if (left <= 1000) break;
       try {
-        return { text: await gigaChat(model, messages, maxTokens), model: `GigaChat ${model}` };
+        return { text: await gigaChat(model, messages, maxTokens, Math.min(LLM_TIMEOUT_MS, left)), model: `GigaChat ${model}` };
       } catch (e) {
         lastErr = e; /* следующий */
       }
     }
+    if (Date.now() + 1500 >= deadline) break;
     await new Promise((r) => setTimeout(r, 1500)); // пауза перед повтором
   }
   throw lastErr instanceof Error ? lastErr : new Error('GigaChat не ответил');

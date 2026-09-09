@@ -23,7 +23,12 @@ export interface ScriptedPlayer {
   turn(state: GameState, stats: PolicyStats): void;
 }
 
-export function createPlayer(): ScriptedPlayer {
+export interface PlayerOptions {
+  /** SRV-04: автопилот не стартует проекты сам — только резолвит события (старт — через чат-решение) */
+  resolveOnly?: boolean;
+}
+
+export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
   let lastCombo: { genreId: string; typeId: string } | null = null;
 
   return {
@@ -105,6 +110,7 @@ export function createPlayer(): ScriptedPlayer {
 
       // проект
       if (!state.activeGame) {
+        if (opts.resolveOnly) return; // SRV-04: решение о новой игре принимает чат, не политика
         startNextProject(state, lastCombo, (combo) => {
           lastCombo = combo;
         });

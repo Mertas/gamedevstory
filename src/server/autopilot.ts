@@ -95,7 +95,8 @@ export function buildDecisionContext(state: GameState): {
 /** Политика автопилота: резолвит события и выпускает готовые игры, НО не стартует
  * проекты сам (решение — за чатом). Внутри — обычный «разумный игрок» из sim/policy. */
 export function createAutopilotPolicy(): { turn(state: GameState): void; stats: PolicyStats } {
-  const player = createPlayer();
+  // SRV-04: политика резолвит события и выпускает игры, но НЕ стартует проекты (это делает чат)
+  const player = createPlayer({ resolveOnly: true });
   const stats: PolicyStats = { hires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
   return {
     stats,

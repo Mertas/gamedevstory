@@ -15,7 +15,7 @@ import { isValidGameState, migrateSave } from '../core/migrate';
 import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 import { buildLetterPrompt, buildMessages, buildDecisionPrompt, parseDecision, parseSingleMessage } from './chatgen';
-import { generateStory, generateWithFallback } from './giga';
+import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { buildDecisionContext, createAutopilotPolicy, validateDecision, autopilotProjectInput } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 
@@ -112,15 +112,26 @@ function normalizeLegacyContrib(state: GameState): void {
   for (const s of state.staff) g.contribTotal[s.id] = ((sumPoints * (statOf[s.id] ?? 0)) / total) || 0;
 }
 
+/** LLM-инъекция (LLM-05): в тестах — fake-LLM, в проде — GigaChat. savePath — временный файл в тестах. */
+export interface GameServerDeps {
+  llm?: LlmFn;
+  story?: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
+  savePath?: string;
+}
+
 export class GameServer {
   private game: GameState;
   private chat: ChatState;
+  private llm: LlmFn;
+  private story: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
+  private savePath: string;
   private speed = 1;
   private timer: NodeJS.Timeout | null = null;
   private listeners = new Set<(s: SessionSnapshot) => void>();
   private chatThread: ChatThread | null = null; // фазы чата в процессе генерации
-  private pendingPlayer: string | null = null; // вопрос игрока, ждущий свободного чата
-  private pendingPhase: { phase: string; extra?: Record<string, unknown>; openingFor?: string } | null = null;
+  // SRV-11/12: очереди, а не одиночные слоты — второе сообщение/сцена не затирают первое
+  private pendingPlayers: string[] = [];
+  private pendingPhases: { phase: string; extra?: Record<string, unknown>; openingFor?: string }[] = [];
   private lastAction: { ok: boolean; error?: string } | null = null;
   // ─── автопилот (plan/14): триггер 7 дней простоя, решение в чате, «театр» событий ───
   private autopilotOn = false;
@@ -142,7 +153,10 @@ export class GameServer {
   private mailShownId = 0; // последнее письмо, опубликованное в чат
   private fanReplyQueued = false; // реакция команды ждёт свободного чата
 
-  constructor() {
+  constructor(deps: GameServerDeps = {}) {
+    this.llm = deps.llm ?? generateWithFallback;
+    this.story = deps.story ?? generateStory;
+    this.savePath = deps.savePath ?? SAVE_PATH;
     this.game = this.load();
     this.chat = this.loadedChat ?? resetChat();
     this.lastBossActionDay = this.game.week;
@@ -274,7 +288,7 @@ export class GameServer {
       const g = genreById(msg.genreId);
       const t = typeById(msg.typeId);
       if (!g || !t) throw new Error('Жанр или тема не найдены');
-      const s = await generateStory(g.ru ?? g.name, t.nameRu ?? t.name);
+      const s = await this.story(g.ru ?? g.name, t.nameRu ?? t.name);
       this.storyCb?.({ ok: true, ...s });
     } catch (e) {
       this.storyCb?.({ ok: false, error: e instanceof Error ? e.message : 'Ошибка генерации' });
@@ -285,7 +299,7 @@ export class GameServer {
     this.lastAction = null;
     // автопилот (plan/14): любое действие БОССА выключает авторежим; действия виртуальной
     // мыши помечены autopilot:true и не выключают. take_control — с реакцией чата.
-    if (!msg.autopilot && msg.type !== 'get_state') {
+    if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
       this.lastBossActionDay = this.game.week;
       if (this.autopilotOn) this.stopAutopilot(msg.type !== 'take_control');
     }
@@ -416,7 +430,7 @@ export class GameServer {
           } else {
             this.chat.msgs.push({ week: this.game.week, author: 'Вы', avatar: '', text, trigger: 'week' });
             if (this.chatThread) {
-              this.pendingPlayer = text; // команда занята — ответим после текущей серии
+              this.pendingPlayers.push(text); // SRV-11: FIFO — все вопросы будут отвечены
             } else {
               this.startPlayerThread(text);
             }
@@ -488,8 +502,8 @@ export class GameServer {
   /** SRV-09: сброс сессионной чат-машины при новой игре/импорте сейва. */
   private resetSession(): void {
     this.chatThread = null;
-    this.pendingPlayer = null;
-    this.pendingPhase = null;
+    this.pendingPlayers = [];
+    this.pendingPhases = [];
     this.letterBusy = false;
     this.letterNextAt = 0;
     this.fanReplyQueued = false;
@@ -591,7 +605,7 @@ export class GameServer {
     };
     try {
       const ctx = buildDecisionContext(this.game);
-      const { text } = await generateWithFallback(buildDecisionPrompt(ctx), 800);
+      const { text } = await this.llm(buildDecisionPrompt(ctx), 800);
       if (cancelled()) return;
       const plan = parseDecision(text);
       const err = plan ? validateDecision(plan, this.game) : 'не удалось разобрать JSON';
@@ -644,7 +658,8 @@ export class GameServer {
   private async generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void> {
     // чат занят (отвечает игроку / идёт другая фаза) — встаём в очередь
     if (this.chatThread) {
-      this.pendingPhase = { phase, extra, openingFor };
+      // SRV-12: очередь сцен (FIFO, лимит 5) — события не схлопываются в одно
+      if (this.pendingPhases.length < 5) this.pendingPhases.push({ phase, extra, openingFor });
       return;
     }
     // событие фазы → живая серия: реплики по одной, с ответами друг другу
@@ -702,15 +717,15 @@ export class GameServer {
     if (!t) return;
     if (t.left > 0 && t.errors < 3) return;
     this.chatThread = null;
-    if (this.pendingPlayer) {
-      // сначала ответим на свежий вопрос игрока, потом — отложенные события
-      const text = this.pendingPlayer;
-      this.pendingPlayer = null;
-      this.startPlayerThread(text);
-    } else if (this.pendingPhase) {
-      const p = this.pendingPhase;
-      this.pendingPhase = null;
-      void this.generatePhase(p.phase, p.extra, p.openingFor);
+    // LLM-02: серия оборвалась из-за ошибок LLM — игрок должен это видеть
+    if (t.errors >= 3) chatSystem(this.game, this.chat, '📡 Связь с командой пропала — они не смогли ответить. Напишите ещё раз.');
+    const nextPlayer = this.pendingPlayers.shift();
+    if (nextPlayer !== undefined) {
+      // сначала ответим на вопросы игрока (FIFO), потом — отложенные события
+      this.startPlayerThread(nextPlayer);
+    } else {
+      const p = this.pendingPhases.shift();
+      if (p) void this.generatePhase(p.phase, p.extra, p.openingFor);
     }
   }
 
@@ -735,7 +750,7 @@ export class GameServer {
       this.chat.msgs.push({
         week: l.week, author: `${l.fanName} (фанат)`, avatar: '', text: `${emoji} ${l.text}`, trigger: 'week',
       });
-      if (this.chatThread || this.pendingPhase || this.pendingPlayer) {
+      if (this.chatThread || this.pendingPhases.length > 0 || this.pendingPlayers.length > 0) {
         this.fanReplyQueued = true; // чат занят — реакция после текущей серии
       } else {
         void this.generatePhase('fanmail', { text: l.text, fanName: l.fanName, gameName: l.gameName, sentiment: l.sentiment });
@@ -743,7 +758,7 @@ export class GameServer {
       return; // одно письмо за тик
     }
     // (3) отложенная реакция на последнее показанное письмо
-    if (this.fanReplyQueued && !this.chatThread && !this.pendingPhase && !this.pendingPlayer) {
+    if (this.fanReplyQueued && !this.chatThread && this.pendingPhases.length === 0 && this.pendingPlayers.length === 0) {
       this.fanReplyQueued = false;
       const l = this.game.mail.find((x) => x.id === this.mailShownId);
       if (l) {
@@ -755,7 +770,7 @@ export class GameServer {
   private async writeLetterText(letter: FanLetter): Promise<void> {
     try {
       const messages = buildLetterPrompt(letter);
-      const { text } = await generateWithFallback(messages, 250);
+      const { text } = await this.llm(messages, 250);
       const t = text.trim().replace(/^["«]|["»]$/g, '').slice(0, 700);
       if (t.length >= 20) letter.text = t; // иначе оставляем заготовку движка
     } catch (e) {
@@ -776,7 +791,7 @@ export class GameServer {
 
   private async fetchOneReply(t: NonNullable<ChatThread>, replyTo: string | undefined): Promise<void> {
     const messages = buildMessages(t.phase, this.buildContext(t.phase, t.extra), replyTo, replyTo ? undefined : t.openingFor);
-    const { text } = await generateWithFallback(messages, 600);
+    const { text } = await this.llm(messages, 600);
     const parsed = parseSingleMessage(text);
     const valid = parsed && this.game.staff.some((s) => s.name === parsed.author) && parsed.text.length >= 4 && parsed.text.length <= 500;
     if (!valid || !parsed) throw new Error('нет валидной реплики');
@@ -842,7 +857,7 @@ export class GameServer {
 
   private load(): GameState {
     try {
-      const raw = fs.readFileSync(SAVE_PATH, 'utf8');
+      const raw = fs.readFileSync(this.savePath, 'utf8');
       const parsed = JSON.parse(raw) as unknown;
       // формат 2 (SRV-21): { game, chat }; формат 1 (легаси): сам GameState
       const wrapped = !!parsed && typeof parsed === 'object' && 'game' in (parsed as Record<string, unknown>);
@@ -860,14 +875,14 @@ export class GameServer {
     } catch (e) {
       // битый JSON не должен молча стирать партию: сохраняем улику и сообщаем;
       // отсутствие файла — обычный первый запуск, это НЕ повреждение
-      if (fs.existsSync(SAVE_PATH)) this.backupSave(String(e).slice(0, 300));
+      if (fs.existsSync(this.savePath)) this.backupSave(String(e).slice(0, 300));
     }
     return newGame(Math.floor(Math.random() * 99991) + 1);
   }
 
   private backupSave(why: string): void {
     try {
-      fs.copyFileSync(SAVE_PATH, `${SAVE_PATH}.corrupt-${Date.now()}`);
+      fs.copyFileSync(this.savePath, `${this.savePath}.corrupt-${Date.now()}`);
       console.error('[gds] сейв повреждён — бэкап в data/save.json.corrupt-*; начата новая игра:', why);
     } catch {
       console.error('[gds] сейв повреждён и бэкап не удался:', why);
@@ -879,12 +894,18 @@ export class GameServer {
     this.autosave(true);
   }
 
+  /** остановка тикера (тесты, graceful shutdown) */
+  dispose(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+  }
+
   private autosave(force = false): void {
     if (!force && this.game.week - this.lastSaveDay < SAVE_DEBOUNCE_DAYS) return;
     try {
-      const tmp = `${SAVE_PATH}.tmp`;
+      const tmp = `${this.savePath}.tmp`;
       fs.writeFileSync(tmp, JSON.stringify({ game: this.game, chat: this.chat })); // SRV-21: чат переживает рестарт
-      fs.renameSync(tmp, SAVE_PATH); // атомарно: tmp появляется целиком, rename заменяет
+      fs.renameSync(tmp, this.savePath); // атомарно: tmp появляется целиком, rename заменяет
       this.lastSaveDay = this.game.week;
     } catch (e) {
       console.error('[gds] автосейв не удался:', String(e).slice(0, 300));
@@ -910,7 +931,7 @@ export class GameServer {
       normalizeLegacyContrib(candidate);
       // аудит 05.09: импорт затирает текущую партию — бэкап перед перезаписью
       try {
-        if (fs.existsSync(SAVE_PATH)) fs.copyFileSync(SAVE_PATH, `${SAVE_PATH}.pre-import-${Date.now()}`);
+        if (fs.existsSync(this.savePath)) fs.copyFileSync(this.savePath, `${this.savePath}.pre-import-${Date.now()}`);
       } catch { /* бэкап не критичен */ }
       this.game = candidate;
       const chat = wrapped ? (parsed as { chat?: unknown }).chat : undefined;
