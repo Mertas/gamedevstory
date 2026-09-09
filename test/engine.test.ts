@@ -10,7 +10,7 @@ import { resolveBoost } from '../src/core/systems/dev';
 import { consoleAvailable } from '../src/core/systems/dev';
 import { dateToDay, dailySales, tickMediaEvents, dateLabel as coreDateLabel } from '../src/core/systems/market';
 import { tickFanLetters } from '../src/core/systems/mail';
-import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
+import { isValidGameState, migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { dateLabel as sharedDateLabel } from '../src/shared/meta';
 import type { ActiveGame, GameState } from '../src/core/types';
 
@@ -480,5 +480,38 @@ describe('M5: Gamedex (выставка в июле, офис 2+)', () => {
     expect(res.ok).toBe(true);
     expect(g.activeGame?.fame).toBe(CONFIG.PROJECT_FAME_BASE + 40);
     expect(g.gamedexFame).toBe(0); // списана
+  });
+});
+
+// ─── SRV-02: схемная проверка сейва — импорт/загрузка не подменяют живую партию огрызком ───
+describe('isValidGameState', () => {
+  it('принимает настоящий GameState', () => {
+    expect(isValidGameState(newGame(1))).toBe(true);
+  });
+
+  it('принимает легаси-сейв без полей, которые допишет миграция', () => {
+    const g = newGame(1) as Partial<GameState>;
+    delete g.mail;
+    delete g.log;
+    delete g.saveVersion;
+    expect(isValidGameState(g)).toBe(true);
+  });
+
+  it('отклоняет не-объекты и огрызки', () => {
+    expect(isValidGameState(null)).toBe(false);
+    expect(isValidGameState('строка')).toBe(false);
+    expect(isValidGameState([])).toBe(false);
+    expect(isValidGameState({})).toBe(false);
+    expect(isValidGameState({ week: 1 })).toBe(false);
+    expect(isValidGameState({ ...newGame(1), week: Number.NaN })).toBe(false);
+    expect(isValidGameState({ ...newGame(1), money: '1000' })).toBe(false);
+    expect(isValidGameState({ ...newGame(1), staff: 'нет' })).toBe(false);
+    expect(isValidGameState({ ...newGame(1), staff: [{}] })).toBe(false);
+    expect(isValidGameState({ ...newGame(1), history: null })).toBe(false);
+    expect(isValidGameState({ ...newGame(1), consoles: [] })).toBe(false);
+  });
+
+  it('отклоняет сейв «из будущего» (saveVersion > SAVE_VERSION)', () => {
+    expect(isValidGameState({ ...newGame(1), saveVersion: SAVE_VERSION + 1 })).toBe(false);
   });
 });

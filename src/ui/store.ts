@@ -39,7 +39,10 @@ function connect(): void {
   (globalThis as { __gdsWs?: WebSocket }).__gdsWs = ws;
   // после (пере)подключения сразу синхронизируемся — иначе при паузе (висит событие,
   // тикер молчит) state не придёт и потерянный клик не вернёт попап решения
-  ws.onopen = () => send({ type: 'get_state' });
+  ws.onopen = () => {
+    autopilotQueue.length = 0; // SRV-16: после реконнекта старые шаги мыши не доигрываем
+    send({ type: 'get_state' });
+  };
   ws.onmessage = (e) => {
     try {
       const d = JSON.parse(String(e.data)) as {
@@ -55,6 +58,8 @@ function connect(): void {
           game: d.game, chat: d.chat ?? snap.chat, speed: d.speed ?? snap.speed,
           connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot),
         };
+        // SRV-16: автопилот выключен — очередь шагов не доигрываем (мышь не жмёт за игрока)
+        if (!snap.autopilot) autopilotQueue.length = 0;
         emit();
       }
       if (d.type === 'autopilot_step' && d.step) {

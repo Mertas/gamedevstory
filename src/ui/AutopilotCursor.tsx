@@ -7,7 +7,7 @@
 //   (реальный onClick → реальное действие с флагом autopilot:true)
 // - click: курсор летит к [data-autopilot=target] и нажимает кнопку
 import { useEffect, useRef, useState } from 'react';
-import { takeAutopilotStep } from './store';
+import { takeAutopilotStep, useAutopilot } from './store';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { useWindows } from './wm';
 
@@ -22,6 +22,10 @@ const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
 export function AutopilotCursor() {
   const wm = useRef(useWindows());
   const busyRef = useRef(false);
+  // SRV-16: флаг автопилота в ref — интервал и хореография проверяют его без пересоздания эффекта
+  const autopilot = useAutopilot();
+  const autoRef = useRef(autopilot);
+  autoRef.current = autopilot;
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const [label, setLabel] = useState('');
   const [pressing, setPressing] = useState(false);
@@ -113,8 +117,11 @@ export function AutopilotCursor() {
 
     /** шоу: мышь сама заполняет визард по плану (реальные клики) */
     const wizardShow = async (plan: AutopilotPlan): Promise<void> => {
+      const stopped = (): boolean => !autoRef.current; // SRV-03/16: прерывание на любом шаге
       setLabel('Заполняю мастер проекта');
+      if (stopped()) return;
       await clickTarget('wiz-step-1');
+      if (stopped()) return;
       await clickTarget(`wiz-console-${plan.consoleId}`);
       await clickTarget('wiz-step-2');
       await clickTarget(`wiz-genre-${plan.genreId}`);
@@ -147,6 +154,7 @@ export function AutopilotCursor() {
         await clickTarget(`wiz-role-${role}`);
         await clickCard(staffId);
       }
+      if (stopped()) return;
       await clickTarget('wiz-step-7');
       // название и сюжет: мышь жмёт «Сгенерировать» и ЖДЁТ ответ GigaChat (title заполнен)
       setLabel('Генерирую название и сюжет');
@@ -156,16 +164,19 @@ export function AutopilotCursor() {
         await clickTarget('wiz-story-gen');
         const started = performance.now();
         for (;;) {
+          if (stopped()) return;
           if ((titleInput()?.value ?? '').trim()) break;
           if (performance.now() - started >= 25000) break; // LLM не ответил — стартуем без названия
           await sleep(500);
         }
       }
+      if (stopped()) return; // финальный клик «Начать» — только если босс не вернулся
       setLabel('Начинаю разработку');
       await clickTarget('wizard-start', false); // финальный дальний клик
     };
 
     const playStep = async (step: AutopilotStep): Promise<void> => {
+      if (!autoRef.current) return; // SRV-16: босс вернул управление — шаг не играем
       if (step.kind === 'open') {
         setLabel(`Открываю ${step.app}`);
         wm.current.open(step.app);
@@ -182,6 +193,7 @@ export function AutopilotCursor() {
 
     const iv = window.setInterval(() => {
       if (busyRef.current) return;
+      if (!autoRef.current) return; // SRV-16: после «Взять управление» очередь не доигрываем
       const step = takeAutopilotStep();
       if (!step) return;
       busyRef.current = true;

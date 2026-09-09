@@ -20,13 +20,33 @@ const server = app.listen(PORT, HOST, () => {
 
 const game = new GameServer();
 
+// SRV-07/SRV-08: последний рубеж — не терять партию при падении/остановке
+process.on('uncaughtException', (e) => {
+  console.error('[gds] uncaughtException:', e);
+  try { game.saveNow(); } catch { /* noop */ }
+  process.exit(1);
+});
+process.on('unhandledRejection', (e) => {
+  console.error('[gds] unhandledRejection:', String(e).slice(0, 300));
+});
+for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(sig, () => {
+    console.log(`[gds] ${sig}: сохраняю партию…`);
+    try { game.saveNow(); } catch { /* noop */ }
+    process.exit(0);
+  });
+}
+
 // ─── WebSocket: игра и чат ───
 const wss = new WebSocketServer({ server });
+// SRV-14: без обработчика 'error' необработанная ошибка сокета роняла процесс
+wss.on('error', (e) => console.error('[gds] wss error:', String(e).slice(0, 300)));
 wss.on('connection', (ws, req) => {
   if (req.url !== '/ws') {
     ws.close(1008, 'wrong path');
     return;
   }
+  ws.on('error', (e) => console.error('[gds] ws error:', String(e).slice(0, 300))); // SRV-14
   ws.send(JSON.stringify({ type: 'meta', data: game.meta() }));
   // сразу шлём текущее состояние: новый клиент или переподключение на паузе (событие
   // висит, тикер молчит) иначе не получат state, и попап решения не вернётся
