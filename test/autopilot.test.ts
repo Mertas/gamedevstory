@@ -146,6 +146,30 @@ describe('автопилот: упор направления (решает LLM/
   });
 });
 
+describe('фолбэк-политика: упор тратит весь бюджет партии', () => {
+  it('при 10 очках — 5/5 (как раньше, свежая игра не меняется)', () => {
+    const g = fresh();
+    const plan = autopilotProjectInput(g)!;
+    expect(plan.direction).toEqual({ approach: 5, polish: 5 });
+  });
+
+  it('при 12 очках — 6/6, а не 5/5 с двумя свободными', () => {
+    const g = fresh();
+    g.directionPoints = 12;
+    const plan = autopilotProjectInput(g)!;
+    expect(plan.direction).toEqual({ approach: 6, polish: 6 });
+    expect(Object.values(plan.direction).reduce((a, b) => a + b, 0)).toBe(g.directionPoints);
+    expect(validateDecision(plan, g)).toBeNull();
+  });
+
+  it('сверх двух осей лишнее не тратится: 18 → 8/8 (оси ≤ 8)', () => {
+    const g = fresh();
+    g.directionPoints = 18;
+    const plan = autopilotProjectInput(g)!;
+    expect(plan.direction).toEqual({ approach: 8, polish: 8 });
+  });
+});
+
 describe('хореография направления (клиент): planDirClicks', () => {
   const AXES = ['cute', 'realism', 'approach', 'niche', 'simple', 'innovation', 'world', 'polish'];
 

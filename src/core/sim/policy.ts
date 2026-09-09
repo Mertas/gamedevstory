@@ -221,6 +221,14 @@ export function comboCostK(state: GameState, genreId: string, typeId: string, co
   return (g.costWan * 0.1 * (1 + 0.5 * genreLevel) + CONFIG.TYPE_COST_DEFAULT * (1 + 0.3 * typeLevel)) * c.costMult * CONFIG.MODE[mode].cost;
 }
 
+/** Упор по умолчанию для фолбэка без LLM: весь бюджет поровну в доступность и полировку
+ *  (оси ≤ 8, как в визарде). При 10 очках — 5/5, при 12 — 6/6; лишнее сверх 16 не тратим. */
+function defaultDirection(state: GameState): Record<string, number> {
+  const points = Math.max(0, state.directionPoints);
+  const approach = Math.min(8, Math.ceil(points / 2));
+  return { approach, polish: Math.min(8, points - approach) };
+}
+
 /** Ввод проекта для автопилота-фолбэка: лучшая доступная комбинация + роли (как у политики). */
 export function autopilotProjectInput(state: GameState): StartProjectInput | null {
   const combo = pickBestCombo(state, null);
@@ -238,7 +246,7 @@ export function autopilotProjectInput(state: GameState): StartProjectInput | nul
     genreId: combo.genreId,
     typeId: combo.typeId,
     mode: state.money > 600 ? 'quality' : 'normal',
-    direction: { approach: 5, polish: 5 },
+    direction: defaultDirection(state),
     proposalStaffId: proposalStaff.id,
     assignments: assignRoles(state, proposalStaff.id),
   };
@@ -303,7 +311,7 @@ export function startNextProject(
     genreId: combo.genreId,
     typeId: combo.typeId,
     mode: state.money > 600 ? 'quality' : 'normal',
-    direction: { approach: 5, polish: 5 }, // доступность + полировка → Fun + немного всего
+    direction: defaultDirection(state), // весь бюджет в доступность + полировку → Fun + немного всего
     proposalStaffId: proposalStaff.id,
     assignments: assignRoles(state, proposalStaff.id),
   };
