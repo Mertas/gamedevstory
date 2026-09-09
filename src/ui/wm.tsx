@@ -1,4 +1,7 @@
 // Менеджер окон Win95: состояние окон, z-order, фокус, мигание.
+// UI-02: методы стабильны (контекст НЕ пересоздаётся при move/resize) — окна не
+// ререндерятся всем списком; состояние окон живёт в отдельном контексте, а Window95
+// получает своё окно пропсом и мемоизирован, поэтому двигается только оно.
 import {
   createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode,
 } from 'react';
@@ -13,9 +16,6 @@ export interface WinState {
 }
 
 interface WmApi {
-  wins: WinState[];
-  /** id активного окна (клик по пустому месту стола снимает фокус со всех) */
-  activeId: string | null;
   open(id: string): void;
   close(id: string): void;
   focus(id: string): void;
@@ -29,7 +29,14 @@ interface WmApi {
   unflash(id: string): void;
 }
 
-const WmCtx = createContext<WmApi | null>(null);
+interface WmState {
+  wins: WinState[];
+  /** id активного окна (клик по пустому месту стола снимает фокус со всех) */
+  activeId: string | null;
+}
+
+const WmApiCtx = createContext<WmApi | null>(null);
+const WmStateCtx = createContext<WmState>({ wins: [], activeId: null });
 
 let zCounter = 10;
 
@@ -38,15 +45,23 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const patch = useCallback((id: string, fn: (w: WinState) => WinState) => {
-    setWins((ws) => ws.map((w) => (w.id === id ? fn(w) : w)));
+    setWins((ws) => {
+      let changed = false;
+      const next = ws.map((w) => {
+        if (w.id !== id) return w;
+        const nw = fn(w);
+        if (nw !== w) changed = true;
+        return nw;
+      });
+      return changed ? next : ws; // без изменений — сохраняем ссылку (лишних ререндеров нет)
+    });
   }, []);
 
   // запомненные геометрии окон (размер+позиция переживают закрытие приложения)
   const memory = useRef(new Map<string, { x: number; y: number; w: number; h: number }>());
 
+  // UI-02: пустые зависимости — объект методов стабилен, move/resize его не пересоздают
   const api = useMemo<WmApi>(() => ({
-    wins,
-    activeId,
     open(id) {
       setActiveId(id);
       setWins((ws) => {
@@ -90,7 +105,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     },
     minimize(id) {
       setActiveId((cur: string | null) => (cur === id ? null : cur));
-      patch(id, (w) => ({ ...w, minimized: true }));
+      patch(id, (w) => (w.minimized ? w : { ...w, minimized: true }));
     },
     toggleMax(id) {
       // разворот на весь экран поднимает окно поверх остальных (и оно активно)
@@ -98,27 +113,41 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       patch(id, (w) => (w.maximized ? { ...w, maximized: false } : { ...w, maximized: true, z: ++zCounter }));
     },
     move(id, x, y) {
-      patch(id, (w) => ({ ...w, x, y }));
+      patch(id, (w) => (w.x === x && w.y === y ? w : { ...w, x, y }));
     },
     resize(id, width, height) {
-      patch(id, (w) => ({ ...w, w: Math.max(240, width), h: Math.max(140, height) }));
+      const nw = Math.max(240, width);
+      const nh = Math.max(140, height);
+      patch(id, (w) => (w.w === nw && w.h === nh ? w : { ...w, w: nw, h: nh }));
     },
     setRect(id, x, y, width, height) {
-      patch(id, (w) => ({ ...w, x, y, w: width, h: height }));
+      patch(id, (w) => (w.x === x && w.y === y && w.w === width && w.h === height ? w : { ...w, x, y, w: width, h: height }));
     },
     flash(id) {
-      patch(id, (w) => ({ ...w, flash: true }));
+      patch(id, (w) => (w.flash ? w : { ...w, flash: true }));
     },
     unflash(id) {
-      patch(id, (w) => ({ ...w, flash: false }));
+      patch(id, (w) => (w.flash ? { ...w, flash: false } : w));
     },
-  }), [wins, activeId, patch]);
+  }), [patch]);
 
-  return <WmCtx.Provider value={api}>{children}</WmCtx.Provider>;
+  const state = useMemo<WmState>(() => ({ wins, activeId }), [wins, activeId]);
+
+  return (
+    <WmApiCtx.Provider value={api}>
+      <WmStateCtx.Provider value={state}>{children}</WmStateCtx.Provider>
+    </WmApiCtx.Provider>
+  );
 }
 
+/** стабильные методы окон (не меняются при move/resize — не вызывают ререндер) */
 export function useWindows(): WmApi {
-  const ctx = useContext(WmCtx);
+  const ctx = useContext(WmApiCtx);
   if (!ctx) throw new Error('useWindows вне WindowManagerProvider');
   return ctx;
+}
+
+/** состояние окон: список + активное окно (читают только рабочий стол и таскбар) */
+export function useWinState(): WmState {
+  return useContext(WmStateCtx);
 }

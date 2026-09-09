@@ -1,13 +1,14 @@
 // Приложение «Чат»: лента корпоративного чата + ввод сообщений игроку.
 import { useEffect, useRef, useState } from 'react';
-import { useChat, useGame, actionChatMessage } from '../store';
+import { useChat, useGameSelector, actionChatMessage } from '../store';
 import { typingName } from '../../shared/chat';
 
 export function ChatApp() {
-  const game = useGame();
   const chat = useChat();
   const listRef = useRef<HTMLDivElement>(null);
-  const typing = typingName(game, chat);
+  // UI-01: подписки точечные — ререндер только при смене «печатает…»/аватара
+  const typing = useGameSelector((g) => typingName(g, chat));
+  const typingAvatar = useGameSelector((g) => (typing ? g.staff.find((s) => s.name === typing)?.avatar ?? '' : ''));
   const [draft, setDraft] = useState('');
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function ChatApp() {
         ))}
         {typing && (
           <div className="w95-chat-typing">
-            <img className="w95-avatar" style={{ width: 20, height: 20, verticalAlign: 'middle', marginRight: 6 }} src={game.staff.find((s) => s.name === typing)?.avatar ?? ''} alt="" />
+            <img className="w95-avatar" style={{ width: 20, height: 20, verticalAlign: 'middle', marginRight: 6 }} src={typingAvatar} alt="" />
             {typing} печатает…
           </div>
         )}

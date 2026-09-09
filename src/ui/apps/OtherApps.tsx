@@ -8,7 +8,7 @@ import {
   actionFire, actionHire, actionLevelUp, actionMoveOffice, actionStartOwnConsole,
   actionTakeContract, actionTrain, useGame, useMeta,
 } from '../store';
-import { useWindows } from '../wm';
+import { useWinState, useWindows } from '../wm';
 
 const METHOD_LABELS: Record<HireMethodId, string> = {
   'word-of-mouth': 'По знакомству ($50K)',
@@ -685,8 +685,9 @@ export function OwnConsolePanel() {
 export function MailApp() {
   const game = useGame();
   const wm = useWindows();
+  const { wins } = useWinState();
   const mail = game.mail ?? [];
-  const mailOpen = wm.wins.some((w) => w.id === 'mail' && !w.minimized);
+  const mailOpen = wins.some((w) => w.id === 'mail' && !w.minimized);
   const prevLen = useRef(0);
   // новое письмо при закрытом окне — подсветка кнопки в таскбаре (снимется при открытии)
   useEffect(() => {

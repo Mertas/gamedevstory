@@ -1,5 +1,5 @@
 // Игровой стор: WebSocket-клиент. Вся игра — на сервере; здесь только снапшоты и отправка действий.
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import type * as React from 'react';
 import type { HireMethodId } from '../core/config';
 import type { GameState, StartProjectInput } from '../core/types';
@@ -24,6 +24,20 @@ const listeners = new Set<() => void>();
 
 function emit(): void {
   for (const l of listeners) l();
+}
+
+/**
+ * UI-01: дешёвая подпись чата (длины + фазы + хеш текстов). По ней решаем, менять ли
+ * ссылку на чат в снапшоте: неизменный чат не должен ререндерить окно каждый тик.
+ */
+function chatSig(c: ChatState): string {
+  let h = 0;
+  for (const m of c.msgs) {
+    const t = m.text;
+    h = (h * 31 + t.length + (t.charCodeAt(0) || 0) * 7 + (t.charCodeAt(t.length - 1) || 0) * 13) | 0;
+  }
+  for (const m of c.queue) h = (h * 31 + m.text.length) | 0;
+  return `${c.msgs.length}|${c.queue.length}|${JSON.stringify(c.phases)}|${h}`;
 }
 
 function subscribe(fn: () => void): () => void {
@@ -54,8 +68,12 @@ function connect(): void {
         emit();
       }
       if (d.type === 'state' && d.game) {
+        // UI-01: чат меняется редко (только новые сообщения) — сохраняем прежнюю ссылку,
+        // иначе окно чата ререндерилось бы каждый игровой тик
+        const nextChat = d.chat ?? snap.chat;
         snap = {
-          game: d.game, chat: d.chat ?? snap.chat, speed: d.speed ?? snap.speed,
+          game: d.game, chat: chatSig(nextChat) === chatSig(snap.chat) ? snap.chat : nextChat,
+          speed: d.speed ?? snap.speed,
           connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot),
         };
         // SRV-16: автопилот выключен — очередь шагов не доигрываем (мышь не жмёт за игрока)
@@ -105,6 +123,16 @@ export function useSnapshot(): Snapshot {
 
 export function useGame(): GameState {
   return useSyncExternalStore(subscribe, () => snap).game as GameState;
+}
+
+/**
+ * UI-01: подписка на производное значение игры. Селектор должен возвращать примитив
+ * (или стабильную ссылку) — компонент ререндерится только при изменении значения.
+ */
+export function useGameSelector<T>(sel: (g: GameState) => T): T {
+  const ref = useRef(sel);
+  ref.current = sel;
+  return useSyncExternalStore(subscribe, () => ref.current(snap.game as GameState));
 }
 
 export function useActionError(): string | null {

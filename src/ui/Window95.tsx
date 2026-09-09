@@ -1,7 +1,9 @@
 // Окно Win95: заголовок, drag, свернуть/развернуть/закрыть.
 // Ресайз за все края и углы — единая реализация (8 направлений), окно
 // не выходит за пределы рабочего стола, действуют мин. размеры.
-import { useRef, type ReactNode } from 'react';
+// UI-02/03: memo + фокус через пропс (не через контекст состояния) + rAF-коалесинг
+// move/resize — mousemove 60+ Гц превращается в один setRect на кадр.
+import { memo, useEffect, useRef, type ComponentType } from 'react';
 import type { WinState } from './wm';
 import { useWindows } from './wm';
 
@@ -11,14 +13,31 @@ export const WIN_MIN_H = 140;
 type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 const RESIZE_DIRS: ResizeDir[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 
-export function Window95({ win, title, icon, iconUrl, externalFocus, children }: {
-  win: WinState; title: string; icon?: string; iconUrl?: string; externalFocus?: boolean; children: ReactNode;
+export const Window95 = memo(function Window95({ win, title, icon, iconUrl, focused, component: Body }: {
+  win: WinState; title: string; icon?: string; iconUrl?: string; focused?: boolean; component: ComponentType;
 }) {
   const wm = useWindows();
   const drag = useRef<{ dx: number; dy: number } | null>(null);
 
-  // окно активно, если под фокусом wm И фокус не у внешнего приложения (Winamp)
-  const focused = !externalFocus && wm.activeId === win.id;
+  // UI-03: коалесинг через requestAnimationFrame — не чаще одного апдейта на кадр
+  const rafRef = useRef(0);
+  const pendingMove = useRef<{ x: number; y: number } | null>(null);
+  const pendingRect = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  const flush = () => {
+    rafRef.current = 0;
+    const m = pendingMove.current;
+    pendingMove.current = null;
+    if (m) wm.move(win.id, m.x, m.y);
+    const r = pendingRect.current;
+    pendingRect.current = null;
+    if (r) wm.setRect(win.id, r.x, r.y, r.w, r.h);
+  };
+  const schedule = () => {
+    if (!rafRef.current) rafRef.current = requestAnimationFrame(flush);
+  };
+  // при размонтировании не оставляем висящий кадр
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
   function onTitleDown(e: React.MouseEvent) {
     wm.focus(win.id);
@@ -30,10 +49,14 @@ export function Window95({ win, title, icon, iconUrl, externalFocus, children }:
       const vh = window.innerHeight - 30; // рабочая область над таскбаром
       const x = Math.max(-200, Math.min(ev.clientX - drag.current.dx, vw - 240));
       const y = Math.max(0, Math.min(ev.clientY - drag.current.dy, vh - 60));
-      wm.move(win.id, x, y);
+      pendingMove.current = { x, y };
+      schedule();
     };
     const up = () => {
       drag.current = null;
+      // догоняем последнюю позицию сразу, без ожидания кадра
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      flush();
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
     };
@@ -77,10 +100,13 @@ export function Window95({ win, title, icon, iconUrl, externalFocus, children }:
           y += r.oh - nh;
           h = nh;
         }
-        wm.setRect(win.id, x, y, w, h);
+        pendingRect.current = { x, y, w, h };
+        schedule();
       };
       const up = () => {
         rs.current = null;
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        flush();
         window.removeEventListener('mousemove', move);
         window.removeEventListener('mouseup', up);
       };
@@ -149,10 +175,10 @@ export function Window95({ win, title, icon, iconUrl, externalFocus, children }:
           </svg>
         </button>
       </div>
-      <div className="w95-body">{children}</div>
+      <div className="w95-body"><Body /></div>
       {!win.maximized && RESIZE_DIRS.map((d) => (
         <div key={d} className={`w95-rs w95-rs-${d}`} onMouseDown={onResizeStart(d)} />
       ))}
     </div>
   );
-}
+});

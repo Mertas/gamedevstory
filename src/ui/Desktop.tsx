@@ -1,7 +1,7 @@
 // Рабочий стол + панель задач + меню «Пуск».
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Window95 } from './Window95';
-import { useWindows } from './wm';
+import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { WebampLayer } from './WebampLayer';
 import {
@@ -24,6 +24,7 @@ const ICONS_KEY = 'gds-desk-icons';
 
 export function Desktop() {
   const wm = useWindows();
+  const { wins, activeId } = useWinState();
   const wmRef = useRef(wm);
   wmRef.current = wm;
   const game = useGame();
@@ -130,6 +131,22 @@ export function Desktop() {
   };
   const dragRef = useRef<{ ids: string[]; start: { x: number; y: number }; bases: Record<string, { x: number; y: number }> } | null>(null);
   const [dragMap, setDragMap] = useState<Record<string, { x: number; y: number }> | null>(null);
+  // UI-04: перетаскивание иконок — не чаще одного обновления на кадр (rAF-коалесинг)
+  const dragRaf = useRef(0);
+  const pendingDragMap = useRef<Record<string, { x: number; y: number }> | null>(null);
+  const currentDragMap = useRef<Record<string, { x: number; y: number }> | null>(null);
+  const scheduleDrag = (map: Record<string, { x: number; y: number }>) => {
+    currentDragMap.current = map;
+    pendingDragMap.current = map;
+    if (!dragRaf.current) {
+      dragRaf.current = requestAnimationFrame(() => {
+        dragRaf.current = 0;
+        const m = pendingDragMap.current;
+        pendingDragMap.current = null;
+        if (m) setDragMap(m);
+      });
+    }
+  };
   const snapOnRef = useRef(snapOn);
   snapOnRef.current = snapOn;
 
@@ -207,6 +224,7 @@ export function Desktop() {
       if (b) map[id] = { ...b };
     }
     setDragMap(map);
+    currentDragMap.current = map;
     void r;
   };
   useEffect(() => {
@@ -254,31 +272,36 @@ export function Desktop() {
           y: Math.min(Math.max(b.y + dy, 0), Math.max(0, r.height - 80)),
         };
       }
-      setDragMap(map);
+      scheduleDrag(map);
     };
     const onUp = () => {
       const d = dragRef.current;
       if (d) {
         dragRef.current = null;
-        setDragMap((map) => {
-          if (map) {
-            const next = { ...map };
-            if (snapOnRef.current) {
-              // «выровнять по сетке»: после отпускания иконки встают в ближайшие ячейки
-              for (const id of Object.keys(next)) {
-                const cur = next[id];
-                if (cur) {
-                  next[id] = {
-                    x: 4 + Math.round(Math.max(0, cur.x - 4) / 84) * 84,
-                    y: 4 + Math.round(Math.max(0, cur.y - 4) / 80) * 80,
-                  };
-                }
+        if (dragRaf.current) {
+          cancelAnimationFrame(dragRaf.current);
+          dragRaf.current = 0;
+        }
+        const map = currentDragMap.current;
+        currentDragMap.current = null;
+        pendingDragMap.current = null;
+        setDragMap(null);
+        if (map) {
+          const next = { ...map };
+          if (snapOnRef.current) {
+            // «выровнять по сетке»: после отпускания иконки встают в ближайшие ячейки
+            for (const id of Object.keys(next)) {
+              const cur = next[id];
+              if (cur) {
+                next[id] = {
+                  x: 4 + Math.round(Math.max(0, cur.x - 4) / 84) * 84,
+                  y: 4 + Math.round(Math.max(0, cur.y - 4) / 80) * 80,
+                };
               }
             }
-            setDeskPos((p) => ({ ...p, ...next }));
           }
-          return null; // dragMap — только на время перетаскивания
-        });
+          setDeskPos((p) => ({ ...p, ...next }));
+        }
         return;
       }
       // выделение областью: отпустили — собрать иконки в прямоугольнике
@@ -323,12 +346,12 @@ export function Desktop() {
   const lastCount = useRef(chat.msgs.length);
   useEffect(() => {
     if (chat.msgs.length > lastCount.current) {
-      const win = wm.wins.find((w) => w.id === 'chat');
-      if (win && !win.minimized && !(win.z === Math.max(...wm.wins.map((x) => x.z)))) wm.flash('chat');
+      const win = wins.find((w) => w.id === 'chat');
+      if (win && !win.minimized && !(win.z === Math.max(...wins.map((x) => x.z)))) wm.flash('chat');
       if (win?.minimized) wm.flash('chat');
     }
     lastCount.current = chat.msgs.length;
-  }, [chat.msgs.length, wm, wm.wins]);
+  }, [chat.msgs.length, wm, wins]);
 
   const typing = typingName(game, chat);
 
@@ -369,14 +392,21 @@ export function Desktop() {
         {selBox && <div className="w95-desk-box" style={{ left: selBox.x, top: selBox.y, width: selBox.w, height: selBox.h }} />}
       </div>
 
-      {wm.wins.map((w) => {
+      {wins.map((w) => {
         const def = APP_DEFS.find((a) => a.id === w.id);
         if (!def) return null;
-        const C = def.component;
+        // UI-01/02: контент — стабильная ссылка на компонент + memo(Window95):
+        // ререндер Desktop (тик/снапшот/драг) не тянет за собой все окна
         return (
-          <Window95 key={w.id} win={w} title={def.title} icon={def.icon} iconUrl={iconUrlFor(w.id) ?? undefined} externalFocus={winampActive}>
-            <C />
-          </Window95>
+          <Window95
+            key={w.id}
+            win={w}
+            title={def.title}
+            icon={def.icon}
+            iconUrl={iconUrlFor(w.id) ?? undefined}
+            focused={!winampActive && activeId === w.id}
+            component={def.component}
+          />
         );
       })}
 
@@ -455,9 +485,9 @@ export function Desktop() {
           <span>Пуск</span>
         </button>
 
-        {wm.wins.map((w) => {
+        {wins.map((w) => {
           const def = APP_DEFS.find((a) => a.id === w.id);
-          const isActive = !winampActive && !w.minimized && wm.activeId === w.id;
+          const isActive = !winampActive && !w.minimized && activeId === w.id;
           return (
             <button
               key={w.id}

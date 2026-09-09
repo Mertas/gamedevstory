@@ -1,5 +1,7 @@
 // Реестр приложений рабочего стола.
-import type { ComponentType } from 'react';
+// UI-01: все приложения обёрнуты в memo — ререндер Desktop (тик/драг/снапшот)
+// не тянет за собой содержимое окон без изменения их собственных пропсов.
+import { memo, type ComponentType } from 'react';
 import { ChatApp } from './ChatApp';
 import { CodeApp } from './CodeApp';
 import {
@@ -15,15 +17,15 @@ export interface AppDef {
 }
 
 export const APP_DEFS: AppDef[] = [
-  { id: 'code', title: 'Код', icon: '🖥️', component: CodeApp },
-  { id: 'chat', title: 'Чат', icon: '💬', component: ChatApp },
-  { id: 'hire', title: 'Найм', icon: '👥', component: HireApp },
-  { id: 'archive', title: 'Архив', icon: '🗄️', component: ArchiveApp },
-  { id: 'hardware', title: 'Железо', icon: '🎮', component: HardwareApp },
-  { id: 'research', title: 'Исследования', icon: '🔬', component: ResearchApp },
-  { id: 'magazines', title: 'Журналы', icon: '📰', component: MagazinesApp },
-  { id: 'marketing', title: 'Маркетинг', icon: '📣', component: MarketingApp },
-  { id: 'contracts', title: 'Контракты', icon: '📝', component: ContractsApp },
-  { id: 'mail', title: 'Почта', icon: '✉️', component: MailApp },
-  { id: 'help', title: 'Справка', icon: '❓', component: HelpApp },
+  { id: 'code', title: 'Код', icon: '🖥️', component: memo(CodeApp) },
+  { id: 'chat', title: 'Чат', icon: '💬', component: memo(ChatApp) },
+  { id: 'hire', title: 'Найм', icon: '👥', component: memo(HireApp) },
+  { id: 'archive', title: 'Архив', icon: '🗄️', component: memo(ArchiveApp) },
+  { id: 'hardware', title: 'Железо', icon: '🎮', component: memo(HardwareApp) },
+  { id: 'research', title: 'Исследования', icon: '🔬', component: memo(ResearchApp) },
+  { id: 'magazines', title: 'Журналы', icon: '📰', component: memo(MagazinesApp) },
+  { id: 'marketing', title: 'Маркетинг', icon: '📣', component: memo(MarketingApp) },
+  { id: 'contracts', title: 'Контракты', icon: '📝', component: memo(ContractsApp) },
+  { id: 'mail', title: 'Почта', icon: '✉️', component: memo(MailApp) },
+  { id: 'help', title: 'Справка', icon: '❓', component: memo(HelpApp) },
 ];
