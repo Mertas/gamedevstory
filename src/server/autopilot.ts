@@ -35,8 +35,16 @@ export function validateDecision(plan: AutopilotPlan, state: GameState): string 
   if (!(plan.mode in CONFIG.MODE)) return `неизвестный режим ${plan.mode}`;
   if (!state.staff.some((s) => s.id === plan.proposalStaffId)) return `нет сотрудника ${plan.proposalStaffId}`;
   const known = new Set(state.staff.map((s) => s.id));
+  // одна роль на человека: сценарист тоже занят (движок добавит его в proposal сам),
+  // дубль в ролях визард всё равно не сможет показать — раньше он молча «съезжал»
+  const assigned = new Set<string>();
   for (const ids of Object.values(plan.assignments ?? {})) {
-    for (const id of ids) if (!known.has(id)) return `неизвестный сотрудник в ролях: ${id}`;
+    for (const id of ids) {
+      if (!known.has(id)) return `неизвестный сотрудник в ролях: ${id}`;
+      if (id === plan.proposalStaffId) return `сценарист ${id} не может быть в другой роли (одна роль на человека)`;
+      if (assigned.has(id)) return `сотрудник ${id} в двух ролях (одна роль на человека)`;
+      assigned.add(id);
+    }
   }
   const cost = comboCostK(state, plan.genreId, plan.typeId, plan.consoleId, plan.mode);
   if (cost > state.money) return `денег не хватает (нужно ${Math.round(cost)}K)`;

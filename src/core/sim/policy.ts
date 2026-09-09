@@ -246,16 +246,20 @@ export function autopilotProjectInput(state: GameState): StartProjectInput | nul
 
 // назначение ролей: каждый сотрудник на одной роли, по лучшему стату, с ротацией
 function assignRoles(state: GameState, proposalStaffId: string): StartProjectInput['assignments'] {
-  const free = state.staff.filter((s) => s.id !== proposalStaffId);
+  // пул свободных: выбранный на роль сотрудник выбывает из пула (одна роль на человека)
+  const pool = state.staff.filter((s) => s.id !== proposalStaffId);
   const pick = (role: 'program' | 'graphics' | 'sound', statKey: 'program' | 'graphics' | 'sound'): string[] => {
-    const sorted = [...free]
+    const sorted = [...pool]
       .filter((s) => s.stats[statKey] >= 10)
       .sort((a, b) => {
         const rot = (a.lastRole === role ? 1 : 0) - (b.lastRole === role ? 1 : 0);
         return rot !== 0 ? rot : b.stats[statKey] - a.stats[statKey];
       });
     const picked = sorted.slice(0, role === 'program' ? 2 : 1);
-    for (const s of picked) s.lastRole = role;
+    for (const s of picked) {
+      s.lastRole = role;
+      pool.splice(pool.indexOf(s), 1); // и в других ролях этот сотрудник больше не участвует
+    }
     return picked.map((s) => s.id);
   };
   const program = pick('program', 'program');
@@ -263,7 +267,7 @@ function assignRoles(state: GameState, proposalStaffId: string): StartProjectInp
   const sound = pick('sound', 'sound');
   // отладка: оставшиеся с лучшим program
   const used = new Set([proposalStaffId, ...program, ...graphics, ...sound]);
-  const debug = free
+  const debug = pool
     .filter((s) => !used.has(s.id))
     .sort((a, b) => b.stats.program - a.stats.program)
     .slice(0, 2)

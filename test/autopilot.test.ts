@@ -59,6 +59,41 @@ describe('автопилот: validateDecision', () => {
     g.money = 1;
     expect(validateDecision(plan, g)).toContain('денег');
   });
+
+  it('сотрудник в двух ролях отклоняется (одна роль на человека)', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    const dup = g.staff[0]!.id;
+    plan.assignments.program = [dup];
+    plan.assignments.graphics = [dup];
+    expect(validateDecision(plan, g)).toContain('двух ролях');
+  });
+
+  it('сценарист в другой роли отклоняется (движок добавит его в proposal сам)', () => {
+    const g = fresh();
+    const plan = validPlan(g);
+    plan.assignments.program = [plan.proposalStaffId];
+    expect(validateDecision(plan, g)).toContain('сценарист');
+  });
+});
+
+describe('автопилот: назначение ролей — одна роль на человека', () => {
+  it('assignRoles не повторяет сотрудника и не трогает сценариста (маленькая команда)', () => {
+    const g = fresh();
+    // команда из двух: у Newb высокие и program, и graphics — до фикса он попадал в обе роли
+    const newb = g.staff.find((s) => s.id === 'newb-ownerton')!;
+    newb.stats.program = 30;
+    newb.stats.graphics = 30;
+    const input = autopilotProjectInput(g)!;
+    const ids = [
+      ...input.assignments.program,
+      ...input.assignments.graphics,
+      ...input.assignments.sound,
+      ...input.assignments.debug,
+    ];
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).not.toContain(input.proposalStaffId);
+  });
 });
 
 describe('автопилот: политика-обёртка', () => {

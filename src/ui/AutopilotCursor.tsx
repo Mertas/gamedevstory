@@ -93,16 +93,22 @@ export function AutopilotCursor() {
       return true;
     };
 
-    /** клик по карточке сотрудника (по data-staff-id → корень карточки) */
+    /** клик по карточке сотрудника: контракт с StaffCard — data-staff-id на корне карточки.
+     * Ищем ВИДИМУЮ карточку в окне мастера: тот же сотрудник может быть и в окне «Найм». */
     const clickCard = async (staffId: string): Promise<void> => {
       const started = performance.now();
+      const wizardScope = (): ParentNode => {
+        const anchor = document.querySelector<HTMLElement>('[data-autopilot="wiz-step-6"]');
+        return anchor?.closest<HTMLElement>('.w95-window') ?? document;
+      };
       for (;;) {
-        const name = document.querySelector<HTMLElement>(`[data-staff-id="${staffId}"]`);
-        const card = name?.closest<HTMLElement>('.w95-staff-card');
-        if (card && card.getClientRects().length > 0) {
-          await flyTo(card, true);
-          await press(card, true);
-          return;
+        for (const el of wizardScope().querySelectorAll<HTMLElement>(`[data-staff-id="${staffId}"]`)) {
+          const card = el.closest<HTMLElement>('.w95-staff-card');
+          if (card && card.getClientRects().length > 0) {
+            await flyTo(card, true);
+            await press(card, true);
+            return;
+          }
         }
         if (performance.now() - started >= 2000) return;
         await sleep(120);

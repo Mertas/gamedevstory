@@ -22,6 +22,7 @@ export function StaffCard({ st, selected, disabled, note, onClick }: StaffCardPr
   return (
     <div
       className={`w95-staff-card${selected ? ' selected' : ''}${disabled ? ' disabled' : ''}`}
+      data-staff-id={st.id}
       onClick={disabled ? undefined : onClick}
       title={disabled ? 'Сотрудник вымотался (POWER 0)' : undefined}
     >
