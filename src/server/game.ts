@@ -129,7 +129,8 @@ export class GameServer {
   private deciding = false; // LLM-решение в процессе
   private pendingDecision = false; // ждём конца обсуждения, чтобы вызвать решение
   private decidedThisIdle = false; // решение для текущего простоя уже сделано
-  private pendingEventSince: number | null = null; // «театр»: попап висит ~1.2с
+  private lastHadActiveGame = false; // переход activeGame→null сбрасывает decidedThisIdle
+  private pendingEventSince: number | null = null; // «театр»: попап висит ~2.6с
   private stepListeners = new Set<(s: AutopilotStep) => void>();
   // письма фанатов: текст дописывает LLM (по одному, не чаще раза в игровой день)
   private letterBusy = false;
@@ -217,6 +218,9 @@ export class GameServer {
           this.lastPulse = Date.now();
           this.emit();
         }
+        // аудит 06.09: театр автопилота обязан работать И при висящем событии —
+        // иначе мышь не летит к «Выпустить игру», и событие никто не резолвит
+        this.maybeAutopilot();
         return;
       }
       tick(this.game);
@@ -484,14 +488,15 @@ export class GameServer {
       return;
     }
 
-    // (1) «театр» событий: попап висит ~1.2с реального времени (мышь успевает нажать),
-    // затем политика резолвит сама — автопилот работает и без клиента
+    // (1) «театр» событий: попап висит ~2.6с реального времени — мышь (медленный полёт
+    // ~1.2с + поиск элемента) успевает нажать; не успела — политика резолвит сама,
+    // автопилот работает и без клиента
     if (g.pendingEvent) {
       if (this.pendingEventSince === null) {
         this.pendingEventSince = Date.now();
         const t = this.autopilotEventTarget();
         this.emitStep({ kind: 'click', target: t.target, label: t.label });
-      } else if (Date.now() - this.pendingEventSince >= 1200) {
+      } else if (Date.now() - this.pendingEventSince >= 2600) {
         this.autopilotPolicy.turn(g);
         this.pendingEventSince = null;
         this.emit();
@@ -501,6 +506,12 @@ export class GameServer {
     }
 
     // (2) обсуждение в чате → LLM-решение (один запрос со всеми параметрами)
+    // сброс decidedThisIdle: активная игра только что закончилась (релиз) → следующий
+    // раунд простоя снова решает чат (релиз политикой идёт мимо handle(), поэтому
+    // сбрасываем по переходу activeGame → null, а не по действию)
+    const hasActive = !!g.activeGame;
+    if (!hasActive && this.lastHadActiveGame) this.decidedThisIdle = false;
+    this.lastHadActiveGame = hasActive;
     if (
       !g.activeGame && !g.pendingEvent && !this.pendingPlan &&
       !this.deciding && !this.pendingDecision && !this.decidedThisIdle
@@ -512,7 +523,7 @@ export class GameServer {
     if (this.pendingDecision && !this.chatThread && !this.deciding) void this.runDecision();
 
     // (3) таймаут плана: клиент не успел/не смог нажать «Начать» — стартуем сами
-    if (this.pendingPlan && !g.activeGame && Date.now() > this.pendingPlanDeadline) {
+    if (this.pendingPlan && !g.activeGame && !g.pendingEvent && Date.now() > this.pendingPlanDeadline) {
       const plan = this.pendingPlan;
       this.pendingPlan = null;
       let res = startProjectAction(g, plan as StartProjectInput);

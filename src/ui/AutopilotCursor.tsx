@@ -9,8 +9,8 @@ import { setAutopilotPlan, takeAutopilotStep } from './store';
 import type { AutopilotStep } from '../shared/autopilot';
 import { useWindows } from './wm';
 
-const FLY_MS = 380;
-const PRESS_MS = 160;
+const FLY_MS = 800; // медленный полёт (просьба: «пусть мышка летает медленнее»)
+const PRESS_MS = 220;
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
 export function AutopilotCursor() {
@@ -20,6 +20,8 @@ export function AutopilotCursor() {
   const [label, setLabel] = useState('');
   const [pressing, setPressing] = useState(false);
   const posRef = useRef<{ x: number; y: number } | null>(null);
+  // эффект клика: волна в точке нажатия (+ сжатие курсора в стиле)
+  const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null);
 
   useEffect(() => {
     const playStep = async (step: AutopilotStep): Promise<void> => {
@@ -44,12 +46,14 @@ export function AutopilotCursor() {
       const ty = r.top + r.height / 2;
       const from = posRef.current ?? { x: tx - 120, y: ty - 60 };
       await fly(from, { x: tx, y: ty });
-      // «нажатие»: утопить кнопку, затем настоящий клик (действие с autopilot:true)
+      // «нажатие»: утопить кнопку, волна в точке клика, затем настоящий клик
       setPressing(true);
+      setRipple({ x: tx, y: ty, id: Date.now() });
       el.classList.add('w95-autopilot-press');
       await sleep(PRESS_MS);
       el.classList.remove('w95-autopilot-press');
       setPressing(false);
+      window.setTimeout(() => setRipple(null), 700);
       const g = globalThis as { __gdsAutopilot?: boolean };
       g.__gdsAutopilot = true;
       try {
@@ -57,7 +61,7 @@ export function AutopilotCursor() {
       } finally {
         window.setTimeout(() => { g.__gdsAutopilot = false; }, 0);
       }
-      await sleep(450);
+      await sleep(600);
     };
 
     const findTarget = async (target: string, timeoutMs: number): Promise<HTMLElement | null> => {
@@ -99,6 +103,13 @@ export function AutopilotCursor() {
 
   return (
     <div style={{ position: 'fixed', left: 0, top: 0, zIndex: 30001, pointerEvents: 'none' }}>
+      {ripple && (
+        <span
+          key={ripple.id}
+          className="w95-autopilot-ripple"
+          style={{ left: ripple.x - 22, top: ripple.y - 22 }}
+        />
+      )}
       {pos && (
         <div
           style={{

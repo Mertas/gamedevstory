@@ -253,3 +253,18 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   padding: 1px 6px;
   white-space: nowrap;
 }
+
+/* волна-клик виртуальной мыши */
+.w95-autopilot-ripple {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  border: 3px solid #000080;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: autopilot-ripple 0.6s ease-out forwards;
+}
+@keyframes autopilot-ripple {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
