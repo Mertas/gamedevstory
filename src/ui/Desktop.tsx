@@ -5,10 +5,11 @@ import { useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { WebampLayer } from './WebampLayer';
 import {
-  exportSave, importSave, newGameAction, setSpeed, useChat, useGame, useSpeed,
+  actionTakeControl, exportSave, importSave, newGameAction, setSpeed, useAutopilot, useChat, useGame, useSpeed,
 } from './store';
 import { typingName } from '../shared/chat';
 import { dateLabel, dayInYear } from '../shared/meta';
+import { AutopilotCursor } from './AutopilotCursor';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -28,6 +29,7 @@ export function Desktop() {
   const game = useGame();
   const chat = useChat();
   const speed = useSpeed();
+  const autopilot = useAutopilot();
   const [startOpen, setStartOpen] = useState(false);
   const startOpenRef = useRef(startOpen);
   startOpenRef.current = startOpen;
@@ -440,6 +442,9 @@ export function Desktop() {
 
       {waEverStarted && <WebampLayer open={waOpen} visible={!waHidden} zTop={waZ} onHidden={() => setWaHidden(true)} onExit={closeWinamp} />}
 
+      {/* виртуальная мышь автопилота (plan/14) */}
+      <AutopilotCursor />
+
       {/* панель задач */}
       <div className="w95-taskbar" onMouseDown={(e) => e.stopPropagation()}>
         <button
@@ -490,6 +495,11 @@ export function Desktop() {
         )}
 
         <div className="w95-tray">
+          {autopilot && (
+            <button className="w95-btn" style={{ marginRight: 8, fontWeight: 'bold', color: '#c00000' }} onClick={actionTakeControl} title="Вернуть управление боссу — автопилот выключится">
+              👤 Взять управление
+            </button>
+          )}
           {typing && <span className="w95-hint" style={{ color: '#000080' }}>{typing} печатает…</span>}
           <span className="w95-hint" style={{ marginRight: 6 }}>❤ {Math.round(game.fans)}</span>
           <span className="w95-hint" style={{ marginRight: 6 }}>🔬 {Math.round(game.research)} PR</span>

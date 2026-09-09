@@ -46,7 +46,13 @@ wss.on('connection', (ws, req) => {
     }
   });
   game.setStoryCb((res) => ws.send(JSON.stringify({ type: 'story_result', ...res })));
-  ws.on('close', () => unsub());
+  const unsubSteps = game.subscribeSteps((step) => {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'autopilot_step', step }));
+  });
+  ws.on('close', () => {
+    unsub();
+    unsubSteps();
+  });
 });
 
 // ─── HTTP: экспорт/импорт сейва ───

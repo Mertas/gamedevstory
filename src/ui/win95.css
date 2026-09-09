@@ -239,3 +239,17 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-task-ic { width: 16px; height: 16px; flex: none; }
 .w95-title-ic { width: 16px; height: 16px; margin: 0 5px 0 2px; vertical-align: -3px; }
 .w95-task-emo { font-size: 12px; }
+
+/* ─── автопилот (plan/14): виртуальная мышь ─── */
+.w95-autopilot-press {
+  box-shadow: inset 2px 2px 0 #808080, inset -2px -2px 0 #ffffff !important;
+  transform: translate(1px, 1px);
+}
+.w95-autopilot-label {
+  background: #ffffcc;
+  border: 1px solid #000080;
+  color: #000080;
+  font-size: 11px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}

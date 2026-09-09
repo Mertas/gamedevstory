@@ -47,6 +47,7 @@ function EventWatcher() {
       );
       popup({
         title: 'Предложение улучшить игру',
+        autopilotTarget: 'mb-accept',
         body: (
           <div>
             <div>💡 {staff?.name ?? 'Сотрудник'} предлагает улучшить игру (база {ev.cost} PR).</div>
@@ -74,6 +75,7 @@ function EventWatcher() {
     if (ev.type === 'salesman') {
       popup({
         title: 'Продавец Тыквенных Продуктов',
+        autopilotTarget: 'mb-ok',
         text: '🛒 Продавец пришёл в офис! Бустеры, Dead Bull и Руководство по смене профессии — во вкладке «Продавец» окна «Найм».',
         buttons: [
           { label: 'Заглянуть', onClick: () => actionDismissSalesman() },
@@ -85,6 +87,7 @@ function EventWatcher() {
       const opts = Object.entries(CONFIG.GAMEDEX_OPTIONS).filter(([id]) => id !== 'none');
       popup({
         title: '🎪 Gamedex — летняя выставка',
+        autopilotTarget: 'mb-none',
         body: (
           <div>
             <div>Стенд даст известность (стартовый fame <b>следующей</b> игры) и фанатов. Повтор того же стенда подряд — вдвое слабее.</div>
@@ -111,6 +114,7 @@ function EventWatcher() {
     if (ev.type === 'disaster') {
       popup({
         title: 'Происшествие в студии!',
+        autopilotTarget: 'mb-ok',
         text: ev.text,
         buttons: [
           { label: 'Ок', onClick: () => actionResolveEvent() },
@@ -120,6 +124,7 @@ function EventWatcher() {
     if (ev.type === 'boost_result') {
       popup({
         title: 'Результат улучшения',
+        autopilotTarget: 'mb-ok',
         text: ev.text,
         buttons: [
           { label: 'Ок', onClick: () => actionResolveEvent() },
@@ -129,6 +134,7 @@ function EventWatcher() {
     if (ev.type === 'info') {
       popup({
         title: ev.title,
+        autopilotTarget: 'mb-ok',
         text: ev.text,
         buttons: [
           { label: 'Ок', onClick: () => actionResolveEvent() },
@@ -138,6 +144,7 @@ function EventWatcher() {
     if (ev.type === 'ready_to_release') {
       popup({
         title: 'Игра готова к выпуску!',
+        autopilotTarget: 'mb-release',
         text: ev.text,
         buttons: [
           { label: '🚀 Выпустить игру', onClick: () => actionRelease() },
@@ -147,6 +154,7 @@ function EventWatcher() {
     if (ev.type === 'release_result') {
       popup({
         title: 'Оценки критиков',
+        autopilotTarget: 'mb-ok',
         text: ev.text,
         buttons: [
           { label: 'Ок', onClick: () => actionResolveEvent() },

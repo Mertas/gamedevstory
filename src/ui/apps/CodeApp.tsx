@@ -6,10 +6,11 @@ import {
   comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
 } from '../../shared/meta';
 import type { DirectionAxis, Role } from '../../core/types';
+import type { AutopilotPlan } from '../../shared/autopilot';
 import { StaffCard } from '../StaffCard';
 import {
   actionGenerateStory, actionRelease, actionStartProject, actionUseBooster, clearActionError,
-  clearStoryResult, useActionError, useGame, useMeta, useStoryResult,
+  clearStoryResult, useActionError, useAutopilotPlan, useGame, useMeta, useStoryResult,
 } from '../store';
 
 const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = [
@@ -359,6 +360,7 @@ function DevStatus() {
             onClick={() => actionRelease()}
             disabled={g.bugs > 10}
             title={g.bugs > 10 ? 'Сначала вычисти баги (≤10)' : 'Выпустить игру'}
+            data-autopilot="release"
           >
             🚀 Выпустить игру {g.bugs > 0 ? `(багов: ${Math.round(g.bugs)})` : ''}
           </button>
@@ -450,6 +452,26 @@ function ProjectWizard() {
   const [plot, setPlot] = useState('');
   const [storyBusy, setStoryBusy] = useState(false);
   const story = useStoryResult();
+  // ─── автопилот (plan/14): заполнить визард решением команды, курсор нажмёт «Начать» ───
+  const autopilotPlan = useAutopilotPlan();
+  const planAppliedRef = useRef<AutopilotPlan | null>(null);
+  useEffect(() => {
+    if (!autopilotPlan || planAppliedRef.current === autopilotPlan) return;
+    planAppliedRef.current = autopilotPlan;
+    setConsoleId(autopilotPlan.consoleId);
+    setGenreId(autopilotPlan.genreId);
+    setTypeId(autopilotPlan.typeId);
+    setMode(autopilotPlan.mode);
+    setDirection({ ...autopilotPlan.direction } as Record<DirectionAxis, number>);
+    setRoles({
+      proposal: autopilotPlan.proposalStaffId,
+      program: autopilotPlan.assignments.program[0] ?? null,
+      graphics: autopilotPlan.assignments.graphics[0] ?? null,
+      sound: autopilotPlan.assignments.sound[0] ?? null,
+      debug: autopilotPlan.assignments.debug[0] ?? null,
+    });
+    setStep(7);
+  }, [autopilotPlan]);
   // применить сгенерированное название/сюжет
   useEffect(() => {
     clearActionError();
@@ -836,6 +858,7 @@ function ProjectWizard() {
                 className="w95-btn"
                 disabled={!canAfford || !stepOk[6]}
                 onClick={start}
+                data-autopilot="wizard-start"
               >
                 ▶ Начать разработку
               </button>

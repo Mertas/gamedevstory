@@ -1,5 +1,6 @@
 // Промпты чата разработчиков + парсинг ответа LLM (JSON {"messages":[...]}).
 // Порт extractJsonObject из LLMKing/src/server/llm.ts.
+import type { AutopilotPlan } from '../shared/autopilot';
 
 interface LlmMessage { role: 'system' | 'user'; content: string }
 
@@ -23,6 +24,8 @@ const PHASE_INSTRUCTIONS: Record<string, string> = {
   boost: 'Событие в разработке: кто-то предложил улучшение (см. факты). Обсудите результат: получилось или провал.',
   player: 'Босс студии написал в чат: «%TEXT%». Живо ответьте ему в своём стиле — по делу (совет, отчёт, мнение, шутка). Если разговор продолжится — пусть отвечают разные сотрудники по очереди, развивая тему и реагируя друг на друга.',
   fanmail: 'Студия получила письмо от фаната (текст: «%TEXT%»). Один сотрудник открывает обсуждение: живо отреагируйте на письмо сообразно его тону (восторг/недовольство/сдержанно) — ответьте фанату или обсудите с командой, в своём стиле, по делу.',
+  autopilot_discuss: 'Босс студии пропал и не выходит на связь уже неделю. Живо обсудите между собой, какую игру делать дальше сами (жанр, тип, платформа) — спорьте, предлагайте, шутите, в своих характерах. Решение объявят после обсуждения.',
+  boss_back: 'Босс снова взял управление студией! Живо отреагируйте в своих характерах: кто-то радуется возвращению, кто-то делает вид, что всё это время усердно работал, кто-то недоволен, что самодеятельность кончилась.',
 };
 
 // персональные личности сотрудников приходят из контентной БД (research/04 → personalities
@@ -106,6 +109,65 @@ export function buildMessages(phase: string, context: Record<string, unknown>, r
       ].filter(Boolean).join('\n'),
     },
   ];
+}
+
+// ─── автопилот: LLM-решение «какую игру делать» (plan/14) ───
+// API по замечанию пользователя: ОДИН запрос, в ответе все параметры новой игры.
+export function buildDecisionPrompt(ctx: {
+  team: string; money: number; research: number; office: number;
+  genres: string; types: string; combos: string; consoles: string;
+}): LlmMessage[] {
+  return [
+    {
+      role: 'system',
+      content:
+        'Ты — старший сотрудник игровой студии. Босс пропал, команда решает сама, какую игру делать дальше. ' +
+        'Выбери ЖАНР и ТИП с максимальной градацией комбо (S лучше A, A лучше B) при бюджете, КОНСОЛЬ, РЕЖИМ, распредели очки направления и назначь роли. ' +
+        'Правила: только id из списков; комбо S или A обязательны, если есть по деньгам; сценарист (proposal) обязателен; направление — целые 0..8, сумма потраченного не больше 10; ' +
+        'режимы: normal, speed, quality, research, budget. Ответь СТРОГО одним JSON-объектом: ' +
+        '{"genreId":"...","typeId":"...","consoleId":"...","mode":"normal","direction":{"cute":0,"realism":0,"approach":5,"niche":0,"simple":0,"innovation":0,"world":0,"polish":5},"proposalStaffId":"...","assignments":{"program":[],"graphics":[],"sound":[],"debug":[]}} — без пояснений и markdown.',
+    },
+    {
+      role: 'user',
+      content: [
+        `Команда: ${ctx.team}`,
+        `Деньги: ${ctx.money}K, PR: ${ctx.research}, офис: ${ctx.office}.`,
+        `Жанры: ${ctx.genres}`,
+        `Типы: ${ctx.types}`,
+        `Топ комбинаций (жанр × тип = градация, ~цена): ${ctx.combos}`,
+        `Доступные консоли: ${ctx.consoles}`,
+      ].join('\n'),
+    },
+  ];
+}
+
+/** Распарсить JSON-решение в AutopilotPlan (null — не разобралось). */
+export function parseDecision(text: string): AutopilotPlan | null {
+  const json = extractJsonObject(text);
+  if (!json) return null;
+  const direction = (json.direction ?? {}) as Record<string, unknown>;
+  const dir: Record<string, number> = {};
+  for (const k of ['cute', 'realism', 'approach', 'niche', 'simple', 'innovation', 'world', 'polish']) {
+    const v = Number(direction[k] ?? 0);
+    dir[k] = Number.isFinite(v) ? Math.max(0, Math.min(8, Math.round(v))) : 0;
+  }
+  const assignments = (json.assignments ?? {}) as Record<string, unknown>;
+  const ids = (k: string): string[] => {
+    const v = assignments[k];
+    if (!Array.isArray(v)) return [];
+    return v.filter((x): x is string => typeof x === 'string' && x.length > 0);
+  };
+  if (
+    typeof json.genreId !== 'string' || typeof json.typeId !== 'string' ||
+    typeof json.consoleId !== 'string' || typeof json.proposalStaffId !== 'string'
+  ) return null;
+  const mode = json.mode === 'speed' || json.mode === 'quality' || json.mode === 'research' || json.mode === 'budget' ? json.mode : 'normal';
+  return {
+    genreId: json.genreId, typeId: json.typeId, consoleId: json.consoleId, mode,
+    direction: dir,
+    proposalStaffId: json.proposalStaffId,
+    assignments: { program: ids('program'), graphics: ids('graphics'), sound: ids('sound'), debug: ids('debug') },
+  };
 }
 
 /** Разобрать одиночный ответ {"message":{"author":"...","text":"..."}} */

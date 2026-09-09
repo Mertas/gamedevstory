@@ -5,6 +5,7 @@ import type { HireMethodId } from '../core/config';
 import type { GameState, StartProjectInput } from '../core/types';
 import type { ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
+import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 
 export interface Snapshot {
   game: GameState | null;
@@ -12,10 +13,11 @@ export interface Snapshot {
   speed: number;
   connected: boolean;
   meta: MetaData | null;
+  autopilot: boolean;
 }
 
 let snap: Snapshot = {
-  game: null, chat: { msgs: [], queue: [], phases: {} }, speed: 1, connected: false, meta: null,
+  game: null, chat: { msgs: [], queue: [], phases: {} }, speed: 1, connected: false, meta: null, autopilot: false,
 };
 let actionError: string | null = null;
 const listeners = new Set<() => void>();
@@ -42,14 +44,21 @@ function connect(): void {
     try {
       const d = JSON.parse(String(e.data)) as {
         type: string; game?: GameState; chat?: ChatState; speed?: number; data?: MetaData; error?: string;
-        ok?: boolean; title?: string; plot?: string;
+        ok?: boolean; title?: string; plot?: string; autopilot?: boolean; step?: unknown;
       };
       if (d.type === 'meta' && d.data) {
         snap = { ...snap, meta: d.data };
         emit();
       }
       if (d.type === 'state' && d.game) {
-        snap = { game: d.game, chat: d.chat ?? snap.chat, speed: d.speed ?? snap.speed, connected: true, meta: snap.meta };
+        snap = {
+          game: d.game, chat: d.chat ?? snap.chat, speed: d.speed ?? snap.speed,
+          connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot),
+        };
+        emit();
+      }
+      if (d.type === 'autopilot_step' && d.step) {
+        autopilotQueue.push(d.step as AutopilotStep);
         emit();
       }
       if (d.type === 'action_result' && d.error) {
@@ -77,7 +86,11 @@ connect();
 function send(msg: unknown): void {
   // сообщение кладём в очередь на случай переподключения — упрощённо: шлём при открытом сокете
   const wss = (globalThis as { __gdsWs?: WebSocket }).__gdsWs;
-  if (wss?.readyState === WebSocket.OPEN) wss.send(JSON.stringify(msg));
+  if (wss?.readyState === WebSocket.OPEN) {
+    // действия виртуальной мыши автопилота помечаются autopilot:true (не выключают автопилот)
+    const auto = (globalThis as { __gdsAutopilot?: boolean }).__gdsAutopilot === true;
+    wss.send(JSON.stringify(auto ? { ...(msg as Record<string, unknown>), autopilot: true } : msg));
+  }
 }
 
 // ─── хуки ───
@@ -109,6 +122,41 @@ export function useChat(): ChatState {
 
 export function useSpeed(): number {
   return useSyncExternalStore(subscribe, () => snap).speed;
+}
+
+// ─── автопилот (plan/14): флаг, очередь шагов хореографии, план для визарда ───
+export function useAutopilot(): boolean {
+  return useSyncExternalStore(subscribe, () => snap).autopilot;
+}
+
+const autopilotQueue: AutopilotStep[] = [];
+
+/** длина очереди шагов (реактивный сигнал для курсора) */
+export function useAutopilotQueueLen(): number {
+  return useSyncExternalStore(subscribe, () => autopilotQueue.length);
+}
+
+/** взять первый шаг из очереди (null — пусто) */
+export function takeAutopilotStep(): AutopilotStep | null {
+  const s = autopilotQueue.shift() ?? null;
+  emit();
+  return s;
+}
+
+let autopilotPlan: AutopilotPlan | null = null;
+
+export function setAutopilotPlan(plan: AutopilotPlan | null): void {
+  autopilotPlan = plan;
+  emit();
+}
+
+export function useAutopilotPlan(): AutopilotPlan | null {
+  useSyncExternalStore(subscribe, () => autopilotPlan);
+  return autopilotPlan;
+}
+
+export function actionTakeControl() {
+  send({ type: 'take_control' });
 }
 
 // ─── действия (отправка на сервер) ───
@@ -232,6 +280,7 @@ export interface MessageBoxData {
   body?: React.ReactNode; // произвольное содержимое (вместо/вместе с text)
   buttons: { label: string; onClick: () => void }[];
   evKey?: string; // ключ события, чей попап показан (пульс сервера не пересоздаёт открытый)
+  autopilotTarget?: string; // цель виртуальной мыши автопилота на первой кнопке (plan/14)
 }
 
 let messageBox: MessageBoxData | null = null;

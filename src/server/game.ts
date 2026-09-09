@@ -14,8 +14,10 @@ import type { GameState, FanLetter, GamedexOption, Staff, StartProjectInput } fr
 import { migrateSave } from '../core/migrate';
 import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
-import { buildLetterPrompt, buildMessages, parseSingleMessage } from './chatgen';
+import { buildLetterPrompt, buildMessages, buildDecisionPrompt, parseDecision, parseSingleMessage } from './chatgen';
 import { generateStory, generateWithFallback } from './giga';
+import { buildDecisionContext, createAutopilotPolicy, validateDecision, autopilotProjectInput } from './autopilot';
+import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SAVE_PATH = `${ROOT}data/save.json`;
@@ -27,9 +29,10 @@ export interface SessionSnapshot {
   game: GameState;
   chat: ChatState;
   speed: number;
+  autopilot: boolean;
 }
 
-export type ClientAction =
+export type ClientAction = { autopilot?: boolean } & (
   | { type: 'start_project'; input: StartProjectInput }
   | { type: 'release' }
   | { type: 'hire'; method: HireMethodId; staffId?: string; maxFee?: number }
@@ -56,7 +59,10 @@ export type ClientAction =
   // M4
   | { type: 'buy_ad'; adId: number }
   | { type: 'take_contract'; contractId: number; staffIds: string[] }
-  | { type: 'start_own_console'; name: string; kind: 'console' | 'portable'; cpu: string; media: string };
+  | { type: 'start_own_console'; name: string; kind: 'console' | 'portable'; cpu: string; media: string }
+  // автопилот (plan/14)
+  | { type: 'take_control' }
+);
 
 interface ChatThread {
   phase: string;
@@ -114,6 +120,17 @@ export class GameServer {
   private pendingPlayer: string | null = null; // вопрос игрока, ждущий свободного чата
   private pendingPhase: { phase: string; extra?: Record<string, unknown>; openingFor?: string } | null = null;
   private lastAction: { ok: boolean; error?: string } | null = null;
+  // ─── автопилот (plan/14): триггер 7 дней простоя, решение в чате, «театр» событий ───
+  private autopilotOn = false;
+  private lastBossActionDay: number;
+  private autopilotPolicy = createAutopilotPolicy();
+  private pendingPlan: AutopilotPlan | null = null; // решение, ждёт клика «Начать» клиента
+  private pendingPlanDeadline = 0;
+  private deciding = false; // LLM-решение в процессе
+  private pendingDecision = false; // ждём конца обсуждения, чтобы вызвать решение
+  private decidedThisIdle = false; // решение для текущего простоя уже сделано
+  private pendingEventSince: number | null = null; // «театр»: попап висит ~1.2с
+  private stepListeners = new Set<(s: AutopilotStep) => void>();
   // письма фанатов: текст дописывает LLM (по одному, не чаще раза в игровой день)
   private letterBusy = false;
   private letterNextAt = 0;
@@ -123,6 +140,7 @@ export class GameServer {
   constructor() {
     this.game = this.load();
     this.chat = resetChat();
+    this.lastBossActionDay = this.game.week;
     this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
     this.startTicker();
   }
@@ -135,7 +153,17 @@ export class GameServer {
   }
 
   snapshot(): SessionSnapshot {
-    return { game: this.game, chat: this.chat, speed: this.speed };
+    return { game: this.game, chat: this.chat, speed: this.speed, autopilot: this.autopilotOn };
+  }
+
+  // шаги хореографии автопилота (виртуальная мышь клиента)
+  subscribeSteps(fn: (s: AutopilotStep) => void): () => void {
+    this.stepListeners.add(fn);
+    return () => { this.stepListeners.delete(fn); };
+  }
+
+  private emitStep(s: AutopilotStep): void {
+    for (const l of this.stepListeners) l(s);
   }
 
   meta(): MetaData {
@@ -196,6 +224,7 @@ export class GameServer {
       this.maybeTriggerPhases();
       if (this.chatThread) void this.nextReply();
       this.maybeMailLetters();
+      this.maybeAutopilot();
       this.autosave();
       this.emit();
     }, Math.round(CONFIG.TICK_MS / Math.max(0.5, this.speed)));
@@ -238,6 +267,16 @@ export class GameServer {
 
   handle(msg: ClientAction): void {
     this.lastAction = null;
+    // автопилот (plan/14): любое действие БОССА выключает авторежим; действия виртуальной
+    // мыши помечены autopilot:true и не выключают. take_control — с реакцией чата.
+    if (!msg.autopilot && msg.type !== 'get_state') {
+      this.lastBossActionDay = this.game.week;
+      if (this.autopilotOn) this.stopAutopilot(msg.type !== 'take_control');
+    }
+    if (msg.type === 'take_control') {
+      this.emit();
+      return;
+    }
     switch (msg.type) {
       case 'set_speed':
         this.speed = msg.v;
@@ -257,6 +296,7 @@ export class GameServer {
         const res = startProjectAction(this.game, msg.input);
         this.run(res);
         if (res.ok) {
+          this.pendingPlan = null; // клик «Начать» (или таймаут) — план применён
           chatSystem(this.game, this.chat, '📦 Проект стартовал: разработка началась');
           void this.generatePhase('kickoff');
         }
@@ -267,6 +307,7 @@ export class GameServer {
         const res = releaseAction(this.game);
         this.run(res);
         if (res.ok) {
+          if (this.autopilotOn) this.decidedThisIdle = false; // следующую игру снова решает чат
           const g = this.game.history[this.game.history.length - 1];
           chatSystem(this.game, this.chat, `🚀 Релиз! ${g ? `Рецензии: ${g.score}/40${g.score >= CONFIG.HALL_OF_FAME ? ' — ЗАЛ СЛАВЫ!' : ''}` : ''}`);
           void this.generatePhase('release', { score: g?.score ?? 0, units: g?.units ?? 0 });
@@ -396,6 +437,133 @@ export class GameServer {
         this.run(startOwnConsoleAction(this.game, msg.name, msg.kind, msg.cpu, msg.media));
         this.emit();
         return;
+    }
+  }
+
+  // ─── автопилот (plan/14) ───
+  private stopAutopilot(silent: boolean): void {
+    this.autopilotOn = false;
+    this.pendingPlan = null;
+    this.pendingPlanDeadline = 0;
+    this.deciding = false;
+    this.pendingDecision = false;
+    this.decidedThisIdle = false;
+    this.pendingEventSince = null;
+    if (!silent) {
+      chatSystem(this.game, this.chat, '🧑‍💼 Босс вернулся! Команда спешно делает вид, что всё это время усердно работала.');
+      void this.generatePhase('boss_back');
+    }
+    this.emit();
+  }
+
+  /** Куда и что нажимает виртуальная мышь для текущего события (театр). */
+  private autopilotEventTarget(): { target: string; label: string } {
+    const ev = this.game.pendingEvent;
+    switch (ev?.type) {
+      case 'boost': return { target: 'mb-accept', label: 'Принять улучшение' };
+      case 'ready_to_release': return { target: 'mb-release', label: 'Выпустить игру' };
+      case 'gamedex': return { target: 'mb-none', label: 'Не участвовать' };
+      case 'salesman': return { target: 'mb-ok', label: 'Заглянуть' };
+      default: return { target: 'mb-ok', label: 'Ок' };
+    }
+  }
+
+  private maybeAutopilot(): void {
+    const g = this.game;
+    // (0) триггер: 7 игровых дней без действий босса, нет висящего события,
+    // нет идущей разработки (или игра уже в отладке — дожмём её сами)
+    if (!this.autopilotOn) {
+      const idle = !g.bankrupt && !g.pendingEvent && (!g.activeGame || g.activeGame.phase === 'debug');
+      if (idle && g.week - this.lastBossActionDay >= 7) {
+        this.autopilotOn = true;
+        this.decidedThisIdle = false;
+        this.pendingDecision = false;
+        chatSystem(g, this.chat, '🕵️ Команда заметила, что босс пропал. Берём дело в свои руки!');
+        this.emit();
+      }
+      return;
+    }
+
+    // (1) «театр» событий: попап висит ~1.2с реального времени (мышь успевает нажать),
+    // затем политика резолвит сама — автопилот работает и без клиента
+    if (g.pendingEvent) {
+      if (this.pendingEventSince === null) {
+        this.pendingEventSince = Date.now();
+        const t = this.autopilotEventTarget();
+        this.emitStep({ kind: 'click', target: t.target, label: t.label });
+      } else if (Date.now() - this.pendingEventSince >= 1200) {
+        this.autopilotPolicy.turn(g);
+        this.pendingEventSince = null;
+        this.emit();
+      }
+    } else {
+      this.pendingEventSince = null;
+    }
+
+    // (2) обсуждение в чате → LLM-решение (один запрос со всеми параметрами)
+    if (
+      !g.activeGame && !g.pendingEvent && !this.pendingPlan &&
+      !this.deciding && !this.pendingDecision && !this.decidedThisIdle
+    ) {
+      this.decidedThisIdle = true;
+      void this.generatePhase('autopilot_discuss');
+      this.pendingDecision = true;
+    }
+    if (this.pendingDecision && !this.chatThread && !this.deciding) void this.runDecision();
+
+    // (3) таймаут плана: клиент не успел/не смог нажать «Начать» — стартуем сами
+    if (this.pendingPlan && !g.activeGame && Date.now() > this.pendingPlanDeadline) {
+      const plan = this.pendingPlan;
+      this.pendingPlan = null;
+      let res = startProjectAction(g, plan as StartProjectInput);
+      if (!res.ok) {
+        const fb = autopilotProjectInput(g);
+        if (fb) res = startProjectAction(g, fb);
+      }
+      this.emit();
+    }
+  }
+
+  /** Решение LLM: какую игру делать. Невалидно/молчит — детерминированный фолбэк. */
+  private async runDecision(): Promise<void> {
+    this.pendingDecision = false;
+    this.deciding = true;
+    const announce = (plan: AutopilotPlan): void => {
+      this.pendingPlan = plan;
+      this.pendingPlanDeadline = Date.now() + 3000; // 3с на хореографию клиента
+      this.emitStep({ kind: 'open', app: 'code' });
+      this.emitStep({ kind: 'plan', plan });
+      this.emitStep({ kind: 'click', target: 'wizard-start', label: 'Начать разработку' });
+    };
+    try {
+      const ctx = buildDecisionContext(this.game);
+      const { text } = await generateWithFallback(buildDecisionPrompt(ctx), 800);
+      const plan = parseDecision(text);
+      const err = plan ? validateDecision(plan, this.game) : 'не удалось разобрать JSON';
+      if (err || !plan) {
+        console.error('[gds] автопилот: решение LLM отклонено, фолбэк:', err ?? 'null');
+        const fb = autopilotProjectInput(this.game);
+        if (fb) {
+          announce(fb);
+          chatSystem(this.game, this.chat, '📋 GigaChat не решился — команда выбрала сама (по старой доброй таблице комбо).');
+        }
+      } else {
+        const genre = genreById(plan.genreId);
+        const type = typeById(plan.typeId);
+        const con = consoleById(plan.consoleId);
+        chatSystem(this.game, this.chat, `📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}.`);
+        announce(plan);
+      }
+    } catch (e) {
+      console.error('[gds] автопилот: решение не получено, фолбэк:', String(e).slice(0, 200));
+      const fb = autopilotProjectInput(this.game);
+      if (fb) {
+        announce(fb);
+        chatSystem(this.game, this.chat, '📋 GigaChat недоступен — команда решила по старинке.');
+      }
+    } finally {
+      this.deciding = false;
+      this.emit();
     }
   }
 

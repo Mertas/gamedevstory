@@ -4,7 +4,7 @@ import { CONFIG } from '../config';
 import { ADS, TRAININGS } from '../data/db';
 import { CONSOLES, GENRES, TYPES } from '../data/db';
 import type { GameState, StartProjectInput } from '../types';
-import { comboGrade, consoleAvailable } from '../systems/dev';
+import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
 import {
   buyAdAction, dismissSalesmanAction, hireAction, levelUpAction, releaseAction, resolveBoostAction,
   resolveEventAction, resolveGamedexAction, startProjectAction, trainAction,
@@ -201,6 +201,41 @@ function bestConsole(state: GameState) {
     return CONSOLES.find((c) => c.id === 'microx-sx')!;
   }
   return CONSOLES.find((c) => c.id === 'pc-game')!;
+}
+
+// ─── помощники для автопилота (server/autopilot.ts): стоимость комбо и готовый
+// стартовый ввод проекта — без мутаций состояния ───
+export function comboCostK(state: GameState, genreId: string, typeId: string, consoleId: string, mode: 'normal' | 'speed' | 'quality' | 'research' | 'budget' = 'normal'): number {
+  const g = genreById(genreId);
+  const t = typeById(typeId);
+  const c = CONSOLES.find((x) => x.id === consoleId);
+  if (!g || !t || !c) return Infinity;
+  const genreLevel = state.genreLevels[genreId] ?? 0;
+  const typeLevel = state.typeLevels[typeId] ?? 0;
+  return (g.costWan * 0.1 * (1 + 0.5 * genreLevel) + CONFIG.TYPE_COST_DEFAULT * (1 + 0.3 * typeLevel)) * c.costMult * CONFIG.MODE[mode].cost;
+}
+
+/** Ввод проекта для автопилота-фолбэка: лучшая доступная комбинация + роли (как у политики). */
+export function autopilotProjectInput(state: GameState): StartProjectInput | null {
+  const combo = pickBestCombo(state, null);
+  if (!combo) return null;
+  const consoleData = bestConsole(state);
+  if (!consoleAvailable(state, consoleData.id)) return null;
+  const proposalStaff = [...state.staff]
+    .sort((a, b) => {
+      const rot = (a.lastRole === 'proposal' ? 1 : 0) - (b.lastRole === 'proposal' ? 1 : 0);
+      return rot !== 0 ? rot : b.stats.scenario - a.stats.scenario;
+    })[0];
+  if (!proposalStaff) return null;
+  return {
+    consoleId: consoleData.id,
+    genreId: combo.genreId,
+    typeId: combo.typeId,
+    mode: state.money > 600 ? 'quality' : 'normal',
+    direction: { approach: 5, polish: 5 },
+    proposalStaffId: proposalStaff.id,
+    assignments: assignRoles(state, proposalStaff.id),
+  };
 }
 
 // назначение ролей: каждый сотрудник на одной роли, по лучшему стату, с ротацией

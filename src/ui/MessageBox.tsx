@@ -21,11 +21,12 @@ export function MessageBox() {
           </div>
         )}
           <div className="w95-row" style={{ justifyContent: 'center', marginTop: 14, gap: 8 }}>
-            {mb.buttons.map((b) => (
+            {mb.buttons.map((b, i) => (
               <button
                 key={b.label}
                 className="w95-btn"
                 style={{ minWidth: 90 }}
+                data-autopilot={i === 0 ? mb.autopilotTarget : undefined}
                 onClick={() => { closeMessageBox(); b.onClick(); }}
               >
                 {b.label}
