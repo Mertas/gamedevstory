@@ -292,6 +292,10 @@ export class GameServer {
         this.chat = resetChat();
         this.mailShownId = 0;
         this.fanReplyQueued = false;
+        // аудит 06.09: иначе lastBossActionDay остаётся от СТАРОЙ партии (week там больше) —
+        // триггер автопилота `week - lastBossActionDay >= 7` не наступит, пока новая партия
+        // не перегонит старую (симптом: «50 дней, автопилот молчит»)
+        this.lastBossActionDay = this.game.week;
         this.autosave(true);
         this.emit();
         return;
@@ -848,6 +852,7 @@ export class GameServer {
       this.game = data.game;
       migrateSave(this.game);
       this.chat = data.chat ?? resetChat();
+      this.lastBossActionDay = this.game.week; // импортированная партия может быть моложе текущей (аудит 06.09)
       this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
       this.fanReplyQueued = false;
       normalizeLegacyContrib(this.game);
