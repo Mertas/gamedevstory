@@ -632,7 +632,7 @@ function ProjectWizard() {
               <div className="w95-hint">Открытые жанры ({genres.length}/{meta.genres.length}); остальные — за уровни сотрудников.</div>
               <div className="w95-field" style={{ maxHeight: 260, overflowY: 'auto' }}>
                 {genres.map((gg) => (
-                  <div key={gg.id} className="w95-li" style={{ padding: '1px 4px' }} data-autopilot={`wiz-genre-${gg.id}`}>
+                  <div key={gg.id} className="w95-li" style={{ padding: '1px 4px' }} onClick={() => setGenreId(gg.id)} data-autopilot={`wiz-genre-${gg.id}`}>
                     <label className="w95-row">
                       <input type="radio" checked={genreId === gg.id} onChange={() => setGenreId(gg.id)} />
                       {gg.ru} <span className="w95-hint">(база {gg.costWan / 10}K)</span>
@@ -662,7 +662,7 @@ function ProjectWizard() {
                 {types.map((t) => {
                   const cg = genre ? comboGrade(meta, genre.id, t.id) : null;
                   return (
-                    <div key={t.id} className="w95-li" style={{ padding: '1px 4px' }} data-autopilot={`wiz-type-${t.id}`}>
+                    <div key={t.id} className="w95-li" style={{ padding: '1px 4px' }} onClick={() => setTypeId(t.id)} data-autopilot={`wiz-type-${t.id}`}>
                       <label className="w95-row">
                         <input type="radio" checked={typeId === t.id} onChange={() => setTypeId(t.id)} />
                         {t.nameRu ?? t.name}
@@ -684,7 +684,7 @@ function ProjectWizard() {
               <b>Режим разработки</b>
               <div className="w95-field">
                 {MODES.map((m) => (
-                  <div key={m.id} className="w95-li" style={{ padding: '1px 4px' }} data-autopilot={`wiz-mode-${m.id}`}>
+                  <div key={m.id} className="w95-li" style={{ padding: '1px 4px' }} onClick={() => setMode(m.id)} data-autopilot={`wiz-mode-${m.id}`}>
                     <label className="w95-row">
                       <input type="radio" checked={mode === m.id} onChange={() => setMode(m.id)} />
                       <b>{m.label}</b> <span className="w95-hint">{m.hint}</span>
