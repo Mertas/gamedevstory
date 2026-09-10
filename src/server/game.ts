@@ -3,10 +3,10 @@ import { type HireMethodId } from '../core/config';
 import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
 import { newGame, startProjectAction } from '../core/engine';
-import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type StartProjectInput } from '../core/types';
+import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type StartProjectInput } from '../core/types';
 import { resetChat, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
-import { buildLetterPrompt, buildDecisionPrompt, parseDecision } from './chatgen';
+import { buildDecisionPrompt, parseDecision } from './chatgen';
 import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { buildDecisionContext, createAutopilotPolicy, fitDirection, validateDecision, autopilotProjectInput } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
@@ -14,6 +14,7 @@ import { SaveManager, SAVE_PATH } from './save';
 import { dispatchClientAction } from './actions';
 import { GameTicker } from './ticker';
 import { ChatOrchestrator } from './chatflow';
+import { MailService } from './mail';
 
 /** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
 function dirSummary(direction: Record<string, number>): string {
@@ -90,6 +91,7 @@ export class GameServer {
   speed = 1;
   private readonly ticker = new GameTicker(this);
   private readonly chatflow = new ChatOrchestrator(this);
+  private readonly mailer = new MailService(this);
   private listeners = new Set<(s: SessionSnapshot) => void>();
   chatThread: ChatThread | null = null; // фазы чата в процессе генерации
   // SRV-11/12: очереди, а не одиночные слоты — второе сообщение/сцена не затирают первое
@@ -109,10 +111,10 @@ export class GameServer {
   private decisionEpoch = 0; // SRV-03: отмена решений автопилота (take_control во время LLM-запроса)
   private stepListeners = new Set<(s: AutopilotStep) => void>();
   // письма фанатов: текст дописывает LLM (по одному, не чаще раза в игровой день)
-  private letterBusy = false;
-  private letterNextAt = 0;
+  letterBusy = false;
+  letterNextAt = 0;
   mailShownId = 0; // последнее письмо, опубликованное в чат
-  private fanReplyQueued = false; // реакция команды ждёт свободного чата
+  fanReplyQueued = false; // реакция команды ждёт свободного чата
 
   constructor(deps: GameServerDeps = {}) {
     this.llm = deps.llm ?? generateWithFallback;
@@ -412,7 +414,7 @@ export class GameServer {
   }
 
   /** «Пол» очереди: раньше этой недели новое сообщение не выскочит вперёд (письма, 10.09.2026). */
-  private chatFloor(): number {
+  chatFloor(): number {
     return this.chatflow.chatFloor();
   }
 
@@ -421,61 +423,10 @@ export class GameServer {
     this.chatflow.pushSystem(text);
   }
 
-  // ─── M5: письма фанатов ───
-  // (1) LLM дописывает текст письма; (2) готовое письмо публикуется в ЧАТ целиком, и команда
-  // реагирует серией реплик (фаза 'fanmail'); (3) если чат был занят — реакция откладывается.
+  // ─── M5: письма фанатов (SRV-22): логика — в mail.ts ───
+  /** @internal для GameTicker: LLM-тексты и публикация писем (см. mail.ts). */
   maybeMailLetters(): void {
-    // (1) LLM-текст: одно письмо за раз, не чаще раза в игровой день и не во время реплики чата
-    if (!this.letterBusy && this.game.week >= this.letterNextAt && !this.chatThread?.busy) {
-      const pending = this.game.mail.find((m) => !m.llm);
-      if (pending) {
-        this.letterBusy = true;
-        this.letterNextAt = this.game.week + 1;
-        void this.writeLetterText(pending);
-      }
-    }
-    // (2) письмо готово (текст LLM или заготовка) — в чат, но не в середину живого диалога:
-    // публикуем, когда чат свободен, и встаём в конец очереди — хронология недель не рвётся (10.09.2026)
-    if (!this.chatThread && this.pendingPlayers.length === 0) {
-      for (const l of this.game.mail) {
-        if (l.id <= this.mailShownId || !l.llm) continue;
-        this.mailShownId = l.id;
-        const emoji = l.sentiment === 'love' ? '💌' : l.sentiment === 'hate' ? '💔' : '✉️';
-        this.chat.queue.push({
-          week: this.chatFloor(), author: `${l.fanName} (фанат)`, avatar: '', text: `${emoji} ${l.text}`, trigger: 'week',
-        });
-        this.emit();
-        if (this.pendingPhases.length > 0) {
-          this.fanReplyQueued = true; // впереди события — реакция после текущей серии
-        } else {
-          void this.generatePhase('fanmail', { text: l.text, fanName: l.fanName, gameName: l.gameName, sentiment: l.sentiment });
-        }
-        return; // одно письмо за тик
-      }
-    }
-    // (3) отложенная реакция на последнее показанное письмо
-    if (this.fanReplyQueued && !this.chatThread && this.pendingPhases.length === 0 && this.pendingPlayers.length === 0) {
-      this.fanReplyQueued = false;
-      const l = this.game.mail.find((x) => x.id === this.mailShownId);
-      if (l) {
-        void this.generatePhase('fanmail', { text: l.text, fanName: l.fanName, gameName: l.gameName, sentiment: l.sentiment });
-      }
-    }
-  }
-
-  private async writeLetterText(letter: FanLetter): Promise<void> {
-    try {
-      const messages = buildLetterPrompt(letter);
-      const { text } = await this.llm(messages, 250);
-      const t = text.trim().replace(/^["«]|["»]$/g, '').slice(0, 700);
-      if (t.length >= 20) letter.text = t; // иначе оставляем заготовку движка
-    } catch (e) {
-      console.error('[gds] LLM-текст письма не получен — остаётся заготовка:', String(e).slice(0, 200));
-    }
-    letter.llm = true;
-    this.letterBusy = false;
-    this.saves.autosave(this.game, this.chat, true); // LLM-текст письма не должен теряться при дебаунсе
-    this.emit();
+    this.mailer.maybeMailLetters();
   }
 
   // ─── сейвы ───
