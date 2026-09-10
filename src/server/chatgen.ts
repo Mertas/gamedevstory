@@ -205,6 +205,7 @@ export function buildDecisionPrompt(
     team: string; money: number; research: number; office: number;
     genres: string; types: string; combos: string; consoles: string; directionPoints: number;
     /** AP-05: удачное комбо прошлого (зал славы) — продолжение узнаваемо и дешевле */ sequel?: string;
+    /** AP-04: свежие письма фанатов — после разгрома жанр меняем */ fans?: string;
   },
   discussion?: string,
 ): LlmMessage[] {
@@ -232,6 +233,7 @@ export function buildDecisionPrompt(
         `Топ комбинаций (жанр × тип = градация, ~цена): ${ctx.combos}`,
         `Доступные консоли: ${ctx.consoles}`,
         ctx.sequel ? `Удачное прошлое (сиквел): ${ctx.sequel} — продолжение узнаваемо и дешевле в продвижении.` : '',
+        ctx.fans ? `Письма фанатов (свежие): ${ctx.fans}. Учти настроение: после разгрома этот жанр не повторяй — предложи другой; восторг — можно продолжить удачную линейку (сиквел).` : '',
         `Очки направления: ${ctx.directionPoints} (сумма direction = ${ctx.directionPoints} — все очки в дело, свободных не оставляй).`,
         discussionBlock,
       ].filter(Boolean).join('\n'),

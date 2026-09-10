@@ -187,8 +187,13 @@ interface ComboCandidate {
   cost: number;
 }
 
-// лучшая доступная комбинация: максимум градации (S>A>B), минимум стоимости
-export function pickBestCombo(state: GameState, last: { genreId: string; typeId: string } | null): ComboCandidate | null {
+// лучшая доступная комбинация: максимум градации (S>A>B), минимум стоимости.
+// AP-04: avoidGenreId — жанр свежего фан-разгрома: не берём его, пока есть альтернатива.
+export function pickBestCombo(
+  state: GameState,
+  last: { genreId: string; typeId: string } | null,
+  avoidGenreId?: string | null,
+): ComboCandidate | null {
   const unlockedGenres = GENRES.filter((g) => {
     if (g.unlockJob && g.unlockLevel) {
       return state.staff.some((s) => (s.careers[g.unlockJob as keyof typeof s.careers] ?? 0) >= g.unlockLevel!);
@@ -207,45 +212,52 @@ export function pickBestCombo(state: GameState, last: { genreId: string; typeId:
 
   const consoleData = bestConsole(state);
   const gradeRank = { S: 0, A: 1, B: 2, C: 3, D: 4, F: 5 };
-  let best: ComboCandidate | null = null;
-  for (const g of unlockedGenres) {
-    for (const t of unlockedTypes) {
-      if (last && last.genreId === g.id && last.typeId === t.id) continue; // избегаем дубля подряд
-      const grade = comboGrade(g.id, t.id);
-      if (grade === 'C') continue; // «Nothing» не интересен
-      const genreLevel = state.genreLevels[g.id] ?? 0;
-      const typeLevel = state.typeLevels[t.id] ?? 0;
-      const cost =
-        (g.costWan * 0.1 * (1 + 0.5 * genreLevel) + CONFIG.TYPE_COST_DEFAULT * (1 + 0.3 * typeLevel)) *
-        consoleData.costMult *
-        CONFIG.MODE.normal.cost;
-      if (cost > state.money) continue; // игрок тратит всё, но не больше, чем есть
-      const cand: ComboCandidate = { genreId: g.id, typeId: t.id, grade, cost };
-      if (!best) best = cand;
-      else {
-        const br = gradeRank[best.grade as keyof typeof gradeRank] ?? 3;
-        const cr = gradeRank[grade as keyof typeof gradeRank] ?? 3;
-        if (cr < br || (cr === br && cand.cost < best.cost)) best = cand;
-      }
-    }
-  }
-  // fallback: дубль разрешён, если ничего не нашли
-  if (!best) {
+  const search = (avoid: string | null): ComboCandidate | null => {
+    let best: ComboCandidate | null = null;
     for (const g of unlockedGenres) {
+      if (avoid && g.id === avoid) continue;
       for (const t of unlockedTypes) {
+        if (last && last.genreId === g.id && last.typeId === t.id) continue; // избегаем дубля подряд
         const grade = comboGrade(g.id, t.id);
-        if (grade === 'C') continue;
+        if (grade === 'C') continue; // «Nothing» не интересен
+        const genreLevel = state.genreLevels[g.id] ?? 0;
+        const typeLevel = state.typeLevels[t.id] ?? 0;
         const cost =
-          (g.costWan * 0.1 + CONFIG.TYPE_COST_DEFAULT) * consoleData.costMult * CONFIG.MODE.normal.cost;
-        if (cost > state.money) continue;
+          (g.costWan * 0.1 * (1 + 0.5 * genreLevel) + CONFIG.TYPE_COST_DEFAULT * (1 + 0.3 * typeLevel)) *
+          consoleData.costMult *
+          CONFIG.MODE.normal.cost;
+        if (cost > state.money) continue; // игрок тратит всё, но не больше, чем есть
         const cand: ComboCandidate = { genreId: g.id, typeId: t.id, grade, cost };
-        if (!best || gradeRank[cand.grade as keyof typeof gradeRank]! < gradeRank[best.grade as keyof typeof gradeRank]!) {
-          best = cand;
+        if (!best) best = cand;
+        else {
+          const br = gradeRank[best.grade as keyof typeof gradeRank] ?? 3;
+          const cr = gradeRank[grade as keyof typeof gradeRank] ?? 3;
+          if (cr < br || (cr === br && cand.cost < best.cost)) best = cand;
         }
       }
     }
-  }
-  return best;
+    // fallback: дубль разрешён, если ничего не нашли
+    if (!best) {
+      for (const g of unlockedGenres) {
+        if (avoid && g.id === avoid) continue;
+        for (const t of unlockedTypes) {
+          const grade = comboGrade(g.id, t.id);
+          if (grade === 'C') continue;
+          const cost =
+            (g.costWan * 0.1 + CONFIG.TYPE_COST_DEFAULT) * consoleData.costMult * CONFIG.MODE.normal.cost;
+          if (cost > state.money) continue;
+          const cand: ComboCandidate = { genreId: g.id, typeId: t.id, grade, cost };
+          if (!best || gradeRank[cand.grade as keyof typeof gradeRank]! < gradeRank[best.grade as keyof typeof gradeRank]!) {
+            best = cand;
+          }
+        }
+      }
+    }
+    return best;
+  };
+  if (!avoidGenreId) return search(null);
+  // альтернатив у избегаемого жанра нет — жанр остаётся в игре (иначе автопилот встанет)
+  return search(avoidGenreId) ?? search(null);
 }
 
 /** Комбо-кандидат для конкретной пары жанр×тип — если жанр/тип ещё открыты и влезаем в бюджет. */
@@ -283,6 +295,18 @@ export function sequelOpportunity(state: GameState): { genreId: string; typeId: 
   return best;
 }
 
+/** AP-04: жанр свежего фан-разгрома (последнее hate-письмо не старше HATE_MEMORY_WEEKS) —
+ *  фанатам не зашла последняя игра жанра: в следующий проект его не берём, пока есть альтернатива. */
+const HATE_MEMORY_WEEKS = 48;
+function hatedGenre(state: GameState): string | null {
+  const letter = [...state.mail].reverse().find((l) => l.sentiment === 'hate');
+  if (!letter || state.week - letter.week > HATE_MEMORY_WEEKS) return null;
+  const rec = [...state.history].reverse().find((h) => h.name === letter.gameName);
+  if (rec) return rec.genreId;
+  const gen = GENRES.find((g) => g.ru === letter.genre || g.name === letter.genre);
+  return gen?.id ?? null;
+}
+
 function bestConsole(state: GameState) {
   // PC всегда; Microx SX — если лицензия куплена
   if (state.consoles['microx-sx']?.licensed) {
@@ -318,7 +342,11 @@ export function autopilotProjectInput(state: GameState): StartProjectInput | nul
   // AP-05: удачное комбо прошлого (зал славы) важнее «лучшей градации»: сиквел продаётся лучше
   const seq = sequelOpportunity(state);
   const sequel = seq ? candidateFor(state, seq.genreId, seq.typeId) : null;
-  const combo = sequel ?? pickBestCombo(state, null);
+  // AP-04: свежий фан-разгром — этот жанр в следующий проект не берём, если есть альтернатива
+  const avoid = hatedGenre(state);
+  let combo: ComboCandidate | null = sequel && sequel.genreId !== avoid ? sequel : null;
+  if (!combo && avoid) combo = pickBestCombo(state, null, avoid);
+  if (!combo) combo = sequel ?? pickBestCombo(state, null);
   if (!combo) return null;
   const consoleData = bestConsole(state);
   if (!consoleAvailable(state, consoleData.id)) return null;

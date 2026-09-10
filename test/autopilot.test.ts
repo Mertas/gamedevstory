@@ -1,7 +1,7 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it, vi } from 'vitest';
 import { newGame, startProjectAction, tick } from '../src/core/engine';
-import { AutopilotController, createAutopilotPolicy, decisionReason, fitDirection, validateDecision } from '../src/server/autopilot';
+import { AutopilotController, buildDecisionContext, createAutopilotPolicy, decisionReason, fitDirection, validateDecision } from '../src/server/autopilot';
 import type { AutopilotHost } from '../src/server/autopilot';
 import { ChatOrchestrator } from '../src/server/chatflow';
 import type { ChatThread } from '../src/server/game';
@@ -553,5 +553,57 @@ describe('AP-08: idle-серия — одна короткая реплика, �
     for (let i = 0; i < 20; i++) await Promise.resolve();
     expect(chat.queue.length).toBe(1);
     expect(chat.queue[0]!.text).toContain('рефакторю');
+  });
+});
+
+describe('AP-04: письма фанатов влияют на решения', () => {
+  function rec(name: string, genreId: string, score: number): GameRecord {
+    return {
+      name, genreId, typeId: 'rpg', consoleId: 'pc-game',
+      score, units: 10, revenue: 100, releaseWeek: 5, year: 1,
+      attrs: { fun: 1, creativity: 1, graphics: 1, sound: 1 }, bugs: 0, awards: [],
+    };
+  }
+
+  function letter(gameName: string, sentiment: 'love' | 'hate' | 'neutral', week: number): GameState['mail'][number] {
+    return {
+      id: 1, week, year: 1, gameName,
+      score: sentiment === 'love' ? 30 : sentiment === 'hate' ? 10 : 22,
+      fanName: 'Алексей', gender: 'M', sentiment, fansDelta: 0, text: 'письмо', llm: true,
+    };
+  }
+
+  it('свежий разгром: жанр уходит из следующего выбора автопилота', () => {
+    const g = fresh();
+    const before = autopilotProjectInput(g)!;
+    g.history.push(rec('Провал', before.genreId, 10));
+    g.mail.push(letter('Провал', 'hate', g.week));
+    const after = autopilotProjectInput(g)!;
+    expect(after.genreId).not.toBe(before.genreId); // фанаты разнесли игру — жанр сменили
+  });
+
+  it('остывший разгром (год назад) жанр больше не блокирует', () => {
+    const g = fresh();
+    const before = autopilotProjectInput(g)!;
+    g.history.push(rec('Старый провал', before.genreId, 10));
+    g.mail.push(letter('Старый провал', 'hate', g.week - 50)); // старше HATE_MEMORY_WEEKS (48)
+    const after = autopilotProjectInput(g)!;
+    expect(after.genreId).toBe(before.genreId); // память о разгроме не вечная
+  });
+
+  it('восторг и нейтральные письма жанр не отменяют', () => {
+    const g = fresh();
+    const before = autopilotProjectInput(g)!;
+    g.mail.push(letter('Хорошая игра', 'love', g.week));
+    expect(autopilotProjectInput(g)!.genreId).toBe(before.genreId);
+  });
+
+  it('buildDecisionContext: свежие письма попадают в контекст решения', () => {
+    const g = fresh();
+    expect(buildDecisionContext(g).fans).toBeUndefined(); // без писем строки нет
+    g.mail.push(letter('Гонки', 'hate', g.week));
+    const ctx = buildDecisionContext(g);
+    expect(ctx.fans).toContain('разгром');
+    expect(ctx.fans).toContain('Гонки');
   });
 });

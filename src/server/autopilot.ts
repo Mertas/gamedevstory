@@ -82,6 +82,8 @@ export function buildDecisionContext(state: GameState): {
   consoles: string;
   directionPoints: number;
   sequel?: string;
+  /** AP-04: свежие письма фанатов (настроение по играм) — влияют на выбор жанра */
+  fans?: string;
 } {
   const unlockedGenres = GENRES.filter((g) => {
     if (g.unlockJob && g.unlockLevel) {
@@ -116,6 +118,13 @@ export function buildDecisionContext(state: GameState): {
   const sequelLine = seq && seqGenre && seqType
     ? `«${seqGenre.ru ?? seqGenre.name} × ${seqType.nameRu ?? seqType.name}» — ${seq.score}/40`
     : undefined;
+  // AP-04: свежие письма фанатов — команда их «читает»: разгром меняет жанр, восторг зовёт в сиквел
+  const recentMail = state.mail.slice(-3);
+  const fans = recentMail.length
+    ? recentMail
+        .map((l) => `${l.sentiment === 'love' ? 'восторг' : l.sentiment === 'hate' ? 'разгром' : 'нейтрально'} — «${l.gameName}»`)
+        .join('; ')
+    : undefined;
   return {
     team: state.staff.map((s) => `${s.name} (${s.activeCareer} Lv${s.careers[s.activeCareer] ?? 0}, id:${s.id})`).join('; '),
     money: Math.round(state.money),
@@ -127,6 +136,7 @@ export function buildDecisionContext(state: GameState): {
     consoles: licensed.map((c) => `${c.id}="${c.name}"`).join(', '),
     directionPoints: state.directionPoints,
     sequel: sequelLine,
+    fans,
   };
 }
 

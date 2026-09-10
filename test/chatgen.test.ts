@@ -43,6 +43,19 @@ describe('buildDecisionPrompt: упор решает чат', () => {
     expect(text).not.toContain('Обсуждение команды');
     expect(text).toContain('"direction"');
   });
+
+  it('AP-04: письма фанатов попадают в промпт с правилом о смене жанра после разгрома', () => {
+    const text = buildDecisionPrompt({ ...ctx, fans: 'разгром — «Гонки»; восторг — «Рогалик»' }, undefined)
+      .map((m) => m.content)
+      .join('\n');
+    expect(text).toContain('Письма фанатов');
+    expect(text).toContain('разгром — «Гонки»');
+    expect(text).toContain('жанр не повторяй');
+  });
+
+  it('AP-04: без писем строки о фанатах в промпте нет (промпт не пухнет)', () => {
+    expect(promptText()).not.toContain('Письма фанатов');
+  });
 });
 
 // Память диалога, анти-повтор и ротация говорящих: раньше реплика видела только последнюю
