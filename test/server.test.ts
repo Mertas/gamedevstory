@@ -87,6 +87,7 @@ describe('GameServer: автопилот и чат', () => {
     srv.subscribeSteps((s) => steps.push(s));
 
     srv.handle({ type: 'set_speed', v: 8 });
+    srv.handle({ type: 'set_autopilot', on: true }); // кнопка «Отдать управление» (таймаут убран)
     for (let i = 0; i < 60 && !resolveDecision; i++) await vi.advanceTimersByTimeAsync(500);
     expect(srv.snapshot().autopilot).toBe(true);
     expect(resolveDecision).toBeTypeOf('function'); // решение LLM уже в полёте
@@ -130,6 +131,7 @@ describe('GameServer: автопилот и чат', () => {
     const steps: AutopilotStep[] = [];
     srv.subscribeSteps((s) => steps.push(s));
     srv.handle({ type: 'set_speed', v: 8 });
+    srv.handle({ type: 'set_autopilot', on: true }); // кнопка «Отдать управление» (таймаут убран)
 
     for (let i = 0; i < 160 && !resolveDecision; i++) await vi.advanceTimersByTimeAsync(500);
     expect(resolveDecision).toBeTypeOf('function'); // LLM-решение уже в полёте
@@ -169,12 +171,25 @@ describe('GameServer: автопилот и чат', () => {
     // оба вопроса приходят, пока команда занята первым
     srv.handle({ type: 'chat_message', text: 'Первый вопрос' });
     srv.handle({ type: 'chat_message', text: 'Второй вопрос' });
-    await vi.advanceTimersByTimeAsync(700); // < 7 дней: автопилот в этом тесте не включается
+    await vi.advanceTimersByTimeAsync(700); // автопилот сам не включается — только кнопкой
 
     const msgs = srv.snapshot().chat.msgs;
     const asked = msgs.filter((m) => m.author === 'Вы');
     const answered = msgs.filter((m) => m.author !== 'Вы' && m.author !== 'Система');
     expect(asked.length).toBe(2); // оба вопроса в чате
     expect(answered.length).toBe(2); // и на каждый есть ответ (раньше второй терялся)
+  });
+
+  it('автопилот не включается сам от простоя — только кнопкой «Взять/Отдать управление»', async () => {
+    srv = makeServer();
+    srv.snapshot().game.money = 1e6;
+    srv.handle({ type: 'set_speed', v: 8 });
+    await vi.advanceTimersByTimeAsync(30000); // десятки игровых недель без действий босса
+    expect(srv.snapshot().autopilot).toBe(false); // авторежим не включился сам
+
+    srv.handle({ type: 'set_autopilot', on: true }); // кнопка «Отдать управление»
+    expect(srv.snapshot().autopilot).toBe(true);
+    srv.handle({ type: 'set_autopilot', on: false }); // кнопка «Взять управление»
+    expect(srv.snapshot().autopilot).toBe(false);
   });
 });

@@ -180,6 +180,11 @@ export function actionTakeControl() {
   send({ type: 'take_control' });
 }
 
+/** «Отдать управление»: включить автопилот кнопкой (сам он больше не включается). */
+export function actionSetAutopilot(on: boolean) {
+  send({ type: 'set_autopilot', on });
+}
+
 // ─── действия (отправка на сервер) ───
 export function actionStartProject(input: StartProjectInput) {
   send({ type: 'start_project', input });

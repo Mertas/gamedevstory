@@ -5,7 +5,7 @@ import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { WebampLayer } from './WebampLayer';
 import {
-  actionTakeControl, exportSave, importSave, newGameAction, setSpeed, useAutopilot, useChat, useGame, useSpeed,
+  actionSetAutopilot, actionTakeControl, exportSave, importSave, newGameAction, setSpeed, useAutopilot, useChat, useGame, useSpeed,
 } from './store';
 import { typingName } from '../shared/chat';
 import { dateLabel, dayInYear } from '../shared/meta';
@@ -525,11 +525,16 @@ export function Desktop() {
         )}
 
         <div className="w95-tray">
-          {autopilot && (
-            <button className="w95-btn" style={{ marginRight: 8, fontWeight: 'bold', color: '#c00000' }} onClick={actionTakeControl} title="Вернуть управление боссу — автопилот выключится">
-              👤 Взять управление
-            </button>
-          )}
+          <button
+            className="w95-btn"
+            style={{ marginRight: 8, fontWeight: 'bold', ...(autopilot ? { color: '#c00000' } : {}) }}
+            onClick={autopilot ? actionTakeControl : () => actionSetAutopilot(true)}
+            title={autopilot
+              ? 'Вернуть управление боссу — автопилот выключится'
+              : 'Передать управление команде — она сама решит, что делать дальше'}
+          >
+            {autopilot ? '👤 Взять управление' : '🤖 Отдать управление'}
+          </button>
           {typing && <span className="w95-hint" style={{ color: '#000080' }}>{typing} печатает…</span>}
           <span className="w95-hint" style={{ marginRight: 6 }}>❤ {Math.round(game.fans)}</span>
           <span className="w95-hint" style={{ marginRight: 6 }}>🔬 {Math.round(game.research)} PR</span>

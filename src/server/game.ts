@@ -68,8 +68,9 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'buy_ad'; adId: number }
   | { type: 'take_contract'; contractId: number; staffIds: string[] }
   | { type: 'start_own_console'; name: string; kind: 'console' | 'portable'; cpu: string; media: string }
-  // автопилот (plan/14)
+  // автопилот (plan/14): включение — только вручную (кнопка «Взять/Отдать управление»)
   | { type: 'take_control' }
+  | { type: 'set_autopilot'; on: boolean }
 );
 
 interface ChatThread {
@@ -139,9 +140,8 @@ export class GameServer {
   private pendingPlayers: string[] = [];
   private pendingPhases: { phase: string; extra?: Record<string, unknown>; openingFor?: string }[] = [];
   private lastAction: { ok: boolean; error?: string } | null = null;
-  // ─── автопилот (plan/14): триггер 7 дней простоя, решение в чате, «театр» событий ───
+  // ─── автопилот (plan/14): включается только кнопкой, решение в чате, «театр» событий ───
   private autopilotOn = false;
-  private lastBossActionDay: number;
   private autopilotPolicy = createAutopilotPolicy();
   private pendingPlan: AutopilotPlan | null = null; // решение, ждёт клика «Начать» клиента
   private pendingPlanDeadline = 0;
@@ -165,7 +165,6 @@ export class GameServer {
     this.savePath = deps.savePath ?? SAVE_PATH;
     this.game = this.load();
     this.chat = this.loadedChat ?? resetChat();
-    this.lastBossActionDay = this.game.week;
     this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
     this.startTicker();
   }
@@ -303,10 +302,16 @@ export class GameServer {
 
   handle(msg: ClientAction): void {
     this.lastAction = null;
+    // кнопка «Отдать управление»: ручное включение (таймаут простоя убран — сам не включается)
+    if (msg.type === 'set_autopilot') {
+      if (msg.on) this.startAutopilot();
+      else if (this.autopilotOn) this.stopAutopilot(false);
+      this.emit();
+      return;
+    }
     // автопилот (plan/14): любое действие БОССА выключает авторежим; действия виртуальной
     // мыши помечены autopilot:true и не выключают. take_control — с реакцией чата.
     if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
-      this.lastBossActionDay = this.game.week;
       if (this.autopilotOn) this.stopAutopilot(msg.type !== 'take_control');
     }
     if (msg.type === 'take_control') {
@@ -331,10 +336,6 @@ export class GameServer {
         this.chat = resetChat();
         this.resetSession(); // SRV-09: ответы старой партии не должны прилетать в новую
         this.mailShownId = 0;
-        // аудит 06.09: иначе lastBossActionDay остаётся от СТАРОЙ партии (week там больше) —
-        // триггер автопилота `week - lastBossActionDay >= 7` не наступит, пока новая партия
-        // не перегонит старую (симптом: «50 дней, автопилот молчит»)
-        this.lastBossActionDay = this.game.week;
         this.autosave(true);
         this.emit();
         return;
@@ -527,22 +528,22 @@ export class GameServer {
     }
   }
 
+  /** Ручное включение автопилота (кнопка «Отдать управление»): команда берётся за дело сама. */
+  private startAutopilot(): void {
+    if (this.autopilotOn) return;
+    this.autopilotOn = true;
+    this.decidedThisIdle = false;
+    this.pendingDecision = false;
+    chatSystem(this.game, this.chat, '🤖 Босс отдал команде управление — решаем сами!');
+    this.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
+    this.emit();
+  }
+
   private maybeAutopilot(): void {
     const g = this.game;
-    // (0) триггер: 7 игровых дней без действий босса, нет висящего события,
-    // нет идущей разработки (или игра уже в отладке — дожмём её сами)
-    if (!this.autopilotOn) {
-      const idle = !g.bankrupt && !g.pendingEvent && (!g.activeGame || g.activeGame.phase === 'debug');
-      if (idle && g.week - this.lastBossActionDay >= 7) {
-        this.autopilotOn = true;
-        this.decidedThisIdle = false;
-        this.pendingDecision = false;
-        chatSystem(g, this.chat, '🕵️ Команда заметила, что босс пропал. Берём дело в свои руки!');
-        this.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
-        this.emit();
-      }
-      return;
-    }
+    // (0) автопилот включается ТОЛЬКО кнопкой «Отдать управление» (таймаут простоя убран):
+    // без явного включения виртуальная мышь и чат не работают — игра ждёт босса
+    if (!this.autopilotOn) return;
 
     // (1) «театр» событий: попап висит ~2.6с реального времени — мышь (медленный полёт
     // ~1.2с + поиск элемента) успевает нажать; не успела — политика резолвит сама,
@@ -950,7 +951,6 @@ export class GameServer {
       const chat = wrapped ? (parsed as { chat?: unknown }).chat : undefined;
       this.chat = chat && Array.isArray((chat as ChatState).msgs) ? (chat as ChatState) : resetChat();
       this.resetSession(); // SRV-09
-      this.lastBossActionDay = this.game.week; // импортированная партия может быть моложе текущей (аудит 06.09)
       this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
       this.autosave(true);
       this.emit();
