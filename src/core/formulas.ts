@@ -44,18 +44,18 @@ export function weeklyPoints(
 }
 
 // распределение недельных очков по атрибутам с учётом осей направления
+// (09 §2.3: норму задаёт CONFIG.DIRECTION_NORM — 10 очков дают полный бонус, сумма распределённого усиливает эффект)
 export function distributePoints(
   weekly: number,
   direction: Record<string, number>,
   axisWeights: Record<string, Stats>,
 ): Stats {
   const out: Stats = { fun: 0, creativity: 0, graphics: 0, sound: 0 };
-  const dirTotal = Object.values(direction).reduce((a, b) => a + b, 0) || 1;
   const bonus = weekly * CONFIG.DIRECTION_BONUS;
   for (const [axis, pts] of Object.entries(direction)) {
     const w = axisWeights[axis];
     if (!w) continue;
-    const share = (pts / dirTotal) * bonus;
+    const share = (pts / CONFIG.DIRECTION_NORM) * bonus;
     out.fun += share * w.fun;
     out.creativity += share * w.creativity;
     out.graphics += share * w.graphics;

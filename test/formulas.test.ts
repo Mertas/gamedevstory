@@ -1,7 +1,7 @@
 // Юнит-тесты формул (09_Формулы_и_данные.md) — якоря из research.
 import { describe, expect, it } from 'vitest';
 import {
-  comboMult, debugRate, fanMult, judgeScore, pricePerCopy, projectCost,
+  comboMult, debugRate, distributePoints, fanMult, judgeScore, pricePerCopy, projectCost,
   reviewTotal, salesPlan, totalBugs, weeklyPoints, hypeMult,
 } from '../src/core/formulas';
 import { comboGrade } from '../src/core/systems/dev';
@@ -157,5 +157,39 @@ describe('персонал и время', () => {
     expect(fanMult(9900)).toBeLessThanOrEqual(3.0);
     expect(hypeMult(10, 10)).toBeCloseTo(0.9);
     expect(hypeMult(100, 100)).toBeCloseTo(1.8);
+  });
+});
+
+describe('направление (09 §2.3: 10 очков = норма)', () => {
+  // свои веса, чтобы тест не зависел от баланса данных: ось x → Fun, ось y → Creativity
+  const W = {
+    x: { fun: 1, creativity: 0, graphics: 0, sound: 0 },
+    y: { fun: 0, creativity: 1, graphics: 0, sound: 0 },
+  };
+
+  it('пустое направление — только база (70%)', () => {
+    const p = distributePoints(100, {}, W);
+    expect(p.fun).toBeCloseTo(28); // 70 × 0.4
+    expect(p.creativity).toBeCloseTo(21); // 70 × 0.3
+  });
+
+  it('10 распределённых очков = полный бонус (норма)', () => {
+    const p = distributePoints(100, { x: 10 }, W);
+    expect(p.fun).toBeCloseTo(28 + 30); // база + норма × вес
+  });
+
+  it('сумма усиливает эффект: 5 очков — половина, 20 — вдвое', () => {
+    expect(distributePoints(100, { x: 5 }, W).fun).toBeCloseTo(28 + 15);
+    expect(distributePoints(100, { x: 20 }, W).fun).toBeCloseTo(28 + 60);
+  });
+
+  it('две оси складываются по своим весам', () => {
+    const p = distributePoints(100, { x: 6, y: 4 }, W);
+    expect(p.fun).toBeCloseTo(28 + 18);
+    expect(p.creativity).toBeCloseTo(21 + 12);
+  });
+
+  it('ось без известных весов игнорируется', () => {
+    expect(distributePoints(100, { vibes: 10 }, W).fun).toBeCloseTo(28);
   });
 });

@@ -31,6 +31,7 @@ export const CONFIG = {
   DEV_STAT_FACTOR: 0.5, // очки/нед = стат × фактор
   DEV_COST_SCALE: 2.5, // масштаб стоимости: разработка ~100 дней (1 день = 1 сек на 1×)
   DIRECTION_BONUS: 0.3, // доля очков, распределяемая осями направления
+  DIRECTION_NORM: 10, // норма эффекта осей (09 §2.3): 10 очков = полный бонус, больше распределил — сильнее
   TYPE_COST_DEFAULT: 30, // K — M1: единая стоимость типа (TODO: точные из research/03 §4)
   GENRE_LV_COST_MULT: (lv: number) => 1 + 0.5 * lv,
   TYPE_LV_COST_MULT: (lv: number) => 1 + 0.3 * lv,

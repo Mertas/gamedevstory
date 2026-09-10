@@ -24,7 +24,9 @@ describe('buildDecisionPrompt: упор решает чат', () => {
     const text = promptText('John: делаем упор на нишевость и инновации\nNewb: согласен, ниша наше всё');
     expect(text).toContain('Обсуждение команды');
     expect(text).toContain('John: делаем упор на нишевость и инновации');
-    expect(text).toContain('сумма не больше 12');
+    expect(text).toContain('сумма РОВНО 12');
+    expect(text).toContain('распредели все доступные очки');
+    expect(text).toContain('свободных очков не оставляй');
     expect(text).toContain('Очки направления: 12');
     expect(text).toContain('УПОР в направлении выбери сам');
   });

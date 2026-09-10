@@ -5,6 +5,8 @@ import { ADS, TRAININGS } from '../data/db';
 import { CONSOLES, GENRES, TYPES } from '../data/db';
 import type { GameState, StartProjectInput } from '../types';
 import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
+import { DIRECTION_ORDER } from '../types';
+import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
 import {
   buyAdAction, dismissSalesmanAction, hireAction, levelUpAction, releaseAction, resolveBoostAction,
   resolveEventAction, resolveGamedexAction, startProjectAction, trainAction,
@@ -221,12 +223,14 @@ export function comboCostK(state: GameState, genreId: string, typeId: string, co
   return (g.costWan * 0.1 * (1 + 0.5 * genreLevel) + CONFIG.TYPE_COST_DEFAULT * (1 + 0.3 * typeLevel)) * c.costMult * CONFIG.MODE[mode].cost;
 }
 
-/** Упор по умолчанию для фолбэка без LLM: весь бюджет поровну в доступность и полировку
- *  (оси ≤ 8, как в визарде). При 10 очках — 5/5, при 12 — 6/6; лишнее сверх 16 не тратим. */
+/** Упор по умолчанию для фолбэка без LLM: доступность и полировка поровну, остаток —
+ *  пакетами по 8 в свободные оси. Весь пул распределяется полностью (ось ≤ 8, как в визарде). */
 function defaultDirection(state: GameState): Record<string, number> {
   const points = Math.max(0, state.directionPoints);
-  const approach = Math.min(8, Math.ceil(points / 2));
-  return { approach, polish: Math.min(8, points - approach) };
+  const approach = Math.min(DIRECTION_AXIS_MAX, Math.ceil(points / 2));
+  const direction = { approach, polish: Math.min(DIRECTION_AXIS_MAX, points - approach) };
+  topUpDirection(direction, points, DIRECTION_ORDER);
+  return direction;
 }
 
 /** Ввод проекта для автопилота-фолбэка: лучшая доступная комбинация + роли (как у политики). */

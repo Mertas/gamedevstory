@@ -623,7 +623,7 @@ export class GameServer {
       const { text } = await this.llm(buildDecisionPrompt(ctx, discussion), 800);
       if (cancelled()) return;
       const plan = parseDecision(text);
-      if (plan) fitDirection(plan, this.game.directionPoints); // LLM иногда тратит больше очков, чем есть
+      if (plan) fitDirection(plan, this.game.directionPoints); // приводим упор к бюджету: перерасход ужимаем, недобор добиваем до всего пула
       const err = plan ? validateDecision(plan, this.game) : 'не удалось разобрать JSON';
       if (err || !plan) {
         console.error('[gds] автопилот: решение LLM отклонено, фолбэк:', err ?? 'null');

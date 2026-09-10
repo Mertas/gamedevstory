@@ -5,8 +5,9 @@ import { GENRES, TYPES, CONSOLES } from '../core/data/db';
 import { comboGrade, consoleAvailable } from '../core/systems/dev';
 import { autopilotProjectInput, comboCostK } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
+import { DIRECTION_ORDER } from '../core/types';
 import type { GameState } from '../core/types';
-import type { AutopilotPlan } from '../shared/autopilot';
+import { topUpDirection, type AutopilotPlan } from '../shared/autopilot';
 
 /** Проверка решения LLM по правилам игры; null = ок, иначе текст ошибки. */
 export function validateDecision(plan: AutopilotPlan, state: GameState): string | null {
@@ -111,8 +112,9 @@ export function buildDecisionContext(state: GameState): {
   };
 }
 
-/** Ужать упор под бюджет игры: LLM иногда тратит больше очков, чем есть.
- *  Снимаем по одному с самой большой оси — топ-оси (сам упор) сохраняются. */
+/** Привести упор к бюджету партии. Перерасход ужимаем по одному с самой большой оси
+ *  (топ-оси упора сохраняются), недобор добиваем до полного пула (topUpDirection):
+ *  автопилот распределяет ВСЕ доступные очки — свободных не остаётся. */
 export function fitDirection(plan: AutopilotPlan, directionPoints: number): void {
   const dir = plan.direction ?? {};
   const axes = Object.keys(dir);
@@ -124,6 +126,7 @@ export function fitDirection(plan: AutopilotPlan, directionPoints: number): void
     dir[top] = (dir[top] ?? 0) - 1;
     spent--;
   }
+  topUpDirection(dir, directionPoints, DIRECTION_ORDER);
 }
 
 /** Политика автопилота: резолвит события и выпускает готовые игры, НО не стартует

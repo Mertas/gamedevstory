@@ -137,12 +137,23 @@ describe('автопилот: упор направления (решает LLM/
     expect(validateDecision(plan, g)).toBeNull(); // после ужатия решение проходит целиком
   });
 
-  it('fitDirection не трогает упор в пределах бюджета', () => {
+  it('fitDirection не трогает упор, когда бюджет распределён полностью', () => {
     const g = fresh();
-    const plan = validPlan(g);
+    const plan = validPlan(g); // готовый план занимает весь пул (10)
     const before = { ...plan.direction };
     fitDirection(plan, g.directionPoints);
     expect(plan.direction).toEqual(before);
+  });
+
+  it('fitDirection добивает недобор до полного пула (свободных очков не остаётся)', () => {
+    const g = fresh();
+    g.directionPoints = 20;
+    const plan = validPlan(g);
+    plan.direction = { niche: 6, innovation: 4 }; // LLM пожадничала — остаток добиваем
+    fitDirection(plan, g.directionPoints);
+    expect(plan.direction).toEqual({ cute: 4, niche: 8, innovation: 8 });
+    expect(Object.values(plan.direction).reduce((a, b) => a + b, 0)).toBe(20);
+    expect(validateDecision(plan, g)).toBeNull();
   });
 });
 
@@ -162,11 +173,22 @@ describe('фолбэк-политика: упор тратит весь бюдж
     expect(validateDecision(plan, g)).toBeNull();
   });
 
-  it('сверх двух осей лишнее не тратится: 18 → 8/8 (оси ≤ 8)', () => {
+  it('остаток сверх двух осей — пакетами в свободные оси: 18 → милота 2 + 8/8', () => {
     const g = fresh();
     g.directionPoints = 18;
     const plan = autopilotProjectInput(g)!;
-    expect(plan.direction).toEqual({ approach: 8, polish: 8 });
+    expect(plan.direction).toEqual({ cute: 2, approach: 8, polish: 8 });
+    expect(validateDecision(plan, g)).toBeNull();
+  });
+
+  it('большой пул (36) распределяется весь: ось ≤ 8, свободных нет', () => {
+    const g = fresh();
+    g.directionPoints = 36;
+    const plan = autopilotProjectInput(g)!;
+    const values = Object.values(plan.direction);
+    expect(values.reduce((a, b) => a + b, 0)).toBe(36);
+    expect(Math.max(...values)).toBeLessThanOrEqual(8);
+    expect(validateDecision(plan, g)).toBeNull();
   });
 });
 

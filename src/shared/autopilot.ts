@@ -31,6 +31,31 @@ export function planDirClicks(
   return clicks;
 }
 
+/** Максимум одной оси направления (как в визарде). */
+export const DIRECTION_AXIS_MAX = 8;
+
+/** Добить упор до бюджета партии: ведущие (ненулевые) оси — до максимума, затем свободные
+ *  оси «пакетами» по 8 в порядке списка (ось ≤ 8, как в визарде). Автопилот распределяет
+ *  ВЕСЬ доступный пул — свободных очков не остаётся. */
+export function topUpDirection(
+  direction: Record<string, number>,
+  directionPoints: number,
+  axes: readonly string[],
+): void {
+  let spent = Object.values(direction).reduce((a, b) => a + b, 0);
+  const raise = (axis: string, onlyExisting: boolean): void => {
+    if (spent >= directionPoints) return;
+    const cur = Math.max(0, Math.round(direction[axis] ?? 0));
+    if (cur >= DIRECTION_AXIS_MAX) return;
+    if (onlyExisting && cur <= 0) return;
+    const add = Math.min(DIRECTION_AXIS_MAX - cur, directionPoints - spent);
+    direction[axis] = cur + add;
+    spent += add;
+  };
+  for (const axis of axes) raise(axis, true); // ведущие оси упора — до максимума
+  for (const axis of axes) raise(axis, false); // свободные оси — пакетами по 8
+}
+
 /** Шаг хореографии: сервер описывает, клиент показывает мышкой. */
 export type AutopilotStep =
   | { kind: 'open'; app: string } // открыть окно приложения (id из APP_DEFS)
