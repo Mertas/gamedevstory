@@ -1,17 +1,18 @@
 // Игровая сессия на сервере: состояние + тикер + действия + чат-фазы (GigaChat) + автосейв.
-import { CONFIG, type HireMethodId } from '../core/config';
+import { type HireMethodId } from '../core/config';
 import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
-import { newGame, startProjectAction, tick } from '../core/engine';
+import { newGame, startProjectAction } from '../core/engine';
 import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type StartProjectInput } from '../core/types';
-import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
+import { avatarFor, chatSystem, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 import { buildLetterPrompt, buildMessages, buildDecisionPrompt, parseDecision, parseSingleMessage } from './chatgen';
 import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { buildDecisionContext, createAutopilotPolicy, fitDirection, validateDecision, autopilotProjectInput } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH } from './save';
-import { dispatchClientAction, MAX_SPEED } from './actions';
+import { dispatchClientAction } from './actions';
+import { GameTicker } from './ticker';
 
 /** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
 function dirSummary(direction: Record<string, number>): string {
@@ -86,7 +87,7 @@ export class GameServer {
   private story: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
   private saves: SaveManager;
   speed = 1;
-  private timer: NodeJS.Timeout | null = null;
+  private readonly ticker = new GameTicker(this);
   private listeners = new Set<(s: SessionSnapshot) => void>();
   private chatThread: ChatThread | null = null; // фазы чата в процессе генерации
   // SRV-11/12: очереди, а не одиночные слоты — второе сообщение/сцена не затирают первое
@@ -181,41 +182,9 @@ export class GameServer {
   }
 
   // ─── тикер ───
-  private lastPulse = 0; // последний state-пульс при висящем событии (пауза)
+  /** (пере)запуск тикера после смены скорости (цикл — в ticker.ts, SRV-22) */
   startTicker(): void {
-    if (this.timer) clearInterval(this.timer);
-    // SRV-01: кламп на случай любого источника (валидация set_speed — первая линия)
-    const clamped = Number.isFinite(this.speed) ? Math.min(Math.max(this.speed, 0), MAX_SPEED) : 1;
-    this.timer = setInterval(() => {
-      // SRV-07: исключение в тике не должно ронять процесс — лог + принудительный сейв
-      try {
-        if (this.speed <= 0 || this.game.bankrupt) return;
-        if (this.game.pendingEvent) {
-          // пульс: пока событие ждёт решения, шлём state ~раз в 1.5с. Клиент, потерявший
-          // попап (клик ушёл в оборванный WS), вернёт его; открытый попап не пересоздаётся
-          // (клиент сверяет evKey).
-          if (Date.now() - this.lastPulse >= 1500) {
-            this.lastPulse = Date.now();
-            this.emit();
-          }
-          // аудит 06.09: театр автопилота обязан работать И при висящем событии —
-          // иначе мышь не летит к «Выпустить игру», и событие никто не резолвит
-          this.maybeAutopilot();
-          return;
-        }
-        tick(this.game);
-        deliverChat(this.game, this.chat);
-        this.maybeTriggerPhases();
-        if (this.chatThread) void this.nextReply();
-        this.maybeMailLetters();
-        this.maybeAutopilot();
-        this.saves.autosave(this.game, this.chat);
-        this.emit();
-      } catch (e) {
-        console.error('[gds] ошибка тика (сервер продолжает работу):', String(e).slice(0, 300));
-        this.saves.autosave(this.game, this.chat, true);
-      }
-    }, Math.round(CONFIG.TICK_MS / Math.max(0.5, clamped)));
+    this.ticker.start();
   }
 
   // ─── действия игрока ───
@@ -308,7 +277,7 @@ export class GameServer {
     this.emit();
   }
 
-  private maybeAutopilot(): void {
+  maybeAutopilot(): void {
     const g = this.game;
     // (0) автопилот включается ТОЛЬКО кнопкой «Отдать управление» (таймаут простоя убран):
     // без явного включения виртуальная мышь и чат не работают — игра ждёт босса
@@ -421,7 +390,7 @@ export class GameServer {
   }
 
   // ─── чат: фазы по прогрессу ───
-  private maybeTriggerPhases(): void {
+  maybeTriggerPhases(): void {
     const g = this.game.activeGame;
     if (!g) return;
     if (!this.chat.phases.alpha && g.progress >= 0.4) {
@@ -455,6 +424,11 @@ export class GameServer {
   queuePlayerMessage(text: string): void {
     if (this.chatThread) this.pendingPlayers.push(text); // SRV-11: FIFO — все вопросы будут отвечены
     else this.startPlayerThread(text);
+  }
+
+  /** @internal для GameTicker: докрутить следующую реплику, если команда ещё пишет */
+  pumpChatThread(): void {
+    if (this.chatThread) void this.nextReply();
   }
 
   // игрок написал в чат: команда отвечает серией из 1..7 реплик (зависит от «объёма» вопроса)
@@ -541,7 +515,7 @@ export class GameServer {
   // ─── M5: письма фанатов ───
   // (1) LLM дописывает текст письма; (2) готовое письмо публикуется в ЧАТ целиком, и команда
   // реагирует серией реплик (фаза 'fanmail'); (3) если чат был занят — реакция откладывается.
-  private maybeMailLetters(): void {
+  maybeMailLetters(): void {
     // (1) LLM-текст: одно письмо за раз, не чаще раза в игровой день и не во время реплики чата
     if (!this.letterBusy && this.game.week >= this.letterNextAt && !this.chatThread?.busy) {
       const pending = this.game.mail.find((m) => !m.llm);
@@ -715,13 +689,17 @@ export class GameServer {
   // ─── сейвы ───
   /** SRV-08: принудительный сейв (SIGINT/SIGTERM/краш) — вызывается из server.ts */
   saveNow(): void {
-    this.saves.autosave(this.game, this.chat, true);
+    this.autosave(true);
+  }
+
+  /** @internal для GameTicker: обычный автосейв; force — в обход дебаунса по дням */
+  autosave(force = false): void {
+    this.saves.autosave(this.game, this.chat, force);
   }
 
   /** остановка тикера (тесты, graceful shutdown) */
   dispose(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
+    this.ticker.stop();
   }
 
   exportSave(): string {
