@@ -82,6 +82,8 @@ interface ChatThread {
   errors: number;
   openingDone?: boolean;
   openingFor?: string; // кто должен открыть серию (новичок представляется)
+  lines?: Array<{ author: string; text: string }>; // реплики этого диалога — память для следующих
+  spoken?: string[]; // кто уже говорил в этом диалоге — ротация
 }
 
 // ─── легаси: игра начата до введения счётчика вклада — восстановить приблизительно ───
@@ -803,12 +805,59 @@ export class GameServer {
     return null;
   }
 
-  private async fetchOneReply(t: NonNullable<ChatThread>, replyTo: string | undefined): Promise<void> {
-    const messages = buildMessages(t.phase, this.buildContext(t.phase, t.extra), replyTo, replyTo ? undefined : t.openingFor);
-    const { text } = await this.llm(messages, 600);
-    const parsed = parseSingleMessage(text);
+  /** Зачины недавних реплик (для «не повторяй»): реплики этого треда + доставленные в чат. */
+  private recentOpenings(t: ChatThread): string[] {
+    const parts = (t.lines ?? []).slice(-4).map((h) => h.text.slice(0, 60));
+    for (const m of [...this.chat.msgs].reverse()) {
+      if (m.system || m.author === 'Система' || m.author.endsWith('(фанат)')) continue;
+      parts.push(m.text.slice(0, 60));
+      if (parts.length >= 6) break;
+    }
+    return parts.slice(0, 6);
+  }
+
+  /** Ротация говорящих: сначала не говорившие в диалоге, затем самые молчаливые по игре. */
+  private silentFirstTeam(spoken: string[]): string[] {
+    const counts = new Map<string, number>();
+    for (const m of this.chat.msgs) {
+      if (m.system || m.author === 'Система' || m.author.endsWith('(фанат)')) continue;
+      counts.set(m.author, (counts.get(m.author) ?? 0) + 1);
+    }
+    return this.game.staff
+      .map((s) => s.name)
+      .filter((n) => !spoken.includes(n))
+      .sort((a, b) => (counts.get(a) ?? 0) - (counts.get(b) ?? 0));
+  }
+
+  private async fetchOneReply(t: NonNullable<ChatThread>, replyToParam: string | undefined): Promise<void> {
+    // память диалога + ротация говорящих (10.09.2026): реплика видит весь тред и недавние
+    // зачины, а не только последнюю строку; слово получают те, кто давно молчит
+    const lines = t.lines ?? [];
+    const lastLine = lines.length ? lines[lines.length - 1]! : null;
+    const replyTo = lastLine ? lastLine.text : replyToParam;
+    const spoken = t.spoken ?? [];
+    const silent = this.silentFirstTeam(spoken);
+    const ctx = this.buildContext(t.phase, t.extra);
+    const opts = {
+      replyTo,
+      openingFor: replyTo ? undefined : t.openingFor,
+      history: lines.slice(0, -1).slice(-6),
+      recent: this.recentOpenings(t),
+      spoken,
+      suggest: t.openingFor && !replyTo ? [] : silent.slice(0, 3),
+    };
+    const first = await this.llm(buildMessages(t.phase, ctx, opts), 600);
+    let parsed = parseSingleMessage(first.text);
+    // ротация: модель выбрала уже говорившего, хотя есть молчащие → один повтор с жёстким списком
+    if (parsed && replyTo && spoken.length > 0 && silent.length > 0 && spoken.includes(parsed.author)) {
+      const again = await this.llm(buildMessages(t.phase, ctx, { ...opts, hardRotate: true }), 600);
+      parsed = parseSingleMessage(again.text) ?? parsed;
+    }
     const valid = parsed && this.game.staff.some((s) => s.name === parsed.author) && parsed.text.length >= 4 && parsed.text.length <= 500;
     if (!valid || !parsed) throw new Error('нет валидной реплики');
+    // запомнили реплику и говорящего: следующие вызовы увидят историю и не повторят автора
+    t.lines = [...lines, { author: parsed.author, text: parsed.text }];
+    if (!spoken.includes(parsed.author)) t.spoken = [...spoken, parsed.author];
     const msg: ChatMsg = {
       week: this.game.week + (replyTo ? 2 : 1),
       author: parsed.author,

@@ -59,7 +59,26 @@ export function buildLetterPrompt(letter: {
   ];
 }
 
-export function buildMessages(phase: string, context: Record<string, unknown>, replyTo?: string, openingFor?: string): LlmMessage[] {
+/** Опции промпта чата: память диалога, анти-повтор зачинов, ротация говорящих (10.09.2026). */
+export interface ChatPromptOpts {
+  /** отвечаем на эту реплику; не задано — открытие серии */
+  replyTo?: string;
+  /** открытие: именно этот сотрудник представляется (новичок) */
+  openingFor?: string;
+  /** реплики этого диалога — следующая реплика «видит» беседу (память треда) */
+  history?: Array<{ author: string; text: string }>;
+  /** зачины недавних реплик — НЕ повторять */
+  recent?: string[];
+  /** кто уже говорил в этом диалоге */
+  spoken?: string[];
+  /** кому стоит дать слово: молчуны, по возрастанию болтливости */
+  suggest?: string[];
+  /** жёсткая ротация: автором может быть ТОЛЬКО кто-то из suggest */
+  hardRotate?: boolean;
+}
+
+export function buildMessages(phase: string, context: Record<string, unknown>, opts: ChatPromptOpts = {}): LlmMessage[] {
+  const { replyTo, openingFor } = opts;
   const staff = (context.staff as Array<{ id?: string; name: string; career: string; stats: { program: number; scenario: number; graphics: number; sound: number }; persona?: string | null }>) ?? [];
   const project = context.project as Record<string, unknown> | null;
   const facts = (context.facts ?? {}) as Record<string, unknown>;
@@ -79,6 +98,33 @@ export function buildMessages(phase: string, context: Record<string, unknown>, r
     : 'Проект: —';
 
   const factsLine = Object.keys(facts).length ? `Факты события: ${JSON.stringify(facts)}` : '';
+
+  // память диалога (10.09.2026): следующая реплика видит весь тред, а не только одну строку
+  const historyBlock = opts.history?.length
+    ? `Диалог до этого:\n${opts.history.map((h) => `${h.author}: «${h.text.slice(0, 220)}»`).join('\n')}`
+    : '';
+  // анти-повтор: раньше модель не видела своих фраз и зацикливала «Ёлки-палки» / «Да ладно тебе»
+  const recentBlock = opts.recent?.length
+    ? `Уже звучало в чате — НЕ повторяй эти зачины и шутки: ${opts.recent.map((r) => `«${r.trim()}»`).join('; ')}`
+    : '';
+  // ротация говорящих: слово получают молчуны, а не одни и те же двое
+  const rotationBlock =
+    opts.hardRotate && opts.suggest?.length
+      ? [
+          opts.spoken?.length ? `СТРОГО: ${opts.spoken.join(', ')} уже говорили в этом диалоге —` : 'СТРОГО:',
+          `сейчас автором должен быть ТОЛЬКО один из: ${opts.suggest.join(', ')}.`,
+        ].join(' ')
+      : opts.spoken?.length || opts.suggest?.length
+        ? [
+            opts.spoken?.length ? `В диалоге уже говорили: ${opts.spoken.join(', ')}.` : '',
+            opts.suggest?.length
+              ? opts.spoken?.length
+                ? `Дай слово тому, кто ещё НЕ говорил: ${opts.suggest.join(', ')}.`
+                : `Слово лучше дать одному из: ${opts.suggest.join(', ')}.`
+              : '',
+            'Сотрудник не отвечает сам себе и не говорит вторым подряд.',
+          ].filter(Boolean).join(' ')
+        : '';
 
   const replyBlock = replyTo
     ? `Последняя реплика: «${replyTo.slice(0, 400)}»`
@@ -101,9 +147,12 @@ export function buildMessages(phase: string, context: Record<string, unknown>, r
         projectLine,
         factsLine,
         `Деньги: ${String(context.money)}K, фанаты: ${String(context.fans)}, PR: ${String(context.research)}.`,
+        historyBlock,
+        recentBlock,
         replyBlock,
+        rotationBlock,
         replyTo
-          ? 'Верни JSON {"message":{"author":"Имя сотрудника","text":"реплика"}} — ТОЛЬКО ОДНО сообщение: один сотрудник живо отвечает на последнюю реплику (лучше не автор последнего сообщения).'
+          ? 'Верни JSON {"message":{"author":"Имя сотрудника","text":"реплика"}} — ТОЛЬКО ОДНО сообщение: один сотрудник живо отвечает, продолжая диалог (реагируй на суть последней реплики, не противоречь цифрам из «Факты события»).'
           : 'Верни JSON {"message":{"author":"Имя сотрудника","text":"реплика"}} — ТОЛЬКО ОДНО сообщение: один сотрудник открывает обсуждение.',
         'author — строго одно из имён сотрудников из списка. Без пояснений и markdown.',
       ].filter(Boolean).join('\n'),

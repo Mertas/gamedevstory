@@ -192,4 +192,27 @@ describe('GameServer: автопилот и чат', () => {
     srv.handle({ type: 'set_autopilot', on: false }); // кнопка «Взять управление»
     expect(srv.snapshot().autopilot).toBe(false);
   });
+
+  it('память диалога и ротация: реплика видит историю треда, повтор автора переспрашивается', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const chatPrompts: string[] = [];
+    let srvName = '';
+    const llm: LlmFn = async (messages) => {
+      const sys = messages[0]?.content ?? '';
+      if (sys.includes('старший сотрудник')) return new Promise<{ text: string; model: string }>(() => { /* решение «висит» — не мешает */ });
+      chatPrompts.push(messages[1]?.content ?? '');
+      return { text: JSON.stringify({ message: { author: srvName, text: 'Ёлки-палки, давайте уже работать!' } }), model: 'fake' };
+    };
+    srv = makeServer(llm);
+    srvName = srv.snapshot().game.staff[0]!.name; // все реплики — от одного: проверяем ротацию
+    srv.snapshot().game.money = 1e6;
+    srv.handle({ type: 'set_speed', v: 8 });
+    srv.handle({ type: 'set_autopilot', on: true });
+    for (let i = 0; i < 160 && chatPrompts.length < 4; i++) await vi.advanceTimersByTimeAsync(500);
+
+    expect(chatPrompts.length).toBeGreaterThanOrEqual(4); // открытие + реплики + повтор выбора автора
+    expect(chatPrompts.some((p) => p.includes('Диалог до этого:'))).toBe(true); // реплика видит тред
+    expect(chatPrompts.some((p) => p.includes('Ёлки-палки, давайте уже работать!'))).toBe(true); // история содержит реплику
+    expect(chatPrompts.some((p) => p.includes('СТРОГО:'))).toBe(true); // автор-повтор → жёсткая ротация
+  });
 });
