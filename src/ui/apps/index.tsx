@@ -4,10 +4,15 @@
 import { memo, type ComponentType } from 'react';
 import { ChatApp } from './ChatApp';
 import { CodeApp } from './CodeApp';
-import {
-  ArchiveApp, ContractsApp, HardwareApp, HelpApp, HireApp, MagazinesApp,
-  MailApp, MarketingApp, ResearchApp,
-} from './OtherApps';
+import { ArchiveApp } from './archive/Archive';
+import { ContractsApp } from './market/Contracts';
+import { HardwareApp } from './market/Hardware';
+import { HelpApp } from './help/Help';
+import { HireApp } from './hire/HireApp';
+import { MagazinesApp } from './archive/Magazines';
+import { MailApp } from './mail/Mail';
+import { MarketingApp } from './market/Marketing';
+import { ResearchApp } from './research/Research';
 
 export interface AppDef {
   id: string;

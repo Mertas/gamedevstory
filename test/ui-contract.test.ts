@@ -11,7 +11,8 @@ const read = (rel: string): string =>
 
 const staffCard = read('../src/ui/StaffCard.tsx');
 const cursor = read('../src/ui/AutopilotCursor.tsx');
-const codeApp = read('../src/ui/apps/CodeApp.tsx');
+// UI-08: визард вынесен из CodeApp.tsx в code/Wizard.tsx
+const wizard = read('../src/ui/apps/code/Wizard.tsx');
 
 describe('DOM-контракт автопилота и карточек', () => {
   it('StaffCard рендерит data-staff-id на корне .w95-staff-card', () => {
@@ -27,6 +28,6 @@ describe('DOM-контракт автопилота и карточек', () => 
 
   it('окно мастера опознаётся по якорю wiz-step-6 (скоуп поиска карточек)', () => {
     expect(cursor).toContain('[data-autopilot="wiz-step-6"]');
-    expect(codeApp).toContain('data-autopilot={`wiz-step-${s.id}`}');
+    expect(wizard).toContain('data-autopilot={`wiz-step-${s.id}`}');
   });
 });
