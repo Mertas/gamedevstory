@@ -134,7 +134,20 @@ export function buildMessages(phase: string, context: Record<string, unknown>, o
       (project.plot ? `\nСюжет игры: ${String(project.plot)}` : '')
     : 'Проект: —';
 
-  const factsLine = Object.keys(facts).length ? `Факты события: ${JSON.stringify(facts)}` : '';
+  // LLM-06(г): итоги релиза — человеческой строкой (score/units жили сырым JSON в «Факты события»)
+  const fmtCount = (v: unknown): string => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : String(v ?? '—');
+  };
+  const releaseParts = phase === 'release'
+    ? [
+        ...(facts.score != null ? [`рецензии ${String(facts.score)}/40`] : []),
+        ...(facts.units != null ? [`продажи ${fmtCount(facts.units)} копий`] : []),
+      ]
+    : [];
+  const factsLine = Object.keys(facts).length
+    ? releaseParts.length ? `Итоги релиза: ${releaseParts.join(', ')}.` : `Факты события: ${JSON.stringify(facts)}`
+    : '';
 
   // память диалога (10.09.2026): следующая реплика видит весь тред, а не только одну строку
   const historyBlock = opts.history?.length
@@ -270,19 +283,26 @@ export function parseDecision(text: string): AutopilotPlan | null {
   };
 }
 
-/** Разобрать одиночный ответ {"message":{"author":"...","text":"..."}} */
-export function parseSingleMessage(text: string): { author: string; text: string } | null {
+/** Разобрать одиночный ответ {"message":{"author":"...","text":"..."}}.
+ *  LLM-06(в): если модель ответила массивом messages (как просит системный промпт), берём
+ *  первую ВАЛИДНУЮ реплику, а не молча arr[0]; при avoidAuthor пропускаем того, кто говорил
+ *  последним — сотрудник не отвечает сам себе. */
+export function parseSingleMessage(text: string, avoidAuthor?: string): { author: string; text: string } | null {
   const json = extractJsonObject(text) as Record<string, unknown> | null;
   const m = json?.message as Record<string, unknown> | undefined;
   if (m && typeof m.author === 'string' && typeof m.text === 'string' && m.text.trim().length > 0) {
     return { author: m.author, text: m.text.trim() };
   }
-  // фолбэк: первый элемент messages
+  // фолбэк: массив messages — первая валидная реплика (раньше без проверок брался arr[0]:
+  // короткая/битая первая строка валила всю серию, хотя дальше были хорошие реплики)
   const arr = Array.isArray(json?.messages) ? (json.messages as Record<string, unknown>[]) : [];
-  if (arr[0] && typeof arr[0].author === 'string' && typeof arr[0].text === 'string') {
-    return { author: arr[0].author, text: arr[0].text.trim() };
-  }
-  return null;
+  const valid = arr.filter(
+    (r): r is { author: string; text: string } =>
+      r !== null && r !== undefined && typeof r.author === 'string' && typeof r.text === 'string'
+      && r.text.trim().length >= 4 && r.text.trim().length <= 500,
+  );
+  const pick = valid.find((r) => r.author.trim() !== avoidAuthor) ?? valid[0];
+  return pick ? { author: pick.author.trim(), text: pick.text.trim() } : null;
 }
 
 /** Извлечь JSON-объект из текста ответа (съедает markdown-обёртки и мусор). */

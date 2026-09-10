@@ -1,7 +1,7 @@
 // Промпт решения автопилота: упор направления выбирает LLM — по жанру/типу и обсуждению
 // команды в чате, а не по пришпиленному примеру (иначе каждый проект «упор: доступность+полировка»).
 import { describe, expect, it } from 'vitest';
-import { buildDecisionPrompt, buildLetterPrompt, buildMessages } from '../src/server/chatgen';
+import { buildDecisionPrompt, buildLetterPrompt, buildMessages, parseSingleMessage } from '../src/server/chatgen';
 
 const ctx = {
   team: 'John (proposal Lv1, id:john)',
@@ -129,6 +129,46 @@ describe('buildLetterPrompt: 4 тона писем', () => {
     const p = buildLetterPrompt({ ...base, sentiment: 'love', genre: 'Гонки' });
     expect(p[1]!.content).toContain('жанр: Гонки');
     expect(p[1]!.content).toContain('30/40');
+  });
+});
+
+// LLM-06(в,г): разбор массива реплик и человеческие итоги релиза (10.09.2026).
+describe('parseSingleMessage и итоги релиза (LLM-06 в,г)', () => {
+  it('массив messages: берём первую валидную, а не битый arr[0]', () => {
+    const raw = JSON.stringify({
+      messages: [
+        { author: 'Dee', text: 'ок' }, // 2 символа — невалидно
+        { author: 'Деидре', text: 'Продолжаю мысль дальше по существу вопроса.' },
+        { author: 'Newb', text: 'А я добавлю, что да.' },
+      ],
+    });
+    expect(parseSingleMessage(raw)).toEqual({ author: 'Деидре', text: 'Продолжаю мысль дальше по существу вопроса.' });
+  });
+
+  it('массив: пропускаем автора, говорившего последним (не отвечаем сами себе)', () => {
+    const raw = JSON.stringify({
+      messages: [
+        { author: 'Деидре', text: 'Реплику начну с этой фразы, всё по делу.' },
+        { author: 'Newb', text: 'А я добавлю пару слов про пиксели.' },
+      ],
+    });
+    expect(parseSingleMessage(raw, 'Деидре')).toEqual({ author: 'Newb', text: 'А я добавлю пару слов про пиксели.' });
+  });
+
+  it('объект {"message"} остаётся приоритетным', () => {
+    const raw = JSON.stringify({
+      message: { author: 'Newb', text: 'Одиночная реплика как просили.' },
+      messages: [{ author: 'Dee', text: 'Игнорируем этот массив.' }],
+    });
+    expect(parseSingleMessage(raw)).toEqual({ author: 'Newb', text: 'Одиночная реплика как просили.' });
+  });
+
+  it('итоги релиза — человеческой строкой, units не сырым JSON', () => {
+    const text = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 12000 } }, {})
+      .map((m) => m.content)
+      .join('\n');
+    expect(text).toContain('Итоги релиза: рецензии 33/40, продажи 12 000 копий.');
+    expect(text).not.toContain('"units"');
   });
 });
 

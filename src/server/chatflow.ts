@@ -195,11 +195,11 @@ export class ChatOrchestrator {
       suggest: t.openingFor && !replyTo ? [] : silent.slice(0, 3),
     };
     const first = await this.h.llm(buildMessages(t.phase, ctx, opts), 600);
-    let parsed = parseSingleMessage(first.text);
+    let parsed = parseSingleMessage(first.text, lastLine?.author); // LLM-06(в): не отвечаем сами себе
     // ротация: модель выбрала уже говорившего, хотя есть молчащие → один повтор с жёстким списком
     if (parsed && replyTo && spoken.length > 0 && silent.length > 0 && spoken.includes(parsed.author)) {
       const again = await this.h.llm(buildMessages(t.phase, ctx, { ...opts, hardRotate: true }), 600);
-      parsed = parseSingleMessage(again.text) ?? parsed;
+      parsed = parseSingleMessage(again.text, lastLine?.author) ?? parsed;
     }
     const valid = parsed && this.h.game.staff.some((s) => s.name === parsed.author) && parsed.text.length >= 4 && parsed.text.length <= 500;
     if (!valid || !parsed) throw new Error('нет валидной реплики');
