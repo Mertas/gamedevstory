@@ -7,9 +7,14 @@ import { WebSocketServer } from 'ws';
 import { PORT, HOST, gigaReady } from './config';
 import { GameServer, type ClientAction } from './game';
 import { llmStatus } from './giga';
+import { createSeqGuard } from './wire';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const DIST = path.join(ROOT, 'dist');
+
+// SRV-06: seq/ack на WS-канале — клиент повторяет недоставленные действия после обрыва
+// (очередь с TTL); guard отсекает уже обработанные (их ack потерялся вместе с сокетом).
+const seqGuard = createSeqGuard();
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -55,14 +60,29 @@ wss.on('connection', (ws, req) => {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'state', ...snap }));
   });
   ws.on('message', (raw) => {
+    let seq: number | undefined;
     try {
-      const msg = JSON.parse(String(raw)) as ClientAction;
+      const msg = JSON.parse(String(raw)) as ClientAction & { sid?: string; seq?: number };
+      seq = typeof msg.seq === 'number' ? msg.seq : undefined;
+      if (seqGuard.check(typeof msg.sid === 'string' ? msg.sid : null, seq) === 'dup') {
+        // SRV-06: повтор при переподключении — уже обрабатывали, только подтверждаем
+        ws.send(JSON.stringify({ type: 'action_result', seq, ok: true, dup: true }));
+        return;
+      }
       game.handle(msg);
       const ar = game.actionResult();
-      if (ar && !ar.ok) ws.send(JSON.stringify({ type: 'action_result', error: ar.error }));
+      const ok = !(ar && ar.ok === false);
+      // SRV-06: ack на каждое действие (не только на ошибку) — клиент снимает его с очереди
+      if (seq !== undefined) {
+        ws.send(JSON.stringify({ type: 'action_result', seq, ok, ...(ok ? {} : { error: ar?.error }) }));
+      } else if (!ok) {
+        ws.send(JSON.stringify({ type: 'action_result', error: ar?.error }));
+      }
     } catch (e) {
       console.error('[gds] WS-сообщение не обработано:', String(e).slice(0, 300));
-      ws.send(JSON.stringify({ type: 'action_result', error: String(e).slice(0, 200) }));
+      ws.send(JSON.stringify({
+        type: 'action_result', ...(seq !== undefined ? { seq } : {}), ok: false, error: String(e).slice(0, 200),
+      }));
     }
   });
   game.setStoryCb((res) => ws.send(JSON.stringify({ type: 'story_result', ...res })));

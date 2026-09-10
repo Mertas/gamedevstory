@@ -6,6 +6,7 @@ import type { GameState, StartProjectInput } from '../core/types';
 import type { ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 import type { AutopilotStep } from '../shared/autopilot';
+import { Outbox } from './outbox';
 
 export interface Snapshot {
   game: GameState | null;
@@ -20,6 +21,7 @@ let snap: Snapshot = {
   game: null, chat: { msgs: [], queue: [], phases: {} }, speed: 1, connected: false, meta: null, autopilot: false,
 };
 let actionError: string | null = null;
+let actionErrorVer = 0; // SRV-17: версия показа — повторный тот же текст тоже поднимает тост
 const listeners = new Set<() => void>();
 
 function emit(): void {
@@ -48,6 +50,29 @@ function subscribe(fn: () => void): () => void {
 // ─── WebSocket ───
 const WS_PORT = 3001;
 
+// SRV-06: sid — сессия страницы (новый при перезагрузке), seq — сквозной номер исходящего.
+// Сервер подтверждает каждое действие (action_result{seq}), повтор при переподключении
+// отсекается по sid+seq — клик из окна обрыва не теряется и не выполняется дважды.
+const SID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const outbox = new Outbox();
+let seqN = 0;
+
+/** «1 действие», «2 действия», «5 действий» */
+function actionsWord(n: number): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'действие';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'действия';
+  return 'действий';
+}
+
+/** SRV-17: общий канал ошибок (ошибки действий от сервера + сетевые сбои) — его показывает тост */
+function raiseError(text: string): void {
+  actionError = text;
+  actionErrorVer++;
+  emit();
+}
+
 function connect(): void {
   const ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}/ws`);
   (globalThis as { __gdsWs?: WebSocket }).__gdsWs = ws;
@@ -55,13 +80,17 @@ function connect(): void {
   // тикер молчит) state не придёт и потерянный клик не вернёт попап решения
   ws.onopen = () => {
     autopilotQueue.length = 0; // SRV-16: после реконнекта старые шаги мыши не доигрываем
+    // SRV-06: повторяем недоставленные действия (не старше TTL) — клик не пропадает молча
+    const { ready, dropped } = outbox.drain();
+    if (dropped > 0) raiseError(`Связь пропала: ${dropped} ${actionsWord(dropped)} не доставлено`);
+    for (const it of ready) ws.send(it.data);
     send({ type: 'get_state' });
   };
   ws.onmessage = (e) => {
     try {
       const d = JSON.parse(String(e.data)) as {
         type: string; game?: GameState; chat?: ChatState; speed?: number; data?: MetaData; error?: string;
-        ok?: boolean; title?: string; plot?: string; autopilot?: boolean; step?: unknown;
+        ok?: boolean; title?: string; plot?: string; autopilot?: boolean; step?: unknown; seq?: number;
       };
       if (d.type === 'meta' && d.data) {
         snap = { ...snap, meta: d.data };
@@ -84,9 +113,9 @@ function connect(): void {
         autopilotQueue.push(d.step as AutopilotStep);
         emit();
       }
-      if (d.type === 'action_result' && d.error) {
-        actionError = d.error;
-        emit();
+      if (d.type === 'action_result') {
+        if (typeof d.seq === 'number') outbox.ack(d.seq); // SRV-06: действие доставлено
+        if (d.error) raiseError(d.error);
       }
       if (d.type === 'story_result') {
         storyResult = {
@@ -106,14 +135,25 @@ function connect(): void {
 
 connect();
 
-function send(msg: unknown): void {
-  // сообщение кладём в очередь на случай переподключения — упрощённо: шлём при открытом сокете
+// SRV-06: подчистка очереди, если ack не пришёл при живой связи (старый сервер/потеря) —
+// offline-очередь не трогаем: её судьбу решает drain() при переподключении (с отчётом о потерях)
+window.setInterval(() => {
   const wss = (globalThis as { __gdsWs?: WebSocket }).__gdsWs;
-  if (wss?.readyState === WebSocket.OPEN) {
-    // действия виртуальной мыши автопилота помечаются autopilot:true (не выключают автопилот)
-    const auto = (globalThis as { __gdsAutopilot?: boolean }).__gdsAutopilot === true;
-    wss.send(JSON.stringify(auto ? { ...(msg as Record<string, unknown>), autopilot: true } : msg));
-  }
+  if (wss?.readyState === WebSocket.OPEN) outbox.prune();
+}, 5000);
+
+function send(msg: unknown): void {
+  // SRV-06: исходящее нумеруется (seq) и ждёт в очереди до ack сервера — закрытый сокет
+  // больше не означает потерю клика: при переподключении недоставленное уйдёт повторно
+  const seq = ++seqN;
+  // действия виртуальной мыши автопилота помечаются autopilot:true (не выключают автопилот)
+  const auto = (globalThis as { __gdsAutopilot?: boolean }).__gdsAutopilot === true;
+  const data = JSON.stringify({
+    ...(msg as Record<string, unknown>), sid: SID, seq, ...(auto ? { autopilot: true } : {}),
+  });
+  outbox.push(seq, data);
+  const wss = (globalThis as { __gdsWs?: WebSocket }).__gdsWs;
+  if (wss?.readyState === WebSocket.OPEN) wss.send(data);
 }
 
 // ─── хуки ───
@@ -138,6 +178,17 @@ export function useGameSelector<T>(sel: (g: GameState) => T): T {
 export function useActionError(): string | null {
   useSyncExternalStore(subscribe, () => actionError);
   return actionError;
+}
+
+/** SRV-17: версия ошибки — тост перезапускается, даже если текст не изменился */
+export function useActionErrorVer(): number {
+  useSyncExternalStore(subscribe, () => actionErrorVer);
+  return actionErrorVer;
+}
+
+/** показать ошибку клиента в общем канале (тост): сетевые сбои, потерянные действия */
+export function showClientError(text: string): void {
+  raiseError(text);
 }
 
 export function clearActionError(): void {
