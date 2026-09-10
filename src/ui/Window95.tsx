@@ -126,7 +126,7 @@ export const Window95 = memo(function Window95({ win, title, icon, iconUrl, focu
         width: win.maximized ? undefined : win.w,
         height: win.maximized ? undefined : win.h,
         zIndex: win.z,
-        display: win.minimized ? 'none' : undefined,
+        display: win.minimized || win.closed ? 'none' : undefined,
       }}
       onMouseDown={() => wm.focus(win.id)}
     >

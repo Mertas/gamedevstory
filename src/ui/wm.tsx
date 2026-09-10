@@ -13,6 +13,8 @@ export interface WinState {
   maximized: boolean;
   z: number;
   flash: boolean;
+  /** UI-07: окно закрыто игроком, но компонент жив (display:none) — состояние переживает закрытие */
+  closed: boolean;
 }
 
 interface WmApi {
@@ -66,9 +68,11 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       setActiveId(id);
       setWins((ws) => {
         if (ws.some((w) => w.id === id)) {
-          return ws.map((w) => (w.id === id ? { ...w, minimized: false, z: ++zCounter } : w));
+          // UI-07: открытие возвращает ту же инстанцию — состояние (визард/формы) сохраняется
+          return ws.map((w) => (w.id === id ? { ...w, minimized: false, closed: false, flash: false, z: ++zCounter } : w));
         }
-        const n = ws.length;
+        // UI-07: закрытые окна не занимают позиции каскада новых окон
+        const n = ws.filter((x) => !x.closed).length;
         const mem = memory.current.get(id);
         const vw = window.innerWidth;
         const vh = window.innerHeight - 30;
@@ -83,17 +87,23 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
           h: geo.h,
           minimized: false,
           maximized: false,
+          closed: false,
           z: ++zCounter,
           flash: false,
         }];
       });
     },
     close(id) {
+      // UI-07: закрытие НЕ размонтирует окно — ставим closed (hidden), открытие вернёт состояние
       setActiveId((cur: string | null) => (cur === id ? null : cur));
       setWins((ws) => {
-        const w = ws.find((x) => x.id === id);
-        if (w && !w.maximized) memory.current.set(id, { x: w.x, y: w.y, w: w.w, h: w.h });
-        return ws.filter((x) => x.id !== id);
+        const i = ws.findIndex((x) => x.id === id);
+        const w = i >= 0 ? ws[i] : undefined;
+        if (!w || w.closed) return ws;
+        if (!w.maximized) memory.current.set(id, { x: w.x, y: w.y, w: w.w, h: w.h });
+        const next = ws.slice();
+        next[i] = { ...w, closed: true, flash: false };
+        return next;
       });
     },
     focus(id) {

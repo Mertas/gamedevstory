@@ -348,8 +348,8 @@ export function Desktop() {
   const lastCount = useRef(chat.msgs.length);
   useEffect(() => {
     if (chat.msgs.length > lastCount.current) {
-      const win = wins.find((w) => w.id === 'chat');
-      if (win && !win.minimized && !(win.z === Math.max(...wins.map((x) => x.z)))) wm.flash('chat');
+      const win = wins.find((w) => w.id === 'chat' && !w.closed);
+      if (win && !win.minimized && !(win.z === Math.max(...wins.filter((x) => !x.closed).map((x) => x.z)))) wm.flash('chat');
       if (win?.minimized) wm.flash('chat');
     }
     lastCount.current = chat.msgs.length;
@@ -488,6 +488,8 @@ export function Desktop() {
         </button>
 
         {wins.map((w) => {
+          // UI-07: закрытые окна в таскбаре не показываем (состояние живёт скрыто)
+          if (w.closed) return null;
           const def = APP_DEFS.find((a) => a.id === w.id);
           const isActive = !winampActive && !w.minimized && activeId === w.id;
           return (

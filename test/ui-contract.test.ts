@@ -30,4 +30,13 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(cursor).toContain('[data-autopilot="wiz-step-6"]');
     expect(wizard).toContain('data-autopilot={`wiz-step-${s.id}`}');
   });
+
+  it('UI-07: закрытие окна сохраняет состояние (closed-флаг вместо размонтирования)', () => {
+    const wmSrc = read('../src/ui/wm.tsx');
+    const win95 = read('../src/ui/Window95.tsx');
+    const deskSrc = read('../src/ui/Desktop.tsx');
+    expect(wmSrc).toContain('closed: true');                  // close() помечает окно, а не удаляет
+    expect(win95).toContain('win.minimized || win.closed');   // скрытие через display:none — компонент жив
+    expect(deskSrc).toContain('if (w.closed) return null');   // таскбар не рисует закрытые окна
+  });
 });

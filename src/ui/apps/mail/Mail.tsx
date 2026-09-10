@@ -9,7 +9,7 @@ export function MailApp() {
   const wm = useWindows();
   const { wins } = useWinState();
   const mail = game.mail ?? [];
-  const mailOpen = wins.some((w) => w.id === 'mail' && !w.minimized);
+  const mailOpen = wins.some((w) => w.id === 'mail' && !w.minimized && !w.closed);
   const prevLen = useRef(0);
   // новое письмо при закрытом окне — подсветка кнопки в таскбаре (снимется при открытии)
   useEffect(() => {
