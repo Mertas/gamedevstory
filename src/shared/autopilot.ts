@@ -60,4 +60,8 @@ export function topUpDirection(
 export type AutopilotStep =
   | { kind: 'open'; app: string } // открыть окно приложения (id из APP_DEFS)
   | { kind: 'plan'; plan: AutopilotPlan } // заполнить визард значениями решения
-  | { kind: 'click'; target: string; label: string }; // мышка к элементу [data-autopilot]
+  // мышка к элементу [data-autopilot]; cosmetic — действие уже применено сервером:
+  // жмём «витринно» (волна+утопление) без повторного клика; quick — короткий перелёт
+  | { kind: 'click'; target: string; label: string; cosmetic?: boolean; quick?: boolean }
+  | { kind: 'card'; staffId: string; app: string; label?: string } // реальный клик по карточке в окне приложения
+  | { kind: 'select'; target: string; value: string; label?: string }; // выбор в <select> (напр. кому бустер)

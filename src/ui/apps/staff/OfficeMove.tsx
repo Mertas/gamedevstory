@@ -16,7 +16,7 @@ export function OfficeMove() {
     ].filter(Boolean) as string[];
     return (
       <div className="w95-row">
-        <button className="w95-btn" disabled={!ready || game.money < 600} onClick={() => actionMoveOffice()}>
+        <button className="w95-btn" disabled={!ready || game.money < 600} data-autopilot="office-move" onClick={() => actionMoveOffice()}>
           🏢 Переехать в офис 2 (600K)
         </button>
         <span className="w95-hint" style={{ color: ready ? undefined : '#000' }}>
@@ -35,7 +35,7 @@ export function OfficeMove() {
   ].filter(Boolean) as string[];
   return (
     <div className="w95-row">
-      <button className="w95-btn" disabled={!ready || game.money < 2500} onClick={() => actionMoveOffice()}>
+      <button className="w95-btn" disabled={!ready || game.money < 2500} data-autopilot="office-move" onClick={() => actionMoveOffice()}>
         🏢 Переехать в офис 3 (2,500K)
       </button>
       <span className="w95-hint">

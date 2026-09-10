@@ -40,6 +40,7 @@ export function TrainingTab() {
               <td>
                 <button
                   className="w95-btn"
+                  data-autopilot={`train-${t.id}`}
                   disabled={!trainStaffId || game.officeLevel < (t.office ?? 1)}
                   onClick={() => actionTrain(trainStaffId, t.id)}
                 >

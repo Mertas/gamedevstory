@@ -33,7 +33,7 @@ export function SalesmanPanel() {
               <tr key={b.id}>
                 <td>{b.label}</td>
                 <td>{price === undefined ? 'распродано' : `${price}K`}</td>
-                <td><button className="w95-btn" disabled={price === undefined || game.money < (price ?? 0)} onClick={() => actionBuyBooster(b.id)}>Купить</button></td>
+                <td><button className="w95-btn" data-autopilot={`booster-${b.id}`} disabled={price === undefined || game.money < (price ?? 0)} onClick={() => actionBuyBooster(b.id)}>Купить</button></td>
               </tr>
             );
           })}

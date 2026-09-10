@@ -31,6 +31,7 @@ export function HardwareApp() {
                     : (
                       <button
                         className="w95-btn"
+                        data-autopilot={`lic-${c.id}`}
                         disabled={(cs.availableAtWeek ?? 0) > game.week || game.money < c.licenseCost}
                         onClick={() => actionBuyLicense(c.id)}
                       >

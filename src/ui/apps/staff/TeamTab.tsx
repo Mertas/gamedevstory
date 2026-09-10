@@ -37,7 +37,7 @@ export function TeamTab() {
                 <td>{Math.round(st.salary * Math.pow(1.2, st.levelUps))}K</td>
                 <td>
                   {price && lv < 5 && (
-                    <button className="w95-btn" disabled={game.research < price} onClick={() => actionLevelUp(st.id)} title={`${price} PR`}>
+                    <button className="w95-btn" disabled={game.research < price} data-autopilot={`lvl-${st.id}`} onClick={() => actionLevelUp(st.id)} title={`${price} PR`}>
                       ⬆ Lv{lv + 1} ({price})
                     </button>
                   )}

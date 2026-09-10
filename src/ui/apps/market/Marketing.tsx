@@ -37,6 +37,7 @@ export function MarketingApp() {
                 <td>
                   <button
                     className="w95-btn"
+                    data-autopilot={`ad-${a.id}`}
                     title={why}
                     disabled={noOffice || poor || cost === 0 || exhausted}
                     onClick={() => actionBuyAd(a.id)}

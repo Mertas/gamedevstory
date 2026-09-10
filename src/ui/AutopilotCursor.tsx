@@ -17,6 +17,12 @@ const PRESS_MS = 200;
 const PAUSE_MS = 500; // после дальних кликов
 const PAUSE_QUICK_MS = 220; // после кликов внутри визарда
 const DIR_AXES = ['cute', 'realism', 'approach', 'niche', 'simple', 'innovation', 'world', 'polish'];
+/** человекочитаемые названия окон для ярлыка мыши */
+const APP_TITLES: Record<string, string> = {
+  chat: 'Чат', code: 'Код', hire: 'Найм', marketing: 'Маркетинг', hardware: 'Железо',
+  research: 'Исследования', archive: 'Архив', magazines: 'Журналы', contracts: 'Контракты',
+  mail: 'Почта', help: 'Справка',
+};
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
 export function AutopilotCursor() {
@@ -64,8 +70,10 @@ export function AutopilotCursor() {
       });
     };
 
-    /** нажать элемент: волна + утопление + настоящий клик */
-    const press = async (el: HTMLElement, quick: boolean): Promise<void> => {
+    /** нажать элемент: волна + утопление + настоящий клик.
+     *  cosmetic — «витринное» нажатие действий политики: действие уже применено сервером,
+     *  повторный клик применил бы его второй раз — жмём только визуально. */
+    const press = async (el: HTMLElement, quick: boolean, cosmetic = false): Promise<void> => {
       const r = el.getBoundingClientRect();
       setPressing(true);
       setRipple({ x: r.left + r.width / 2, y: r.top + r.height / 2, id: Date.now() });
@@ -74,35 +82,32 @@ export function AutopilotCursor() {
       el.classList.remove('w95-autopilot-press');
       setPressing(false);
       window.setTimeout(() => setRipple(null), 700);
-      const g = globalThis as { __gdsAutopilot?: boolean };
-      g.__gdsAutopilot = true;
-      try {
-        el.click();
-      } finally {
-        window.setTimeout(() => { g.__gdsAutopilot = false; }, 0);
+      if (!cosmetic) {
+        const g = globalThis as { __gdsAutopilot?: boolean };
+        g.__gdsAutopilot = true;
+        try {
+          el.click();
+        } finally {
+          window.setTimeout(() => { g.__gdsAutopilot = false; }, 0);
+        }
       }
       await sleep(quick ? PAUSE_QUICK_MS : PAUSE_MS);
     };
 
     /** полёт + клик по [data-autopilot=target]; false — элемент не найден */
-    const clickTarget = async (target: string, quick = true): Promise<boolean> => {
-      const el = await findTarget(target, 2500);
+    const clickTarget = async (target: string, quick = true, cosmetic = false): Promise<boolean> => {
+      const el = await findTarget(target, cosmetic ? 1500 : 2500);
       if (!el) return false;
       await flyTo(el, quick);
-      await press(el, quick);
+      await press(el, quick, cosmetic);
       return true;
     };
 
-    /** клик по карточке сотрудника: контракт с StaffCard — data-staff-id на корне карточки.
-     * Ищем ВИДИМУЮ карточку в окне мастера: тот же сотрудник может быть и в окне «Найм». */
-    const clickCard = async (staffId: string): Promise<void> => {
+    /** клик по карточке сотрудника: контракт с StaffCard — data-staff-id на корне карточки. */
+    const clickCardIn = async (scope: () => ParentNode, staffId: string, timeoutMs: number): Promise<void> => {
       const started = performance.now();
-      const wizardScope = (): ParentNode => {
-        const anchor = document.querySelector<HTMLElement>('[data-autopilot="wiz-step-6"]');
-        return anchor?.closest<HTMLElement>('.w95-window') ?? document;
-      };
       for (;;) {
-        for (const el of wizardScope().querySelectorAll<HTMLElement>(`[data-staff-id="${staffId}"]`)) {
+        for (const el of scope().querySelectorAll<HTMLElement>(`[data-staff-id="${staffId}"]`)) {
           const card = el.closest<HTMLElement>('.w95-staff-card');
           if (card && card.getClientRects().length > 0) {
             await flyTo(card, true);
@@ -110,9 +115,30 @@ export function AutopilotCursor() {
             return;
           }
         }
-        if (performance.now() - started >= 2000) return;
+        if (performance.now() - started >= timeoutMs) return;
         await sleep(120);
       }
+    };
+    /** скоуп окна мастера («Код»): тот же сотрудник может быть и в окне «Найм» */
+    const wizardScope = (): ParentNode => {
+      const anchor = document.querySelector<HTMLElement>('[data-autopilot="wiz-step-6"]');
+      return anchor?.closest<HTMLElement>('.w95-window') ?? document;
+    };
+    const clickCard = (staffId: string): Promise<void> => clickCardIn(wizardScope, staffId, 2000);
+    /** скоуп окна приложения по якорям его вкладок (шаг card: выбор сотрудника в «Найме») */
+    const appScope = (app: string): ParentNode => {
+      const anchor = document.querySelector<HTMLElement>(`[data-autopilot^="${app}-tab-"]`);
+      return anchor?.closest<HTMLElement>('.w95-window') ?? document;
+    };
+    /** выбрать значение в <select> (React-совместимо: нативный setter + bubbling change) */
+    const selectValue = async (target: string, value: string): Promise<void> => {
+      const el = await findTarget(target, 2000);
+      if (!(el instanceof HTMLSelectElement)) return;
+      await flyTo(el, true);
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+      if (setter) setter.call(el, value);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      await sleep(300);
     };
 
     const readDirValue = (ax: string): number => {
@@ -180,7 +206,7 @@ export function AutopilotCursor() {
     const playStep = async (step: AutopilotStep): Promise<void> => {
       if (!autoRef.current) return; // SRV-16: босс вернул управление — шаг не играем
       if (step.kind === 'open') {
-        setLabel(`Открываю ${step.app}`);
+        setLabel(`Открываю «${APP_TITLES[step.app] ?? step.app}»`);
         wm.current.open(step.app);
         await sleep(500);
         return;
@@ -189,8 +215,18 @@ export function AutopilotCursor() {
         await wizardShow(step.plan);
         return;
       }
+      if (step.kind === 'card') {
+        setLabel(step.label ?? 'Выбираю сотрудника');
+        await clickCardIn(() => appScope(step.app), step.staffId, 1500);
+        return;
+      }
+      if (step.kind === 'select') {
+        setLabel(step.label ?? 'Выбираю значение');
+        await selectValue(step.target, step.value);
+        return;
+      }
       setLabel(step.label);
-      await clickTarget(step.target, false);
+      await clickTarget(step.target, step.quick === true, step.cosmetic === true);
     };
 
     const iv = window.setInterval(() => {

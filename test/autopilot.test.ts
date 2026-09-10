@@ -1,14 +1,14 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it, vi } from 'vitest';
 import { newGame, startProjectAction, tick } from '../src/core/engine';
-import { AutopilotController, buildDecisionContext, createAutopilotPolicy, decisionReason, fitDirection, validateDecision } from '../src/server/autopilot';
+import { AutopilotController, buildDecisionContext, createAutopilotPolicy, decisionReason, fitDirection, policySteps, validateDecision } from '../src/server/autopilot';
 import type { AutopilotHost } from '../src/server/autopilot';
 import { ChatOrchestrator } from '../src/server/chatflow';
 import type { ChatThread } from '../src/server/game';
-import { autopilotProjectInput, sequelOpportunity } from '../src/core/sim/policy';
+import { autopilotProjectInput, sequelOpportunity, type PolicyAction } from '../src/core/sim/policy';
 import { resetChat } from '../src/shared/chat';
 import { planDirClicks } from '../src/shared/autopilot';
-import type { AutopilotPlan } from '../src/shared/autopilot';
+import type { AutopilotPlan, AutopilotStep } from '../src/shared/autopilot';
 import type { GameRecord, GameState } from '../src/core/types';
 
 function fresh(): GameState {
@@ -605,5 +605,103 @@ describe('AP-04: письма фанатов влияют на решения', 
     const ctx = buildDecisionContext(g);
     expect(ctx.fans).toContain('разгром');
     expect(ctx.fans).toContain('Гонки');
+  });
+});
+
+
+describe('видимость автопилота: журнал политики → шаги мыши', () => {
+  const busy = (g: GameState): void => { g.pendingEvent = { type: 'info', title: 'Тест', text: 'Событие' }; };
+
+  it('тренировка: журнал фиксирует её, шаги ведут в «Найм» → «Обучение» → карточка → тренинг', () => {
+    const g = fresh();
+    g.officeLevel = 3;
+    g.week = 28; // неделя обучения
+    g.money = 500;
+    g.research = 0;
+    g.staff[0]!.power = 5;
+    busy(g);
+    const pol = createAutopilotPolicy();
+    const journal: PolicyAction[] = [];
+    pol.turn(g, journal);
+    const train = journal.find((a) => a.type === 'train');
+    expect(train).toBeTruthy(); // тренировка реально применена
+    expect(g.pendingEvent).toBeNull(); // событие резолвнуто заодно
+    const steps = policySteps(journal, g);
+    expect(steps[0]).toEqual({ kind: 'open', app: 'hire' });
+    expect(steps.some((s) => s.kind === 'click' && s.target === 'hire-tab-training')).toBe(true);
+    const card = steps.find((s) => s.kind === 'card');
+    expect(card && card.kind === 'card' ? card.staffId : null).toBe(train && train.type === 'train' ? train.staffId : null);
+    const press = steps.find((s) => s.kind === 'click' && s.target.startsWith('train-'));
+    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(true);
+  });
+
+  it('левел-ап: в журнале только реально случившееся (нет ложного «office», нет найма без денег)', () => {
+    const g = fresh();
+    g.money = 0;
+    g.research = 90;
+    for (const s of g.staff) s.careers[s.activeCareer] = 1; // всем lv1: доступная цена апгрейда (15–55 PR)
+    busy(g);
+    const pol = createAutopilotPolicy();
+    const journal: PolicyAction[] = [];
+    pol.turn(g, journal);
+    const lvl = journal.find((a) => a.type === 'levelup'); // апгрейд у лучшего по скиллам — не обязательно staff[0]
+    expect(lvl).toBeTruthy();
+    expect(journal.some((a) => a.type === 'office')).toBe(false);
+    expect(journal.some((a) => a.type === 'hire')).toBe(false);
+    const steps = policySteps(journal, g);
+    const staffId = lvl && lvl.type === 'levelup' ? lvl.staffId : '';
+    const press = steps.find((s) => s.kind === 'click' && s.target === `lvl-${staffId}`);
+    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(true);
+  });
+
+  it('бустер: покупка у продавца + применение в окне «Код» (select + нажатие)', () => {
+    const g = fresh();
+    const sid = g.staff[0]!.id;
+    const steps = policySteps([{ type: 'booster', boosterType: 'fun', staffId: sid }], g);
+    expect(steps.map((s) => (s.kind === 'click' ? s.target : s.kind === 'select' ? `select:${s.target}` : s.kind))).toEqual([
+      'open', 'hire-tab-salesman', 'booster-fun', 'open', 'select:booster-staff', 'booster-use-fun',
+    ]);
+    const sel = steps.find((s) => s.kind === 'select');
+    expect(sel && sel.kind === 'select' ? sel.value : null).toBe(sid);
+  });
+
+  it('финальные нажатия действий политики — «витринные» (действие уже применено)', () => {
+    const g = fresh();
+    const steps = policySteps([
+      { type: 'ad', adId: 1 }, { type: 'license', consoleId: 'microx-sx' }, { type: 'office' },
+    ], g);
+    expect(steps.some((s) => s.kind === 'open' && s.app === 'marketing')).toBe(true);
+    expect(steps.some((s) => s.kind === 'open' && s.app === 'hardware')).toBe(true);
+    const finals = steps.filter((s) => s.kind === 'click' && !s.target.startsWith('hire-tab-'));
+    expect(finals.length).toBe(3);
+    expect(finals.every((s) => s.kind === 'click' && s.cosmetic === true)).toBe(true);
+  });
+
+  it('по таймауту события шаги политики уходят в emitStep (мышь сыграет их вживую)', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-09-10T12:00:00Z'));
+      const g = fresh();
+      g.officeLevel = 3;
+      g.week = 28;
+      g.money = 500;
+      g.staff[0]!.power = 5;
+      const base = makeHost(g);
+      const steps: AutopilotStep[] = [];
+      const host = { ...base.host, emitStep: (s: AutopilotStep) => { steps.push(s); } } as AutopilotHost;
+      const ap = new AutopilotController(host);
+      ap.startAutopilot();
+      host.autopilotOn = true;
+      g.pendingEvent = { type: 'info', title: 'Тест', text: 'Событие' };
+      ap.maybeAutopilot(); // начало «театра»: клик по попапу
+      vi.setSystemTime(new Date('2026-09-10T12:00:03Z')); // +3с — таймаут политики
+      ap.maybeAutopilot();
+      expect(g.pendingEvent).toBeNull();
+      expect(steps.some((s) => s.kind === 'open' && s.app === 'hire')).toBe(true);
+      expect(steps.some((s) => s.kind === 'click' && s.target === 'hire-tab-training')).toBe(true);
+      expect(steps.some((s) => s.kind === 'click' && s.target.startsWith('train-'))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

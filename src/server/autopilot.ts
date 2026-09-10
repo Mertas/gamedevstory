@@ -2,10 +2,10 @@
 // политика авто-резолва событий, и AutopilotController (SRV-22) — оркестрация сессии:
 // «театр» событий, обсуждение→решение, таймаут плана.
 import { CONFIG } from '../core/config';
-import { GENRES, TYPES, CONSOLES, consoleById, genreById, typeById } from '../core/data/db';
+import { GENRES, TYPES, CONSOLES, TRAININGS, ADS, consoleById, genreById, typeById } from '../core/data/db';
 import { startProjectAction } from '../core/engine';
 import { comboGrade, consoleAvailable } from '../core/systems/dev';
-import { autopilotProjectInput, comboCostK, sequelOpportunity } from '../core/sim/policy';
+import { autopilotProjectInput, comboCostK, sequelOpportunity, type PolicyAction } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../core/types';
 import type { GameRecord, GameState, StartProjectInput } from '../core/types';
@@ -159,20 +159,85 @@ export function fitDirection(plan: AutopilotPlan, directionPoints: number): void
 
 /** Политика автопилота: резолвит события и выпускает готовые игры, НО не стартует
  * проекты сам (решение — за чатом). Внутри — обычный «разумный игрок» из sim/policy. */
-export function createAutopilotPolicy(): { turn(state: GameState): void; stats: PolicyStats } {
+export function createAutopilotPolicy(): { turn(state: GameState, journal?: PolicyAction[]): void; stats: PolicyStats } {
   // SRV-04: политика резолвит события и выпускает игры, но НЕ стартует проекты (это делает чат)
   const player = createPlayer({ resolveOnly: true });
   const stats: PolicyStats = { hires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
   return {
     stats,
-    turn(state: GameState): void {
+    turn(state: GameState, journal?: PolicyAction[]): void {
       // вызываем только когда есть что резолвить (событие) или готово к релизу —
       // иначе политика сама стартовала бы свои проекты вместо решений чата
       const busy = !!state.pendingEvent || (state.activeGame?.phase === 'debug' && state.activeGame.bugs <= 5);
       if (!busy) return;
-      player.turn(state, stats);
+      player.turn(state, stats, journal);
     },
   };
+}
+
+/** Видимость автопилота (план «все действия видны»): журнал политики → шаги хореографии.
+ *  Действие уже применено сервером — финальные нажатия «витринные» (cosmetic), чтобы
+ *  повторный клик не применил тренинг/найм/рекламу во второй раз. */
+export function policySteps(journal: PolicyAction[], state: GameState): AutopilotStep[] {
+  const steps: AutopilotStep[] = [];
+  let app = '';
+  let tab = '';
+  const openApp = (a: string): void => {
+    if (app !== a) {
+      steps.push({ kind: 'open', app: a });
+      app = a;
+      tab = '';
+    }
+  };
+  const goTab = (t: 'team' | 'training' | 'salesman'): void => {
+    if (tab !== t) {
+      const label = t === 'team' ? 'Команда' : t === 'training' ? 'Обучение' : 'Продавец';
+      steps.push({ kind: 'click', target: `hire-tab-${t}`, label: `Вкладка «${label}»`, quick: true });
+      tab = t;
+    }
+  };
+  for (const a of journal) {
+    if (a.type === 'levelup') {
+      openApp('hire');
+      goTab('team');
+      const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотруднику';
+      steps.push({ kind: 'click', target: `lvl-${a.staffId}`, label: `Повышаю уровень: ${name}`, cosmetic: true, quick: true });
+    } else if (a.type === 'train') {
+      openApp('hire');
+      goTab('training');
+      const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотрудника';
+      steps.push({ kind: 'card', staffId: a.staffId, app: 'hire', label: `Тренинг для: ${name}` });
+      const t = TRAININGS.find((x) => x.id === a.trainingId);
+      steps.push({ kind: 'click', target: `train-${a.trainingId}`, label: `Тренинг: ${t?.nameRu ?? t?.name ?? a.trainingId}`, cosmetic: true, quick: true });
+    } else if (a.type === 'ad') {
+      openApp('marketing');
+      const ad = ADS.find((x) => x.id === a.adId);
+      steps.push({ kind: 'click', target: `ad-${a.adId}`, label: `Реклама: ${ad?.nameRu ?? ad?.name ?? a.adId}`, cosmetic: true, quick: true });
+    } else if (a.type === 'office') {
+      openApp('hire');
+      goTab('team');
+      steps.push({ kind: 'click', target: 'office-move', label: 'Переезжаю в новый офис', cosmetic: true, quick: true });
+    } else if (a.type === 'hire' && a.staffId) {
+      openApp('hire');
+      goTab('team');
+      const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'нового сотрудника';
+      steps.push({ kind: 'click', target: `hire-${a.staffId}`, label: `Принимаю в команду: ${name}`, cosmetic: true, quick: true });
+    } else if (a.type === 'license') {
+      openApp('hardware');
+      const c = CONSOLES.find((x) => x.id === a.consoleId);
+      steps.push({ kind: 'click', target: `lic-${a.consoleId}`, label: `Лицензия: ${c?.name ?? a.consoleId}`, cosmetic: true, quick: true });
+    } else if (a.type === 'booster') {
+      openApp('hire');
+      goTab('salesman');
+      steps.push({ kind: 'click', target: `booster-${a.boosterType}`, label: `Беру бустер (${a.boosterType})`, cosmetic: true, quick: true });
+      // применение — в окне «Код» (панель «Бустеры»): выбрать сотрудника и нажать
+      openApp('code');
+      const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотрудника';
+      steps.push({ kind: 'select', target: 'booster-staff', value: a.staffId, label: `Бустер — ${name}` });
+      steps.push({ kind: 'click', target: `booster-use-${a.boosterType}`, label: 'Применяю бустер', cosmetic: true, quick: true });
+    }
+  }
+  return steps;
 }
 
 export { autopilotProjectInput };
@@ -346,8 +411,11 @@ export class AutopilotController {
         const t = this.eventTarget();
         this.h.emitStep({ kind: 'click', target: t.target, label: t.label });
       } else if (Date.now() - this.pendingEventSince >= 2600) {
-        this.policy.turn(g);
+        const journal: PolicyAction[] = [];
+        this.policy.turn(g, journal);
         this.pendingEventSince = null;
+        // видимость: мышка показывает, что политика сделала «между делом» (прокачка/найм/реклама/…)
+        if (journal.length) for (const s of policySteps(journal, g)) this.h.emitStep(s);
         this.h.emit();
       }
     } else {

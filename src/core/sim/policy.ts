@@ -23,8 +23,18 @@ export interface PolicyStats {
 
 // Скриптованный игрок: контекст на запуск (lastCombo — без глобального состояния,
 // иначе прогоны не детерминированы)
+/** Видимость автопилота: что политика РЕАЛЬНО сделала за ход (сервер → шаги мыши). */
+export type PolicyAction =
+  | { type: 'levelup'; staffId: string }
+  | { type: 'train'; staffId: string; trainingId: number }
+  | { type: 'ad'; adId: number }
+  | { type: 'office' }
+  | { type: 'hire'; staffId?: string }
+  | { type: 'license'; consoleId: string }
+  | { type: 'booster'; boosterType: string; staffId: string };
+
 export interface ScriptedPlayer {
-  turn(state: GameState, stats: PolicyStats): void;
+  turn(state: GameState, stats: PolicyStats, journal?: PolicyAction[]): void;
 }
 
 export interface PlayerOptions {
@@ -36,7 +46,7 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
   let lastCombo: { genreId: string; typeId: string } | null = null;
 
   return {
-    turn(state: GameState, stats: PolicyStats): void {
+    turn(state: GameState, stats: PolicyStats, journal?: PolicyAction[]): void {
       // буст — принимаем с разумной ставкой (до 30 PR), продавца — прогоняем
       if (state.pendingEvent?.type === 'boost') {
         // аудит 05.09: ставка должна быть ≤ research И ≥ 1, иначе resolveBoost
@@ -48,7 +58,7 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
       }
       // AP-06: продавец — не просто «прогоняем»: пока он в городе, берём бустеры (при деньгах)
       if (state.pendingEvent?.type === 'salesman' || state.salesmanHere) {
-        buyBoosterForAutopilot(state);
+        buyBoosterForAutopilot(state, journal);
         if (state.pendingEvent?.type === 'salesman') dismissSalesmanAction(state);
       }
       // Gamedex: лучший доступный стенд (запас 300K на зарплаты), нет денег — не участвуем
@@ -76,7 +86,8 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
           if (lv >= 5) continue;
           const price = CONFIG.LEVEL_PR[s.activeCareer]?.[lv - 1];
           if (price && state.research >= price && price <= 55) {
-            levelUpAction(state, s.id);
+            const res = levelUpAction(state, s.id);
+            if (res.ok) journal?.push({ type: 'levelup', staffId: s.id });
             break;
           }
         }
@@ -89,7 +100,10 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
           // pinball (анлок Mahjong) раз в 12 недель, иначе anime
           const wantPinball = !state.unlockedTrainings.some((x) => x.includes('pachinko')) && state.week % 84 === 0;
           const t = TRAININGS.find((x) => x.id === (wantPinball ? 7 : 4));
-          if (t) trainAction(state, s.id, t.id);
+          if (t) {
+            const res = trainAction(state, s.id, t.id);
+            if (res.ok) journal?.push({ type: 'train', staffId: s.id, trainingId: t.id });
+          }
         }
       }
 
@@ -101,18 +115,27 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
             (state.adFansGained[a.id] ?? 0) < (CONFIG.AD_FAN_CAPS[a.id] ?? 0) &&
             state.money > (a.costWan ?? 0) / 10 + 300,
         );
-        if (ad) buyAdAction(state, ad.id);
+        if (ad) {
+          const res = buyAdAction(state, ad.id);
+          if (res.ok) journal?.push({ type: 'ad', adId: ad.id });
+        }
       }
 
       // AP-06: переезд офиса, когда движок считает готовым (год 4+/1000K, затем 7+/3500K) —
       // до найма, чтобы новые места были доступны уже в этом ходу
-      if (state.officeLevel < 3) moveOfficeAction(state);
+      if (state.officeLevel < 3) {
+        const res = moveOfficeAction(state);
+        if (res.ok) journal?.push({ type: 'office' });
+      }
 
       // найм: есть место и деньги; в бедности — только дешёвые кандидаты
       const capacity = CONFIG.OFFICE_CAPACITY[state.officeLevel];
       if (state.staff.length < capacity && state.money > 400 && state.week < 90) {
         const res = hireAction(state, 'word-of-mouth', { maxFee: state.money < 1000 ? 150 : undefined });
-        if (res.ok) stats.hires++;
+        if (res.ok) {
+          stats.hires++;
+          journal?.push({ type: 'hire', staffId: res.staffId });
+        }
       }
 
       // AP-06: лицензии — всё поступившее в продажу, по одной за ход, с резервом 800K
@@ -124,7 +147,10 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
             && consoleAvailable(state, c.id)
             && state.money - c.licenseCost >= 800;
         }).sort((a, b) => a.licenseCost - b.licenseCost)[0];
-        if (next && buyLicenseSafe(state, next.id)) stats.licenses++;
+        if (next && buyLicenseSafe(state, next.id)) {
+          stats.licenses++;
+          journal?.push({ type: 'license', consoleId: next.id });
+        }
       }
 
       // проект
@@ -154,7 +180,7 @@ function buyLicenseSafe(state: GameState, consoleId: string): boolean {
 
 // AP-06: бустеры у продавца — покупаем по одному за ход и сразу несём в текущую
 // разработку; цель — профильный сотрудник с неисчерпанным запасом (лимит 2 на тип)
-function buyBoosterForAutopilot(state: GameState): void {
+function buyBoosterForAutopilot(state: GameState, journal?: PolicyAction[]): void {
   if (!state.salesmanHere) return;
   const g = state.activeGame;
   if (!g || g.phase === 'released') return;
@@ -169,6 +195,7 @@ function buyBoosterForAutopilot(state: GameState): void {
   if (!pick) return;
   if (!buyBoosterAction(state, pick.type).ok) return;
   applyBoosterAction(state, pick.target, pick.type);
+  journal?.push({ type: 'booster', boosterType: pick.type, staffId: pick.target });
 }
 
 // AP-06: кому применять бустер — профильному сотруднику (полный эффект), иначе лучшему из любых

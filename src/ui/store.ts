@@ -224,9 +224,13 @@ export function useAutopilotQueueLen(): number {
   return useSyncExternalStore(subscribe, () => autopilotQueue.length);
 }
 
-/** взять первый шаг из очереди (null — пусто) */
+/** взять первый шаг из очереди (null — пусто).
+ *  Кнопки попапов (mb-*) — срочные: прыгают вперёд «витринных» шагов, иначе серверный
+ *  таймаут 2.6с закроет попап раньше, чем мышка до него доедет. */
 export function takeAutopilotStep(): AutopilotStep | null {
-  const s = autopilotQueue.shift() ?? null;
+  let idx = autopilotQueue.findIndex((s) => s.kind === 'click' && s.target.startsWith('mb-'));
+  if (idx < 0 && autopilotQueue.length > 0) idx = 0;
+  const s = idx >= 0 ? autopilotQueue.splice(idx, 1)[0]! : null;
   emit();
   return s;
 }

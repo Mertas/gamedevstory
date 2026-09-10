@@ -18,7 +18,7 @@ export function HireApp() {
     <div className="w95-panel" style={{ overflowY: 'auto', height: '100%', gap: 4 }}>
       <div className="w95-tabs">
         {([['team', 'Команда'], ['training', 'Обучение'], ['salesman', 'Продавец']] as const).map(([id, label]) => (
-          <button key={id} className={`w95-tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>{label}</button>
+          <button key={id} className={`w95-tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)} data-autopilot={`hire-tab-${id}`}>{label}</button>
         ))}
         {game.salesmanHere && <span style={{ color: '#c00000', fontSize: 10, alignSelf: 'center' }}>🛒 продавец здесь!</span>}
         <span className="w95-hint" style={{ fontSize: 10, alignSelf: 'center', marginLeft: 'auto', color: officeFull ? '#c00000' : undefined }}>

@@ -293,7 +293,7 @@ export function DevStatus() {
           <div className="w95-row">
             <b>🧪 Бустеры</b>
             <span className="w95-hint">(сотрудник)</span>
-            <select className="w95-input" value={boosterStaff} onChange={(e) => setBoosterStaff(e.target.value)}>
+            <select className="w95-input" data-autopilot="booster-staff" value={boosterStaff} onChange={(e) => setBoosterStaff(e.target.value)}>
               {game.staff.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
             </select>
           </div>
@@ -302,6 +302,7 @@ export function DevStatus() {
               <button
                 key={t}
                 className="w95-btn"
+                data-autopilot={`booster-use-${t}`}
                 disabled={!boosterStaff}
                 onClick={() => boosterStaff && actionUseBooster(boosterStaff, t)}
               >

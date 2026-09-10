@@ -57,6 +57,7 @@ export function SearchTab() {
                   <td>
                     <button
                       className="w95-btn"
+                      data-autopilot={`hire-${c.id}`}
                       disabled={officeFull || game.money < cfg.cost + c.hireFee}
                       onClick={() => actionHire(method, c.id)}
                       title={officeFull ? 'Офис заполнен — купите офис больше' : game.money < cfg.cost + c.hireFee ? `Нужно ${cfg.cost + Math.round(c.hireFee)}K` : `Нанять за ${cfg.cost + Math.round(c.hireFee)}K`}
