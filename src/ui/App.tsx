@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Desktop } from './Desktop';
 import { MessageBox } from './MessageBox';
+import { ActionToast } from './ActionToast';
 import {
   actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, clearDismissedEvKey,
   closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, useMessageBox, useSnapshot, type MessageBoxData,
@@ -186,6 +187,7 @@ export function App() {
       <EventWatcher />
       <Desktop />
       <MessageBox />
+      <ActionToast />
     </WindowManagerProvider>
   );
 }

@@ -268,3 +268,29 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   0% { transform: scale(0.3); opacity: 1; }
   100% { transform: scale(1.6); opacity: 0; }
 }
+
+/* ─── SRV-17: связь — индикатор обрыва и тост ошибок ─── */
+.w95-noconn {
+  display: inline-flex; align-items: center; padding: 1px 6px; background: #b00000; color: #fff;
+  font-size: 10px; animation: w95-noconn-blink 1.2s steps(2, start) infinite;
+}
+@keyframes w95-noconn-blink { 50% { background: #6e0000; } }
+
+.w95-noconn-banner {
+  position: fixed; top: 6px; left: 50%; transform: translateX(-50%); z-index: 9600;
+  background: #b00000; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 12px;
+  border: 2px solid; border-color: #ff9b9b #5e0000 #5e0000 #ff9b9b;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .35);
+}
+
+.w95-toast {
+  position: fixed; right: 8px; bottom: 36px; z-index: 9600; width: 300px; cursor: pointer;
+  background: var(--w95-face); border: 2px solid;
+  border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .4);
+}
+.w95-toast-bar {
+  height: 18px; display: flex; align-items: center; padding: 0 4px;
+  background: linear-gradient(90deg, #800000, #c00000); color: #fff; font-weight: 700; font-size: 11px;
+}
+.w95-toast-body { padding: 6px 8px; font-size: 11px; }

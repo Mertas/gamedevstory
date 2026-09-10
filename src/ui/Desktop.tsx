@@ -6,7 +6,7 @@ import { APP_DEFS } from './apps';
 import { WebampLayer } from './WebampLayer';
 import {
   actionSetAutopilot, actionTakeControl, exportSave, importSave, newGameAction, setSpeed, showClientError,
-  useAutopilot, useChat, useGame, useSpeed,
+  useAutopilot, useChat, useGame, useSnapshot, useSpeed,
 } from './store';
 import { typingName } from '../shared/chat';
 import { dateLabel, dayInYear } from '../shared/meta';
@@ -32,6 +32,7 @@ export function Desktop() {
   const chat = useChat();
   const speed = useSpeed();
   const autopilot = useAutopilot();
+  const connected = useSnapshot().connected; // SRV-17: индикация обрыва связи (трей + баннер)
   const [startOpen, setStartOpen] = useState(false);
   const startOpenRef = useRef(startOpen);
   startOpenRef.current = startOpen;
@@ -526,6 +527,9 @@ export function Desktop() {
         )}
 
         <div className="w95-tray">
+          {!connected && (
+            <span className="w95-noconn" title="Сервер недоступен — действия копятся и уйдут после переподключения">🔌 нет связи</span>
+          )}
           {typing && <span className="w95-hint" style={{ color: '#000080', marginRight: 6 }}>{typing} печатает…</span>}
           <button
             className="w95-btn"
@@ -552,6 +556,11 @@ export function Desktop() {
           </div>
         </div>
       </div>
+
+      {/* SRV-17: обрыв связи — баннер поверх стола, пока не переподключимся */}
+      {!connected && (
+        <div className="w95-noconn-banner">🔌 Нет связи с сервером — переподключение…</div>
+      )}
 
       {/* Пуск */}
       {startOpen && (
