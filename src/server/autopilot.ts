@@ -1,13 +1,19 @@
 // Автопилот (plan/14): серверная логика — валидация решения LLM, контекст решения,
-// политика авто-резолва событий. Оркестрация (таймеры, «театр») — в game.ts.
+// политика авто-резолва событий, и AutopilotController (SRV-22) — оркестрация сессии:
+// «театр» событий, обсуждение→решение, таймаут плана.
 import { CONFIG } from '../core/config';
-import { GENRES, TYPES, CONSOLES } from '../core/data/db';
+import { GENRES, TYPES, CONSOLES, consoleById, genreById, typeById } from '../core/data/db';
+import { startProjectAction } from '../core/engine';
 import { comboGrade, consoleAvailable } from '../core/systems/dev';
 import { autopilotProjectInput, comboCostK } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
-import { DIRECTION_ORDER } from '../core/types';
-import type { GameState } from '../core/types';
-import { topUpDirection, type AutopilotPlan } from '../shared/autopilot';
+import { DIRECTION_LABELS, DIRECTION_ORDER } from '../core/types';
+import type { GameState, StartProjectInput } from '../core/types';
+import { topUpDirection, type AutopilotPlan, type AutopilotStep } from '../shared/autopilot';
+import type { ChatState } from '../shared/chat';
+import { buildDecisionPrompt, parseDecision } from './chatgen';
+import type { ChatThread } from './game';
+import type { LlmFn } from './giga';
 
 /** Проверка решения LLM по правилам игры; null = ок, иначе текст ошибки. */
 export function validateDecision(plan: AutopilotPlan, state: GameState): string | null {
@@ -148,3 +154,189 @@ export function createAutopilotPolicy(): { turn(state: GameState): void; stats: 
 }
 
 export { autopilotProjectInput };
+
+/** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
+function dirSummary(direction: Record<string, number>): string {
+  const parts = DIRECTION_ORDER.filter((a) => (direction[a] ?? 0) > 0).map((a) => `${DIRECTION_LABELS[a]} ${direction[a]}`);
+  return parts.length ? `Упор: ${parts.join(', ')}.` : 'Без упора в направлении.';
+}
+
+/** Всё, что контроллеру автопилота нужно от сессии (GameServer подходит структурно). */
+export interface AutopilotHost {
+  game: GameState;
+  chat: ChatState;
+  llm: LlmFn;
+  autopilotOn: boolean;
+  decidedThisIdle: boolean;
+  pendingPlan: AutopilotPlan | null;
+  chatThread: ChatThread | null;
+  emit(): void;
+  emitStep(s: AutopilotStep): void;
+  pushSystem(text: string): void;
+  generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void>;
+}
+
+/** Оркестрация автопилота (SRV-22): «театр» событий, обсуждение→решение, таймаут плана. */
+export class AutopilotController {
+  private readonly policy = createAutopilotPolicy();
+  private deciding = false; // LLM-решение в процессе
+  private pendingDecision = false; // ждём конца обсуждения, чтобы вызвать решение
+  private pendingPlanDeadline = 0; // дедлайн самостоятельного старта, если клиент не нажал «Начать»
+  private lastHadActiveGame = false; // переход activeGame→null сбрасывает decidedThisIdle
+  private pendingEventSince: number | null = null; // «театр»: попап висит ~2.6с
+  private decisionEpoch = 0; // SRV-03: отмена решений автопилота (take_control во время LLM-запроса)
+
+  constructor(private readonly h: AutopilotHost) {}
+
+  /** Куда и что нажимает виртуальная мышь для текущего события (театр). */
+  private eventTarget(): { target: string; label: string } {
+    const ev = this.h.game.pendingEvent;
+    switch (ev?.type) {
+      case 'boost': return { target: 'mb-accept', label: 'Принять улучшение' };
+      case 'ready_to_release': return { target: 'mb-release', label: 'Выпустить игру' };
+      case 'gamedex': return { target: 'mb-none', label: 'Не участвовать' };
+      case 'salesman': return { target: 'mb-ok', label: 'Заглянуть' };
+      default: return { target: 'mb-ok', label: 'Ок' };
+    }
+  }
+
+  /** Ручное включение автопилота (кнопка «Отдать управление»): команда берётся за дело сама. */
+  startAutopilot(): void {
+    if (this.h.autopilotOn) return;
+    this.h.autopilotOn = true;
+    this.h.decidedThisIdle = false;
+    this.pendingDecision = false;
+    this.h.pushSystem('🤖 Босс отдал команде управление — решаем сами!');
+    this.h.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
+    this.h.emit();
+  }
+
+  /** Выключение автопилота: босс снова у руля; silent — без реплики «Босс вернулся» */
+  stopAutopilot(silent: boolean): void {
+    this.h.autopilotOn = false;
+    this.decisionEpoch++; // SRV-03: in-flight runDecision потеряет право ставить план
+    this.h.pendingPlan = null;
+    this.pendingPlanDeadline = 0;
+    this.deciding = false;
+    this.pendingDecision = false;
+    this.h.decidedThisIdle = false;
+    this.pendingEventSince = null;
+    if (!silent) {
+      this.h.pushSystem('🧑‍💼 Босс вернулся! Команда спешно делает вид, что всё это время усердно работала.');
+      void this.h.generatePhase('boss_back');
+    }
+    this.h.emit();
+  }
+
+  maybeAutopilot(): void {
+    const g = this.h.game;
+    // (0) автопилот включается ТОЛЬКО кнопкой «Отдать управление» (таймаут простоя убран):
+    // без явного включения виртуальная мышь и чат не работают — игра ждёт босса
+    if (!this.h.autopilotOn) return;
+
+    // (1) «театр» событий: попап висит ~2.6с реального времени — мышь (медленный полёт
+    // ~1.2с + поиск элемента) успевает нажать; не успела — политика резолвит сама,
+    // автопилот работает и без клиента
+    if (g.pendingEvent) {
+      if (this.pendingEventSince === null) {
+        this.pendingEventSince = Date.now();
+        const t = this.eventTarget();
+        this.h.emitStep({ kind: 'click', target: t.target, label: t.label });
+      } else if (Date.now() - this.pendingEventSince >= 2600) {
+        this.policy.turn(g);
+        this.pendingEventSince = null;
+        this.h.emit();
+      }
+    } else {
+      this.pendingEventSince = null;
+    }
+
+    // (2) обсуждение в чате → LLM-решение (один запрос со всеми параметрами)
+    // сброс decidedThisIdle: активная игра только что закончилась (релиз) → следующий
+    // раунд простоя снова решает чат (релиз политикой идёт мимо handle(), поэтому
+    // сбрасываем по переходу activeGame → null, а не по действию)
+    const hasActive = !!g.activeGame;
+    if (!hasActive && this.lastHadActiveGame) this.h.decidedThisIdle = false;
+    this.lastHadActiveGame = hasActive;
+    if (
+      !g.activeGame && !g.pendingEvent && !this.h.pendingPlan &&
+      !this.deciding && !this.pendingDecision && !this.h.decidedThisIdle
+    ) {
+      this.h.decidedThisIdle = true;
+      this.h.emitStep({ kind: 'open', app: 'chat' }); // после релиза — новое обсуждение тоже видно
+      void this.h.generatePhase('autopilot_discuss');
+      this.pendingDecision = true;
+    }
+    if (this.pendingDecision && !this.h.chatThread && !this.deciding) void this.runDecision();
+
+    // (3) таймаут плана: клиент не успел/не смог нажать «Начать» — стартуем сами
+    if (this.h.pendingPlan && !g.activeGame && !g.pendingEvent && Date.now() > this.pendingPlanDeadline) {
+      const plan = this.h.pendingPlan;
+      this.h.pendingPlan = null;
+      let res = startProjectAction(g, plan as StartProjectInput);
+      if (!res.ok) {
+        const fb = autopilotProjectInput(g);
+        if (fb) res = startProjectAction(g, fb);
+      }
+      this.h.emit();
+    }
+  }
+
+  /** Решение LLM: какую игру делать. Невалидно/молчит — детерминированный фолбэк. */
+  private async runDecision(): Promise<void> {
+    this.pendingDecision = false;
+    this.deciding = true;
+    // SRV-03: снимок эпохи — «Взять управление» во время LLM-запроса отменяет решение
+    const epoch = this.decisionEpoch;
+    const cancelled = (): boolean => !this.h.autopilotOn || epoch !== this.decisionEpoch;
+    const announce = (plan: AutopilotPlan): void => {
+      if (cancelled()) return;
+      this.h.pendingPlan = plan;
+      // клиентская хореография визарда — десятки реальных кликов (~15–35с) + генерация
+      // сюжета (до 25с ожидания LLM); фолбэк стартует сам только если клиента нет/завис
+      this.pendingPlanDeadline = Date.now() + 120000;
+      this.h.emitStep({ kind: 'open', app: 'code' });
+      // «plan» включает ВСЮ хореографию визарда, включая финальный клик «Начать»
+      this.h.emitStep({ kind: 'plan', plan });
+    };
+    try {
+      const ctx = buildDecisionContext(this.h.game);
+      // упор решает чат: решению отдаём последние реплики обсуждения (autopilot_discuss)
+      const discussion = this.h.chat.msgs
+        .filter((m) => !m.system)
+        .slice(-12)
+        .map((m) => `${m.author}: ${m.text.slice(0, 300)}`)
+        .join('\n');
+      const { text } = await this.h.llm(buildDecisionPrompt(ctx, discussion), 800);
+      if (cancelled()) return;
+      const plan = parseDecision(text);
+      if (plan) fitDirection(plan, this.h.game.directionPoints); // приводим упор к бюджету: перерасход ужимаем, недобор добиваем до всего пула
+      const err = plan ? validateDecision(plan, this.h.game) : 'не удалось разобрать JSON';
+      if (err || !plan) {
+        console.error('[gds] автопилот: решение LLM отклонено, фолбэк:', err ?? 'null');
+        const fb = autopilotProjectInput(this.h.game);
+        if (fb && !cancelled()) {
+          announce(fb);
+          this.h.pushSystem('📋 GigaChat не решился — команда выбрала сама (по старой доброй таблице комбо).');
+        }
+      } else {
+        const genre = genreById(plan.genreId);
+        const type = typeById(plan.typeId);
+        const con = consoleById(plan.consoleId);
+        if (cancelled()) return;
+        this.h.pushSystem(`📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
+        announce(plan);
+      }
+    } catch (e) {
+      console.error('[gds] автопилот: решение не получено, фолбэк:', String(e).slice(0, 200));
+      const fb = autopilotProjectInput(this.h.game);
+      if (fb && !cancelled()) {
+        announce(fb);
+        this.h.pushSystem('📋 GigaChat недоступен — команда решила по старинке.');
+      }
+    } finally {
+      this.deciding = false;
+      this.h.emit();
+    }
+  }
+}
