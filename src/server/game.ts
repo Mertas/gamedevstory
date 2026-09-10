@@ -2,13 +2,8 @@
 import { CONFIG, type HireMethodId } from '../core/config';
 import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
-import {
-  buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
-  changeCareerAction, dismissSalesmanAction, fireAction, hireAction, hireByIdAction, levelUpAction, moveOfficeAction, newGame,
-  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startOwnConsoleAction, startProjectAction,
-  takeContractAction, tick, trainAction, applyBoosterAction,
-} from '../core/engine';
-import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type GamedexOption, type StartProjectInput } from '../core/types';
+import { newGame, startProjectAction, tick } from '../core/engine';
+import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type StartProjectInput } from '../core/types';
 import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 import { buildLetterPrompt, buildMessages, buildDecisionPrompt, parseDecision, parseSingleMessage } from './chatgen';
@@ -16,9 +11,7 @@ import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { buildDecisionContext, createAutopilotPolicy, fitDirection, validateDecision, autopilotProjectInput } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH } from './save';
-
-// аудит 09.09 (SRV-01): скорость — конечное число в [0..MAX_SPEED]; иначе Math.round(1000/v)=0 → тик каждую 1 мс
-const MAX_SPEED = 8;
+import { dispatchClientAction, MAX_SPEED } from './actions';
 
 /** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
 function dirSummary(direction: Record<string, number>): string {
@@ -87,27 +80,27 @@ export interface GameServerDeps {
 }
 
 export class GameServer {
-  private game: GameState;
-  private chat: ChatState;
+  game: GameState;
+  chat: ChatState;
   private llm: LlmFn;
   private story: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
   private saves: SaveManager;
-  private speed = 1;
+  speed = 1;
   private timer: NodeJS.Timeout | null = null;
   private listeners = new Set<(s: SessionSnapshot) => void>();
   private chatThread: ChatThread | null = null; // фазы чата в процессе генерации
   // SRV-11/12: очереди, а не одиночные слоты — второе сообщение/сцена не затирают первое
   private pendingPlayers: string[] = [];
   private pendingPhases: { phase: string; extra?: Record<string, unknown>; openingFor?: string }[] = [];
-  private lastAction: { ok: boolean; error?: string } | null = null;
+  lastAction: { ok: boolean; error?: string } | null = null;
   // ─── автопилот (plan/14): включается только кнопкой, решение в чате, «театр» событий ───
-  private autopilotOn = false;
+  autopilotOn = false;
   private autopilotPolicy = createAutopilotPolicy();
-  private pendingPlan: AutopilotPlan | null = null; // решение, ждёт клика «Начать» клиента
+  pendingPlan: AutopilotPlan | null = null; // решение, ждёт клика «Начать» клиента
   private pendingPlanDeadline = 0;
   private deciding = false; // LLM-решение в процессе
   private pendingDecision = false; // ждём конца обсуждения, чтобы вызвать решение
-  private decidedThisIdle = false; // решение для текущего простоя уже сделано
+  decidedThisIdle = false; // решение для текущего простоя уже сделано
   private lastHadActiveGame = false; // переход activeGame→null сбрасывает decidedThisIdle
   private pendingEventSince: number | null = null; // «театр»: попап висит ~2.6с
   private decisionEpoch = 0; // SRV-03: отмена решений автопилота (take_control во время LLM-запроса)
@@ -115,7 +108,7 @@ export class GameServer {
   // письма фанатов: текст дописывает LLM (по одному, не чаще раза в игровой день)
   private letterBusy = false;
   private letterNextAt = 0;
-  private mailShownId = 0; // последнее письмо, опубликованное в чат
+  mailShownId = 0; // последнее письмо, опубликованное в чат
   private fanReplyQueued = false; // реакция команды ждёт свободного чата
 
   constructor(deps: GameServerDeps = {}) {
@@ -182,14 +175,14 @@ export class GameServer {
     };
   }
 
-  private emit(): void {
+  emit(): void {
     const snap = this.snapshot();
     for (const l of this.listeners) l(snap);
   }
 
   // ─── тикер ───
   private lastPulse = 0; // последний state-пульс при висящем событии (пауза)
-  private startTicker(): void {
+  startTicker(): void {
     if (this.timer) clearInterval(this.timer);
     // SRV-01: кламп на случай любого источника (валидация set_speed — первая линия)
     const clamped = Number.isFinite(this.speed) ? Math.min(Math.max(this.speed, 0), MAX_SPEED) : 1;
@@ -233,7 +226,7 @@ export class GameServer {
     return r;
   }
 
-  private run(res: { ok: boolean; error?: string; popup?: { title: string; text: string } }): void {
+  run(res: { ok: boolean; error?: string; popup?: { title: string; text: string } }): void {
     this.lastAction = res;
     // попап результата действия: если уже висит другое событие — откладываем
     if (res.ok && res.popup) {
@@ -248,7 +241,7 @@ export class GameServer {
   }
 
   /** генерация названия и сюжета через GigaChat (асинхронно, ответ — в storyCb) */
-  private async runStory(msg: { genreId: string; typeId: string }): Promise<void> {
+  async runStory(msg: { genreId: string; typeId: string }): Promise<void> {
     try {
       const g = genreById(msg.genreId);
       const t = typeById(msg.typeId);
@@ -260,197 +253,13 @@ export class GameServer {
     }
   }
 
+  /** SRV-22: диспетчер действий клиента — см. server/actions.ts */
   handle(msg: ClientAction): void {
-    this.lastAction = null;
-    // кнопка «Отдать управление»: ручное включение (таймаут простоя убран — сам не включается)
-    if (msg.type === 'set_autopilot') {
-      if (msg.on) this.startAutopilot();
-      else if (this.autopilotOn) this.stopAutopilot(false);
-      this.emit();
-      return;
-    }
-    // автопилот (plan/14): любое действие БОССА выключает авторежим; действия виртуальной
-    // мыши помечены autopilot:true и не выключают. take_control — с реакцией чата.
-    if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
-      if (this.autopilotOn) this.stopAutopilot(msg.type !== 'take_control');
-    }
-    if (msg.type === 'take_control') {
-      this.emit();
-      return;
-    }
-    switch (msg.type) {
-      case 'set_speed': {
-        // SRV-01: без валидации v=0/NaN/1e9 превращался в тик каждую 1 мс и уносил партию
-        const v = msg.v;
-        if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > MAX_SPEED) {
-          this.lastAction = { ok: false, error: `некорректная скорость: ${String(v)}` };
-          return;
-        }
-        this.speed = v;
-        this.startTicker();
-        this.emit();
-        return;
-      }
-      case 'new_game': {
-        this.game = newGame(Math.floor(Math.random() * 99991) + 1);
-        this.chat = resetChat();
-        this.resetSession(); // SRV-09: ответы старой партии не должны прилетать в новую
-        this.mailShownId = 0;
-        this.saves.autosave(this.game, this.chat, true);
-        this.emit();
-        return;
-      }
-      case 'start_project': {
-        const res = startProjectAction(this.game, msg.input);
-        this.run(res);
-        if (res.ok) {
-          this.pendingPlan = null; // клик «Начать» (или таймаут) — план применён
-          this.pushSystem('📦 Проект стартовал: разработка началась');
-          void this.generatePhase('kickoff');
-        }
-        this.emit();
-        return;
-      }
-      case 'release': {
-        const res = releaseAction(this.game);
-        this.run(res);
-        if (res.ok) {
-          if (this.autopilotOn) this.decidedThisIdle = false; // следующую игру снова решает чат
-          const g = this.game.history[this.game.history.length - 1];
-          this.pushSystem(`🚀 Релиз! ${g ? `Рецензии: ${g.score}/40${g.score >= CONFIG.HALL_OF_FAME ? ' — ЗАЛ СЛАВЫ!' : ''}` : ''}`);
-          void this.generatePhase('release', { score: g?.score ?? 0, units: g?.units ?? 0 });
-        }
-        this.emit();
-        return;
-      }
-      case 'hire': {
-        const opts = msg.maxFee !== undefined ? { maxFee: msg.maxFee } : undefined;
-        const res = msg.staffId
-          ? hireByIdAction(this.game, msg.method, msg.staffId, opts)
-          : hireAction(this.game, msg.method, opts);
-        this.run(res);
-        // новичок представляется в чате
-        if (res.ok && res.staffId) {
-          const hired = this.game.staff.find((x) => x.id === res.staffId);
-          if (hired) void this.generatePhase('hire', { hireName: hired.name }, hired.name);
-        }
-        this.emit();
-        return;
-      }
-      case 'fire':
-        this.run(fireAction(this.game, msg.staffId));
-        this.emit();
-        return;
-      case 'buy_license': {
-        const res = buyLicenseAction(this.game, msg.consoleId);
-        this.run(res);
-        if (res.ok) this.pushSystem('🔑 Куплена лицензия на консоль');
-        this.emit();
-        return;
-      }
-      case 'resolve_boost': {
-        const ev = this.game.pendingEvent;
-        const res = resolveBoostAction(this.game, msg.accept, msg.amount ?? (ev?.type === 'boost' ? ev.cost : undefined));
-        this.run(res);
-        // чат должен знать РЕАЛЬНЫЙ результат: смотрим outcome события-результата
-        const outcome = this.game.pendingEvent?.type === 'boost_result' ? this.game.pendingEvent.outcome : undefined;
-        if (ev?.type === 'boost' && msg.accept) {
-          this.pushSystem('💪 Улучшение применено');
-          if (outcome) void this.generatePhase('boost', { outcome });
-        }
-        this.emit();
-        return;
-      }
-      case 'resolve_salesman':
-        dismissSalesmanAction(this.game);
-        this.emit();
-        return;
-      case 'resolve_gamedex':
-        this.run(resolveGamedexAction(this.game, msg.option as GamedexOption));
-        this.emit(); // SRV-10: на паузе без emit() клиент не видел снятие события
-        return;
-      case 'resolve_event':
-        resolveEventAction(this.game);
-        this.emit();
-        return;
-      case 'generate_story':
-        this.runStory(msg);
-        return;
-      case 'get_state':
-        this.emit();
-        return;
-      // M3
-      case 'level_up':
-        this.run(levelUpAction(this.game, msg.staffId));
-        this.emit();
-        return;
-      case 'train':
-        this.run(trainAction(this.game, msg.staffId, msg.trainingId));
-        this.emit();
-        return;
-      // игрок пишет в чат → команда отвечает серией реплик (по одной, по очереди)
-      case 'chat_message': {
-        const text = msg.text.trim().slice(0, 400);
-        if (text.length >= 2) {
-          if (this.game.staff.length === 0) {
-            this.pushSystem('Пока некому отвечать — наймите первого сотрудника в окне «Найм».');
-          } else {
-            this.chat.msgs.push({ week: this.game.week, author: 'Вы', avatar: '', text, trigger: 'week' });
-            if (this.chatThread) {
-              this.pendingPlayers.push(text); // SRV-11: FIFO — все вопросы будут отвечены
-            } else {
-              this.startPlayerThread(text);
-            }
-          }
-        }
-        this.emit();
-        return;
-      }
-      case 'change_career':
-        this.run(changeCareerAction(this.game, msg.staffId, msg.target));
-        this.emit();
-        return;
-      case 'buy_booster': {
-        const res = buyBoosterAction(this.game, msg.booster);
-        this.run(res);
-        if (res.ok) this.pushSystem(`🧪 Куплен бустер (${msg.booster}) — примените в окне «Код»`);
-        this.emit();
-        return;
-      }
-      case 'use_booster':
-        this.run(applyBoosterAction(this.game, msg.staffId, msg.booster));
-        this.emit();
-        return;
-      case 'buy_dead_bull':
-        this.run(buyDeadBullAction(this.game, msg.staffId));
-        this.emit();
-        return;
-      case 'buy_career_manual':
-        this.run(buyCareerManualAction(this.game, msg.staffId, msg.target));
-        this.emit();
-        return;
-      case 'move_office':
-        this.run(moveOfficeAction(this.game));
-        this.emit();
-        return;
-      // M4
-      case 'buy_ad':
-        this.run(buyAdAction(this.game, msg.adId));
-        this.emit();
-        return;
-      case 'take_contract':
-        this.run(takeContractAction(this.game, msg.contractId, msg.staffIds));
-        this.emit();
-        return;
-      case 'start_own_console':
-        this.run(startOwnConsoleAction(this.game, msg.name, msg.kind, msg.cpu, msg.media));
-        this.emit();
-        return;
-    }
+    dispatchClientAction(this, msg);
   }
 
   // ─── автопилот (plan/14) ───
-  private stopAutopilot(silent: boolean): void {
+  stopAutopilot(silent: boolean): void {
     this.autopilotOn = false;
     this.decisionEpoch++; // SRV-03: in-flight runDecision потеряет право ставить план
     this.pendingPlan = null;
@@ -467,7 +276,7 @@ export class GameServer {
   }
 
   /** SRV-09: сброс сессионной чат-машины при новой игре/импорте сейва. */
-  private resetSession(): void {
+  resetSession(): void {
     this.chatThread = null;
     this.pendingPlayers = [];
     this.pendingPhases = [];
@@ -489,7 +298,7 @@ export class GameServer {
   }
 
   /** Ручное включение автопилота (кнопка «Отдать управление»): команда берётся за дело сама. */
-  private startAutopilot(): void {
+  startAutopilot(): void {
     if (this.autopilotOn) return;
     this.autopilotOn = true;
     this.decidedThisIdle = false;
@@ -629,7 +438,7 @@ export class GameServer {
     }
   }
 
-  private async generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void> {
+  async generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void> {
     // чат занят (отвечает игроку / идёт другая фаза) — встаём в очередь
     if (this.chatThread) {
       // SRV-12: очередь сцен (FIFO, лимит 5) — события не схлопываются в одно
@@ -640,6 +449,12 @@ export class GameServer {
     const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : phase === 'autopilot_discuss' ? 3 : phase === 'boss_back' ? 4 : 5; // ответов после открывающей
     this.chatThread = { phase, extra: extra ?? {}, left, busy: false, nextAt: this.game.week, errors: 0, openingFor };
     void this.nextReply();
+  }
+
+  /** SRV-22: реплика игрока — в очередь FIFO, если команда ещё отвечает (вызывает диспетчер). */
+  queuePlayerMessage(text: string): void {
+    if (this.chatThread) this.pendingPlayers.push(text); // SRV-11: FIFO — все вопросы будут отвечены
+    else this.startPlayerThread(text);
   }
 
   // игрок написал в чат: команда отвечает серией из 1..7 реплик (зависит от «объёма» вопроса)
@@ -712,7 +527,7 @@ export class GameServer {
   }
 
   /** Системная запись: если в очереди есть недоставленные сообщения — встаёт за ними (очередь). */
-  private pushSystem(text: string): void {
+  pushSystem(text: string): void {
     if (this.chat.queue.length === 0) {
       chatSystem(this.game, this.chat, text);
       return;
