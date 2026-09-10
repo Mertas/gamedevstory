@@ -194,6 +194,10 @@ export interface AutopilotHost {
   chat: ChatState;
   llm: LlmFn;
   autopilotOn: boolean;
+  /** AP-07: текущая скорость игры — автопилот держит ускоренный темп и меняет его сам */
+  speed: number;
+  /** AP-07: смена скорости на хосте (валидация/эмит/перезапуск тикера — там же) */
+  setSpeed(v: number): void;
   decidedThisIdle: boolean;
   pendingPlan: AutopilotPlan | null;
   chatThread: ChatThread | null;
@@ -212,6 +216,9 @@ export class AutopilotController {
   private lastHadActiveGame = false; // переход activeGame→null сбрасывает decidedThisIdle
   private pendingEventSince: number | null = null; // «театр»: попап висит ~2.6с
   private decisionEpoch = 0; // SRV-03: отмена решений автопилота (take_control во время LLM-запроса)
+  private speedBefore = 1; // AP-07: скорость до включения автопилота (в неё вернём контроль)
+  private autoTarget = 4; // AP-07: ускоренный темп между событиями (4-8×, ниже не опускаем)
+  private loweredForEvent = false; // AP-07: мы сами уронили до 1× ради драматургии события
 
   constructor(private readonly h: AutopilotHost) {}
 
@@ -233,6 +240,10 @@ export class AutopilotController {
     this.h.autopilotOn = true;
     this.h.decidedThisIdle = false;
     this.pendingDecision = false;
+    // AP-07: адаптивный темп — команда не ползёт на 1×; уже разогнанные 8× не опускаем
+    this.speedBefore = this.h.speed;
+    this.autoTarget = Math.max(4, this.h.speed);
+    if (this.h.speed < this.autoTarget) this.h.setSpeed(this.autoTarget);
     this.h.pushSystem('🤖 Босс отдал команде управление — решаем сами!');
     this.h.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
     this.h.emit();
@@ -248,6 +259,9 @@ export class AutopilotController {
     this.pendingDecision = false;
     this.h.decidedThisIdle = false;
     this.pendingEventSince = null;
+    // AP-07: вернуть человеческий темп — но только если автопилот его сам и держал
+    this.loweredForEvent = false;
+    if (this.h.speed === this.autoTarget && this.h.speed !== this.speedBefore) this.h.setSpeed(this.speedBefore);
     if (!silent) {
       this.h.pushSystem('🧑‍💼 Босс вернулся! Команда спешно делает вид, что всё это время усердно работала.');
       void this.h.generatePhase('boss_back');
@@ -265,6 +279,11 @@ export class AutopilotController {
     // ~1.2с + поиск элемента) успевает нажать; не успела — политика резолвит сама,
     // автопилот работает и без клиента
     if (g.pendingEvent) {
+      // AP-07: событие — это драматургия: тормозим до 1×, чтобы попап и чат «сыграли» вживую
+      if (!this.loweredForEvent && this.h.speed > 1) {
+        this.loweredForEvent = true;
+        this.h.setSpeed(1);
+      }
       if (this.pendingEventSince === null) {
         this.pendingEventSince = Date.now();
         const t = this.eventTarget();
@@ -276,6 +295,11 @@ export class AutopilotController {
       }
     } else {
       this.pendingEventSince = null;
+      // AP-07: событие закрылось — если темп роняли мы, возвращаем ускорение
+      if (this.loweredForEvent) {
+        this.loweredForEvent = false;
+        if (this.h.speed === 1) this.h.setSpeed(this.autoTarget);
+      }
     }
 
     // (2) обсуждение в чате → LLM-решение (один запрос со всеми параметрами)

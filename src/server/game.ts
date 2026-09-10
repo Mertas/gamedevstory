@@ -11,7 +11,7 @@ import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { AutopilotController } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH } from './save';
-import { dispatchClientAction } from './actions';
+import { dispatchClientAction, MAX_SPEED } from './actions';
 import { GameTicker } from './ticker';
 import { ChatOrchestrator } from './chatflow';
 import { MailService } from './mail';
@@ -177,6 +177,14 @@ export class GameServer {
   /** (пере)запуск тикера после смены скорости (цикл — в ticker.ts, SRV-22) */
   startTicker(): void {
     this.ticker.start();
+  }
+
+  /** AP-07: смена скорости из автопилота (адаптивный темп) — та же валидация, что у set_speed */
+  setSpeed(v: number): void {
+    if (!Number.isFinite(v) || v < 0 || v > MAX_SPEED) return;
+    this.speed = v;
+    this.startTicker();
+    this.emit();
   }
 
   // ─── действия игрока ───

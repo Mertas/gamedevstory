@@ -1,8 +1,10 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it } from 'vitest';
-import { newGame, tick } from '../src/core/engine';
-import { createAutopilotPolicy, decisionReason, fitDirection, validateDecision } from '../src/server/autopilot';
+import { newGame, startProjectAction, tick } from '../src/core/engine';
+import { AutopilotController, createAutopilotPolicy, decisionReason, fitDirection, validateDecision } from '../src/server/autopilot';
+import type { AutopilotHost } from '../src/server/autopilot';
 import { autopilotProjectInput, sequelOpportunity } from '../src/core/sim/policy';
+import { resetChat } from '../src/shared/chat';
 import { planDirClicks } from '../src/shared/autopilot';
 import type { AutopilotPlan } from '../src/shared/autopilot';
 import type { GameState } from '../src/core/types';
@@ -345,5 +347,75 @@ describe('автопилот: политика-обёртка', () => {
     const ap = createAutopilotPolicy();
     ap.turn(g);
     expect(g.history.length).toBe(1);
+  });
+});
+
+describe('AP-07: адаптивный темп (скорость при автопилоте)', () => {
+  function makeHost(g: GameState) {
+    const speedLog: number[] = [];
+    const host = {
+      game: g,
+      chat: resetChat(),
+      llm: async () => ({ text: '', model: 'test' }),
+      autopilotOn: false,
+      speed: 1,
+      setSpeed(v: number) { host.speed = v; speedLog.push(v); },
+      decidedThisIdle: false,
+      pendingPlan: null,
+      chatThread: null,
+      emit() {},
+      emitStep() {},
+      pushSystem() {},
+      generatePhase: async () => {},
+    };
+    return { host: host as AutopilotHost, speedLog };
+  }
+
+  function hostWithGame() {
+    const g = fresh();
+    expect(startProjectAction(g, autopilotProjectInput(g)!).ok).toBe(true); // активная игра — обсуждение не побежит
+    return makeHost(g);
+  }
+
+  it('старт ускоряет до 4×, уже разогнанные 8× не сбавляет', () => {
+    const h1 = makeHost(fresh());
+    new AutopilotController(h1.host).startAutopilot();
+    expect(h1.host.speed).toBe(4);
+    expect(h1.speedLog).toEqual([4]);
+    const h2 = makeHost(fresh());
+    h2.host.speed = 8;
+    new AutopilotController(h2.host).startAutopilot();
+    expect(h2.host.speed).toBe(8); // ставку не опускаем
+    expect(h2.speedLog).toEqual([]);
+  });
+
+  it('событие — на 1×, после закрытия возвращается ускорение', () => {
+    const h = hostWithGame();
+    const ap = new AutopilotController(h.host);
+    ap.startAutopilot();
+    expect(h.host.speed).toBe(4);
+    h.host.game.pendingEvent = { type: 'info', title: 'Тест', text: 'Событие' };
+    ap.maybeAutopilot();
+    expect(h.host.speed).toBe(1); // драматургия: попап смотрим на человеческой скорости
+    h.host.game.pendingEvent = null;
+    ap.maybeAutopilot();
+    expect(h.host.speed).toBe(4); // событие закрылось — команда снова гонит время
+    expect(h.speedLog).toEqual([4, 1, 4]);
+  });
+
+  it('«Взять управление» возвращает темп, который был у босса', () => {
+    const h = hostWithGame();
+    const ap = new AutopilotController(h.host);
+    ap.startAutopilot();
+    expect(h.host.speed).toBe(4);
+    ap.stopAutopilot(true);
+    expect(h.host.speed).toBe(1); // босс вернулся — время снова на его усмотрение
+    // если босс сам крутил скорость при автопилоте — его выбор не трогаем
+    const h2 = hostWithGame();
+    const ap2 = new AutopilotController(h2.host);
+    ap2.startAutopilot();
+    h2.host.speed = 2;
+    ap2.stopAutopilot(true);
+    expect(h2.host.speed).toBe(2);
   });
 });

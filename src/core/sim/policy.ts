@@ -5,11 +5,13 @@ import { ADS, TRAININGS } from '../data/db';
 import { CONSOLES, GENRES, TYPES } from '../data/db';
 import type { GameState, StartProjectInput } from '../types';
 import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
+import { BOOSTER_KEY_JOB, boosterPrice } from '../systems/progression';
 import { DIRECTION_ORDER } from '../types';
 import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
 import {
-  buyAdAction, dismissSalesmanAction, hireAction, levelUpAction, releaseAction, resolveBoostAction,
-  resolveEventAction, resolveGamedexAction, startProjectAction, trainAction,
+  applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, hireAction, levelUpAction,
+  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction,
+  startProjectAction, trainAction,
 } from '../engine';
 
 export interface PolicyStats {
@@ -44,7 +46,11 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         resolveBoostAction(state, accept, amount);
         if (accept) stats.boostAccepts++;
       }
-      if (state.pendingEvent?.type === 'salesman') dismissSalesmanAction(state);
+      // AP-06: продавец — не просто «прогоняем»: пока он в городе, берём бустеры (при деньгах)
+      if (state.pendingEvent?.type === 'salesman' || state.salesmanHere) {
+        buyBoosterForAutopilot(state);
+        if (state.pendingEvent?.type === 'salesman') dismissSalesmanAction(state);
+      }
       // Gamedex: лучший доступный стенд (запас 300K на зарплаты), нет денег — не участвуем
       if (state.pendingEvent?.type === 'gamedex') {
         const afford = (Object.entries(CONFIG.GAMEDEX_OPTIONS) as Array<[keyof typeof CONFIG.GAMEDEX_OPTIONS, (typeof CONFIG.GAMEDEX_OPTIONS)[keyof typeof CONFIG.GAMEDEX_OPTIONS]]>)
@@ -98,6 +104,10 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         if (ad) buyAdAction(state, ad.id);
       }
 
+      // AP-06: переезд офиса, когда движок считает готовым (год 4+/1000K, затем 7+/3500K) —
+      // до найма, чтобы новые места были доступны уже в этом ходу
+      if (state.officeLevel < 3) moveOfficeAction(state);
+
       // найм: есть место и деньги; в бедности — только дешёвые кандидаты
       const capacity = CONFIG.OFFICE_CAPACITY[state.officeLevel];
       if (state.staff.length < capacity && state.money > 400 && state.week < 90) {
@@ -105,9 +115,16 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         if (res.ok) stats.hires++;
       }
 
-      // лицензия на Microx SX при достатке
-      if (state.money > 1500 && !state.consoles['microx-sx']?.licensed) {
-        if (buyLicenseSafe(state, 'microx-sx')) stats.licenses++;
+      // AP-06: лицензии — всё поступившее в продажу, по одной за ход, с резервом 800K
+      // на жизнь (раньше — только Microx SX; она остаётся первой как самая дешёвая)
+      if (state.money > 1500) {
+        const next = CONSOLES.filter((c) => {
+          const cs = state.consoles[c.id];
+          return !!cs && !cs.licensed && c.licenseCost > 0
+            && consoleAvailable(state, c.id)
+            && state.money - c.licenseCost >= 800;
+        }).sort((a, b) => a.licenseCost - b.licenseCost)[0];
+        if (next && buyLicenseSafe(state, next.id)) stats.licenses++;
       }
 
       // проект
@@ -133,6 +150,34 @@ function buyLicenseSafe(state: GameState, consoleId: string): boolean {
   state.money -= c.licenseCost;
   cs.licensed = true;
   return true;
+}
+
+// AP-06: бустеры у продавца — покупаем по одному за ход и сразу несём в текущую
+// разработку; цель — профильный сотрудник с неисчерпанным запасом (лимит 2 на тип)
+function buyBoosterForAutopilot(state: GameState): void {
+  if (!state.salesmanHere) return;
+  const g = state.activeGame;
+  if (!g || g.phase === 'released') return;
+  const options: Array<{ type: string; price: number; target: string }> = [];
+  for (const type of CONFIG.BOOSTER_TYPES) {
+    const price = boosterPrice(state, type);
+    if (price === null || state.money < price + 1000) continue; // резерв 1000K на жизнь
+    const target = boosterTarget(state, type);
+    if (target) options.push({ type, price, target });
+  }
+  const pick = options.sort((a, b) => a.price - b.price)[0];
+  if (!pick) return;
+  if (!buyBoosterAction(state, pick.type).ok) return;
+  applyBoosterAction(state, pick.target, pick.type);
+}
+
+// AP-06: кому применять бустер — профильному сотруднику (полный эффект), иначе лучшему из любых
+function boosterTarget(state: GameState, type: string): string | null {
+  const keyJob = BOOSTER_KEY_JOB[type];
+  const alive = [...state.staff]
+    .filter((s) => (s.boosterUses[type] ?? 0) < 2)
+    .sort((a, b) => b.power - a.power);
+  return (alive.find((s) => s.activeCareer === keyJob) ?? alive[0])?.id ?? null;
 }
 
 interface ComboCandidate {

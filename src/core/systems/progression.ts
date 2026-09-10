@@ -148,7 +148,8 @@ export function dismissSalesman(state: GameState): void {
   if (state.pendingEvent?.type === 'salesman') state.pendingEvent = null;
 }
 
-function boosterPrice(state: GameState, type: string): number | null {
+// AP-06: цену бустера спрашивает и политика автопилота (policy.ts) — не только продавец
+export function boosterPrice(state: GameState, type: string): number | null {
   const n = state.boosterPurchases[type] ?? 0;
   const row = BOOSTER_PRICES.find((b) => b.office === state.officeLevel && b.purchaseNo === n + 1);
   return row?.price ?? null;
@@ -171,7 +172,8 @@ export function buyBooster(state: GameState, type: string): ActionResult {
 const BOOSTER_ATTR: Record<string, 'fun' | 'creativity' | 'graphics' | 'sound'> = {
   fun: 'fun', creativity: 'creativity', graphics: 'graphics', sound: 'sound',
 };
-const BOOSTER_KEY_JOB: Record<string, CareerId> = {
+// AP-06: профильные профессии бустеров — экспорт для политики (выбор цели применения)
+export const BOOSTER_KEY_JOB: Record<string, CareerId> = {
   fun: 'coder', creativity: 'writer', graphics: 'designer', sound: 'sound',
 };
 
