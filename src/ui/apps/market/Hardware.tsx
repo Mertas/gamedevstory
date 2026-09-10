@@ -27,7 +27,7 @@ export function HardwareApp() {
                 <td>{c.licenseCost === 0 ? 'бесплатно' : `${Math.round(c.licenseCost)}K`}</td>
                 <td>
                   {cs.licensed
-                    ? <span style={{ color: '#008000' }}>куплена</span>
+                    ? <span style={{ color: '#008000' }} data-autopilot={`lic-${c.id}`}>куплена</span>
                     : (
                       <button
                         className="w95-btn"
