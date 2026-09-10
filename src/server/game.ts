@@ -347,7 +347,7 @@ export class GameServer {
         this.run(res);
         if (res.ok) {
           this.pendingPlan = null; // клик «Начать» (или таймаут) — план применён
-          chatSystem(this.game, this.chat, '📦 Проект стартовал: разработка началась');
+          this.pushSystem('📦 Проект стартовал: разработка началась');
           void this.generatePhase('kickoff');
         }
         this.emit();
@@ -359,7 +359,7 @@ export class GameServer {
         if (res.ok) {
           if (this.autopilotOn) this.decidedThisIdle = false; // следующую игру снова решает чат
           const g = this.game.history[this.game.history.length - 1];
-          chatSystem(this.game, this.chat, `🚀 Релиз! ${g ? `Рецензии: ${g.score}/40${g.score >= CONFIG.HALL_OF_FAME ? ' — ЗАЛ СЛАВЫ!' : ''}` : ''}`);
+          this.pushSystem(`🚀 Релиз! ${g ? `Рецензии: ${g.score}/40${g.score >= CONFIG.HALL_OF_FAME ? ' — ЗАЛ СЛАВЫ!' : ''}` : ''}`);
           void this.generatePhase('release', { score: g?.score ?? 0, units: g?.units ?? 0 });
         }
         this.emit();
@@ -386,7 +386,7 @@ export class GameServer {
       case 'buy_license': {
         const res = buyLicenseAction(this.game, msg.consoleId);
         this.run(res);
-        if (res.ok) chatSystem(this.game, this.chat, '🔑 Куплена лицензия на консоль');
+        if (res.ok) this.pushSystem('🔑 Куплена лицензия на консоль');
         this.emit();
         return;
       }
@@ -397,7 +397,7 @@ export class GameServer {
         // чат должен знать РЕАЛЬНЫЙ результат: смотрим outcome события-результата
         const outcome = this.game.pendingEvent?.type === 'boost_result' ? this.game.pendingEvent.outcome : undefined;
         if (ev?.type === 'boost' && msg.accept) {
-          chatSystem(this.game, this.chat, '💪 Улучшение применено');
+          this.pushSystem('💪 Улучшение применено');
           if (outcome) void this.generatePhase('boost', { outcome });
         }
         this.emit();
@@ -435,7 +435,7 @@ export class GameServer {
         const text = msg.text.trim().slice(0, 400);
         if (text.length >= 2) {
           if (this.game.staff.length === 0) {
-            chatSystem(this.game, this.chat, 'Пока некому отвечать — наймите первого сотрудника в окне «Найм».');
+            this.pushSystem('Пока некому отвечать — наймите первого сотрудника в окне «Найм».');
           } else {
             this.chat.msgs.push({ week: this.game.week, author: 'Вы', avatar: '', text, trigger: 'week' });
             if (this.chatThread) {
@@ -455,7 +455,7 @@ export class GameServer {
       case 'buy_booster': {
         const res = buyBoosterAction(this.game, msg.booster);
         this.run(res);
-        if (res.ok) chatSystem(this.game, this.chat, `🧪 Куплен бустер (${msg.booster}) — примените в окне «Код»`);
+        if (res.ok) this.pushSystem(`🧪 Куплен бустер (${msg.booster}) — примените в окне «Код»`);
         this.emit();
         return;
       }
@@ -502,7 +502,7 @@ export class GameServer {
     this.decidedThisIdle = false;
     this.pendingEventSince = null;
     if (!silent) {
-      chatSystem(this.game, this.chat, '🧑‍💼 Босс вернулся! Команда спешно делает вид, что всё это время усердно работала.');
+      this.pushSystem('🧑‍💼 Босс вернулся! Команда спешно делает вид, что всё это время усердно работала.');
       void this.generatePhase('boss_back');
     }
     this.emit();
@@ -536,7 +536,7 @@ export class GameServer {
     this.autopilotOn = true;
     this.decidedThisIdle = false;
     this.pendingDecision = false;
-    chatSystem(this.game, this.chat, '🤖 Босс отдал команде управление — решаем сами!');
+    this.pushSystem('🤖 Босс отдал команде управление — решаем сами!');
     this.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
     this.emit();
   }
@@ -630,14 +630,14 @@ export class GameServer {
         const fb = autopilotProjectInput(this.game);
         if (fb && !cancelled()) {
           announce(fb);
-          chatSystem(this.game, this.chat, '📋 GigaChat не решился — команда выбрала сама (по старой доброй таблице комбо).');
+          this.pushSystem('📋 GigaChat не решился — команда выбрала сама (по старой доброй таблице комбо).');
         }
       } else {
         const genre = genreById(plan.genreId);
         const type = typeById(plan.typeId);
         const con = consoleById(plan.consoleId);
         if (cancelled()) return;
-        chatSystem(this.game, this.chat, `📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
+        this.pushSystem(`📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
         announce(plan);
       }
     } catch (e) {
@@ -645,7 +645,7 @@ export class GameServer {
       const fb = autopilotProjectInput(this.game);
       if (fb && !cancelled()) {
         announce(fb);
-        chatSystem(this.game, this.chat, '📋 GigaChat недоступен — команда решила по старинке.');
+        this.pushSystem('📋 GigaChat недоступен — команда решила по старинке.');
       }
     } finally {
       this.deciding = false;
@@ -734,7 +734,7 @@ export class GameServer {
     if (t.left > 0 && t.errors < 3) return;
     this.chatThread = null;
     // LLM-02: серия оборвалась из-за ошибок LLM — игрок должен это видеть
-    if (t.errors >= 3) chatSystem(this.game, this.chat, '📡 Связь с командой пропала — они не смогли ответить. Напишите ещё раз.');
+    if (t.errors >= 3) this.pushSystem('📡 Связь с командой пропала — они не смогли ответить. Напишите ещё раз.');
     const nextPlayer = this.pendingPlayers.shift();
     if (nextPlayer !== undefined) {
       // сначала ответим на вопросы игрока (FIFO), потом — отложенные события
@@ -743,6 +743,26 @@ export class GameServer {
       const p = this.pendingPhases.shift();
       if (p) void this.generatePhase(p.phase, p.extra, p.openingFor);
     }
+  }
+
+  // ─── Порядок чата (10.09.2026): события не рвут живые диалоги ───
+  /** «Пол» очереди: раньше этой недели новое сообщение не должно выскочить вперёд. */
+  private chatFloor(): number {
+    let w = this.game.week;
+    for (const m of this.chat.queue) if (m.week > w) w = m.week;
+    return w;
+  }
+
+  /** Системная запись: если в очереди есть недоставленные сообщения — встаёт за ними (очередь). */
+  private pushSystem(text: string): void {
+    if (this.chat.queue.length === 0) {
+      chatSystem(this.game, this.chat, text);
+      return;
+    }
+    this.chat.queue.push({
+      week: this.chatFloor(), author: 'Система', avatar: '', text, system: true, trigger: 'week',
+    });
+    this.emit();
   }
 
   // ─── M5: письма фанатов ───
@@ -758,20 +778,24 @@ export class GameServer {
         void this.writeLetterText(pending);
       }
     }
-    // (2) письмо готово (текст LLM или заготовка) — целиком в чат + реакция команды
-    for (const l of this.game.mail) {
-      if (l.id <= this.mailShownId || !l.llm) continue;
-      this.mailShownId = l.id;
-      const emoji = l.sentiment === 'love' ? '💌' : l.sentiment === 'hate' ? '💔' : '✉️';
-      this.chat.msgs.push({
-        week: l.week, author: `${l.fanName} (фанат)`, avatar: '', text: `${emoji} ${l.text}`, trigger: 'week',
-      });
-      if (this.chatThread || this.pendingPhases.length > 0 || this.pendingPlayers.length > 0) {
-        this.fanReplyQueued = true; // чат занят — реакция после текущей серии
-      } else {
-        void this.generatePhase('fanmail', { text: l.text, fanName: l.fanName, gameName: l.gameName, sentiment: l.sentiment });
+    // (2) письмо готово (текст LLM или заготовка) — в чат, но не в середину живого диалога:
+    // публикуем, когда чат свободен, и встаём в конец очереди — хронология недель не рвётся (10.09.2026)
+    if (!this.chatThread && this.pendingPlayers.length === 0) {
+      for (const l of this.game.mail) {
+        if (l.id <= this.mailShownId || !l.llm) continue;
+        this.mailShownId = l.id;
+        const emoji = l.sentiment === 'love' ? '💌' : l.sentiment === 'hate' ? '💔' : '✉️';
+        this.chat.queue.push({
+          week: this.chatFloor(), author: `${l.fanName} (фанат)`, avatar: '', text: `${emoji} ${l.text}`, trigger: 'week',
+        });
+        this.emit();
+        if (this.pendingPhases.length > 0) {
+          this.fanReplyQueued = true; // впереди события — реакция после текущей серии
+        } else {
+          void this.generatePhase('fanmail', { text: l.text, fanName: l.fanName, gameName: l.gameName, sentiment: l.sentiment });
+        }
+        return; // одно письмо за тик
       }
-      return; // одно письмо за тик
     }
     // (3) отложенная реакция на последнее показанное письмо
     if (this.fanReplyQueued && !this.chatThread && this.pendingPhases.length === 0 && this.pendingPlayers.length === 0) {
@@ -859,7 +883,7 @@ export class GameServer {
     t.lines = [...lines, { author: parsed.author, text: parsed.text }];
     if (!spoken.includes(parsed.author)) t.spoken = [...spoken, parsed.author];
     const msg: ChatMsg = {
-      week: this.game.week + (replyTo ? 2 : 1),
+      week: Math.max(this.game.week + (replyTo ? 2 : 1), this.chatFloor()),
       author: parsed.author,
       avatar: avatarFor(this.game, parsed.author),
       text: parsed.text,

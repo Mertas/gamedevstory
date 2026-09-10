@@ -515,3 +515,33 @@ describe('isValidGameState', () => {
     expect(isValidGameState({ ...newGame(1), saveVersion: SAVE_VERSION + 1 })).toBe(false);
   });
 });
+
+
+// 4 тона письма (10.09.2026): движок выбирает стиль (восторг/ностальгия/разбор/идеи) и жанр для конкретики.
+describe('M5: 4 тона писем (движок)', () => {
+  function letterFor(score: number) {
+    for (let seed = 1; seed <= 500; seed++) {
+      const g = newGame(seed);
+      g.fans = 1000;
+      const ag = debugGame(g, 10);
+      ag.phase = 'released';
+      ag.name = 'Mail Game';
+      ag.score = score;
+      ag.releaseWeek = g.week - 5;
+      ag.sales = [];
+      g.released = [ag];
+      tickFanLetters(g, createRng(seed * 17 + 3));
+      if (g.mail.length === 1) return g.mail[0]!;
+    }
+    throw new Error(`письмо не пришло (score ${score})`);
+  }
+
+  it('стиль согласован с чувством, жанр заполнен, заготовка по стилю', () => {
+    const love = letterFor(33);
+    expect(['delight', 'nostalgia']).toContain(love.style);
+    expect(love.genre).toBeTruthy();
+    expect(love.text).toContain('Mail Game');
+    expect(letterFor(15).style).toBe('rant');
+    expect(letterFor(22).style).toBe('ideas');
+  });
+});

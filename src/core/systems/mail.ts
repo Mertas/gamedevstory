@@ -2,9 +2,10 @@
 // Тон — по оценке игры (≥25 любовь, ≤19 гнев, иначе нейтрально); эффект ±фанаты [Н].
 // Движок пишет текст-заготовку; сервер (game.ts) заменяет его письмом LLM (поле llm).
 import { CONFIG } from '../config';
+import { genreById } from '../data/db';
 import { log } from '../log';
 import type { Rng } from '../rng';
-import type { FanLetter, GameState } from '../types';
+import type { FanLetter, FanLetterStyle, GameState } from '../types';
 
 export const FAN_NAMES_M = [
   'Алексей', 'Дмитрий', 'Сергей', 'Игорь', 'Максим', 'Артём', 'Никита', 'Павел', 'Роман',
@@ -16,24 +17,37 @@ export const FAN_NAMES_F = [
   'Марина', 'Людмила',
 ];
 
+// 4 тона письма (10.09.2026): раньше все письма сходились к трём шаблонам «Дорогие разработчики! Я просто…» —
+// теперь стиль разный (восторг / ностальгия / разбор / идеи), с разными зачинами, длиной и конкретикой.
+const STYLE_POOLS: Record<FanLetter['sentiment'], FanLetterStyle[]> = {
+  love: ['delight', 'nostalgia'],
+  neutral: ['ideas'],
+  hate: ['rant'],
+};
+
 // заготовки, пока LLM не написал письмо (и как запасной текст без GigaChat)
-const FALLBACK: Record<FanLetter['sentiment'], string[]> = {
-  love: [
-    'Здравствуйте! Прошёл «{game}» — это восторг! Спасибо за {score}/40. Когда сиквел?',
-    'Привет! «{game}» — лучшая покупка года. Прошли всей семьёй, {score}/40 заслуженно!',
+const FALLBACK: Record<FanLetterStyle, string[]> = {
+  delight: [
+    'Не могу молчать: «{game}» — это {score}/40 и лучшие выходные за год! Как вам это удалось?!',
+    'Купил «{game}» в пятницу — не спал до утра! {score}/40 заслуженно, когда сиквел?',
+    '«{game}» — {score}/40! Играли с друзьями до рассвета, давно так не смеялись. Спасибо!',
   ],
-  neutral: [
-    'Здравствуйте. Играл в «{game}» — {score}/40, вполне неплохо. Жду следующую игру.',
-    'Привет! «{game}» прошёл до конца ({score}/40). Есть идеи, что улучшить в сиквеле.',
+  nostalgia: [
+    'Помню ваши игры ещё с первых картриджей. «{game}» ({score}/40) — тёплое возвращение в детство, спасибо.',
+    'Ваши игры со мной с детства, и «{game}» — {score}/40 — достойное продолжение традиции. Не теряйте себя!',
   ],
-  hate: [
-    'Это возмутительно! «{game}» ({score}/40) — пустая трата денег. Баги на каждом шагу!',
-    'Верните деньги за «{game}»! {score}/40 — даже это слишком много.',
+  rant: [
+    'И это «{game}»? {score}/40 — ещё много! Баги на каждом шагу, куда ушли деньги?',
+    'Я требую объяснений: «{game}» ({score}/40) — шаг назад. Обещали больше. Так нельзя.',
+  ],
+  ideas: [
+    'Прошёл «{game}» ({score}/40). Сделайте в сиквеле редактор уровней — сообщество оценит.',
+    'К «{game}» ({score}/40) есть идея: добавьте кооператив и режим испытаний. А что дальше делаете?',
   ],
 };
 
-function fallbackText(rng: Rng, sentiment: FanLetter['sentiment'], gameName: string, score: number): string {
-  const pool = FALLBACK[sentiment];
+function fallbackText(rng: Rng, style: FanLetterStyle, gameName: string, score: number): string {
+  const pool = FALLBACK[style];
   const t = pool[rng.int(0, pool.length - 1)] ?? pool[0]!;
   return t.replace('{game}', gameName).replace('{score}', String(score));
 }
@@ -46,6 +60,8 @@ export function tickFanLetters(state: GameState, rng: Rng): void {
     if (!rng.chance(CONFIG.LETTER_CHANCE)) continue;
     const score = game.score ?? 20;
     const sentiment: FanLetter['sentiment'] = score >= 25 ? 'love' : score <= 19 ? 'hate' : 'neutral';
+    const poolS = STYLE_POOLS[sentiment];
+    const style = poolS[rng.int(0, poolS.length - 1)] ?? 'ideas';
     const female = rng.chance(0.5);
     const names = female ? FAN_NAMES_F : FAN_NAMES_M;
     const fanName = names[rng.int(0, names.length - 1)]!;
@@ -63,8 +79,10 @@ export function tickFanLetters(state: GameState, rng: Rng): void {
       fanName,
       gender: female ? 'F' : 'M',
       sentiment,
+      style,
+      genre: genreById(game.genreId)?.name,
       fansDelta: delta,
-      text: fallbackText(rng, sentiment, game.name, score),
+      text: fallbackText(rng, style, game.name, score),
       llm: false,
     };
     state.mail.push(letter);

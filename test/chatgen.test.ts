@@ -1,7 +1,7 @@
 // Промпт решения автопилота: упор направления выбирает LLM — по жанру/типу и обсуждению
 // команды в чате, а не по пришпиленному примеру (иначе каждый проект «упор: доступность+полировка»).
 import { describe, expect, it } from 'vitest';
-import { buildDecisionPrompt, buildMessages } from '../src/server/chatgen';
+import { buildDecisionPrompt, buildLetterPrompt, buildMessages } from '../src/server/chatgen';
 
 const ctx = {
   team: 'John (proposal Lv1, id:john)',
@@ -85,5 +85,34 @@ describe('buildMessages: память диалога и ротация гово�
     const text = msgText({ suggest: ['Donny'] });
     expect(text).toContain('Слово лучше дать одному из: Donny.');
     expect(text).not.toContain('В диалоге уже говорили');
+  });
+});
+
+
+// Письма фанатов: 4 тона, разные зачины и длина, конкретика (10.09.2026).
+// Раньше письма сходились к «Дорогие разработчики! Я просто…» — теперь стиль задаёт движок.
+describe('buildLetterPrompt: 4 тона писем', () => {
+  const base = { fanName: 'Игорь', gender: 'M' as const, gameName: 'Гонки', score: 30, year: 1993 };
+
+  it('стиль задаёт тон, длину и зачин; запрещены шаблонные зачины', () => {
+    const rant = buildLetterPrompt({ ...base, sentiment: 'hate', style: 'rant' });
+    expect(rant[0]!.content).toContain('конкретные претензии');
+    const delight = buildLetterPrompt({ ...base, sentiment: 'love', style: 'delight' });
+    expect(delight[0]!.content).toContain('восторженное');
+    expect(delight[0]!.content).toContain('2–4 предложения');
+    expect(delight[0]!.content).toContain('Дорогие разработчики'); // это запрет в правилах промпта
+    expect(delight[0]!.content).toContain('«Я просто…»'); // анти-шаблон
+  });
+
+  it('без style — тон по чувству: love→восторг, neutral→идеи, hate→разбор', () => {
+    expect(buildLetterPrompt({ ...base, sentiment: 'love' })[0]!.content).toContain('восторженное');
+    expect(buildLetterPrompt({ ...base, sentiment: 'neutral' })[0]!.content).toContain('зачин — предложение');
+    expect(buildLetterPrompt({ ...base, sentiment: 'hate' })[0]!.content).toContain('конкретные претензии');
+  });
+
+  it('жанр из письма попадает в факты — конкретика', () => {
+    const p = buildLetterPrompt({ ...base, sentiment: 'love', genre: 'Гонки' });
+    expect(p[1]!.content).toContain('жанр: Гонки');
+    expect(p[1]!.content).toContain('30/40');
   });
 });

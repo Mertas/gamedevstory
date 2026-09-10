@@ -216,3 +216,73 @@ describe('GameServer: автопилот и чат', () => {
     expect(chatPrompts.some((p) => p.includes('СТРОГО:'))).toBe(true); // автор-повтор → жёсткая ротация
   });
 });
+
+
+describe('порядок чата: события не рвут живые диалоги (10.09.2026)', () => {
+  it('системные записи встают за очередью, а не в середину треда', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.99); // длинная серия ответов
+    const llm: LlmFn = async (messages) => {
+      const sys = messages[0]?.content ?? '';
+      if (sys.includes('корпоративный чат')) {
+        const name = srv!.snapshot().game.staff[0]!.name;
+        return { text: JSON.stringify({ message: { author: name, text: 'Отвечаем, босс!' } }), model: 'fake' };
+      }
+      return { text: '{}', model: 'fake' };
+    };
+    srv = makeServer(llm);
+    srv.handle({ type: 'set_speed', v: 8 });
+    srv.handle({ type: 'chat_message', text: 'Босс спрашивает: как продвигается проект? '.repeat(5) });
+
+    // ждём: серия началась и её реплика уже в очереди (доставка по неделям — ещё не в чате)
+    let queued = 0;
+    for (let i = 0; i < 60; i++) {
+      await vi.advanceTimersByTimeAsync(50);
+      queued = srv.snapshot().chat.queue.filter((m) => m.trigger === 'week' && m.author !== 'Вы').length;
+      if (queued > 0) break;
+    }
+    expect(queued).toBeGreaterThan(0);
+
+    // пока серия «в полёте»: системные записи НЕ выскакивают в чат — встают в очередь
+    srv.handle({ type: 'set_autopilot', on: true });
+    srv.handle({ type: 'set_autopilot', on: false });
+    const snap = srv.snapshot().chat;
+    expect(snap.msgs.some((m) => m.text.includes('Босс вернулся'))).toBe(false);
+    expect(snap.queue.some((m) => m.text.includes('Босс вернулся'))).toBe(true);
+    expect(snap.queue.some((m) => m.text.includes('отдал команде'))).toBe(true);
+
+    // время идёт: всё доставляется, системные записи — ПОСЛЕ реплики серии
+    await vi.advanceTimersByTimeAsync(6000);
+    const msgs = srv.snapshot().chat.msgs;
+    const iReply = msgs.findIndex((m) => m.text.includes('Отвечаем, босс!'));
+    const iGive = msgs.findIndex((m) => m.text.includes('отдал команде'));
+    const iBack = msgs.findIndex((m) => m.text.includes('Босс вернулся'));
+    expect(iReply).toBeGreaterThanOrEqual(0);
+    expect(iGive).toBeGreaterThan(iReply);
+    expect(iBack).toBeGreaterThan(iReply);
+  });
+
+  it('письмо фаната публикуется по текущей неделе (не «старой») и с текстом LLM', async () => {
+    const llm: LlmFn = async (messages) => {
+      const sys = messages[0]?.content ?? '';
+      if (sys.includes('обычный игрок')) return { text: 'Это была великолепная игра, спасибо вам!', model: 'fake' };
+      return { text: '{}', model: 'fake' };
+    };
+    srv = makeServer(llm);
+    srv.handle({ type: 'set_speed', v: 8 });
+    await vi.advanceTimersByTimeAsync(4000); // игра пожила: неделя уже далеко не 1
+
+    const g = srv.snapshot().game;
+    const w0 = g.week;
+    expect(w0).toBeGreaterThan(1);
+    g.mail.push({
+      id: g.mailId + 1, week: 1, year: 1, gameName: 'Тестовая игра', score: 33,
+      fanName: 'Алексей', gender: 'M', sentiment: 'love', fansDelta: 0, text: 'заготовка движка', llm: false,
+    });
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const letter = srv.snapshot().chat.msgs.find((m) => m.author === 'Алексей (фанат)');
+    expect(letter).toBeTruthy();
+    expect(letter!.text).toContain('великолепная игра'); // текст LLM заменил заготовку
+    expect(letter!.week).toBeGreaterThanOrEqual(w0); // дата — неделя ДОСТАВКИ (week: 1 в письме не вылезает в чат)
+  });
+});

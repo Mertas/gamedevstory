@@ -152,6 +152,9 @@ export interface OwnConsoleState {
 }
 
 // ─── M5: письмо фаната ───
+/** 4 тона письма: восторг / ностальгия / разбор / идеи (10.09.2026) */
+export type FanLetterStyle = 'delight' | 'nostalgia' | 'rant' | 'ideas';
+
 export interface FanLetter {
   id: number;
   week: number; // день получения
@@ -161,6 +164,10 @@ export interface FanLetter {
   fanName: string;
   gender: 'M' | 'F';
   sentiment: 'love' | 'neutral' | 'hate';
+  /** стиль письма (4 тона); в старых сейвах нет — сервер возьмёт по sentiment */
+  style?: FanLetterStyle;
+  /** жанр игры — для конкретики в тексте письма */
+  genre?: string;
   fansDelta: number; // эффект уже применён к state.fans
   text: string; // движковая заготовка; сервер заменяет текстом LLM (llm = true)
   llm: boolean;

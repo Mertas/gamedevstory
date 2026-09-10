@@ -49,6 +49,7 @@ export function deliverChat(game: GameState, chat: ChatState): void {
 // «печатает…»: ближайшее сообщение очереди
 export function typingName(game: GameState, chat: ChatState): string | null {
   for (const m of chat.queue) {
+    if (m.system) continue; // системные записи не «печатают»
     if (m.trigger === 'week' && m.week - game.week <= 1) return m.author;
     if (m.trigger === 'progress' && game.activeGame && (m.progress ?? 1) - game.activeGame.progress <= 0.05) return m.author;
   }
