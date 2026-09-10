@@ -1,18 +1,48 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { newGame, startProjectAction, tick } from '../src/core/engine';
 import { AutopilotController, createAutopilotPolicy, decisionReason, fitDirection, validateDecision } from '../src/server/autopilot';
 import type { AutopilotHost } from '../src/server/autopilot';
+import { ChatOrchestrator } from '../src/server/chatflow';
+import type { ChatThread } from '../src/server/game';
 import { autopilotProjectInput, sequelOpportunity } from '../src/core/sim/policy';
 import { resetChat } from '../src/shared/chat';
 import { planDirClicks } from '../src/shared/autopilot';
 import type { AutopilotPlan } from '../src/shared/autopilot';
-import type { GameState } from '../src/core/types';
+import type { GameRecord, GameState } from '../src/core/types';
 
 function fresh(): GameState {
   const g = newGame(11);
   tick(g); // PC «поступила в продажу»
   return g;
+}
+
+/** Фейковый хост автопилота: скорость/фазы/чат под наблюдением. */
+function makeHost(g: GameState) {
+  const speedLog: number[] = [];
+  const phases: string[] = [];
+  const host = {
+    game: g,
+    chat: resetChat(),
+    llm: async () => ({ text: '', model: 'test' }),
+    autopilotOn: false,
+    speed: 1,
+    setSpeed(v: number) { host.speed = v; speedLog.push(v); },
+    decidedThisIdle: false,
+    pendingPlan: null,
+    chatThread: null,
+    emit() {},
+    emitStep() {},
+    pushSystem() {},
+    generatePhase: async (p: string) => { phases.push(p); },
+  };
+  return { host: host as AutopilotHost, speedLog, phases };
+}
+
+function hostWithGame() {
+  const g = fresh();
+  expect(startProjectAction(g, autopilotProjectInput(g)!).ok).toBe(true); // активная игра — обсуждение не побежит
+  return makeHost(g);
 }
 
 function validPlan(g: GameState): AutopilotPlan {
@@ -351,32 +381,6 @@ describe('автопилот: политика-обёртка', () => {
 });
 
 describe('AP-07: адаптивный темп (скорость при автопилоте)', () => {
-  function makeHost(g: GameState) {
-    const speedLog: number[] = [];
-    const host = {
-      game: g,
-      chat: resetChat(),
-      llm: async () => ({ text: '', model: 'test' }),
-      autopilotOn: false,
-      speed: 1,
-      setSpeed(v: number) { host.speed = v; speedLog.push(v); },
-      decidedThisIdle: false,
-      pendingPlan: null,
-      chatThread: null,
-      emit() {},
-      emitStep() {},
-      pushSystem() {},
-      generatePhase: async () => {},
-    };
-    return { host: host as AutopilotHost, speedLog };
-  }
-
-  function hostWithGame() {
-    const g = fresh();
-    expect(startProjectAction(g, autopilotProjectInput(g)!).ok).toBe(true); // активная игра — обсуждение не побежит
-    return makeHost(g);
-  }
-
   it('старт ускоряет до 4×, уже разогнанные 8× не сбавляет', () => {
     const h1 = makeHost(fresh());
     new AutopilotController(h1.host).startAutopilot();
@@ -417,5 +421,137 @@ describe('AP-07: адаптивный темп (скорость при авто
     h2.host.speed = 2;
     ap2.stopAutopilot(true);
     expect(h2.host.speed).toBe(2);
+  });
+});
+
+describe('AP-03: итоги автосессии', () => {
+  function rec(name: string, score: number): GameRecord {
+    return {
+      name, genreId: 'rpg', typeId: 'rpg', consoleId: 'pc-game',
+      score, units: 100, revenue: 1000, releaseWeek: 10, year: 1,
+      attrs: { fun: 10, creativity: 10, graphics: 10, sound: 10 }, bugs: 0, awards: [],
+    };
+  }
+
+  it('после «Взять управление»: экран с играми, средним счётом, деньгами и лучшей игрой', () => {
+    const h = hostWithGame();
+    const ap = new AutopilotController(h.host);
+    const moneyBefore = h.host.game.money;
+    ap.startAutopilot();
+    h.host.game.history.push(rec('Гонки', 28), rec('Рогалик', 36)); // команда успела выпустить две игры
+    h.host.game.money = moneyBefore + 1500;
+    ap.stopAutopilot(false);
+    const ev = h.host.game.pendingEvent;
+    expect(ev?.type).toBe('info');
+    if (ev?.type !== 'info') throw new Error('ожидался info-попап с итогами');
+    expect(ev.title).toContain('Итоги автосессии');
+    expect(ev.text).toContain('Игр выпущено: 2');
+    expect(ev.text).toContain('Средний счёт: 32/40');
+    expect(ev.text).toContain('Лучшая: «Рогалик» — 36/40 — зал славы!');
+    expect(ev.text).toContain('Деньги: +1500K');
+  });
+
+  it('тихий стоп (босс сам взялся за дело) экран итогов не показывает', () => {
+    const h = hostWithGame();
+    const ap = new AutopilotController(h.host);
+    ap.startAutopilot();
+    h.host.game.history.push(rec('Гонки', 28));
+    ap.stopAutopilot(true);
+    expect(h.host.game.pendingEvent).toBeNull();
+  });
+
+  it('пустая сессия (включили и сразу выключили) экран не показывает — попап-пауза зря не встаёт', () => {
+    const h = hostWithGame();
+    const ap = new AutopilotController(h.host);
+    ap.startAutopilot();
+    ap.stopAutopilot(false); // ничего не выпущено, деньги не двигались
+    expect(h.host.game.pendingEvent).toBeNull();
+  });
+
+  it('открытый попап не перебивается — итоги ждут в очереди (lastPopup)', () => {
+    const h = hostWithGame();
+    const ap = new AutopilotController(h.host);
+    ap.startAutopilot();
+    h.host.game.history.push(rec('Гонки', 28));
+    const open = { type: 'info', title: 'Важное', text: 'сначала это' } as const;
+    h.host.game.pendingEvent = open;
+    ap.stopAutopilot(false);
+    expect(h.host.game.pendingEvent).toEqual(open);
+    expect(h.host.game.lastPopup?.title).toContain('Итоги автосессии');
+  });
+});
+
+describe('AP-08: idle-болтовня в затишье', () => {
+  it('раз в ~90с затишья — реплика; чаще — нет', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-09-10T12:00:00Z'));
+      const h = hostWithGame();
+      h.host.game.pendingEvent = null; // театр не мешает: смотрим чистое затишье
+      const ap = new AutopilotController(h.host);
+      ap.startAutopilot();
+      ap.maybeAutopilot();
+      expect(h.phases).toEqual([]); // сразу после старта — тихо
+      vi.setSystemTime(new Date('2026-09-10T12:01:31Z')); // +91с
+      ap.maybeAutopilot();
+      expect(h.phases).toEqual(['idle']);
+      vi.setSystemTime(new Date('2026-09-10T12:02:01Z')); // ещё +30с — кулдаун держит
+      ap.maybeAutopilot();
+      expect(h.phases).toEqual(['idle']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('не перебивает живой чат, недоставленную очередь и открытое событие', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-09-10T12:00:00Z'));
+      const h = hostWithGame();
+      h.host.game.pendingEvent = null;
+      const ap = new AutopilotController(h.host);
+      ap.startAutopilot();
+      vi.setSystemTime(new Date('2026-09-10T12:01:31Z'));
+      h.host.chatThread = { phase: 'kickoff', extra: {}, left: 3, busy: false, nextAt: 0, errors: 0 }; // команда ещё говорит
+      ap.maybeAutopilot();
+      expect(h.phases).toEqual([]);
+      h.host.chatThread = null;
+      h.host.chat.queue.push({ week: 99, author: 'Кто-то', avatar: '', text: 'ещё не доставлено', trigger: 'week' });
+      ap.maybeAutopilot();
+      expect(h.phases).toEqual([]); // недоставленное сообщение — тоже не затишье
+      h.host.chat.queue.length = 0;
+      h.host.game.pendingEvent = { type: 'info', title: 'Событие', text: 'некогда болтать' };
+      ap.maybeAutopilot();
+      expect(h.phases).toEqual([]); // событие на экране
+      h.host.game.pendingEvent = null;
+      ap.maybeAutopilot();
+      expect(h.phases).toEqual(['idle']); // всё стихло — можно перекинуться репликой
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('AP-08: idle-серия — одна короткая реплика, тред сразу закрывается', () => {
+  it('generatePhase("idle") кладёт ровно одно сообщение и не тянет серию', async () => {
+    const g = fresh();
+    const chat = resetChat();
+    const host = {
+      game: g,
+      chat,
+      llm: async () => ({ text: JSON.stringify({ message: { author: g.staff[0]!.name, text: 'Сижу, рефакторю потихоньку.' } }), model: 'fake' }),
+      chatThread: null as ChatThread | null,
+      pendingPlayers: [] as string[],
+      pendingPhases: [] as { phase: string }[],
+      emit() {},
+    };
+    const orc = new ChatOrchestrator(host);
+    void orc.generatePhase('idle');
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(chat.queue.length).toBe(1);
+    orc.pumpThread(); // если бы серия была многоместной — здесь появилась бы вторая реплика
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(chat.queue.length).toBe(1);
+    expect(chat.queue[0]!.text).toContain('рефакторю');
   });
 });

@@ -118,3 +118,12 @@ describe('buildLetterPrompt: 4 тона писем', () => {
     expect(p[1]!.content).toContain('30/40');
   });
 });
+
+// AP-08: idle-фаза автопилота — затишье, одна короткая реплика (оживляет паузы).
+describe('buildMessages: idle-фаза', () => {
+  it('инструкция затишья попадает в промпт (фаза не провалилась в дефолт)', () => {
+    const text = buildMessages('idle', chatCtx, {}).map((m) => m.content).join('\n');
+    expect(text).toContain('Затишье');
+    expect(text).toContain('Одна короткая реплика');
+  });
+});

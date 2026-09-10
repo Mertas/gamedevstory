@@ -49,7 +49,7 @@ export class ChatOrchestrator {
       return;
     }
     // событие фазы → живая серия: реплики по одной, с ответами друг другу
-    const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : phase === 'autopilot_discuss' ? 3 : phase === 'boss_back' ? 4 : 5; // ответов после открывающей
+    const left = phase === 'idle' ? 1 : phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : phase === 'autopilot_discuss' ? 3 : phase === 'boss_back' ? 4 : 5; // всего реплик в серии (idle — одна короткая, AP-08)
     this.h.chatThread = { phase, extra: extra ?? {}, left, busy: false, nextAt: this.h.game.week, errors: 0, openingFor };
     void this.nextReply();
   }

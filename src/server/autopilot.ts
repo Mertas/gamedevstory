@@ -8,12 +8,15 @@ import { comboGrade, consoleAvailable } from '../core/systems/dev';
 import { autopilotProjectInput, comboCostK, sequelOpportunity } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../core/types';
-import type { GameState, StartProjectInput } from '../core/types';
+import type { GameRecord, GameState, StartProjectInput } from '../core/types';
 import { topUpDirection, type AutopilotPlan, type AutopilotStep } from '../shared/autopilot';
 import type { ChatState } from '../shared/chat';
 import { buildDecisionPrompt, parseDecision } from './chatgen';
 import type { ChatThread } from './game';
 import type { LlmFn } from './giga';
+
+/** AP-08: в затишье команда перекидывается репликой не чаще этого интервала (реальное время, мс). */
+const IDLE_CHAT_MS = 90_000;
 
 /** Проверка решения LLM по правилам игры; null = ок, иначе текст ошибки. */
 export function validateDecision(plan: AutopilotPlan, state: GameState): string | null {
@@ -219,6 +222,8 @@ export class AutopilotController {
   private speedBefore = 1; // AP-07: скорость до включения автопилота (в неё вернём контроль)
   private autoTarget = 4; // AP-07: ускоренный темп между событиями (4-8×, ниже не опускаем)
   private loweredForEvent = false; // AP-07: мы сами уронили до 1× ради драматургии события
+  private idleChatAt = 0; // AP-08: когда последний раз болтали просто так (реальное время)
+  private session: { historyLen: number; money: number } | null = null; // AP-03: снимок на старте автосессии
 
   constructor(private readonly h: AutopilotHost) {}
 
@@ -240,6 +245,9 @@ export class AutopilotController {
     this.h.autopilotOn = true;
     this.h.decidedThisIdle = false;
     this.pendingDecision = false;
+    this.idleChatAt = Date.now(); // AP-08: первая реплика в затишье — не сразу после старта
+    // AP-03: снимок для «Итогов автосессии» — что команда успеет, пока босс отдыхает
+    this.session = { historyLen: this.h.game.history.length, money: this.h.game.money };
     // AP-07: адаптивный темп — команда не ползёт на 1×; уже разогнанные 8× не опускаем
     this.speedBefore = this.h.speed;
     this.autoTarget = Math.max(4, this.h.speed);
@@ -263,10 +271,49 @@ export class AutopilotController {
     this.loweredForEvent = false;
     if (this.h.speed === this.autoTarget && this.h.speed !== this.speedBefore) this.h.setSpeed(this.speedBefore);
     if (!silent) {
+      // AP-03: экран «Итоги автосессии» — команда отчитывается за время у руля
+      const summary = this.sessionSummary();
+      if (summary) {
+        if (this.h.game.pendingEvent) this.h.game.lastPopup = summary; // не перебиваем открытый попап
+        else this.h.game.pendingEvent = { type: 'info', ...summary };
+      }
       this.h.pushSystem('🧑‍💼 Босс вернулся! Команда спешно делает вид, что всё это время усердно работала.');
       void this.h.generatePhase('boss_back');
     }
+    this.session = null;
     this.h.emit();
+  }
+
+  /** AP-08: редкая реплика в простое — только когда чат полностью молчит и ничего не решается. */
+  private maybeIdleChat(): void {
+    const g = this.h.game;
+    if (!g.activeGame || g.pendingEvent) return; // событие на экране — не до болтовни
+    if (this.deciding || this.pendingDecision || this.h.pendingPlan) return;
+    if (this.h.chatThread || this.h.chat.queue.length > 0) return; // команда ещё говорит — не перебиваем
+    const now = Date.now();
+    if (now - this.idleChatAt < IDLE_CHAT_MS) return;
+    this.idleChatAt = now;
+    void this.h.generatePhase('idle');
+  }
+
+  /** AP-03: «Итоги автосессии» для экрана после возвращения управления. */
+  private sessionSummary(): { title: string; text: string } | null {
+    if (!this.session) return null;
+    const g = this.h.game;
+    const released = g.history.slice(this.session.historyLen);
+    const delta = Math.round(g.money - this.session.money);
+    // сессию включили и тут же выключили (или ничего не случилось) — рассказывать нечего,
+    // а попап-пауза зря замерла бы на экране
+    if (!released.length && delta === 0) return null;
+    const best = released.reduce<GameRecord | null>((a, b) => (a && a.score >= b.score ? a : b), null);
+    const avg = released.length ? Math.round(released.reduce((s, r) => s + r.score, 0) / released.length) : 0;
+    const lines = [
+      released.length ? `Игр выпущено: ${released.length}` : 'Игр выпущено: 0 — команда только разминалась.',
+      released.length ? `Средний счёт: ${avg}/40` : '',
+      best ? `Лучшая: «${best.name}» — ${best.score}/40${best.score >= CONFIG.HALL_OF_FAME ? ' — зал славы!' : ''}` : '',
+      `Деньги: ${delta >= 0 ? '+' : ''}${delta}K (${Math.round(this.session.money)}K → ${Math.round(g.money)}K)`,
+    ].filter(Boolean);
+    return { title: '🤖 Итоги автосессии', text: lines.join('\n') };
   }
 
   maybeAutopilot(): void {
@@ -331,6 +378,9 @@ export class AutopilotController {
       }
       this.h.emit();
     }
+
+    // (4) AP-08: затишье — редкая реплика команды, чтобы паузы в чате оживали
+    this.maybeIdleChat();
   }
 
   /** Решение LLM: какую игру делать. Невалидно/молчит — детерминированный фолбэк. */

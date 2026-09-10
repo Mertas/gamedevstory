@@ -324,3 +324,28 @@ describe('порядок чата: события не рвут живые ди�
     expect(letter!.week).toBeGreaterThanOrEqual(w0); // дата — неделя ДОСТАВКИ (week: 1 в письме не вылезает в чат)
   });
 });
+
+// AP-08 (Ф5): в затишье автопилота чат оживает редкой репликой команды (idle-фаза).
+describe('AP-08: idle-фаза в живой сессии', () => {
+  it('команда изредка перекидывается репликой, пока босс не вмешивается', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const llm: LlmFn = async (messages) => {
+      const sys = messages[0]?.content ?? '';
+      if (sys.includes('корпоративный чат')) {
+        const name = srv!.snapshot().game.staff[0]!.name;
+        const idle = messages.some((m) => m.content.includes('Затишье')); // инструкция idle-фазы
+        return { text: JSON.stringify({ message: { author: name, text: idle ? 'Тихо, даже баги спят.' : 'Работаем, босс!' } }), model: 'fake' };
+      }
+      return { text: '{}', model: 'fake' };
+    };
+    srv = makeServer(llm);
+    srv.snapshot().game.money = 1e6;
+    srv.handle({ type: 'set_speed', v: 8 });
+    srv.handle({ type: 'set_autopilot', on: true });
+    // ~4 минуты реального времени автосессии: обсуждение → план → проект → затишье между фазами
+    await vi.advanceTimersByTimeAsync(240000);
+    const chat = srv.snapshot().chat;
+    const all = [...chat.msgs, ...chat.queue];
+    expect(all.some((m) => m.text.includes('баги спят'))).toBe(true); // idle-реплика реально дошла до чата
+  });
+});
