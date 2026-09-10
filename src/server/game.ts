@@ -4,15 +4,16 @@ import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRAC
 import type { CareerId } from '../core/data/schema';
 import { newGame, startProjectAction } from '../core/engine';
 import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type StartProjectInput } from '../core/types';
-import { avatarFor, chatSystem, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
+import { resetChat, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
-import { buildLetterPrompt, buildMessages, buildDecisionPrompt, parseDecision, parseSingleMessage } from './chatgen';
+import { buildLetterPrompt, buildDecisionPrompt, parseDecision } from './chatgen';
 import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { buildDecisionContext, createAutopilotPolicy, fitDirection, validateDecision, autopilotProjectInput } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH } from './save';
 import { dispatchClientAction } from './actions';
 import { GameTicker } from './ticker';
+import { ChatOrchestrator } from './chatflow';
 
 /** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
 function dirSummary(direction: Record<string, number>): string {
@@ -60,7 +61,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'set_autopilot'; on: boolean }
 );
 
-interface ChatThread {
+export interface ChatThread {
   phase: string;
   extra: Record<string, unknown>;
   left: number; // сколько ответов осталось сгенерировать
@@ -83,16 +84,17 @@ export interface GameServerDeps {
 export class GameServer {
   game: GameState;
   chat: ChatState;
-  private llm: LlmFn;
+  llm: LlmFn;
   private story: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
   private saves: SaveManager;
   speed = 1;
   private readonly ticker = new GameTicker(this);
+  private readonly chatflow = new ChatOrchestrator(this);
   private listeners = new Set<(s: SessionSnapshot) => void>();
-  private chatThread: ChatThread | null = null; // фазы чата в процессе генерации
+  chatThread: ChatThread | null = null; // фазы чата в процессе генерации
   // SRV-11/12: очереди, а не одиночные слоты — второе сообщение/сцена не затирают первое
-  private pendingPlayers: string[] = [];
-  private pendingPhases: { phase: string; extra?: Record<string, unknown>; openingFor?: string }[] = [];
+  pendingPlayers: string[] = [];
+  pendingPhases: { phase: string; extra?: Record<string, unknown>; openingFor?: string }[] = [];
   lastAction: { ok: boolean; error?: string } | null = null;
   // ─── автопилот (plan/14): включается только кнопкой, решение в чате, «театр» событий ───
   autopilotOn = false;
@@ -389,127 +391,34 @@ export class GameServer {
     }
   }
 
-  // ─── чат: фазы по прогрессу ───
+  // ─── чат-оркестрация (SRV-22): тела методов — в chatflow.ts ───
+  /** @internal для GameTicker: фазы обсуждения по прогрессу проекта */
   maybeTriggerPhases(): void {
-    const g = this.game.activeGame;
-    if (!g) return;
-    if (!this.chat.phases.alpha && g.progress >= 0.4) {
-      this.chat.phases.alpha = true;
-      void this.generatePhase('alpha');
-    }
-    if (!this.chat.phases.beta && g.progress >= 0.8) {
-      this.chat.phases.beta = true;
-      void this.generatePhase('beta');
-    }
-    if (!this.chat.phases.debug && g.phase === 'debug') {
-      this.chat.phases.debug = true;
-      void this.generatePhase('debug');
-    }
+    this.chatflow.maybeTriggerPhases();
   }
 
-  async generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void> {
-    // чат занят (отвечает игроку / идёт другая фаза) — встаём в очередь
-    if (this.chatThread) {
-      // SRV-12: очередь сцен (FIFO, лимит 5) — события не схлопываются в одно
-      if (this.pendingPhases.length < 5) this.pendingPhases.push({ phase, extra, openingFor });
-      return;
-    }
-    // событие фазы → живая серия: реплики по одной, с ответами друг другу
-    const left = phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : phase === 'autopilot_discuss' ? 3 : phase === 'boss_back' ? 4 : 5; // ответов после открывающей
-    this.chatThread = { phase, extra: extra ?? {}, left, busy: false, nextAt: this.game.week, errors: 0, openingFor };
-    void this.nextReply();
+  generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void> {
+    return this.chatflow.generatePhase(phase, extra, openingFor);
   }
 
   /** SRV-22: реплика игрока — в очередь FIFO, если команда ещё отвечает (вызывает диспетчер). */
   queuePlayerMessage(text: string): void {
-    if (this.chatThread) this.pendingPlayers.push(text); // SRV-11: FIFO — все вопросы будут отвечены
-    else this.startPlayerThread(text);
+    this.chatflow.queuePlayerMessage(text);
   }
 
   /** @internal для GameTicker: докрутить следующую реплику, если команда ещё пишет */
   pumpChatThread(): void {
-    if (this.chatThread) void this.nextReply();
+    this.chatflow.pumpThread();
   }
 
-  // игрок написал в чат: команда отвечает серией из 1..7 реплик (зависит от «объёма» вопроса)
-  private startPlayerThread(text: string): void {
-    const l = text.length;
-    const hi = l < 50 ? 2 : l < 140 ? 4 : 7;
-    const left = 1 + Math.floor(Math.random() * hi);
-    this.chatThread = { phase: 'player', extra: { text }, left, busy: false, nextAt: this.game.week, errors: 0 };
-    void this.nextReply();
-  }
-
-  // одна реплика диалога: кто-то отвечает на последнюю (или открывает серию)
-  private async nextReply(): Promise<void> {
-    const t = this.chatThread;
-    if (!t || t.busy) return;
-    if (!t.openingDone) {
-      t.busy = true;
-      t.openingDone = true;
-      try {
-        await this.fetchOneReply(t, undefined);
-        t.left--;
-      } catch (e) {
-        t.errors++;
-        console.error(`[gds] LLM-реплика не удалась (фаза ${t.phase}):`, String(e).slice(0, 200));
-      } finally {
-        t.busy = false;
-        this.maybeEndThread();
-      }
-      return;
-    }
-    if (this.game.week < t.nextAt) return;
-    t.busy = true;
-    try {
-      await this.fetchOneReply(t, this.lastStaffText() ?? undefined);
-      t.left--;
-      t.errors = 0;
-    } catch (e) {
-      t.errors++;
-      console.error(`[gds] LLM-реплика не удалась (фаза ${t.phase}):`, String(e).slice(0, 200));
-    } finally {
-      t.busy = false;
-      t.nextAt = this.game.week + 3; // следующая генерация — после доставки (week+2)
-      this.maybeEndThread();
-    }
-  }
-
-  private maybeEndThread(): void {
-    const t = this.chatThread;
-    if (!t) return;
-    if (t.left > 0 && t.errors < 3) return;
-    this.chatThread = null;
-    // LLM-02: серия оборвалась из-за ошибок LLM — игрок должен это видеть
-    if (t.errors >= 3) this.pushSystem('📡 Связь с командой пропала — они не смогли ответить. Напишите ещё раз.');
-    const nextPlayer = this.pendingPlayers.shift();
-    if (nextPlayer !== undefined) {
-      // сначала ответим на вопросы игрока (FIFO), потом — отложенные события
-      this.startPlayerThread(nextPlayer);
-    } else {
-      const p = this.pendingPhases.shift();
-      if (p) void this.generatePhase(p.phase, p.extra, p.openingFor);
-    }
-  }
-
-  // ─── Порядок чата (10.09.2026): события не рвут живые диалоги ───
-  /** «Пол» очереди: раньше этой недели новое сообщение не должно выскочить вперёд. */
+  /** «Пол» очереди: раньше этой недели новое сообщение не выскочит вперёд (письма, 10.09.2026). */
   private chatFloor(): number {
-    let w = this.game.week;
-    for (const m of this.chat.queue) if (m.week > w) w = m.week;
-    return w;
+    return this.chatflow.chatFloor();
   }
 
-  /** Системная запись: если в очереди есть недоставленные сообщения — встаёт за ними (очередь). */
+  /** Системная запись: встаёт за недоставленными сообщениями очереди (см. chatflow.ts). */
   pushSystem(text: string): void {
-    if (this.chat.queue.length === 0) {
-      chatSystem(this.game, this.chat, text);
-      return;
-    }
-    this.chat.queue.push({
-      week: this.chatFloor(), author: 'Система', avatar: '', text, system: true, trigger: 'week',
-    });
-    this.emit();
+    this.chatflow.pushSystem(text);
   }
 
   // ─── M5: письма фанатов ───
@@ -567,123 +476,6 @@ export class GameServer {
     this.letterBusy = false;
     this.saves.autosave(this.game, this.chat, true); // LLM-текст письма не должен теряться при дебаунсе
     this.emit();
-  }
-
-  private lastStaffText(): string | null {
-    for (const m of [...this.chat.msgs].reverse()) {
-      if (m.author !== 'Система') return m.text;
-    }
-    return null;
-  }
-
-  /** Зачины недавних реплик (для «не повторяй»): реплики этого треда + доставленные в чат. */
-  private recentOpenings(t: ChatThread): string[] {
-    const parts = (t.lines ?? []).slice(-4).map((h) => h.text.slice(0, 60));
-    for (const m of [...this.chat.msgs].reverse()) {
-      if (m.system || m.author === 'Система' || m.author.endsWith('(фанат)')) continue;
-      parts.push(m.text.slice(0, 60));
-      if (parts.length >= 6) break;
-    }
-    return parts.slice(0, 6);
-  }
-
-  /** Ротация говорящих: сначала не говорившие в диалоге, затем самые молчаливые по игре. */
-  private silentFirstTeam(spoken: string[]): string[] {
-    const counts = new Map<string, number>();
-    for (const m of this.chat.msgs) {
-      if (m.system || m.author === 'Система' || m.author.endsWith('(фанат)')) continue;
-      counts.set(m.author, (counts.get(m.author) ?? 0) + 1);
-    }
-    return this.game.staff
-      .map((s) => s.name)
-      .filter((n) => !spoken.includes(n))
-      .sort((a, b) => (counts.get(a) ?? 0) - (counts.get(b) ?? 0));
-  }
-
-  private async fetchOneReply(t: NonNullable<ChatThread>, replyToParam: string | undefined): Promise<void> {
-    // память диалога + ротация говорящих (10.09.2026): реплика видит весь тред и недавние
-    // зачины, а не только последнюю строку; слово получают те, кто давно молчит
-    const lines = t.lines ?? [];
-    const lastLine = lines.length ? lines[lines.length - 1]! : null;
-    const replyTo = lastLine ? lastLine.text : replyToParam;
-    const spoken = t.spoken ?? [];
-    const silent = this.silentFirstTeam(spoken);
-    const ctx = this.buildContext(t.phase, t.extra);
-    const opts = {
-      replyTo,
-      openingFor: replyTo ? undefined : t.openingFor,
-      history: lines.slice(0, -1).slice(-6),
-      recent: this.recentOpenings(t),
-      spoken,
-      suggest: t.openingFor && !replyTo ? [] : silent.slice(0, 3),
-    };
-    const first = await this.llm(buildMessages(t.phase, ctx, opts), 600);
-    let parsed = parseSingleMessage(first.text);
-    // ротация: модель выбрала уже говорившего, хотя есть молчащие → один повтор с жёстким списком
-    if (parsed && replyTo && spoken.length > 0 && silent.length > 0 && spoken.includes(parsed.author)) {
-      const again = await this.llm(buildMessages(t.phase, ctx, { ...opts, hardRotate: true }), 600);
-      parsed = parseSingleMessage(again.text) ?? parsed;
-    }
-    const valid = parsed && this.game.staff.some((s) => s.name === parsed.author) && parsed.text.length >= 4 && parsed.text.length <= 500;
-    if (!valid || !parsed) throw new Error('нет валидной реплики');
-    // запомнили реплику и говорящего: следующие вызовы увидят историю и не повторят автора
-    t.lines = [...lines, { author: parsed.author, text: parsed.text }];
-    if (!spoken.includes(parsed.author)) t.spoken = [...spoken, parsed.author];
-    const msg: ChatMsg = {
-      week: Math.max(this.game.week + (replyTo ? 2 : 1), this.chatFloor()),
-      author: parsed.author,
-      avatar: avatarFor(this.game, parsed.author),
-      text: parsed.text,
-      trigger: 'week',
-    };
-    this.chat.queue.push(msg);
-    this.emit();
-  }
-
-  private buildContext(phase: string, extra?: Record<string, unknown>): Record<string, unknown> {
-    const g = this.game.activeGame;
-    const project = g
-      ? {
-          genre: genreById(g.genreId)?.name ?? g.genreId,
-          type: typeById(g.typeId)?.name ?? g.typeId,
-          console: consoleById(g.consoleId)?.name ?? g.consoleId,
-          mode: g.mode,
-          combo: g.comboGrade,
-          progress: Math.round(g.progress * 100),
-          bugs: Math.round(g.bugs),
-          points: Object.fromEntries(Object.entries(g.points).map(([k, v]) => [k, Math.round(v)])),
-          direction: Object.fromEntries(Object.entries(g.direction).map(([k, v]) => [k, Math.round(v)])),
-          name: g.name || null,
-          plot: g.plot || null,
-        }
-      : null;
-    return {
-      phase,
-      week: this.game.week,
-      year: this.game.year,
-      money: Math.round(this.game.money),
-      fans: Math.round(this.game.fans),
-      research: Math.round(this.game.research),
-      project,
-      // как игрок распределил очки направления в последнем проекте (и режим) — чтобы
-      // сотрудники могли обсуждать выбор в чате
-      lastProject: {
-        genre: this.game.lastGenreId ? genreById(this.game.lastGenreId)?.name ?? this.game.lastGenreId : null,
-        type: this.game.lastTypeId ? typeById(this.game.lastTypeId)?.name ?? this.game.lastTypeId : null,
-        mode: this.game.lastMode,
-        direction: this.game.lastDirection,
-      },
-      staff: this.game.staff.map((s) => ({
-        id: s.id,
-        name: s.name,
-        career: s.activeCareer,
-        stats: s.stats,
-        power: s.power,
-        // личность из контентной БД (research/04 → personalities): используется промптом чата
-        persona: STAFF.find((d) => d.id === s.id)?.persona ?? null,
-      })),
-      facts: extra ?? {},
-    };
   }
 
   // ─── сейвы ───
