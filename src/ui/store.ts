@@ -48,7 +48,6 @@ function subscribe(fn: () => void): () => void {
 }
 
 // ─── WebSocket ───
-const WS_PORT = 3001;
 
 // SRV-06: sid — сессия страницы (новый при перезагрузке), seq — сквозной номер исходящего.
 // Сервер подтверждает каждое действие (action_result{seq}), повтор при переподключении
@@ -74,7 +73,9 @@ function raiseError(text: string): void {
 }
 
 function connect(): void {
-  const ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}/ws`);
+  // SRV-19: адрес от самой страницы (а не хардкод :3001) — в dev-режиме vite проксирует /ws
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
   (globalThis as { __gdsWs?: WebSocket }).__gdsWs = ws;
   // после (пере)подключения сразу синхронизируемся — иначе при паузе (висит событие,
   // тикер молчит) state не придёт и потерянный клик не вернёт попап решения
@@ -336,16 +337,24 @@ export function actionStartOwnConsole(name: string, kind: string, cpu: string, m
 
 // ─── сейвы (HTTP) ───
 export async function exportSave(): Promise<string> {
-  const r = await fetch(`http://${location.hostname}:${WS_PORT}/api/save`);
+  // SRV-19: относительный URL — работает и на сервере (:3001), и в dev через vite-прокси
+  const r = await fetch('/api/save');
+  if (!r.ok) throw new Error(`сервер ответил ${r.status}`);
   return r.text();
 }
 
 export async function importSave(raw: string): Promise<boolean> {
-  const r = await fetch(`http://${location.hostname}:${WS_PORT}/api/save`, {
+  // SRV-19: относительный URL; сетевой сбой — исключение для вызывающего, отказ валидации — false
+  const r = await fetch('/api/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: raw,
   });
+  if (!r.ok) {
+    const d = (await r.json().catch(() => null)) as { ok?: boolean } | null;
+    if (d && typeof d.ok === 'boolean') return !!d.ok;
+    throw new Error(`сервер ответил ${r.status}`);
+  }
   const d = (await r.json()) as { ok: boolean };
   return !!d.ok;
 }

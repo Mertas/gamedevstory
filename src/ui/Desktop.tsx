@@ -5,7 +5,8 @@ import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { WebampLayer } from './WebampLayer';
 import {
-  actionSetAutopilot, actionTakeControl, exportSave, importSave, newGameAction, setSpeed, useAutopilot, useChat, useGame, useSpeed,
+  actionSetAutopilot, actionTakeControl, exportSave, importSave, newGameAction, setSpeed, showClientError,
+  useAutopilot, useChat, useGame, useSpeed,
 } from './store';
 import { typingName } from '../shared/chat';
 import { dateLabel, dayInYear } from '../shared/meta';
@@ -580,7 +581,13 @@ export function Desktop() {
           const f = e.target.files?.[0];
           if (!f) return;
           const r = new FileReader();
-          r.onload = () => { void importSave(String(r.result ?? '')); };
+          r.onload = () => {
+            // SRV-19: отказ сервера/сеть — игрок видит причину, а не тишину
+            void importSave(String(r.result ?? ''))
+              .then((ok) => { if (!ok) showClientError('Файл не принят: это не сейв GameDevStory'); })
+              .catch(() => showClientError('Загрузить не удалось: сервер недоступен'));
+          };
+          r.onerror = () => showClientError('Не удалось прочитать файл');
           r.readAsText(f);
           e.target.value = '';
         }}
@@ -596,6 +603,7 @@ export function Desktop() {
       a.download = `gds-save-${game?.week ?? 0}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
-    });
+    // SRV-19: сервер недоступен — сообщаем, иначе кнопка «молчит»
+    }).catch(() => showClientError('Сохранить не удалось: сервер недоступен'));
   }
 }
