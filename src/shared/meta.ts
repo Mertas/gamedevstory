@@ -1,6 +1,7 @@
 // Метаданные игры для клиента (сервер шлёт один раз при подключении) + чистые хелперы.
 import type { CareerId } from '../core/data/schema';
 import type { GameState } from '../core/types';
+import { comboGradeFrom } from './rules';
 
 export interface MetaData {
   genres: { id: string; name: string; ru: string; popularity: string; costWan: number; unlockJob: string | null; unlockLevel: number | null }[];
@@ -43,25 +44,13 @@ export function consoleById(meta: MetaData, id: string) {
 }
 
 export function comboGrade(meta: MetaData, genreId: string, typeId: string): string {
-  const row = meta.comboGrades[typeId];
-  if (!row) return 'C';
-  const idx = meta.genreOrder.indexOf(genreId);
-  return idx >= 0 ? (row[idx] ?? 'C') : 'C';
+  return comboGradeFrom(meta.comboGrades, meta.genreOrder, genreId, typeId);
 }
 
-export function isUnlocked(game: GameState, job: string | null, level: number | null, training?: string | null): boolean {
-  if (job && level && !game.staff.some((s) => (s.careers[job as CareerId] ?? 0) >= level)) return false;
-  if (training && !game.unlockedTrainings.some((x) => x.toLowerCase().includes(training.toLowerCase()))) return false;
-  return true;
-}
+// isUnlocked / consoleAvailable — единый источник: shared/rules.ts (CORE-04)
+export { isUnlocked, consoleAvailable } from './rules';
 
-export function consoleAvailable(game: GameState, consoleId: string): boolean {
-  const cs = game.consoles[consoleId];
-  return !!cs && cs.licensed && cs.availableAtWeek !== null && cs.availableAtWeek <= game.week
-    && (cs.removedAtWeek === null || cs.removedAtWeek > game.week);
-}
-
-// ─── даты (клиентская копия market.dateLabel; клиент не импортирует core-systems) ───
+// ─── даты ───
 const MONTHS_RU = ['апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря', 'января', 'февраля', 'марта'];
 const MONTH_OFFSETS = [0, 30, 61, 91, 122, 153, 183, 214, 244, 275, 306, 334];
 const MONTH_DAYS = [30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 28, 31];

@@ -10,8 +10,8 @@ import type { Rng } from '../rng';
 import type {
   ActiveGame, ActionResult, ComboGrade, GameState, Role, Staff, StartProjectInput, Stats,
 } from '../types';
-import type { CareerId } from '../data/schema';
 import { DIRECTION_WEIGHTS, EMPTY_STATS } from '../types';
+import { comboGradeFrom, consoleReleased as consoleAvailable, isUnlocked } from '../../shared/rules';
 
 export function genreById(id: string) {
   return GENRES.find((g) => g.id === id)!;
@@ -26,29 +26,14 @@ export function consoleById(id: string) {
 }
 
 export function comboGrade(genreId: string, typeId: string): ComboGrade {
-  const grades = COMBO_GRADES[typeId];
-  if (!grades) return 'C';
-  const gi = GENRE_ORDER.indexOf(genreId);
-  if (gi < 0) return 'C';
-  return (grades[gi] ?? 'C') as ComboGrade;
+  return comboGradeFrom(COMBO_GRADES, GENRE_ORDER, genreId, typeId) as ComboGrade;
 }
 
-// открыт ли жанр/тип (уровни карьер сотрудников)
-export function isUnlocked(state: GameState, job: string | null, level: number | null, training?: string | null): boolean {
-  if (job && level && !state.staff.some((s) => (s.careers[job as CareerId] ?? 0) >= level)) return false;
-  if (training && !state.unlockedTrainings.some((t) => t.toLowerCase().includes(training.toLowerCase()))) return false;
-  return true;
-}
+// открыт ли жанр/тип — общее правило (shared/rules.ts, CORE-04)
+export { isUnlocked };
 
-export function consoleAvailable(state: GameState, consoleId: string): boolean {
-  const cs = state.consoles[consoleId];
-  if (!cs) return false;
-  // null = консоль ещё не вышла (дата появления в consoleEvents);
-  // раньше null трактовался как «без ограничений» — расходилось с клиентом (shared/meta.ts)
-  if (cs.availableAtWeek === null || cs.availableAtWeek > state.week) return false;
-  if (cs.removedAtWeek !== null && cs.removedAtWeek <= state.week) return false;
-  return true;
-}
+// consoleAvailable на сервере = «в продаже по датам»; лицензия проверяется отдельно (startProject)
+export { consoleAvailable };
 
 function isSequel(state: GameState, genreId: string, typeId: string): boolean {
   return state.history.some(

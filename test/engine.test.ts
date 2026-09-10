@@ -8,7 +8,7 @@ import { advanceWeeks, newGame, releaseAction, resolveBoostAction, resolveEventA
 import { createRng } from '../src/core/rng';
 import { resolveBoost } from '../src/core/systems/dev';
 import { consoleAvailable } from '../src/core/systems/dev';
-import { dateToDay, dailySales, tickMediaEvents, dateLabel as coreDateLabel } from '../src/core/systems/market';
+import { dateToDay, dailySales, tickMediaEvents } from '../src/core/systems/market';
 import { tickFanLetters } from '../src/core/systems/mail';
 import { isValidGameState, migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { dateLabel as sharedDateLabel } from '../src/shared/meta';
@@ -391,7 +391,6 @@ describe('даты (календарь с 1 апреля 1985)', () => {
   it('границы годов: январь–март уже следующий календарный год', () => {
     for (const [week, expected] of cases) {
       expect(sharedDateLabel(week), `shared ${week}`).toBe(expected);
-      expect(coreDateLabel(week), `core ${week}`).toBe(expected);
     }
   });
 });
