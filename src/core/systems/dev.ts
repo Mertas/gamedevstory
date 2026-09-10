@@ -50,7 +50,7 @@ export function consoleAvailable(state: GameState, consoleId: string): boolean {
   return true;
 }
 
-export function isSequel(state: GameState, genreId: string, typeId: string): boolean {
+function isSequel(state: GameState, genreId: string, typeId: string): boolean {
   return state.history.some(
     (h) => h.genreId === genreId && h.typeId === typeId && h.score >= CONFIG.HALL_OF_FAME,
   );
@@ -345,7 +345,7 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   state.genreLevels[game.genreId] = gl;
   const tl = Math.min(5, (state.typeLevels[game.typeId] ?? 0) + 1);
   state.typeLevels[game.typeId] = tl;
-  if (gl === 2 || gl === 5) {
+  if (CONFIG.DIRECTION_POINTS_GENRE_LV.some((lv) => lv === gl)) {
     state.directionPoints += 2;
     log(state, `Жанр «${genre.name}» достиг Lv${gl}: +2 очка направления`);
   }
@@ -488,12 +488,12 @@ function bestAttr(st: Staff): keyof Stats {
 
 const NAME_SUFFIXES = ['Story', 'Tales', 'Quest', 'World', 'Heroes', 'Rush', 'Chronicles', 'Simulator', 'Adventure', 'Masters'];
 
-export function generateName(genreName: string, typeName: string, rng: Rng): string {
+function generateName(genreName: string, typeName: string, rng: Rng): string {
   const suffix = NAME_SUFFIXES[rng.int(0, NAME_SUFFIXES.length - 1)]!;
   return `${typeName} ${suffix}: ${genreName}`;
 }
 
-export function pickMessage(score: number, rng: Rng): string {
+function pickMessage(score: number, rng: Rng): string {
   const pool = MESSAGES.filter((m) => m.points === score);
   if (pool.length === 0) return '';
   return pool[rng.int(0, pool.length - 1)]!.message;

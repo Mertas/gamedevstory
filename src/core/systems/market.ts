@@ -114,7 +114,7 @@ export function consoleEvents(state: GameState): void {
 // реальный календарь: 1 апреля 1985 = день 1; год = 365 дней
 // месяцы (апрель..март): 30,31,30,31,31,30,31,30,31,31,28,31
 const MONTH_OFFSETS = [0, 30, 61, 91, 122, 153, 183, 214, 244, 275, 306, 334]; // первое число месяца (день года, 1-based)
-export const MONTH_NAMES_RU = ['апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря', 'января', 'февраля', 'марта'];
+const MONTH_NAMES_RU = ['апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря', 'января', 'февраля', 'марта'];
 const MONTH_DAYS = [30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 28, 31];
 
 export function dateToDay(date: [number, number, number]): number {
@@ -123,7 +123,7 @@ export function dateToDay(date: [number, number, number]): number {
 }
 
 // день года (1..365) → { месяц (0..11, от апреля), день месяца }
-export function dayToDate(dayInYear: number): { month: number; day: number } {
+function dayToDate(dayInYear: number): { month: number; day: number } {
   for (let m = 0; m < 12; m++) {
     const start = MONTH_OFFSETS[m]!;
     const len = MONTH_DAYS[m]!;

@@ -7,11 +7,11 @@ export function clamp(v: number, min: number, max: number): number {
 }
 
 // ---------- 2.1 стоимость проекта (K) ----------
-export function genreCostK(costWan: number, level: number): number {
+function genreCostK(costWan: number, level: number): number {
   return costWan * 0.1 * CONFIG.GENRE_LV_COST_MULT(level);
 }
 
-export function typeCostK(defaultCost: number, level: number): number {
+function typeCostK(defaultCost: number, level: number): number {
   return defaultCost * CONFIG.TYPE_LV_COST_MULT(level);
 }
 
@@ -115,7 +115,7 @@ export function comboMult(grade: ComboGrade): number {
   return CONFIG.COMBO_MULT[grade];
 }
 
-export function popMult(grade: string): number {
+function popMult(grade: string): number {
   return CONFIG.POP_MULT[grade] ?? 1;
 }
 
@@ -179,7 +179,3 @@ export function salaryWithLevels(baseSalary: number, levelUps: number): number {
   return baseSalary * Math.pow(1.2, levelUps);
 }
 
-// ---------- фанаты ----------
-export function fanGain(units: number): number {
-  return units * CONFIG.FAN_PER_UNIT;
-}

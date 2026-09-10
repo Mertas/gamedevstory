@@ -28,7 +28,7 @@ export function makeStaffFromData(id: string): Staff | null {
   };
 }
 
-export const AVATAR_COUNT = 48; // public/avatars/avatar-01..48.png (tools/make-avatars.ts)
+const AVATAR_COUNT = 48; // public/avatars/avatar-01..48.png (tools/make-avatars.ts)
 
 export function pickAvatar(rng: Rng): string {
   return `avatars/avatar-${String(rng.int(1, AVATAR_COUNT)).padStart(2, '0')}.png`;
@@ -123,10 +123,6 @@ export function paySalaries(state: GameState): void {
     log(state, `Не хватило на зарплаты (${Math.round(total)}K) — банкротство!`);
     bankrupt(state);
   }
-}
-
-export function careerLevelSum(s: Staff): number {
-  return Object.values(s.careers).reduce((a, b) => a + b, 0);
 }
 
 export function bankrupt(state: GameState): void {

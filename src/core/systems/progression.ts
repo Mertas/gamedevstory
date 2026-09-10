@@ -105,9 +105,7 @@ export function trainStaff(state: GameState, staffId: string, trainingId: number
 }
 
 // ─── смена профессии ───
-export const CAREER_ORDER: CareerId[] = ['coder', 'writer', 'designer', 'sound', 'director', 'producer', 'hw', 'hacker'];
-
-export function careerPrereqsMet(s: Staff, target: CareerId): boolean {
+function careerPrereqsMet(s: Staff, target: CareerId): boolean {
   const req = CONFIG.CAREER_PREREQ[target];
   if (!req) return true; // базовые профессии — свободно
   return Object.entries(req).every(([job, lv]) => (s.careers[job as CareerId] ?? 0) >= lv);
@@ -150,7 +148,7 @@ export function dismissSalesman(state: GameState): void {
   if (state.pendingEvent?.type === 'salesman') state.pendingEvent = null;
 }
 
-export function boosterPrice(state: GameState, type: string): number | null {
+function boosterPrice(state: GameState, type: string): number | null {
   const n = state.boosterPurchases[type] ?? 0;
   const row = BOOSTER_PRICES.find((b) => b.office === state.officeLevel && b.purchaseNo === n + 1);
   return row?.price ?? null;
@@ -257,7 +255,6 @@ export function buyAd(state: GameState, adId: number): ActionResult {
   if (state.activeGame && state.activeGame.phase !== 'released') {
     state.activeGame.fame += CONFIG.AD_FAME_GAIN;
   }
-  state.adsBought[adId] = (state.adsBought[adId] ?? 0) + 1;
   log(state, `📣 «${ad.nameRu ?? ad.name}» (−${Math.round(cost)}K): +${gain} фанатов`);
   return { ok: true };
 }
@@ -315,17 +312,17 @@ export function tickContracts(state: GameState, rng: Rng): void {
 }
 
 // ─── M4: своя консоль ───
-export const OWN_CONSOLE_TYPES = [
+const OWN_CONSOLE_TYPES = [
   { id: 'console', label: 'Стационарная', cost: 6000 },
   { id: 'portable', label: 'Портативная', cost: 4000 },
 ] as const;
-export const OWN_CONSOLE_CPUS = [
+const OWN_CONSOLE_CPUS = [
   { id: '16-bit', label: '16-бит чип', cost: 1000, hw: 1 },
   { id: '32-bit', label: '32-бит чип', cost: 10000, hw: 1 },
   { id: '64-bit', label: '64-бит чип', cost: 50000, hw: 1 },
   { id: 'potato-chip', label: 'Чип «Картошка»', cost: 90000, hw: 4 },
 ] as const;
-export const OWN_CONSOLE_MEDIA = [
+const OWN_CONSOLE_MEDIA = [
   { id: 'cartridge', label: 'Картридж', cost: 3000, hw: 1 },
   { id: 'cd', label: 'CD-ROM', cost: 5000, hw: 1 },
   { id: 'dvd', label: 'DVD-ROM', cost: 15000, hw: 1 },
@@ -333,7 +330,7 @@ export const OWN_CONSOLE_MEDIA = [
   { id: 'punch-cards', label: 'Перфокарты', cost: 93999.9, hw: 6 },
 ] as const;
 
-export function hwEngineerCount(state: GameState): number {
+function hwEngineerCount(state: GameState): number {
   return state.staff.filter((s) => s.activeCareer === 'hw').length;
 }
 
@@ -387,7 +384,7 @@ export function tickOwnConsole(state: GameState): void {
 }
 
 // ─── переезд офиса ───
-export function officeUpgradeInfo(state: GameState): { level: number; cost: number; ready: boolean; reason: string } | null {
+function officeUpgradeInfo(state: GameState): { level: number; cost: number; ready: boolean; reason: string } | null {
   if (state.officeLevel >= 3) return null;
   const next = state.officeLevel + 1;
   if (next === 2) {
@@ -410,13 +407,3 @@ export function moveOffice(state: GameState): ActionResult {
   return { ok: true };
 }
 
-// проверка анлока типа: тренинг тоже требуется
-export function isTypeUnlockedByTraining(state: GameState, training: string | null): boolean {
-  if (!training) return true;
-  return state.unlockedTrainings.some((t) => t.toLowerCase().includes(training.toLowerCase()));
-}
-
-// консоль существует и доступна
-export function ownConsoleAvailable(state: GameState): boolean {
-  return !!state.consoles['own-console'] || !!state.consoles['own-portable'];
-}

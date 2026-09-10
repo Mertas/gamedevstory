@@ -61,7 +61,6 @@ export function newGame(seed = 1): GameState {
     lastGamedex: null,
     gamedexFame: 0,
     contracts: [],
-    adsBought: {},
     adFansGained: {},
     ownConsole: null,
     mail: [],

@@ -60,7 +60,6 @@ export const CONFIG = {
   DEBUG_PR_MAX: 3,
   BUGS_F_COMBO: 10,
   BOOST_FAIL_BUGS: [20, 30] as const,
-  WORST_GAME_BUGS: 50, // 50–60 багов на релизе → антипремия
 
   // события разработки (шансы — в ДЕНЬ; были в неделю, ÷7)
   BOOST_CHANCE: 0.6,
@@ -113,7 +112,6 @@ export const CONFIG = {
   PRIZE_MUSIC: 100,
   PRIZE_RUNNER_UP: 500,
   PRIZE_GRAND: 1000,
-  PRIZE_WORST: -300,
 
   // найм
   HIRE_METHODS: {
@@ -167,7 +165,6 @@ export const CONFIG = {
   } as Record<string, Record<string, number>>,
 
   // ─── M3: продавец (research/02 §11) ───
-  SALESMAN_WEEK: 18, // первая неделя мая (M5W2), с года 2
   BOOSTER_KEY_GAIN: [18, 22], // ключевая профессия, 1-е использование
   BOOSTER_KEY_GAIN_2: [8, 11],
   BOOSTER_OTHER_GAIN: [8, 11],
@@ -195,7 +192,6 @@ export const CONFIG = {
   // ─── M4: своя консоль (research/01 §8) ───
   OWN_CONSOLE_WEEKS_BASE: 12,
   OWN_CONSOLE_WEEKS_PER_INDEX: 3,
-  OWN_CONSOLE_BASE_GROWTH: 100, // K базы за релиз (общее правило для всех консолей)
 
   // ─── M5: медиа-события после релиза (plan/09 §2.4) ───
   MEDIA_CHANCE: 0.12 / 7, // шанс в ДЕНЬ (12%/нед ÷7) на игру в окне

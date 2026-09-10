@@ -233,7 +233,6 @@ export interface GameState {
 
   // ─── M5 ───
   contracts: ContractState[];
-  adsBought: Record<string, number>; // сколько раз куплен тип (для UI/истории)
   adFansGained: Record<string, number>; // накоплено фанатов по типу (потолки/убывание рекламы)
   ownConsole: OwnConsoleState | null;
   mail: FanLetter[]; // письма фанатов (текст дописывает LLM на сервере)
