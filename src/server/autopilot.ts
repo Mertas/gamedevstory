@@ -5,7 +5,7 @@ import { CONFIG } from '../core/config';
 import { GENRES, TYPES, CONSOLES, consoleById, genreById, typeById } from '../core/data/db';
 import { startProjectAction } from '../core/engine';
 import { comboGrade, consoleAvailable } from '../core/systems/dev';
-import { autopilotProjectInput, comboCostK } from '../core/sim/policy';
+import { autopilotProjectInput, comboCostK, sequelOpportunity } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../core/types';
 import type { GameState, StartProjectInput } from '../core/types';
@@ -78,6 +78,7 @@ export function buildDecisionContext(state: GameState): {
   combos: string;
   consoles: string;
   directionPoints: number;
+  sequel?: string;
 } {
   const unlockedGenres = GENRES.filter((g) => {
     if (g.unlockJob && g.unlockLevel) {
@@ -105,6 +106,13 @@ export function buildDecisionContext(state: GameState): {
     }
   }
   combos.sort((a, b) => a.rank - b.rank || a.cost - b.cost);
+  // AP-05: подсказка о сиквеле — комбо с лучшим результатом в зале славы (если жанр/тип ещё открыты)
+  const seq = sequelOpportunity(state);
+  const seqGenre = seq ? unlockedGenres.find((g) => g.id === seq.genreId) : undefined;
+  const seqType = seq ? unlockedTypes.find((t) => t.id === seq.typeId) : undefined;
+  const sequelLine = seq && seqGenre && seqType
+    ? `«${seqGenre.ru ?? seqGenre.name} × ${seqType.nameRu ?? seqType.name}» — ${seq.score}/40`
+    : undefined;
   return {
     team: state.staff.map((s) => `${s.name} (${s.activeCareer} Lv${s.careers[s.activeCareer] ?? 0}, id:${s.id})`).join('; '),
     money: Math.round(state.money),
@@ -115,6 +123,7 @@ export function buildDecisionContext(state: GameState): {
     combos: combos.slice(0, 12).map((c) => c.line).join('; '),
     consoles: licensed.map((c) => `${c.id}="${c.name}"`).join(', '),
     directionPoints: state.directionPoints,
+    sequel: sequelLine,
   };
 }
 
@@ -154,6 +163,24 @@ export function createAutopilotPolicy(): { turn(state: GameState): void; stats: 
 }
 
 export { autopilotProjectInput };
+
+/** AP-02: почему команда выбрала именно так — градация комбо, бюджет и серия (игрок видит логику). */
+export function decisionReason(state: GameState, plan: AutopilotPlan): string {
+  const genre = genreById(plan.genreId);
+  const type = typeById(plan.typeId);
+  const combo = comboGrade(plan.genreId, plan.typeId);
+  const seq = sequelOpportunity(state);
+  const isSeq = !!seq && seq.genreId === plan.genreId && seq.typeId === plan.typeId;
+  const cost = comboCostK(state, plan.genreId, plan.typeId, plan.consoleId, plan.mode);
+  const budget = state.money > 4000 ? 'бюджет свободный' : state.money > 1200 ? 'бюджет ровный' : 'прижимаемся по деньгам';
+  const grade = combo === 'S' ? 'это S-комбо, грех не взять' : combo === 'A' ? 'крепкое A-комбо' : `комбо ${combo} — зато по деньгам сходится`;
+  const parts = [
+    isSeq ? `серия: у «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» был хит на ${seq!.score}/40 — делаем продолжение` : '',
+    grade,
+    `~${Math.round(cost)}K, ${budget}`,
+  ].filter(Boolean);
+  return parts.join('; ');
+}
 
 /** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
 function dirSummary(direction: Record<string, number>): string {
@@ -325,6 +352,8 @@ export class AutopilotController {
         const con = consoleById(plan.consoleId);
         if (cancelled()) return;
         this.h.pushSystem(`📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
+        // AP-02: одна строка причины — игрок понимает логику команды (градация/бюджет/серия)
+        this.h.pushSystem(`🧑‍💼 Почему так: ${decisionReason(this.h.game, plan)}.`);
         announce(plan);
       }
     } catch (e) {

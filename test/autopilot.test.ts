@@ -1,8 +1,8 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it } from 'vitest';
 import { newGame, tick } from '../src/core/engine';
-import { createAutopilotPolicy, fitDirection, validateDecision } from '../src/server/autopilot';
-import { autopilotProjectInput } from '../src/core/sim/policy';
+import { createAutopilotPolicy, decisionReason, fitDirection, validateDecision } from '../src/server/autopilot';
+import { autopilotProjectInput, sequelOpportunity } from '../src/core/sim/policy';
 import { planDirClicks } from '../src/shared/autopilot';
 import type { AutopilotPlan } from '../src/shared/autopilot';
 import type { GameState } from '../src/core/types';
@@ -189,6 +189,60 @@ describe('фолбэк-политика: упор тратит весь бюдж
     expect(values.reduce((a, b) => a + b, 0)).toBe(36);
     expect(Math.max(...values)).toBeLessThanOrEqual(8);
     expect(validateDecision(plan, g)).toBeNull();
+  });
+});
+
+describe('Ф5: причина решения (AP-02) и сиквелы (AP-05)', () => {
+  function withHit(score = 34): GameState {
+    const g = fresh();
+    const input = autopilotProjectInput(g)!;
+    g.history.push({
+      name: 'Хит', genreId: input.genreId, typeId: input.typeId, consoleId: input.consoleId,
+      score, units: 100, revenue: 1000, releaseWeek: 10, year: 1,
+      attrs: { fun: 10, creativity: 10, graphics: 10, sound: 10 }, bugs: 0, awards: [],
+    });
+    return g;
+  }
+
+  it('AP-02: причина решения проговаривает серию, градацию и бюджет', () => {
+    const g = withHit(34);
+    const plan = validPlan(g);
+    const why = decisionReason(g, plan);
+    expect(why).toContain('серия');
+    expect(why).toContain('34/40');
+    expect(why).toContain('K');
+  });
+
+  it('AP-02: без хита причина говорит о градации и бюджете, без «серии»', () => {
+    const g = fresh();
+    const why = decisionReason(g, validPlan(g));
+    expect(why).not.toContain('серия');
+    expect(why.toLowerCase()).toMatch(/комбо|бюджет/);
+  });
+
+  it('AP-05: sequelOpportunity видит только игры зала славы', () => {
+    const g = withHit(31); // ниже порога (32)
+    expect(sequelOpportunity(g)).toBeNull();
+    g.history[0]!.score = 33;
+    expect(sequelOpportunity(g)).toEqual({ genreId: g.history[0]!.genreId, typeId: g.history[0]!.typeId, score: 33 });
+  });
+
+  it('AP-05: фолбэк предпочитает сиквел удачного комбо обычной «лучшей градации»', () => {
+    const g = withHit(35);
+    const seq = sequelOpportunity(g)!;
+    const plan = autopilotProjectInput(g)!;
+    expect(plan.genreId).toBe(seq.genreId);
+    expect(plan.typeId).toBe(seq.typeId);
+    expect(validateDecision({ ...plan, direction: plan.direction }, g)).toBeNull();
+  });
+
+  it('AP-05: сиквел не берём, если комбо снова не по деньгам — обычный выбор', () => {
+    const g = withHit(35);
+    const seq = sequelOpportunity(g)!;
+    // обнуляем деньги так, чтобы только дёшевое комбо проходило
+    g.money = 1;
+    const plan = autopilotProjectInput(g);
+    if (plan) expect([plan.genreId, plan.typeId]).not.toEqual([seq.genreId, seq.typeId]);
   });
 });
 

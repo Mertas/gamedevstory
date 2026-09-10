@@ -203,6 +203,41 @@ export function pickBestCombo(state: GameState, last: { genreId: string; typeId:
   return best;
 }
 
+/** Комбо-кандидат для конкретной пары жанр×тип — если жанр/тип ещё открыты и влезаем в бюджет. */
+function candidateFor(state: GameState, genreId: string, typeId: string): ComboCandidate | null {
+  const g = GENRES.find((x) => x.id === genreId);
+  const t = TYPES.find((x) => x.id === typeId);
+  if (!g || !t) return null;
+  const unlockedGenres = GENRES.filter((x) => {
+    if (x.unlockJob && x.unlockLevel) return state.staff.some((s) => (s.careers[x.unlockJob as keyof typeof s.careers] ?? 0) >= x.unlockLevel!);
+    return true;
+  });
+  const unlockedTypes = TYPES.filter((x) => {
+    if (x.unlockJob && x.unlockLevel) {
+      if (!state.staff.some((s) => (s.careers[x.unlockJob as keyof typeof s.careers] ?? 0) >= x.unlockLevel!)) return false;
+    }
+    if (x.unlockTraining && !state.unlockedTrainings.some((y) => y.toLowerCase().includes(x.unlockTraining!.toLowerCase()))) return false;
+    return true;
+  });
+  if (!unlockedGenres.some((x) => x.id === genreId) || !unlockedTypes.some((x) => x.id === typeId)) return null;
+  const grade = comboGrade(genreId, typeId);
+  if (grade === 'C') return null; // «Nothing» и как сиквел не нужен
+  const cost = comboCostK(state, genreId, typeId, bestConsole(state).id, 'normal');
+  if (cost > state.money) return null;
+  return { genreId, typeId, grade, cost };
+}
+
+/** Сиквелы (AP-05): комбо уже блистало в Зале славы — продолжение узнаваемо и дешевле
+ *  в продвижении. Возвращаем последнюю удачную игру этого жанра×типа (или null). */
+export function sequelOpportunity(state: GameState): { genreId: string; typeId: string; score: number } | null {
+  let best: { genreId: string; typeId: string; score: number } | null = null;
+  for (const h of state.history) {
+    if (h.score < CONFIG.HALL_OF_FAME) continue;
+    if (!best || h.score > best.score) best = { genreId: h.genreId, typeId: h.typeId, score: h.score };
+  }
+  return best;
+}
+
 function bestConsole(state: GameState) {
   // PC всегда; Microx SX — если лицензия куплена
   if (state.consoles['microx-sx']?.licensed) {
@@ -235,7 +270,10 @@ function defaultDirection(state: GameState): Record<string, number> {
 
 /** Ввод проекта для автопилота-фолбэка: лучшая доступная комбинация + роли (как у политики). */
 export function autopilotProjectInput(state: GameState): StartProjectInput | null {
-  const combo = pickBestCombo(state, null);
+  // AP-05: удачное комбо прошлого (зал славы) важнее «лучшей градации»: сиквел продаётся лучше
+  const seq = sequelOpportunity(state);
+  const sequel = seq ? candidateFor(state, seq.genreId, seq.typeId) : null;
+  const combo = sequel ?? pickBestCombo(state, null);
   if (!combo) return null;
   const consoleData = bestConsole(state);
   if (!consoleAvailable(state, consoleData.id)) return null;
