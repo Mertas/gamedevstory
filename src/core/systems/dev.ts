@@ -57,7 +57,14 @@ export function startProject(state: GameState, input: StartProjectInput): Action
   }
   if (!state.staff.some((s) => s.id === input.proposalStaffId)) return { ok: false, error: 'Нет сценариста' };
 
-  const direction = { ...EMPTY_DIRECTION, ...input.direction } as Record<string, number>;
+  // SRV-23: значения направления проверяются на входе — NaN/отрицательные/чужие оси не должны
+  // попадать в очки проекта (NaN проходил guard суммы и ломал экономику необратимо)
+  const direction: Record<string, number> = { ...EMPTY_DIRECTION };
+  for (const [axis, v] of Object.entries(input.direction ?? {})) {
+    if (axis in direction && typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+      direction[axis] = Math.round(v);
+    }
+  }
   const spent = Object.values(direction).reduce((a, b) => a + b, 0);
   // очки направления — перераспределяемый пул (не списываются; растут с уровнями жанров)
   if (spent > state.directionPoints) return { ok: false, error: 'Не хватает очков направления' };

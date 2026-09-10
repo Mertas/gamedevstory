@@ -66,6 +66,32 @@ describe('GameServer: importSave (SRV-02)', () => {
   });
 });
 
+describe('GameServer: хвосты сервера (SRV-18/08)', () => {
+  it('SRV-18: неизвестное действие и чужой вариант стенда отклоняются с ошибкой', () => {
+    srv = makeServer();
+    srv.handle({ type: 'definitely-not-an-action' } as never);
+    expect(srv.actionResult()).toEqual({ ok: false, error: expect.stringContaining('Неизвестное действие') });
+    srv.handle({ type: 'resolve_gamedex', option: 'hack-the-planet' });
+    expect(srv.actionResult()).toEqual({ ok: false, error: expect.stringContaining('Неизвестный стенд') });
+  });
+
+  it('SRV-08: старт проекта сразу пишется на диск (не ждём дебаунса)', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    srv = makeServer();
+    const g = srv.snapshot().game;
+    g.money = 1e6;
+    srv.handle({ type: 'set_speed', v: 8 });
+    await vi.advanceTimersByTimeAsync(400); // PC «поступила в продажу»
+    const spy = vi.spyOn(srv, 'saveNow');
+    const input = autopilotProjectInput(g)!;
+    srv.handle({ type: 'start_project', input });
+    expect(srv.snapshot().game.activeGame).not.toBeNull();
+    expect(spy).toHaveBeenCalled();
+    const saved = JSON.parse(fs.readFileSync(path.join(dir!, 'save.json'), 'utf8')) as { game: { activeGame: unknown } };
+    expect(saved.game.activeGame).not.toBeNull(); // партия уже на диске
+  });
+});
+
 describe('GameServer: автопилот и чат', () => {
   it('SRV-03: take_control во время решения отменяет план и хореографию', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5); // фиксированный сид партии — тест детерминирован

@@ -90,6 +90,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
         s.pendingPlan = null; // клик «Начать» (или таймаут) — план применён
         s.pushSystem('📦 Проект стартовал: разработка началась');
         void s.generatePhase('kickoff');
+        s.saveNow(); // SRV-08: дорогое действие — сразу на диск
       }
       s.emit();
       return;
@@ -102,6 +103,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
         const g = s.game.history[s.game.history.length - 1];
         s.pushSystem(`🚀 Релиз! ${g ? `Рецензии: ${g.score}/40${g.score >= CONFIG.HALL_OF_FAME ? ' — ЗАЛ СЛАВЫ!' : ''}` : ''}`);
         void s.generatePhase('release', { score: g?.score ?? 0, units: g?.units ?? 0 });
+        s.saveNow(); // SRV-08: дорогое действие — сразу на диск
       }
       s.emit();
       return;
@@ -112,6 +114,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
         ? hireByIdAction(s.game, msg.method, msg.staffId, opts)
         : hireAction(s.game, msg.method, opts);
       s.run(res);
+      if (res.ok) s.saveNow(); // SRV-08: найм оплачен — сохраняем сразу
       // новичок представляется в чате
       if (res.ok && res.staffId) {
         const hired = s.game.staff.find((x) => x.id === res.staffId);
@@ -127,7 +130,10 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
     case 'buy_license': {
       const res = buyLicenseAction(s.game, msg.consoleId);
       s.run(res);
-      if (res.ok) s.pushSystem('🔑 Куплена лицензия на консоль');
+      if (res.ok) {
+        s.pushSystem('🔑 Куплена лицензия на консоль');
+        s.saveNow(); // SRV-08: дорогое действие — сразу на диск
+      }
       s.emit();
       return;
     }
@@ -148,10 +154,17 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       dismissSalesmanAction(s.game);
       s.emit();
       return;
-    case 'resolve_gamedex':
+    case 'resolve_gamedex': {
+      // SRV-18: option приходит из сети — сверяем со списком стендов, а не кастуем вслепую
+      if (!(msg.option in CONFIG.GAMEDEX_OPTIONS)) {
+        s.lastAction = { ok: false, error: `Неизвестный стенд: ${String(msg.option)}` };
+        s.emit();
+        return;
+      }
       s.run(resolveGamedexAction(s.game, msg.option as GamedexOption));
       s.emit(); // SRV-10: на паузе без emit() клиент не видел снятие события
       return;
+    }
     case 'resolve_event':
       resolveEventAction(s.game);
       s.emit();
@@ -208,10 +221,13 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.run(buyCareerManualAction(s.game, msg.staffId, msg.target));
       s.emit();
       return;
-    case 'move_office':
-      s.run(moveOfficeAction(s.game));
+    case 'move_office': {
+      const res = moveOfficeAction(s.game);
+      s.run(res);
+      if (res.ok) s.saveNow(); // SRV-08: дорогое действие — сразу на диск
       s.emit();
       return;
+    }
     // M4
     case 'buy_ad':
       s.run(buyAdAction(s.game, msg.adId));
@@ -221,9 +237,19 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.run(takeContractAction(s.game, msg.contractId, msg.staffIds));
       s.emit();
       return;
-    case 'start_own_console':
-      s.run(startOwnConsoleAction(s.game, msg.name, msg.kind, msg.cpu, msg.media));
+    case 'start_own_console': {
+      const res = startOwnConsoleAction(s.game, msg.name, msg.kind, msg.cpu, msg.media);
+      s.run(res);
+      if (res.ok) s.saveNow(); // SRV-08: дорогое действие — сразу на диск
       s.emit();
       return;
+    }
+    default: {
+      // SRV-18: сообщение неизвестного типа не глотаем молча — клиент получит ошибку
+      const t = (msg as { type?: string }).type;
+      s.lastAction = { ok: false, error: `Неизвестное действие: ${String(t)}` };
+      s.emit();
+      return;
+    }
   }
 }

@@ -153,6 +153,26 @@ describe('старт проекта: первый доступный жанр/к
     expect(res.ok).toBe(true);
     expect(g.activeGame?.phase).toBe('proposal');
   });
+
+  it('SRV-23: мусор в очках направления отбрасывается (NaN/отрицательные/чужие оси)', () => {
+    const g = newGame(1);
+    tick(g);
+    const res = startProjectAction(g, {
+      consoleId: 'pc-game',
+      genreId: 'table', typeId: 'pirate',
+      mode: 'normal',
+      direction: { approach: 5, polish: 5, niche: Number.NaN, vibes: 7, cute: -3 } as never,
+      proposalStaffId: g.staff[1]!.id,
+      assignments: { program: [g.staff[0]!.id], graphics: [], sound: [], debug: [] },
+    });
+    expect(res.ok).toBe(true);
+    const d = g.activeGame!.direction as unknown as Record<string, number>;
+    expect(d.niche).toBe(0); // NaN не прошёл
+    expect(d.cute).toBe(0); // отрицательное не прошло
+    expect(d.vibes).toBeUndefined(); // чужая ось отброшена
+    expect(Object.values(d).reduce((a, b) => a + b, 0)).toBe(10); // бюджет не тронут
+    expect(JSON.stringify(d)).not.toContain('null'); // и в сейв не утечёт NaN → null
+  });
 });
 
 describe('миграции сейва (saveVersion)', () => {
