@@ -1,6 +1,4 @@
 // Игровая сессия на сервере: состояние + тикер + действия + чат-фазы (GigaChat) + автосейв.
-import * as fs from 'fs';
-import { fileURLToPath } from 'url';
 import { CONFIG, type HireMethodId } from '../core/config';
 import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
@@ -10,20 +8,15 @@ import {
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, tick, trainAction, applyBoosterAction,
 } from '../core/engine';
-import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type GamedexOption, type Staff, type StartProjectInput } from '../core/types';
-import { isValidGameState, migrateSave } from '../core/migrate';
+import { DIRECTION_LABELS, DIRECTION_ORDER, type GameState, type FanLetter, type GamedexOption, type StartProjectInput } from '../core/types';
 import { avatarFor, chatSystem, deliverChat, resetChat, type ChatMsg, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 import { buildLetterPrompt, buildMessages, buildDecisionPrompt, parseDecision, parseSingleMessage } from './chatgen';
 import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { buildDecisionContext, createAutopilotPolicy, fitDirection, validateDecision, autopilotProjectInput } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
+import { SaveManager, SAVE_PATH } from './save';
 
-const ROOT = fileURLToPath(new URL('../..', import.meta.url));
-const SAVE_PATH = `${ROOT}data/save.json`;
-// аудит 05.09: сейв писался каждый тик неатомарно; теперь — дебаунс по игровым дням
-// + tmp+rename (обрыв процесса не бьёт JSON), битый сейв уходит в .corrupt-бэкап
-const SAVE_DEBOUNCE_DAYS = 10;
 // аудит 09.09 (SRV-01): скорость — конечное число в [0..MAX_SPEED]; иначе Math.round(1000/v)=0 → тик каждую 1 мс
 const MAX_SPEED = 8;
 
@@ -86,41 +79,6 @@ interface ChatThread {
   spoken?: string[]; // кто уже говорил в этом диалоге — ротация
 }
 
-// ─── легаси: игра начата до введения счётчика вклада — восстановить приблизительно ───
-// Точную историю восстановить нельзя (она не хранилась); оцениваем по текущим очкам
-// проекта и долям сотрудников в «котле» (роль — профильный навык, безролевой — средний).
-function normalizeLegacyContrib(state: GameState): void {
-  const g = state.activeGame;
-  if (!g || g.contribTotal) return;
-  g.contribTotal = {};
-  const sumPoints =
-    (g.points?.fun ?? 0) + (g.points?.creativity ?? 0) + (g.points?.graphics ?? 0) + (g.points?.sound ?? 0);
-  if (sumPoints <= 0) return;
-  // котёл как в devTick: роль даёт профильный навык, безролевой — средний, debug не вкладчик
-  const ROLE_STAT: Record<string, keyof Staff['stats']> = {
-    proposal: 'scenario', program: 'program', graphics: 'graphics', sound: 'sound',
-  };
-  const assignedRoles: Record<string, string[]> = {};
-  for (const [role, ids] of Object.entries(g.assignments ?? {})) for (const id of ids ?? []) (assignedRoles[id] ??= []).push(role);
-  let total = 0;
-  const statOf: Record<string, number> = {};
-  for (const s of state.staff) {
-    const roles = assignedRoles[s.id] ?? [];
-    if (!s.stats) continue;
-    const st = s.stats;
-    let stat = 0;
-    for (const r of roles) {
-      const key = ROLE_STAT[r];
-      if (key) stat += st[key] ?? 0;
-    }
-    if (stat === 0) stat = (st.program + st.scenario + st.graphics + st.sound) / 4; // безролевой-универсал
-    statOf[s.id] = stat;
-    total += stat;
-  }
-  if (total <= 0) return;
-  for (const s of state.staff) g.contribTotal[s.id] = ((sumPoints * (statOf[s.id] ?? 0)) / total) || 0;
-}
-
 /** LLM-инъекция (LLM-05): в тестах — fake-LLM, в проде — GigaChat. savePath — временный файл в тестах. */
 export interface GameServerDeps {
   llm?: LlmFn;
@@ -133,7 +91,7 @@ export class GameServer {
   private chat: ChatState;
   private llm: LlmFn;
   private story: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
-  private savePath: string;
+  private saves: SaveManager;
   private speed = 1;
   private timer: NodeJS.Timeout | null = null;
   private listeners = new Set<(s: SessionSnapshot) => void>();
@@ -153,7 +111,6 @@ export class GameServer {
   private lastHadActiveGame = false; // переход activeGame→null сбрасывает decidedThisIdle
   private pendingEventSince: number | null = null; // «театр»: попап висит ~2.6с
   private decisionEpoch = 0; // SRV-03: отмена решений автопилота (take_control во время LLM-запроса)
-  private loadedChat: ChatState | null = null; // SRV-21: чат из save.json
   private stepListeners = new Set<(s: AutopilotStep) => void>();
   // письма фанатов: текст дописывает LLM (по одному, не чаще раза в игровой день)
   private letterBusy = false;
@@ -164,9 +121,10 @@ export class GameServer {
   constructor(deps: GameServerDeps = {}) {
     this.llm = deps.llm ?? generateWithFallback;
     this.story = deps.story ?? generateStory;
-    this.savePath = deps.savePath ?? SAVE_PATH;
-    this.game = this.load();
-    this.chat = this.loadedChat ?? resetChat();
+    this.saves = new SaveManager(deps.savePath ?? SAVE_PATH);
+    const loaded = this.saves.read();
+    this.game = loaded?.game ?? newGame(Math.floor(Math.random() * 99991) + 1);
+    this.chat = loaded?.chat ?? resetChat();
     this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
     this.startTicker();
   }
@@ -258,11 +216,11 @@ export class GameServer {
         if (this.chatThread) void this.nextReply();
         this.maybeMailLetters();
         this.maybeAutopilot();
-        this.autosave();
+        this.saves.autosave(this.game, this.chat);
         this.emit();
       } catch (e) {
         console.error('[gds] ошибка тика (сервер продолжает работу):', String(e).slice(0, 300));
-        this.autosave(true);
+        this.saves.autosave(this.game, this.chat, true);
       }
     }, Math.round(CONFIG.TICK_MS / Math.max(0.5, clamped)));
   }
@@ -338,7 +296,7 @@ export class GameServer {
         this.chat = resetChat();
         this.resetSession(); // SRV-09: ответы старой партии не должны прилетать в новую
         this.mailShownId = 0;
-        this.autosave(true);
+        this.saves.autosave(this.game, this.chat, true);
         this.emit();
         return;
       }
@@ -818,7 +776,7 @@ export class GameServer {
     }
     letter.llm = true;
     this.letterBusy = false;
-    this.autosave(true); // LLM-текст письма не должен теряться при дебаунсе
+    this.saves.autosave(this.game, this.chat, true); // LLM-текст письма не должен теряться при дебаунсе
     this.emit();
   }
 
@@ -940,45 +898,9 @@ export class GameServer {
   }
 
   // ─── сейвы ───
-  private lastSaveDay = 0;
-
-  private load(): GameState {
-    try {
-      const raw = fs.readFileSync(this.savePath, 'utf8');
-      const parsed = JSON.parse(raw) as unknown;
-      // формат 2 (SRV-21): { game, chat }; формат 1 (легаси): сам GameState
-      const wrapped = !!parsed && typeof parsed === 'object' && 'game' in (parsed as Record<string, unknown>);
-      const candidate = wrapped ? (parsed as { game: unknown }).game : parsed;
-      if (isValidGameState(candidate)) {
-        migrateSave(candidate); // версия формата + repair-нормализации (adFansGained, висящая пауза)
-        normalizeLegacyContrib(candidate);
-        this.lastSaveDay = candidate.week;
-        const chat = wrapped ? (parsed as { chat?: unknown }).chat : undefined;
-        this.loadedChat = chat && Array.isArray((chat as ChatState).msgs) ? (chat as ChatState) : null;
-        return candidate;
-      }
-      console.error('[gds] сейв не похож на GameState — начинаем новую игру');
-      this.backupSave('не похож на GameState');
-    } catch (e) {
-      // битый JSON не должен молча стирать партию: сохраняем улику и сообщаем;
-      // отсутствие файла — обычный первый запуск, это НЕ повреждение
-      if (fs.existsSync(this.savePath)) this.backupSave(String(e).slice(0, 300));
-    }
-    return newGame(Math.floor(Math.random() * 99991) + 1);
-  }
-
-  private backupSave(why: string): void {
-    try {
-      fs.copyFileSync(this.savePath, `${this.savePath}.corrupt-${Date.now()}`);
-      console.error('[gds] сейв повреждён — бэкап в data/save.json.corrupt-*; начата новая игра:', why);
-    } catch {
-      console.error('[gds] сейв повреждён и бэкап не удался:', why);
-    }
-  }
-
   /** SRV-08: принудительный сейв (SIGINT/SIGTERM/краш) — вызывается из server.ts */
   saveNow(): void {
-    this.autosave(true);
+    this.saves.autosave(this.game, this.chat, true);
   }
 
   /** остановка тикера (тесты, graceful shutdown) */
@@ -987,50 +909,19 @@ export class GameServer {
     this.timer = null;
   }
 
-  private autosave(force = false): void {
-    if (!force && this.game.week - this.lastSaveDay < SAVE_DEBOUNCE_DAYS) return;
-    try {
-      const tmp = `${this.savePath}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify({ game: this.game, chat: this.chat })); // SRV-21: чат переживает рестарт
-      fs.renameSync(tmp, this.savePath); // атомарно: tmp появляется целиком, rename заменяет
-      this.lastSaveDay = this.game.week;
-    } catch (e) {
-      console.error('[gds] автосейв не удался:', String(e).slice(0, 300));
-    }
-  }
-
   exportSave(): string {
-    return JSON.stringify({ game: this.game, chat: this.chat });
+    return this.saves.exportPayload(this.game, this.chat);
   }
 
   importSave(raw: string): boolean {
-    try {
-      const parsed = JSON.parse(raw) as unknown;
-      const wrapped = !!parsed && typeof parsed === 'object' && 'game' in (parsed as Record<string, unknown>);
-      const candidateRaw = wrapped ? (parsed as { game: unknown }).game : parsed;
-      // SRV-02: схемная проверка ДО подмены живой партии
-      if (!isValidGameState(candidateRaw)) {
-        console.error('[gds] импорт отклонён: файл не похож на сейв GameState');
-        return false;
-      }
-      // кандидат готовим и мигрируем на копии — живая партия не мутируется до успеха
-      const candidate = migrateSave(JSON.parse(JSON.stringify(candidateRaw)) as GameState);
-      normalizeLegacyContrib(candidate);
-      // аудит 05.09: импорт затирает текущую партию — бэкап перед перезаписью
-      try {
-        if (fs.existsSync(this.savePath)) fs.copyFileSync(this.savePath, `${this.savePath}.pre-import-${Date.now()}`);
-      } catch { /* бэкап не критичен */ }
-      this.game = candidate;
-      const chat = wrapped ? (parsed as { chat?: unknown }).chat : undefined;
-      this.chat = chat && Array.isArray((chat as ChatState).msgs) ? (chat as ChatState) : resetChat();
-      this.resetSession(); // SRV-09
-      this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
-      this.autosave(true);
-      this.emit();
-      return true;
-    } catch (e) {
-      console.error('[gds] импорт сейва не удался:', String(e).slice(0, 300));
-      return false;
-    }
+    const res = this.saves.importPayload(raw);
+    if (!res) return false;
+    this.game = res.game;
+    this.chat = res.chat ?? resetChat();
+    this.resetSession(); // SRV-09
+    this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
+    this.saves.autosave(this.game, this.chat, true);
+    this.emit();
+    return true;
   }
 }
