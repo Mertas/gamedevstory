@@ -525,6 +525,7 @@ export function Desktop() {
         )}
 
         <div className="w95-tray">
+          {typing && <span className="w95-hint" style={{ color: '#000080', marginRight: 6 }}>{typing} печатает…</span>}
           <button
             className="w95-btn"
             style={{ marginRight: 8, fontWeight: 'bold', ...(autopilot ? { color: '#c00000' } : {}) }}
@@ -535,7 +536,6 @@ export function Desktop() {
           >
             {autopilot ? '👤 Взять управление' : '🤖 Отдать управление'}
           </button>
-          {typing && <span className="w95-hint" style={{ color: '#000080' }}>{typing} печатает…</span>}
           <span className="w95-hint" style={{ marginRight: 6 }}>❤ {Math.round(game.fans)}</span>
           <span className="w95-hint" style={{ marginRight: 6 }}>🔬 {Math.round(game.research)} PR</span>
           <span className="w95-tray-money" style={{ fontWeight: 'bold', marginRight: 6 }}>💰 {Math.round(game.money)}K</span>
