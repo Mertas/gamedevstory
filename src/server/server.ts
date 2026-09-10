@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, type WebSocket } from 'ws';
 import { PORT, HOST, gigaReady } from './config';
 import { GameServer, type ClientAction } from './game';
 import { llmStatus } from './giga';
@@ -15,6 +15,18 @@ const DIST = path.join(ROOT, 'dist');
 // SRV-06: seq/ack на WS-канале — клиент повторяет недоставленные действия после обрыва
 // (очередь с TTL); guard отсекает уже обработанные (их ack потерялся вместе с сокетом).
 const seqGuard = createSeqGuard();
+
+// SRV-13: heartbeat — полумёртвый сокет (Wi-Fi уснул, ноут в суспенде) не выглядит закрытым:
+// пингуем и закрываем молчунов. Backpressure: нечитающему клиенту снапшоты не копим — они
+// полные, свежий придёт после разгрузки; иначе буфер рос бы бесконечно.
+const HEARTBEAT_MS = 30_000;
+const MAX_BUFFERED = 1_000_000;
+type LiveSocket = WebSocket & { isAlive?: boolean };
+function sendSafe(ws0: WebSocket, payload: string): void {
+  if (ws0.readyState !== ws0.OPEN) return;
+  if (ws0.bufferedAmount > MAX_BUFFERED) return; // SRV-13: клиент не читает — не копим хвост
+  ws0.send(payload);
+}
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -52,13 +64,14 @@ wss.on('connection', (ws, req) => {
     return;
   }
   ws.on('error', (e) => console.error('[gds] ws error:', String(e).slice(0, 300))); // SRV-14
+  const live = ws as LiveSocket;
+  live.isAlive = true; // SRV-13: сердцебиение — молчуна отключит heartbeat-тик
+  ws.on('pong', () => { live.isAlive = true; });
   ws.send(JSON.stringify({ type: 'meta', data: game.meta() }));
   // сразу шлём текущее состояние: новый клиент или переподключение на паузе (событие
   // висит, тикер молчит) иначе не получат state, и попап решения не вернётся
   ws.send(JSON.stringify({ type: 'state', ...game.snapshot() }));
-  const unsub = game.subscribe((snap) => {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'state', ...snap }));
-  });
+  const unsub = game.subscribe((snap) => sendSafe(ws, JSON.stringify({ type: 'state', ...snap })));
   ws.on('message', (raw) => {
     let seq: number | undefined;
     try {
@@ -66,7 +79,7 @@ wss.on('connection', (ws, req) => {
       seq = typeof msg.seq === 'number' ? msg.seq : undefined;
       if (seqGuard.check(typeof msg.sid === 'string' ? msg.sid : null, seq) === 'dup') {
         // SRV-06: повтор при переподключении — уже обрабатывали, только подтверждаем
-        ws.send(JSON.stringify({ type: 'action_result', seq, ok: true, dup: true }));
+        sendSafe(ws, JSON.stringify({ type: 'action_result', seq, ok: true, dup: true }));
         return;
       }
       game.handle(msg);
@@ -74,26 +87,35 @@ wss.on('connection', (ws, req) => {
       const ok = !(ar && ar.ok === false);
       // SRV-06: ack на каждое действие (не только на ошибку) — клиент снимает его с очереди
       if (seq !== undefined) {
-        ws.send(JSON.stringify({ type: 'action_result', seq, ok, ...(ok ? {} : { error: ar?.error }) }));
+        sendSafe(ws, JSON.stringify({ type: 'action_result', seq, ok, ...(ok ? {} : { error: ar?.error }) }));
       } else if (!ok) {
-        ws.send(JSON.stringify({ type: 'action_result', error: ar?.error }));
+        sendSafe(ws, JSON.stringify({ type: 'action_result', error: ar?.error }));
       }
     } catch (e) {
       console.error('[gds] WS-сообщение не обработано:', String(e).slice(0, 300));
-      ws.send(JSON.stringify({
+      sendSafe(ws, JSON.stringify({
         type: 'action_result', ...(seq !== undefined ? { seq } : {}), ok: false, error: String(e).slice(0, 200),
       }));
     }
   });
-  game.setStoryCb((res) => ws.send(JSON.stringify({ type: 'story_result', ...res })));
-  const unsubSteps = game.subscribeSteps((step) => {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'autopilot_step', step }));
-  });
+  game.setStoryCb((res) => sendSafe(ws, JSON.stringify({ type: 'story_result', ...res })));
+  const unsubSteps = game.subscribeSteps((step) => sendSafe(ws, JSON.stringify({ type: 'autopilot_step', step })));
   ws.on('close', () => {
     unsub();
     unsubSteps();
   });
 });
+
+// SRV-13: раз в 30 с — живым ping, молчунам terminate (полумёртвый TCP сам не закрывается)
+const heartbeat = setInterval(() => {
+  for (const client of wss.clients) {
+    const s = client as LiveSocket;
+    if (s.isAlive === false) { s.terminate(); continue; }
+    s.isAlive = false;
+    try { s.ping(); } catch { /* сокет уже мёртв — добьём следующим тиком */ }
+  }
+}, HEARTBEAT_MS);
+wss.on('close', () => clearInterval(heartbeat));
 
 // ─── HTTP: экспорт/импорт сейва ───
 app.get('/api/health', (_req, res) => {
