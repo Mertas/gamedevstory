@@ -98,11 +98,13 @@ wss.on('connection', (ws, req) => {
       }));
     }
   });
-  game.setStoryCb((res) => sendSafe(ws, JSON.stringify({ type: 'story_result', ...res })));
+  // SRV-05: каждая вкладка слушает результат сама; сюжет несёт reqId запроса
+  const unsubStory = game.addStoryListener((res) => sendSafe(ws, JSON.stringify({ type: 'story_result', ...res })));
   const unsubSteps = game.subscribeSteps((step) => sendSafe(ws, JSON.stringify({ type: 'autopilot_step', step })));
   ws.on('close', () => {
     unsub();
     unsubSteps();
+    unsubStory();
   });
 });
 

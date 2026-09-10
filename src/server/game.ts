@@ -33,7 +33,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'resolve_salesman' }
   | { type: 'resolve_gamedex'; option: string }
   | { type: 'resolve_event' }
-  | { type: 'generate_story'; genreId: string; typeId: string }
+  | { type: 'generate_story'; genreId: string; typeId: string; reqId?: number }
   | { type: 'set_speed'; v: number }
   | { type: 'new_game' }
   | { type: 'get_state' }
@@ -196,21 +196,29 @@ export class GameServer {
     }
   }
 
-  private storyCb: ((res: { ok: boolean; title?: string; plot?: string; error?: string }) => void) | null = null;
-  setStoryCb(cb: (res: { ok: boolean; title?: string; plot?: string; error?: string }) => void): void {
-    this.storyCb = cb;
+  // SRV-05: подписчики на результат сюжета — по одному на соединение; ответ адресуется
+  // reqId-эхом, клиент матчит свой запрос (вкладки больше не перехватывают чужой сюжет)
+  private storyListeners = new Set<(res: { ok: boolean; reqId?: number; title?: string; plot?: string; error?: string }) => void>();
+
+  /** подписка на результат генерации сюжета; возвращает функцию отписки */
+  addStoryListener(cb: (res: { ok: boolean; reqId?: number; title?: string; plot?: string; error?: string }) => void): () => void {
+    this.storyListeners.add(cb);
+    return () => { this.storyListeners.delete(cb); };
   }
 
-  /** генерация названия и сюжета через GigaChat (асинхронно, ответ — в storyCb) */
-  async runStory(msg: { genreId: string; typeId: string }): Promise<void> {
+  /** генерация названия и сюжета через GigaChat (асинхронно, ответ — подписчикам с reqId) */
+  async runStory(msg: { genreId: string; typeId: string; reqId?: number }): Promise<void> {
+    const emitStory = (res: { ok: boolean; title?: string; plot?: string; error?: string }): void => {
+      for (const l of this.storyListeners) l({ ...res, reqId: msg.reqId });
+    };
     try {
       const g = genreById(msg.genreId);
       const t = typeById(msg.typeId);
       if (!g || !t) throw new Error('Жанр или тема не найдены');
       const s = await this.story(g.ru ?? g.name, t.nameRu ?? t.name);
-      this.storyCb?.({ ok: true, ...s });
+      emitStory({ ok: true, ...s });
     } catch (e) {
-      this.storyCb?.({ ok: false, error: e instanceof Error ? e.message : 'Ошибка генерации' });
+      emitStory({ ok: false, error: e instanceof Error ? e.message : 'Ошибка генерации' });
     }
   }
 

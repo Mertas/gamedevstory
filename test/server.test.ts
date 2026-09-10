@@ -66,7 +66,19 @@ describe('GameServer: importSave (SRV-02)', () => {
   });
 });
 
-describe('GameServer: хвосты сервера (SRV-18/08)', () => {
+describe('GameServer: хвосты сервера (SRV-18/08/05)', () => {
+  it('SRV-05: результат сюжета несёт reqId запроса; отписанный слушатель молчит', async () => {
+    srv = makeServer();
+    const got: Array<{ ok: boolean; reqId?: number; title?: string; plot?: string }> = [];
+    const unsub = srv.addStoryListener((res) => got.push(res));
+    await srv.runStory({ genreId: 'table', typeId: 'pirate', reqId: 42 });
+    expect(got).toHaveLength(1);
+    expect(got[0]).toEqual({ ok: true, title: 'Тест', plot: 'Сюжет', reqId: 42 });
+    unsub();
+    await srv.runStory({ genreId: 'table', typeId: 'pirate', reqId: 43 });
+    expect(got).toHaveLength(1); // после отписки результат не приходит
+  });
+
   it('SRV-18: неизвестное действие и чужой вариант стенда отклоняются с ошибкой', () => {
     srv = makeServer();
     srv.handle({ type: 'definitely-not-an-action' } as never);

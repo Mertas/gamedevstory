@@ -9,7 +9,7 @@ import { DIRECTION_LABELS, DIRECTION_ORDER, type DirectionAxis, type Role } from
 import { StaffCard } from '../StaffCard';
 import {
   actionGenerateStory, actionRelease, actionStartProject, actionUseBooster, clearActionError,
-  clearStoryResult, useActionError, useGame, useMeta, useStoryResult,
+  clearStoryResult, showClientError, useActionError, useGame, useMeta, useStoryResult,
 } from '../store';
 
 const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = DIRECTION_ORDER.map((id) => ({
@@ -455,6 +455,15 @@ function ProjectWizard() {
     }
     clearStoryResult();
   }, [story]);
+  // SRV-05: ответ мог потеряться (обрыв сокета) — не оставляем «Генерирую…» навсегда
+  useEffect(() => {
+    if (!storyBusy) return;
+    const t = window.setTimeout(() => {
+      setStoryBusy(false);
+      showClientError('GigaChat не ответил за 95 секунд — попробуйте ещё раз');
+    }, 95000);
+    return () => window.clearTimeout(t);
+  }, [storyBusy]);
   const actionError = useActionError();
 
   // доступные варианты — только открытые (жанры: уровни карьер; типы: + тренинги)

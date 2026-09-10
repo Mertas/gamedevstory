@@ -33,7 +33,7 @@ export interface SessionHost {
   emit(): void;
   pushSystem(text: string): void;
   generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void>;
-  runStory(msg: { genreId: string; typeId: string }): Promise<void>;
+  runStory(msg: { genreId: string; typeId: string; reqId?: number }): Promise<void>;
   queuePlayerMessage(text: string): void;
   startAutopilot(): void;
   stopAutopilot(silent: boolean): void;

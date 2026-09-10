@@ -91,7 +91,7 @@ function connect(): void {
     try {
       const d = JSON.parse(String(e.data)) as {
         type: string; game?: GameState; chat?: ChatState; speed?: number; data?: MetaData; error?: string;
-        ok?: boolean; title?: string; plot?: string; autopilot?: boolean; step?: unknown; seq?: number;
+        ok?: boolean; title?: string; plot?: string; autopilot?: boolean; step?: unknown; seq?: number; reqId?: number;
       };
       if (d.type === 'meta' && d.data) {
         snap = { ...snap, meta: d.data };
@@ -119,6 +119,9 @@ function connect(): void {
         if (d.error) raiseError(d.error);
       }
       if (d.type === 'story_result') {
+        // SRV-05: чужой/устаревший ответ (другая вкладка) не трогает наш черновик
+        if (d.reqId !== undefined && d.reqId !== pendingStoryReq) return;
+        pendingStoryReq = null;
         storyResult = {
           ok: Boolean(d.ok), title: d.title, plot: d.plot, error: d.error,
         } as { ok: boolean; title?: string; plot?: string; error?: string };
@@ -272,8 +275,12 @@ export function actionResolveGamedex(option: string) {
 export function actionResolveEvent() {
   send({ type: 'resolve_event' });
 }
+// SRV-05: сквозной номер запроса сюжета — ответ принимаем только на свой (вкладки не путаются)
+let storyReqSeq = 0;
+let pendingStoryReq: number | null = null;
 export function actionGenerateStory(genreId: string, typeId: string) {
-  send({ type: 'generate_story', genreId, typeId });
+  pendingStoryReq = ++storyReqSeq;
+  send({ type: 'generate_story', genreId, typeId, reqId: pendingStoryReq });
 }
 
 // результат генерации названия/сюжета
