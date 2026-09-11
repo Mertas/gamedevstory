@@ -45,6 +45,8 @@ while read -r _old new ref; do
   fi
 
   log "гейт: типы + линт + тесты"
+  # страховка: тесты никогда не должны открывать боевую users.db (в ней аккаунты и сохранения)
+  export GDS_USERS_DB=/tmp/gds-gate-users.db
   if ! pnpm check; then
     log "ДЕПЛОЙ ОТКЛОНЁН: проверки не прошли. Прод не тронут."
     rm -rf "$REL"
