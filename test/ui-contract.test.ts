@@ -53,6 +53,7 @@ describe('DOM-контракт автопилота и карточек', () => 
     const storeSrc = read('../src/ui/store.ts');
     expect(hire).toContain('data-autopilot={`hire-tab-${id}`}');
     expect(team).toContain('data-autopilot={`lvl-${st.id}`}');
+    expect(team).toContain('data-autopilot={`fire-${st.id}`}'); // AP-09: увольнение видно мыши
     expect(training).toContain('data-autopilot={`train-${t.id}`}');
     expect(search).toContain('data-autopilot={`hire-${c.id}`}');
     expect(office).toContain('data-autopilot="office-move"');

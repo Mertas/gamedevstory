@@ -1,21 +1,24 @@
 // Скриптованный игрок («разумная» политика) — для баланс-тестов и CLI-прогона.
 // Стратегия: дешёвые S-комбо, ротация ролей, найм при деньгах, отладка до ≤5 багов.
-import { CONFIG } from '../config';
-import { ADS, TRAININGS } from '../data/db';
+import { CONFIG, type HireMethodId } from '../config';
+import { ADS, STAFF, TRAININGS } from '../data/db';
 import { CONSOLES, GENRES, TYPES } from '../data/db';
-import type { GameState, StartProjectInput } from '../types';
+import type { GameState, Staff, StartProjectInput } from '../types';
 import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
 import { BOOSTER_KEY_JOB, boosterPrice } from '../systems/progression';
+import { candidatePool } from '../systems/staff';
 import { DIRECTION_ORDER } from '../types';
 import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
 import {
-  applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, hireAction, levelUpAction,
+  applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, hireByIdAction, levelUpAction,
   moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction,
   startProjectAction, trainAction,
 } from '../engine';
 
 export interface PolicyStats {
   hires: number;
+  /** AP-09: увольнения автопилота (замена слабейшего сильным кандидатом) */
+  fires: number;
   releases: number;
   boostAccepts: number;
   licenses: number;
@@ -30,6 +33,7 @@ export type PolicyAction =
   | { type: 'ad'; adId: number }
   | { type: 'office' }
   | { type: 'hire'; staffId?: string }
+  | { type: 'fire'; staffId: string; name?: string }
   | { type: 'license'; consoleId: string }
   | { type: 'booster'; boosterType: string; staffId: string };
 
@@ -44,6 +48,9 @@ export interface PlayerOptions {
 
 export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
   let lastCombo: { genreId: string; typeId: string } | null = null;
+  // AP-09: уволенных автопилотом обратно не нанимаем — иначе «карусель» слабейших
+  // (в движке уволенный возвращается в пул кандидатов — это механика, её не трогаем)
+  const turnedDown = new Set<string>();
 
   return {
     turn(state: GameState, stats: PolicyStats, journal?: PolicyAction[]): void {
@@ -128,16 +135,6 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         if (res.ok) journal?.push({ type: 'office' });
       }
 
-      // найм: есть место и деньги; в бедности — только дешёвые кандидаты
-      const capacity = CONFIG.OFFICE_CAPACITY[state.officeLevel];
-      if (state.staff.length < capacity && state.money > 400 && state.week < 90) {
-        const res = hireAction(state, 'word-of-mouth', { maxFee: state.money < 1000 ? 150 : undefined });
-        if (res.ok) {
-          stats.hires++;
-          journal?.push({ type: 'hire', staffId: res.staffId });
-        }
-      }
-
       // AP-06: лицензии — всё поступившее в продажу, по одной за ход, с резервом 800K
       // на жизнь (раньше — только Microx SX; она остаётся первой как самая дешёвая)
       if (state.money > 1500) {
@@ -153,6 +150,12 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         }
       }
 
+      // AP-09: найм и увольнения — команда растёт до вместимости офиса (решения 11.09):
+      // лучшие по статам с приоритетом слабой специализации, метод — дороже по деньгам,
+      // увольнение — только на замену (офис полон и кандидат заметно сильнее). Найм — ПОСЛЕ
+      // лицензий: без консоли студия не работает, а лицензия дешевле и важнее (тест AP-06).
+      hireAndFire(state, stats, journal, turnedDown);
+
       // проект
       if (!state.activeGame) {
         if (opts.resolveOnly) return; // SRV-04: решение о новой игре принимает чат, не политика
@@ -167,6 +170,111 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
       }
     },
   };
+}
+
+// ─── AP-09: найм и увольнения (решения пользователя 11.09) ───
+// кого нанимать: лучших по статам, приоритет — слабая специализация команды;
+// метод: самый дорогой, который тянем (сильнее пул); увольнять — только на замену.
+
+const STAT_KEYS = ['program', 'scenario', 'graphics', 'sound'] as const;
+type StatKey = (typeof STAT_KEYS)[number];
+
+/** Максимум команды по каждой специализации — «где у нас слабо». */
+function teamBest(state: GameState): Record<StatKey, number> {
+  const best: Record<StatKey, number> = { program: 0, scenario: 0, graphics: 0, sound: 0 };
+  for (const s of state.staff) for (const k of STAT_KEYS) best[k] = Math.max(best[k], s.stats[k]);
+  return best;
+}
+
+/** Слабая специализация команды (по ней приоритет кандидату). */
+export function weakKey(state: GameState): StatKey {
+  const best = teamBest(state);
+  return STAT_KEYS.reduce((a, b) => (best[b] < best[a] ? b : a), STAT_KEYS[0]);
+}
+
+/** Оценка сотрудника/кандидата: сумма статов + 1.5 × стат слабой специализации команды. */
+export function staffScore(state: GameState, stats: Record<StatKey, number>): number {
+  const weak = weakKey(state);
+  const total = STAT_KEYS.reduce((a, k) => a + stats[k], 0);
+  return total + 1.5 * stats[weak];
+}
+
+/** Резерв на жизнь: у богатой студии ~800K, но найм возможен и в начале игры. */
+function hireReserve(state: GameState): number {
+  return Math.min(800, Math.max(500, Math.round(state.money * 0.2)));
+}
+
+/** Самый дорогой метод, который тянем (пул сильнее) — иначе null. */
+function pickHireMethod(state: GameState): HireMethodId | null {
+  const reserve = hireReserve(state);
+  const methods = (Object.keys(CONFIG.HIRE_METHODS) as HireMethodId[])
+    .filter((m) => state.officeLevel >= CONFIG.HIRE_METHODS[m].office)
+    .filter((m) => state.money - CONFIG.HIRE_METHODS[m].cost >= reserve)
+    .filter((m) => candidatePool(state, m).length > 0)
+    .sort((a, b) => CONFIG.HIRE_METHODS[b].cost - CONFIG.HIRE_METHODS[a].cost);
+  return methods[0] ?? null;
+}
+
+/** Лучший кандидат метода по оценке статов (уволенных автопилотом не берём). */
+function pickBestCandidate(state: GameState, method: HireMethodId, turnedDown: Set<string>, reserve: number): string | null {
+  let bestId: string | null = null;
+  let bestScore = -Infinity;
+  for (const id of candidatePool(state, method)) {
+    if (turnedDown.has(id)) continue;
+    const d = STAFF.find((x) => x.id === id);
+    if (!d) continue;
+    // хватает не только на найм, но и на жизнь: после сделки должен остаться резерв
+    if (state.money - (CONFIG.HIRE_METHODS[method].cost + d.hireFee) < reserve) continue;
+    const score = staffScore(state, d.stats);
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = id;
+    }
+  }
+  return bestId;
+}
+
+/** Слабейший в команде по той же оценке статов. */
+function pickWeakest(state: GameState): Staff | null {
+  let weak: Staff | null = null;
+  let least = Infinity;
+  for (const s of state.staff) {
+    const score = staffScore(state, s.stats);
+    if (score < least) {
+      least = score;
+      weak = s;
+    }
+  }
+  return weak;
+}
+
+/** AP-09: найм до вместимости офиса; увольнение — только под замену сильнее. */
+function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction[] | undefined, turnedDown: Set<string>): void {
+  const capacity = CONFIG.OFFICE_CAPACITY[state.officeLevel] ?? 4;
+  const method = pickHireMethod(state);
+  const reserve = hireReserve(state);
+  const bestId = method ? pickBestCandidate(state, method, turnedDown, reserve) : null;
+  const cand = bestId ? STAFF.find((x) => x.id === bestId) : undefined;
+
+  // замена: офис полон и кандидат ЗАМЕТНО сильнее слабейшего (иначе — никакой «карусели»)
+  if (method && cand && bestId && state.staff.length >= capacity && state.staff.length > 2) {
+    const weak = pickWeakest(state);
+    if (weak && weak.id !== bestId && staffScore(state, cand.stats) >= staffScore(state, weak.stats) * 1.2) {
+      const res = fireAction(state, weak.id);
+      if (res.ok) {
+        stats.fires++;
+        turnedDown.add(weak.id);
+        journal?.push({ type: 'fire', staffId: weak.id, name: weak.name });
+      }
+    }
+  }
+  if (method && bestId && state.staff.length < CONFIG.OFFICE_CAPACITY[state.officeLevel]) {
+    const res = hireByIdAction(state, method, bestId);
+    if (res.ok) {
+      stats.hires++;
+      journal?.push({ type: 'hire', staffId: bestId });
+    }
+  }
 }
 
 function buyLicenseSafe(state: GameState, consoleId: string): boolean {

@@ -44,7 +44,7 @@ export function TeamTab() {
                 </td>
                 <td>
                   {game.staff.length > 2 && (
-                    <button className="w95-btn" onClick={() => actionFire(st.id)}>Уволить</button>
+                    <button className="w95-btn" data-autopilot={`fire-${st.id}`} onClick={() => actionFire(st.id)}>Уволить</button>
                   )}
                 </td>
               </tr>

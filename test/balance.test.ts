@@ -9,7 +9,7 @@ import { CONFIG } from '../src/core/config';
 export function runSimulation(days: number, seed: number): { state: ReturnType<typeof newGame>; stats: PolicyStats } {
   const state = newGame(seed);
   const player = createPlayer();
-  const stats: PolicyStats = { hires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
+  const stats: PolicyStats = { hires: 0, fires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
   for (let i = 0; i < days; i++) {
     if (state.bankrupt) break;
     player.turn(state, stats);
@@ -78,7 +78,7 @@ describe('детерминизм', () => {
 });
 
 describe('AP-06: хозяйство «разумного» игрока (офис, лицензии, бустеры)', () => {
-  const emptyStats = (): PolicyStats => ({ hires: 0, releases: 0, boostAccepts: 0, licenses: 0 });
+  const emptyStats = (): PolicyStats => ({ hires: 0, fires: 0, releases: 0, boostAccepts: 0, licenses: 0 });
   const boosterCount = (state: ReturnType<typeof newGame>): number =>
     Object.values(state.boosterPurchases).reduce((a, b) => a + b, 0);
 

@@ -166,7 +166,7 @@ export function fitDirection(plan: AutopilotPlan, directionPoints: number): void
 export function createAutopilotPolicy(): { turn(state: GameState, journal?: PolicyAction[]): void; stats: PolicyStats } {
   // SRV-04: политика резолвит события и выпускает игры, но НЕ стартует проекты (это делает чат)
   const player = createPlayer({ resolveOnly: true });
-  const stats: PolicyStats = { hires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
+  const stats: PolicyStats = { hires: 0, fires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
   return {
     stats,
     turn(state: GameState, journal?: PolicyAction[]): void {
@@ -226,6 +226,12 @@ export function policySteps(journal: PolicyAction[], state: GameState): Autopilo
       goTab('team');
       const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'нового сотрудника';
       steps.push({ kind: 'click', target: `hire-${a.staffId}`, label: `Принимаю в команду: ${name}`, cosmetic: true, quick: true });
+    } else if (a.type === 'fire') {
+      // AP-09: увольнение видно — имя из журнала (сотрудника в штате уже нет)
+      openApp('hire');
+      goTab('team');
+      const name = a.name ?? state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотрудника';
+      steps.push({ kind: 'click', target: `fire-${a.staffId}`, label: `Увольняю: ${name}`, cosmetic: true, quick: true });
     } else if (a.type === 'license') {
       openApp('hardware');
       const c = CONSOLES.find((x) => x.id === a.consoleId);

@@ -7,7 +7,7 @@ const days = Number(process.argv[3] ?? 730);
 
 const state = newGame(seed);
 const player = createPlayer();
-const stats: PolicyStats = { hires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
+const stats: PolicyStats = { hires: 0, fires: 0, releases: 0, boostAccepts: 0, licenses: 0 };
 
 for (let i = 0; i < days; i++) {
   if (state.bankrupt) break;

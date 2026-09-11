@@ -5,7 +5,9 @@ import { AutopilotController, buildDecisionContext, createAutopilotPolicy, fitDi
 import type { AutopilotHost } from '../src/server/autopilot';
 import { ChatOrchestrator } from '../src/server/chatflow';
 import type { ChatThread } from '../src/server/game';
-import { autopilotProjectInput, sequelOpportunity, type PolicyAction } from '../src/core/sim/policy';
+import { autopilotProjectInput, sequelOpportunity, weakKey, type PolicyAction } from '../src/core/sim/policy';
+import { STAFF } from '../src/core/data/db';
+import { candidatePool, makeStaffFromData } from '../src/core/systems/staff';
 import { resetChat } from '../src/shared/chat';
 import { planDirClicks } from '../src/shared/autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../src/shared/autopilot';
@@ -718,5 +720,88 @@ describe('видимость автопилота: журнал политики
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// AP-09: найм и увольнения автопилота (решения пользователя 11.09): лучшие по статам
+// с приоритетом слабой специализации, метод — дороже по деньгам, увольнение — на замену.
+describe('AP-09: найм и увольнения', () => {
+  const busy = (g: GameState): void => { g.pendingEvent = { type: 'info', title: 'Тест', text: 'Событие' }; };
+
+  it('нанимает лучшего кандидата по статам (а не случайного) — приоритет слабой специализации', () => {
+    const g = fresh();
+    g.officeLevel = 1; // методы по деньгам: online 550K — самый дорогой доступный
+    g.money = 5000;
+    const weak = weakKey(g); // слабая специализация ДО найма — та же, что видит политика
+    const pool = candidatePool(g, 'online');
+    expect(pool.length).toBeGreaterThan(1);
+    busy(g);
+    const pol = createAutopilotPolicy();
+    const journal: PolicyAction[] = [];
+    pol.turn(g, journal);
+    const hire = journal.find((a) => a.type === 'hire');
+    expect(hire).toBeTruthy();
+    const hiredId = hire && hire.type === 'hire' ? hire.staffId : undefined;
+    expect(pool).toContain(hiredId); // нанят из пула выбранного метода
+    const scoreOf = (st: { program: number; scenario: number; graphics: number; sound: number }): number =>
+      st.program + st.scenario + st.graphics + st.sound + 1.5 * st[weak];
+    const hired = STAFF.find((d) => d.id === hiredId)!;
+    for (const id of pool.filter((x) => x !== hiredId)) {
+      const other = STAFF.find((d) => d.id === id)!;
+      expect(scoreOf(hired.stats) >= scoreOf(other.stats)).toBe(true);
+    }
+  });
+
+  it('офис полон: слабейшего меняет на сильного кандидата (увольнение только на замену)', () => {
+    const g = fresh();
+    g.officeLevel = 1; // вместимость 4
+    g.money = 5000;
+    const weakIds: string[] = [];
+    for (const d of STAFF) {
+      if (g.staff.length >= 4) break;
+      if (g.hiredIds.includes(d.id)) continue;
+      const w = makeStaffFromData(d.id);
+      if (!w) continue;
+      w.stats = { program: 1, scenario: 1, graphics: 1, sound: 1 }; // заведомо слабое звено
+      g.staff.push(w);
+      g.hiredIds.push(w.id);
+      weakIds.push(w.id);
+    }
+    expect(g.staff.length).toBe(4);
+    busy(g);
+    const pol = createAutopilotPolicy();
+    const journal: PolicyAction[] = [];
+    pol.turn(g, journal);
+    const fire = journal.find((a) => a.type === 'fire');
+    expect(fire).toBeTruthy();
+    const fireId = fire && fire.type === 'fire' ? fire.staffId : '';
+    expect(weakIds).toContain(fireId);
+    expect(g.staff.some((s) => s.id === fireId)).toBe(false); // уволен
+    expect(journal.some((a) => a.type === 'hire')).toBe(true); // и замена пришла
+    expect(g.staff.length).toBe(4); // состав не просел
+    expect(pol.stats.fires).toBe(1);
+  });
+
+  it('если есть свободные места — увольнений нет, только найм', () => {
+    const g = fresh();
+    g.officeLevel = 1;
+    g.money = 5000;
+    busy(g);
+    const pol = createAutopilotPolicy();
+    const journal: PolicyAction[] = [];
+    pol.turn(g, journal);
+    expect(journal.some((a) => a.type === 'hire')).toBe(true);
+    expect(journal.some((a) => a.type === 'fire')).toBe(false);
+  });
+
+  it('увольнение видно: мышь идёт «Найм» → «Команда» → «Уволить» (витринное нажатие)', () => {
+    const g = fresh();
+    const sid = g.staff[0]!.id;
+    const steps = policySteps([{ type: 'fire', staffId: sid, name: 'Тестовый Сотрудник' }], g);
+    expect(steps[0]).toEqual({ kind: 'open', app: 'hire' });
+    expect(steps.some((s) => s.kind === 'click' && s.target === 'hire-tab-team')).toBe(true);
+    const press = steps.find((s) => s.kind === 'click' && s.target === `fire-${sid}`);
+    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(true);
+    expect(press && press.kind === 'click' ? press.label : '').toContain('Тестовый Сотрудник');
   });
 });
