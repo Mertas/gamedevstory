@@ -2,6 +2,7 @@
 // Вынесено из game.ts; GameServer.handle() делегирует сюда.
 // SessionHost — контракт сессии: публичные «внутренности» GameServer (намеренно, ради этого модуля).
 import { CONFIG } from '../core/config';
+import { consoleById, genreById, typeById } from '../core/data/db';
 import {
   buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   changeCareerAction, dismissSalesmanAction, fireAction, hireAction, hireByIdAction, levelUpAction, moveOfficeAction, newGame,
@@ -104,7 +105,19 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
         if (s.autopilotOn) s.decidedThisIdle = false; // следующую игру снова решает чат
         const g = s.game.history[s.game.history.length - 1];
         s.pushSystem(`🚀 Релиз! ${g ? `Рецензии: ${g.score}/40${g.score >= CONFIG.HALL_OF_FAME ? ' — ЗАЛ СЛАВЫ!' : ''}` : ''}`);
-        void s.generatePhase('release', { score: g?.score ?? 0, units: g?.units ?? 0 });
+        // 11.09: в факты реакции — человеческие подписи: имя игры и жанр × тип (units в чате
+        // форматируются в «241K»); без них модель считала релиз 40/40 «куцым» (диагноз по игре)
+        const rg = g ? genreById(g.genreId) : undefined;
+        const rt = g ? typeById(g.typeId) : undefined;
+        const rc = g ? consoleById(g.consoleId) : undefined;
+        void s.generatePhase('release', {
+          score: g?.score ?? 0,
+          units: g?.units ?? 0,
+          name: g?.name ?? '',
+          genre: rg?.ru ?? rg?.name ?? g?.genreId ?? '',
+          type: rt?.nameRu ?? rt?.name ?? g?.typeId ?? '',
+          console: rc?.name ?? g?.consoleId ?? '',
+        });
         s.saveNow(); // SRV-08: дорогое действие — сразу на диск
       }
       s.emit();

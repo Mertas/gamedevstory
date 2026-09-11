@@ -226,6 +226,6 @@ export function resolveGamedex(state: GameState, option: GamedexOption, rng: Rng
   return { ok: true };
 }
 
-function formatUnits(u: number): string {
+export function formatUnits(u: number): string {
   return u >= 1000 ? `${(u / 1000).toFixed(2)}M` : `${Math.round(u)}K`;
 }

@@ -1,6 +1,7 @@
 // Промпты чата разработчиков + парсинг ответа LLM (JSON {"messages":[...]}).
 // Порт extractJsonObject из LLMKing/src/server/llm.ts.
 import type { AutopilotPlan } from '../shared/autopilot';
+import { formatUnits } from '../core/systems/market';
 
 interface LlmMessage { role: 'system' | 'user'; content: string }
 
@@ -134,18 +135,22 @@ export function buildMessages(phase: string, context: Record<string, unknown>, o
     : 'Проект: —';
 
   // LLM-06(г): итоги релиза — человеческой строкой (score/units жили сырым JSON в «Факты события»)
-  const fmtCount = (v: unknown): string => {
-    const n = Number(v);
-    return Number.isFinite(n) ? Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : String(v ?? '—');
-  };
+  // 11.09: units в сейве — ТЫСЯЧИ копий (formulas.ts): «241» печаталось как «241 копия» и команда
+  // решала, что релиз провалился (реальный 241K). Формат — как в игре: 241K / 2.50M.
   const releaseParts = phase === 'release'
     ? [
         ...(facts.score != null ? [`рецензии ${String(facts.score)}/40`] : []),
-        ...(facts.units != null ? [`продажи ${fmtCount(facts.units)} копий`] : []),
+        ...(facts.units != null && Number.isFinite(Number(facts.units)) ? [`продажи ${formatUnits(Number(facts.units))} копий`] : []),
       ]
     : [];
+  // 11.09: реакция знает, ЧТО выпустили — имя и жанр × тип (как в «Истории студии» автопилота)
+  const releaseSubject = phase === 'release' && facts.name
+    ? `«${String(facts.name)}»${facts.genre ? ` (${[facts.genre, facts.type].filter(Boolean).join(' × ')}${facts.console ? `, ${String(facts.console)}` : ''})` : ''}`
+    : '';
   const factsLine = Object.keys(facts).length
-    ? releaseParts.length ? `Итоги релиза: ${releaseParts.join(', ')}.` : `Факты события: ${JSON.stringify(facts)}`
+    ? releaseParts.length
+      ? `Итоги релиза${releaseSubject ? ` игры ${releaseSubject}` : ''}: ${releaseParts.join(', ')}.`
+      : `Факты события: ${JSON.stringify(facts)}`
     : '';
 
   // память диалога (10.09.2026): следующая реплика видит весь тред, а не только одну строку

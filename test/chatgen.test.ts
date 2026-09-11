@@ -185,12 +185,26 @@ describe('parseSingleMessage и итоги релиза (LLM-06 в,г)', () => {
     expect(parseSingleMessage(raw)).toEqual({ author: 'Newb', text: 'Одиночная реплика как просили.' });
   });
 
-  it('итоги релиза — человеческой строкой, units не сырым JSON', () => {
-    const text = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 12000 } }, {})
+  it('итоги релиза — человеческой строкой; units (тыс.) → «241K», не сырой JSON', () => {
+    const text = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 241 } }, {})
       .map((m) => m.content)
       .join('\n');
-    expect(text).toContain('Итоги релиза: рецензии 33/40, продажи 12 000 копий.');
+    expect(text).toContain('Итоги релиза: рецензии 33/40, продажи 241K копий.');
     expect(text).not.toContain('"units"');
+    const big = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 2500 } }, {})
+      .map((m) => m.content)
+      .join('\n');
+    expect(big).toContain('продажи 2.50M копий');
+  });
+
+  it('итоги релиза: имя игры и жанр × тип в подписи (реакция знает, что выпустили)', () => {
+    const text = buildMessages('release', {
+      ...chatCtx,
+      facts: { score: 40, units: 241, name: 'Furry Explorers', genre: 'Приключение', type: 'Животные', console: 'PC Game' },
+    }, {})
+      .map((m) => m.content)
+      .join('\n');
+    expect(text).toContain('Итоги релиза игры «Furry Explorers» (Приключение × Животные, PC Game): рецензии 40/40, продажи 241K копий.');
   });
 });
 
