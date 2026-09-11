@@ -45,7 +45,12 @@ const server = app.listen(PORT, HOST, () => {
 
 // PLAN-18: пользователи, почта, реестр партий — у каждого пользователя своя игровая сессия.
 const users = new UserService();
-users.ensureUser('Mertas', '123456', undefined, true); // сид-владелец студии (решено 11.09)
+// прод без перца = пароли, которые можно перебирать по одной базе: не стартуем
+if (process.env.PROD === '1' && !process.env.GDS_PEPPER) {
+  console.error('[gds] GDS_PEPPER не задан — в проде пароли без перца запрещены');
+  process.exit(1);
+}
+users.ensureUser('Mertas', process.env.GDS_OWNER_PASSWORD ?? '123456', undefined, true); // сид-владелец (пароль — только для чистой установки)
 const mail = createMailer();
 const registry = new SessionRegistry(users);
 // REST авторизации/сохранений; who(req) — пользователь по cookie сессии (ниже — для WS)

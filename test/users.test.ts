@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import express from 'express';
+import { createRequire } from 'node:module';
+import { createHash, randomBytes, scryptSync } from 'node:crypto';
 import { registerApi } from '../src/server/api';
 import { SessionRegistry } from '../src/server/sessions';
 import { UserService } from '../src/server/users';
@@ -21,10 +23,10 @@ afterEach(() => {
 describe('PLAN-18: пользователи (SQLite)', () => {
   it('регистрация, вход, дубликат логина, неверный пароль, выход', () => {
     const u = new UserService(tmpDb());
-    expect(u.register('Mertas', '123456').ok).toBe(true);
-    expect(u.register('mertas', 'abcdef').ok).toBe(false); // логин без учёта регистра
+    expect(u.register('Mertas', '12345678').ok).toBe(true);
+    expect(u.register('mertas', 'abcdefgh').ok).toBe(false); // логин без учёта регистра
     expect(u.login('Mertas', 'wrong').ok).toBe(false);
-    const s = u.login('Mertas', '123456');
+    const s = u.login('Mertas', '12345678');
     expect(s.ok).toBe(true);
     const token = s.ok ? s.token : '';
     expect(u.userByToken(token)?.login).toBe('Mertas');
@@ -35,21 +37,21 @@ describe('PLAN-18: пользователи (SQLite)', () => {
 
   it('правила логина и пароля', () => {
     const u = new UserService(tmpDb());
-    expect(u.register('ab', '123456').ok).toBe(false); // короткий логин
-    expect(u.register('кириллица', '123456').ok).toBe(false); // только латиница/цифры/_.-
+    expect(u.register('ab', '12345678').ok).toBe(false); // короткий логин
+    expect(u.register('кириллица', '12345678').ok).toBe(false); // только латиница/цифры/_.-
     expect(u.register('mertas', '12345').ok).toBe(false); // пароль короче 6
     u.close();
   });
 
   it('восстановление пароля: код → смена → старый пароль не работает, код одноразовый', () => {
     const u = new UserService(tmpDb());
-    u.register('Mertas', '123456', 'mertas@example.com');
+    u.register('Mertas', '12345678', 'mertas@example.com');
     const r = u.startReset('Mertas');
     expect(r.ok).toBe(true);
     const code = r.ok ? r.code : '';
     expect(u.confirmReset('Mertas', '000000', 'newpass1').ok).toBe(false);
     expect(u.confirmReset('Mertas', code, 'newpass1').ok).toBe(true);
-    expect(u.login('Mertas', '123456').ok).toBe(false);
+    expect(u.login('Mertas', '12345678').ok).toBe(false);
     expect(u.login('Mertas', 'newpass1').ok).toBe(true);
     expect(u.confirmReset('Mertas', code, 'another1').ok).toBe(false);
     u.close();
@@ -57,10 +59,10 @@ describe('PLAN-18: пользователи (SQLite)', () => {
 
   it('сохранения: список/создание/обновление/удаление — только свои', () => {
     const u = new UserService(tmpDb());
-    u.register('Mertas', '123456');
-    u.register('Drugoi', '123456');
-    const a = u.login('Mertas', '123456');
-    const b = u.login('Drugoi', '123456');
+    u.register('Mertas', '12345678');
+    u.register('Drugoi', '12345678');
+    const a = u.login('Mertas', '12345678');
+    const b = u.login('Drugoi', '12345678');
     const aid = a.ok ? a.user.id : 0;
     const bid = b.ok ? b.user.id : 0;
     const id = u.createSave(aid, 'Пиксель-Плюс', '{"game":{}}', 1, 1, 500);
@@ -77,12 +79,12 @@ describe('PLAN-18: пользователи (SQLite)', () => {
 
   it('владелец: admin ставится сиду, обычный игрок — не админ', () => {
     const u = new UserService(tmpDb());
-    u.ensureUser('Mertas', '123456', undefined, true);
-    const boss = u.login('Mertas', '123456');
+    u.ensureUser('Mertas', '12345678', undefined, true);
+    const boss = u.login('Mertas', '12345678');
     expect(boss.ok).toBe(true);
     expect(boss.ok && boss.user.admin).toBe(true);
-    u.register('Drug', '123456');
-    const drug = u.login('Drug', '123456');
+    u.register('Drug', '12345678');
+    const drug = u.login('Drug', '12345678');
     expect(drug.ok).toBe(true);
     expect(drug.ok && drug.user.admin).toBe(false);
     u.close();
@@ -95,7 +97,7 @@ describe('PLAN-18: пользователи (SQLite)', () => {
     expect(u.inviteValid(a!.code)).toBe(true);
     expect(u.inviteValid(a!.code.toLowerCase())).toBe(true); // регистр не важен — код диктуют руками
     expect(u.inviteValid('GDS-XXXX-YYYY')).toBe(false);
-    const r = u.register('Vitya', '123456');
+    const r = u.register('Vitya', '12345678');
     expect(r.ok).toBe(true);
     expect(u.consumeInvite(a!.code, r.ok ? r.user.id : 0)).toBe(true);
     expect(u.consumeInvite(a!.code, r.ok ? r.user.id : 0)).toBe(false); // второй раз не сжечь
@@ -123,21 +125,21 @@ describe('PLAN-18: REST — вход, cookie, создание партии, с�
       // регистрация без инвайт-кода закрыта (plan/19)
       const noInvite = await fetch(`${base}/api/auth/register`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ login: 'BezKoda', password: '123456' }),
+        body: JSON.stringify({ login: 'BezKoda', password: '12345678' }),
       });
       expect(((await noInvite.json()) as { ok: boolean }).ok).toBe(false);
 
       const code = users.createInvites('тест', 1)[0]!.code;
       const reg = await fetch(`${base}/api/auth/register`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ login: 'Mertas', password: '123456', invite: code }),
+        body: JSON.stringify({ login: 'Mertas', password: '12345678', invite: code }),
       });
       expect(reg.status).toBe(200);
 
       // код одноразовый: второй раз не пройдёт
       const reuse = await fetch(`${base}/api/auth/register`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ login: 'Vtoroy', password: '123456', invite: code }),
+        body: JSON.stringify({ login: 'Vtoroy', password: '12345678', invite: code }),
       });
       expect(((await reuse.json()) as { ok: boolean }).ok).toBe(false);
       const cookie = reg.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
@@ -180,5 +182,82 @@ describe('PLAN-18: REST — вход, cookie, создание партии, с�
       srv.close();
       users.close();
     }
+  });
+});
+
+describe('безопасность паролей: s2-схема, перец и хэш сессий', () => {
+  const require2 = createRequire(import.meta.url);
+  const { DatabaseSync } = require2('node:sqlite') as typeof import('node:sqlite');
+
+  it('пароль короче 8 символов не принимается', () => {
+    const u = new UserService(tmpDb());
+    expect(u.register('Mertas', '1234567').ok).toBe(false);
+    expect(u.register('Mertas', '12345678').ok).toBe(true);
+    u.close();
+  });
+
+  it('в базе лежит sha256(токен), а не сам токен; вход по открытому токену работает', () => {
+    const file = tmpDb();
+    const u = new UserService(file);
+    u.register('Mertas', '12345678');
+    const r = u.login('Mertas', '12345678');
+    expect(r.ok).toBe(true);
+    const token = r.ok ? r.token : '';
+    const raw = new DatabaseSync(file);
+    const rows = raw.prepare('SELECT token FROM sessions').all() as Array<{ token: string }>;
+    raw.close();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.token).not.toBe(token);
+    expect(rows[0]?.token).toBe(createHash('sha256').update(token).digest('hex'));
+    expect(u.userByToken(token)?.login).toBe('Mertas');
+    expect(u.userByToken(token.slice(0, -2) + 'ff')).toBeNull();
+    u.close();
+  });
+
+  it('легаси-хэш (16384, без перца) принимается и молча апгрейдится до s2', () => {
+    delete process.env.GDS_PEPPER; // легаси считался без перца
+    const file = tmpDb();
+    const u = new UserService(file);
+    u.register('Mertas', '12345678');
+    const salt = randomBytes(16).toString('hex');
+    const legacy = scryptSync('12345678', salt, 64).toString('hex');
+    const raw = new DatabaseSync(file);
+    raw.prepare('UPDATE users SET pass_hash = ?, salt = ? WHERE login = ?').run(legacy, salt, 'Mertas');
+    raw.close();
+    expect(u.login('Mertas', '12345678').ok).toBe(true);
+    const raw2 = new DatabaseSync(file);
+    const after = raw2.prepare('SELECT pass_hash FROM users WHERE login = ?').get('Mertas') as { pass_hash: string };
+    raw2.close();
+    expect(after.pass_hash.startsWith('s2$32768$8$1$')).toBe(true);
+    expect(u.login('Mertas', '12345678').ok).toBe(true);
+    u.close();
+  });
+
+  it('перец обязателен: хэш, посчитанный с другим перцем, не подходит', () => {
+    const file = tmpDb();
+    process.env.GDS_PEPPER = 'perec-odin';
+    const u = new UserService(file);
+    u.register('Mertas', '12345678');
+    expect(u.login('Mertas', '12345678').ok).toBe(true);
+    process.env.GDS_PEPPER = 'perec-dva';
+    expect(u.login('Mertas', '12345678').ok).toBe(false);
+    delete process.env.GDS_PEPPER;
+    u.close();
+  });
+
+  it('setPassword меняет пароль и разлогинивает все сессии', () => {
+    const file = tmpDb();
+    const u = new UserService(file);
+    u.register('Mertas', '12345678');
+    const first = u.login('Mertas', '12345678');
+    const token = first.ok ? first.token : '';
+    const me = u.userByToken(token);
+    expect(me).not.toBeNull();
+    expect(u.setPassword(me!.id, '1234567')).toBe(false);
+    expect(u.setPassword(me!.id, 'sovsemNovy1')).toBe(true);
+    expect(u.userByToken(token)).toBeNull();
+    expect(u.login('Mertas', '12345678').ok).toBe(false);
+    expect(u.login('Mertas', 'sovsemNovy1').ok).toBe(true);
+    u.close();
   });
 });

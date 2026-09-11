@@ -1,5 +1,7 @@
-// PLAN-18: пользователи, сессии, сброс пароля и сохранения — в SQLite (data/users.db).
-// Пароли: scrypt + соль (node:crypto, без новых зависимостей). Токены сессий: 32 случайных байта.
+// PLAN-18/21: пользователи, сессии, сброс пароля и сохранения — в SQLite (data/users.db).
+// В базе нет ни паролей, ни токенов в открытом виде:
+//   pass_hash = "s2$N$r$p$<hex>" (scrypt + уникальная соль + перец сервера из GDS_PEPPER),
+//   сессии  — sha256(токен), коды сброса — sha256(логин:код).
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -16,6 +18,15 @@ const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite');
 
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000; // 30 дней
 const RESET_MS = 15 * 60 * 1000; // код восстановления — 15 минут
+/** Публичный сервер: 6 символов мало. */
+export const MIN_PASSWORD = 8;
+/** scrypt: N=32768 (~32 МБ и десятки мс на проверку) вместо дефолтных 16384. */
+const SCRYPT = { N: 32768, r: 8, p: 1, maxmem: 128 * 1024 * 1024 } as const;
+/** Легаси-хэши в базе считались дефолтным scrypt и без перца — читаем их так же. */
+const LEGACY_SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 128 * 1024 * 1024 } as const;
+const KEYLEN = 64;
+/** Перец: секрет сервера, которого нет в базе. Утечка одного файла БД не даёт перебирать пароли. */
+const pepper = (): string => process.env.GDS_PEPPER ?? '';
 
 export interface UserRow {
   id: number;
@@ -53,15 +64,34 @@ interface RawUser extends UserRow {
   salt: string;
 }
 
-/** scrypt-хэш пароля (соль генерируется, если не передана). */
+/** scrypt-хэш пароля: параметры схемы лежат в самой строке — есть путь для апгрейда. */
 export function hashPassword(pass: string, salt = randomBytes(16).toString('hex')): { salt: string; hash: string } {
-  return { salt, hash: scryptSync(pass, salt, 64).toString('hex') };
+  const key = scryptSync(pepper() + pass, salt, KEYLEN, SCRYPT);
+  return { salt, hash: `s2$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${key.toString('hex')}` };
 }
 
-function verifyPassword(pass: string, salt: string, hash: string): boolean {
-  const got = scryptSync(pass, salt, 64);
-  const want = Buffer.from(hash, 'hex');
+interface StoredHash { n: number; r: number; p: number; hex: string; peppered: boolean }
+
+const scryptOpts = (q: { n: number; r: number; p: number }) => ({ N: q.n, r: q.r, p: q.p, maxmem: SCRYPT.maxmem });
+
+/** Разбор строки из базы: "s2$N$r$p$hex" (новая схема) либо просто hex (легаси: 16384, без перца). */
+function parseStored(stored: string): StoredHash {
+  const m = /^s2\$(\d+)\$(\d+)\$(\d+)\$([0-9a-f]+)$/.exec(stored);
+  if (m) return { n: Number(m[1]), r: Number(m[2]), p: Number(m[3]), hex: m[4] ?? '', peppered: true };
+  return { n: LEGACY_SCRYPT.N, r: LEGACY_SCRYPT.r, p: LEGACY_SCRYPT.p, hex: stored, peppered: false };
+}
+
+function verifyPassword(pass: string, salt: string, stored: string): boolean {
+  const q = parseStored(stored);
+  const got = scryptSync((q.peppered ? pepper() : '') + pass, salt, KEYLEN, scryptOpts(q));
+  const want = Buffer.from(q.hex, 'hex');
   return got.length === want.length && timingSafeEqual(got, want);
+}
+
+/** Пересчитать хэш при успешном входе: легаси-схема или слабые параметры. */
+function needsRehash(stored: string): boolean {
+  const q = parseStored(stored);
+  return !q.peppered || q.n < SCRYPT.N || q.r < SCRYPT.r || q.p < SCRYPT.p;
 }
 
 const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex');
@@ -124,11 +154,11 @@ export class UserService {
     return { id: u.id, login: u.login, email: u.email, created: u.created, admin: Boolean(u.admin) };
   }
 
-  /** Регистрация: логин уникален (без учёта регистра), пароль ≥ 6 символов. */
+  /** Регистрация: логин уникален (без учёта регистра), пароль от MIN_PASSWORD символов. */
   register(login: string, password: string, email?: string): Res<{ user: UserRow }> {
     const name = login.trim();
     if (!/^[a-zA-Z0-9_.-]{3,24}$/.test(name)) return { ok: false, error: 'Логин: 3–24 символа (латиница, цифры, _ . -)' };
-    if (password.length < 6) return { ok: false, error: 'Пароль — не короче 6 символов' };
+    if (password.length < MIN_PASSWORD) return { ok: false, error: `Пароль — не короче ${MIN_PASSWORD} символов` };
     if (this.userByLogin(name)) return { ok: false, error: 'Такой логин уже занят' };
     const { salt, hash } = hashPassword(password);
     const created = Date.now();
@@ -142,26 +172,46 @@ export class UserService {
   login(login: string, password: string): Res<{ user: UserRow; token: string }> {
     const u = this.userByLogin(login.trim());
     if (!u || !verifyPassword(password, u.salt, u.pass_hash)) return { ok: false, error: 'Неверный логин или пароль' };
-    const token = randomBytes(32).toString('hex');
+    // старый хэш (без перца/слабые параметры) молча апгрейдим, пока пароль под рукой
+    if (needsRehash(u.pass_hash)) {
+      const fresh = hashPassword(password);
+      this.db.prepare('UPDATE users SET pass_hash = ?, salt = ? WHERE id = ?').run(fresh.hash, fresh.salt, u.id);
+    }
+    const token = randomBytes(32).toString('hex'); // клиенту — открытый токен
     const now = Date.now();
     this.db.prepare('INSERT INTO sessions (token, user_id, created, expires) VALUES (?, ?, ?, ?)')
-      .run(token, u.id, now, now + SESSION_MS);
+      .run(sha256(token), u.id, now, now + SESSION_MS); // в базе — только его хэш
     return { ok: true, user: UserService.toUser(u), token };
   }
 
-  /** Пользователь по токену сессии (просроченные вычищаются). */
+  /** Пользователь по токену сессии (просроченные вычищаются). В базе лежит sha256(токен). */
   userByToken(token: string): UserRow | null {
     if (!token) return null;
     this.db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
     const row = this.db.prepare(
       `SELECT u.id, u.login, u.email, u.created, u.admin FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token = ? AND s.expires >= ?`,
-    ).get(token, Date.now()) as UserRow | undefined;
+    ).get(sha256(token), Date.now()) as UserRow | undefined;
     return row ? UserService.toUser(row) : null;
   }
 
   logout(token: string): void {
-    this.db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+    this.db.prepare('DELETE FROM sessions WHERE token = ?').run(sha256(token));
+  }
+
+  /** Сколько активных сессий у игрока (диагностика/отладка). */
+  countSessions(userId: number): number {
+    const row = this.db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ? AND expires >= ?').get(userId, Date.now()) as { n: number };
+    return Number(row.n);
+  }
+
+  /** Сменить пароль пользователя (владелец/скрипт обслуживания). */
+  setPassword(userId: number, password: string): boolean {
+    if (password.length < MIN_PASSWORD) return false;
+    const { salt, hash } = hashPassword(password);
+    this.db.prepare('UPDATE users SET pass_hash = ?, salt = ? WHERE id = ?').run(hash, salt, userId);
+    this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId); // старые сессии — вон
+    return true;
   }
 
   /** Код восстановления: 6 цифр; хранится хэшем, живёт 15 минут. */
@@ -176,7 +226,7 @@ export class UserService {
 
   confirmReset(login: string, code: string, password: string): Res<{ user: UserRow }> {
     const name = login.trim();
-    if (password.length < 6) return { ok: false, error: 'Пароль — не короче 6 символов' };
+    if (password.length < MIN_PASSWORD) return { ok: false, error: `Пароль — не короче ${MIN_PASSWORD} символов` };
     const row = this.db.prepare('SELECT code_hash, expires FROM resets WHERE login = ?').get(name) as { code_hash: string; expires: number } | undefined;
     if (!row || row.expires < Date.now()) return { ok: false, error: 'Код истёк — запросите новый' };
     if (row.code_hash !== sha256(`${name}:${code.trim()}`)) return { ok: false, error: 'Неверный код' };
@@ -191,7 +241,12 @@ export class UserService {
 
   /** Сид пользователя (Mertas) — создаётся при первом старте, если ещё нет; admin — владелец. */
   ensureUser(login: string, password: string, email?: string, admin = false): void {
-    if (!this.userByLogin(login)) this.register(login, password, email);
+    // сид — внутренний: политику длины не применяем (иначе установка «с нуля» осталась бы без владельца)
+    if (!this.userByLogin(login)) {
+      const { salt, hash } = hashPassword(password);
+      this.db.prepare('INSERT INTO users (login, email, pass_hash, salt, created, admin) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(login.trim(), email?.trim() || null, hash, salt, Date.now(), admin ? 1 : 0);
+    }
     // admin выставляем и существующему пользователю: базы, созданные до появления колонки
     if (admin) this.db.prepare('UPDATE users SET admin = 1 WHERE login = ?').run(login.trim());
   }
