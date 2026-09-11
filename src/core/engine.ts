@@ -91,6 +91,9 @@ export function newGame(seed = 1): GameState {
   }
 
   log(state, 'Компания основана. Денег: 500K. Персонал: 2. Удачи!');
+  // BUG-01: консоли, вышедшие к первому дню (PC, Microx SX), доступны сразу —
+  // раньше их «выдавал» только первый тик, и на паузе форма новой игры была пуста
+  consoleEvents(state);
   return state;
 }
 

@@ -3,6 +3,7 @@ import { type HireMethodId } from '../core/config';
 import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, genreById, typeById } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
 import { newGame } from '../core/engine';
+import { consoleEvents } from '../core/systems/market';
 import { type GameState, type StartProjectInput } from '../core/types';
 import { resetChat, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
@@ -111,6 +112,8 @@ export class GameServer {
     const loaded = this.saves.read();
     this.game = loaded?.game ?? newGame(Math.floor(Math.random() * 99991) + 1);
     this.chat = loaded?.chat ?? resetChat();
+    // BUG-01: догон консольных событий, пропущенных к текущему дню (старый сейв/пауза)
+    if (loaded) consoleEvents(this.game);
     this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
     this.startTicker();
   }

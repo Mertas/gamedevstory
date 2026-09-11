@@ -94,7 +94,8 @@ export function consoleEvents(state: GameState): void {
       const day = dateToDay(c.unlock);
       if (day === state.week + 21) {
         log(state, `Слух: консоль «${c.name}» появится в продаже через 3 недели`);
-      } else if (day === state.week) {
+      } else if (day <= state.week) {
+        // BUG-01: догон пропущенной даты (пауза/загрузка старого сейва) — событие не теряется
         cs.availableAtWeek = day;
         log(state, `Консоль «${c.name}» поступила в продажу! (база ${cs.base}K, лицензия ${c.licenseCost}K)`);
       }
@@ -103,7 +104,7 @@ export function consoleEvents(state: GameState): void {
       const day = dateToDay(c.removed);
       if (day === state.week + 21) {
         log(state, `Внимание: консоль «${c.name}» будет снята с производства через 3 недели!`);
-      } else if (day === state.week) {
+      } else if (day <= state.week) {
         cs.removedAtWeek = day;
         log(state, `Консоль «${c.name}» снята с производства`);
       }

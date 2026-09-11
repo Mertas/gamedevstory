@@ -38,6 +38,7 @@ export interface SessionHost {
   startAutopilot(): void;
   stopAutopilot(silent: boolean): void;
   startTicker(): void;
+  setSpeed(v: number): void;
   resetSession(): void;
   saveNow(): void;
 }
@@ -78,6 +79,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.game = newGame(Math.floor(Math.random() * 99991) + 1);
       s.chat = resetChat();
       s.resetSession(); // SRV-09: ответы старой партии не должны прилетать в новую
+      s.setSpeed(1); // BUG-01: новая партия — чистый старт на 1× (паузу от авторежима не наследуем)
       s.mailShownId = 0;
       s.saveNow();
       s.emit();

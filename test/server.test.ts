@@ -46,6 +46,17 @@ describe('GameServer: set_speed (SRV-01)', () => {
   });
 });
 
+describe('GameServer: new_game (BUG-01)', () => {
+  it('новая партия стартует на 1× — пауза авторежима не наследуется', () => {
+    srv = makeServer();
+    srv.handle({ type: 'set_speed', v: 0 }); // пауза
+    srv.handle({ type: 'set_autopilot', on: true }); // авто разгоняется, запомнив паузу
+    expect(srv.snapshot().speed).toBe(4);
+    srv.handle({ type: 'new_game' });
+    expect(srv.snapshot().speed).toBe(1);
+  });
+});
+
 describe('GameServer: importSave (SRV-02)', () => {
   it('битый/огрызок импорта не подменяет живую партию', () => {
     srv = makeServer();

@@ -60,12 +60,19 @@ describe('консоли: жизненный цикл (появление по �
     expect(g.log.some((l) => l.text.includes('Слух'))).toBe(true);
   });
 
-  it('консоль дня 1 (PC) становится доступной в первый же тик', () => {
+  it('консоль дня 1 (PC) доступна сразу после старта партии — без тика и на паузе (BUG-01)', () => {
     const g = newGame(1);
-    expect(consoleAvailable(g, 'pc-game')).toBe(false); // до первого тика ещё не «поступила»
-    tick(g);
     expect(g.consoles['pc-game']?.availableAtWeek).toBe(1);
     expect(consoleAvailable(g, 'pc-game')).toBe(true);
+  });
+
+  it('пропущенная дата выхода догоняется первым же тиком (пауза/старый сейв)', () => {
+    const g = newGame(1);
+    advanceWeeks(g, 320); // ушли за день выхода exodus (307)
+    g.consoles['exodus']!.availableAtWeek = null; // событие было потеряно (партия стояла)
+    tick(g);
+    expect(g.consoles['exodus']?.availableAtWeek).toBe(dateToDay([1, 11, 1]));
+    expect(consoleAvailable(g, 'exodus')).toBe(true);
   });
 });
 
