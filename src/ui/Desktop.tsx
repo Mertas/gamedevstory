@@ -12,6 +12,7 @@ import { NewGameForm } from './NewGameForm';
 import { typingName } from '../shared/chat';
 import { dateLabel, dayInYear } from '../shared/meta';
 import { AutopilotCursor } from './AutopilotCursor';
+import { useOwner } from './owner';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -26,6 +27,9 @@ const ICONS_KEY = 'gds-desk-icons';
 
 export function Desktop({ onExit }: { onExit: () => void }) {
   const wm = useWindows();
+  // план 19: «Инвайты» видит только владелец (в меню «Пуск» и на столе)
+  const owner = useOwner();
+  const apps = useMemo(() => (owner ? APP_DEFS : APP_DEFS.filter((a) => !a.adminOnly)), [owner]);
   const { wins, activeId } = useWinState();
   const wmRef = useRef(wm);
   wmRef.current = wm;
@@ -159,7 +163,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   useEffect(() => { try { localStorage.setItem('gds-desk-pos', JSON.stringify(deskPos)); } catch { /* */ } }, [deskPos]);
 
   const deskItems = useMemo(() => {
-    const items = APP_DEFS.map((d) => ({ id: d.id, title: d.title, icon: d.icon, iconFile: DEFAULT_ICONS[d.id], kind: 'app', open: () => wm.open(d.id) }));
+    const items = apps.map((d) => ({ id: d.id, title: d.title, icon: d.icon, iconFile: DEFAULT_ICONS[d.id], kind: 'app', open: () => wm.open(d.id) }));
     items.push({ id: 'winamp', title: 'Winamp', icon: '🎵', iconFile: DEFAULT_ICONS.winamp, kind: 'media', open: openWinamp });
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -397,7 +401,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
       </div>
 
       {wins.map((w) => {
-        const def = APP_DEFS.find((a) => a.id === w.id);
+        const def = apps.find((a) => a.id === w.id);
         if (!def) return null;
         // UI-01/02: контент — стабильная ссылка на компонент + memo(Window95):
         // ререндер Desktop (тик/снапшот/драг) не тянет за собой все окна
@@ -492,7 +496,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
         {wins.map((w) => {
           // UI-07: закрытые окна в таскбаре не показываем (состояние живёт скрыто)
           if (w.closed) return null;
-          const def = APP_DEFS.find((a) => a.id === w.id);
+          const def = apps.find((a) => a.id === w.id);
           const isActive = !winampActive && !w.minimized && activeId === w.id;
           return (
             <button
@@ -570,7 +574,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
       {/* Пуск */}
       {startOpen && (
         <div className="w95-menu w95-start-menu" style={{ left: 2, bottom: 32 }} onMouseDown={(e) => e.stopPropagation()}>
-          {APP_DEFS.map((a) => (
+          {apps.map((a) => (
             <div key={a.id} className="w95-mi" onClick={() => { wm.open(a.id); setStartOpen(false); }}>
               <span style={{ width: 18, textAlign: 'center' }}>{a.icon}</span> {a.title}
             </div>

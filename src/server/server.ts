@@ -35,7 +35,9 @@ function sendSafe(ws0: WebSocket, payload: string): void {
 }
 
 const app = express();
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '8mb' }));
+// за nginx: реальный IP клиента приходит в X-Forwarded-For (нужен для rate-limit)
+app.set('trust proxy', 'loopback');
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`[gds] сервер на http://${HOST}:${PORT}; GigaChat: ${gigaReady ? 'подключён' : 'НЕТ ключей (чат будет молчать)'}`);
@@ -43,7 +45,7 @@ const server = app.listen(PORT, HOST, () => {
 
 // PLAN-18: пользователи, почта, реестр партий — у каждого пользователя своя игровая сессия.
 const users = new UserService();
-users.ensureUser('Mertas', '123456'); // сид-пользователь (решено 11.09)
+users.ensureUser('Mertas', '123456', undefined, true); // сид-владелец студии (решено 11.09)
 const mail = createMailer();
 const registry = new SessionRegistry(users);
 // REST авторизации/сохранений; who(req) — пользователь по cookie сессии (ниже — для WS)

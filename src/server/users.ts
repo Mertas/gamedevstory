@@ -22,6 +22,18 @@ export interface UserRow {
   login: string;
   email: string | null;
   created: number;
+  /** владелец: выдаёт инвайты (окно «Инвайты»); сервер проверяет это сам, а не только клиент */
+  admin: boolean;
+}
+
+/** Инвайт-код: одноразовый, выдаётся владельцем, «сгорает» при регистрации. */
+export interface InviteRow {
+  code: string;
+  note: string | null;
+  created: number;
+  /** логин того, кто использовал код (null — свободен) */
+  usedBy: string | null;
+  usedAt: number | null;
 }
 
 export interface SaveMeta {
@@ -67,7 +79,8 @@ export class UserService {
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         login TEXT NOT NULL UNIQUE COLLATE NOCASE,
-        email TEXT, pass_hash TEXT NOT NULL, salt TEXT NOT NULL, created INTEGER NOT NULL
+        email TEXT, pass_hash TEXT NOT NULL, salt TEXT NOT NULL, created INTEGER NOT NULL,
+        admin INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE IF NOT EXISTS sessions (
         token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL
@@ -81,7 +94,20 @@ export class UserService {
       CREATE TABLE IF NOT EXISTS resets (
         login TEXT PRIMARY KEY COLLATE NOCASE, code_hash TEXT NOT NULL, expires INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS invites (
+        code TEXT PRIMARY KEY, note TEXT, created INTEGER NOT NULL,
+        used_by INTEGER, used_at INTEGER
+      );
     `);
+    this.migrate();
+  }
+
+  /** Миграции схемы: достраивает старые базы (колонки, появившиеся позже). */
+  private migrate(): void {
+    const cols = (this.db.prepare('PRAGMA table_info(users)').all() as Array<Record<string, unknown>>)
+      .map((c) => String(c.name));
+    if (!cols.includes('admin')) this.db.exec('ALTER TABLE users ADD COLUMN admin INTEGER NOT NULL DEFAULT 0');
+    this.db.exec('PRAGMA journal_mode = WAL');
   }
 
   close(): void {
@@ -89,8 +115,13 @@ export class UserService {
   }
 
   private userByLogin(login: string): RawUser | undefined {
-    return this.db.prepare('SELECT id, login, email, created, pass_hash, salt FROM users WHERE login = ?')
+    return this.db.prepare('SELECT id, login, email, created, admin, pass_hash, salt FROM users WHERE login = ?')
       .get(login) as RawUser | undefined;
+  }
+
+  /** Строка БД → наружу (admin: 0/1 → boolean). */
+  private static toUser(u: RawUser | UserRow): UserRow {
+    return { id: u.id, login: u.login, email: u.email, created: u.created, admin: Boolean(u.admin) };
   }
 
   /** Регистрация: логин уникален (без учёта регистра), пароль ≥ 6 символов. */
@@ -101,10 +132,10 @@ export class UserService {
     if (this.userByLogin(name)) return { ok: false, error: 'Такой логин уже занят' };
     const { salt, hash } = hashPassword(password);
     const created = Date.now();
-    this.db.prepare('INSERT INTO users (login, email, pass_hash, salt, created) VALUES (?, ?, ?, ?, ?)')
+    this.db.prepare('INSERT INTO users (login, email, pass_hash, salt, created, admin) VALUES (?, ?, ?, ?, ?, 0)')
       .run(name, email?.trim() || null, hash, salt, created);
     const u = this.userByLogin(name)!;
-    return { ok: true, user: { id: u.id, login: u.login, email: u.email, created: u.created } };
+    return { ok: true, user: UserService.toUser(u) };
   }
 
   /** Вход: проверка пароля + выдача токена сессии. */
@@ -115,7 +146,7 @@ export class UserService {
     const now = Date.now();
     this.db.prepare('INSERT INTO sessions (token, user_id, created, expires) VALUES (?, ?, ?, ?)')
       .run(token, u.id, now, now + SESSION_MS);
-    return { ok: true, user: { id: u.id, login: u.login, email: u.email, created: u.created }, token };
+    return { ok: true, user: UserService.toUser(u), token };
   }
 
   /** Пользователь по токену сессии (просроченные вычищаются). */
@@ -123,10 +154,10 @@ export class UserService {
     if (!token) return null;
     this.db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
     const row = this.db.prepare(
-      `SELECT u.id, u.login, u.email, u.created FROM sessions s JOIN users u ON u.id = s.user_id
+      `SELECT u.id, u.login, u.email, u.created, u.admin FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token = ? AND s.expires >= ?`,
     ).get(token, Date.now()) as UserRow | undefined;
-    return row ?? null;
+    return row ? UserService.toUser(row) : null;
   }
 
   logout(token: string): void {
@@ -155,12 +186,72 @@ export class UserService {
     this.db.prepare('UPDATE users SET pass_hash = ?, salt = ? WHERE id = ?').run(hash, salt, u.id);
     this.db.prepare('DELETE FROM resets WHERE login = ?').run(name);
     this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id); // старые сессии — вон
-    return { ok: true, user: { id: u.id, login: u.login, email: u.email, created: u.created } };
+    return { ok: true, user: UserService.toUser(u) };
   }
 
-  /** Сид пользователя (Mertas) — создаётся при первом старте, если ещё нет. */
-  ensureUser(login: string, password: string, email?: string): void {
+  /** Сид пользователя (Mertas) — создаётся при первом старте, если ещё нет; admin — владелец. */
+  ensureUser(login: string, password: string, email?: string, admin = false): void {
     if (!this.userByLogin(login)) this.register(login, password, email);
+    // admin выставляем и существующему пользователю: базы, созданные до появления колонки
+    if (admin) this.db.prepare('UPDATE users SET admin = 1 WHERE login = ?').run(login.trim());
+  }
+
+  // ─── инвайты (регистрация только по коду владельца) ───
+
+  /** Алфавит без похожих символов (0/O, 1/I) — код диктуют голосом и копируют руками. */
+  private static readonly INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  /** Новые одноразовые коды вида GDS-XXXX-XXXX. */
+  createInvites(note: string | null, count = 1): InviteRow[] {
+    const n = Math.max(1, Math.min(20, Math.floor(count) || 1));
+    const now = Date.now();
+    const alpha = UserService.INVITE_ALPHABET;
+    const part = (len: number): string => Array.from({ length: len }, () => alpha[randomInt(0, alpha.length)] ?? 'A').join('');
+    const out: InviteRow[] = [];
+    for (let i = 0; i < n; i++) {
+      let code = '';
+      do { code = `GDS-${part(4)}-${part(4)}`; } while (this.db.prepare('SELECT 1 FROM invites WHERE code = ?').get(code));
+      const clean = note?.trim() || null;
+      this.db.prepare('INSERT INTO invites (code, note, created, used_by, used_at) VALUES (?, ?, ?, NULL, NULL)')
+        .run(code, clean, now);
+      out.push({ code, note: clean, created: now, usedBy: null, usedAt: null });
+    }
+    return out;
+  }
+
+  listInvites(): InviteRow[] {
+    const rows = this.db.prepare(
+      `SELECT i.code, i.note, i.created, i.used_at AS usedAt, u.login AS usedBy
+       FROM invites i LEFT JOIN users u ON u.id = i.used_by ORDER BY i.created DESC LIMIT 200`,
+    ).all() as Array<Record<string, unknown>>;
+    return rows.map((r) => ({
+      code: String(r.code),
+      note: r.note === null || r.note === undefined ? null : String(r.note),
+      created: Number(r.created),
+      usedBy: r.usedBy === null || r.usedBy === undefined ? null : String(r.usedBy),
+      usedAt: r.usedAt === null || r.usedAt === undefined ? null : Number(r.usedAt),
+    }));
+  }
+
+  /** Код свободен и годится для регистрации. */
+  inviteValid(code: string): boolean {
+    const c = code.trim().toUpperCase();
+    if (!c) return false;
+    const row = this.db.prepare('SELECT used_by FROM invites WHERE code = ?').get(c) as Record<string, unknown> | undefined;
+    return Boolean(row) && (row?.used_by === null || row?.used_by === undefined);
+  }
+
+  /** Сжечь код за пользователем (после успешной регистрации). */
+  consumeInvite(code: string, userId: number): boolean {
+    const info = this.db.prepare('UPDATE invites SET used_by = ?, used_at = ? WHERE code = ? AND used_by IS NULL')
+      .run(userId, Date.now(), code.trim().toUpperCase());
+    return Number(info.changes) > 0;
+  }
+
+  /** Отозвать свободный код (использованные не трогаем — это история). */
+  revokeInvite(code: string): boolean {
+    const info = this.db.prepare('DELETE FROM invites WHERE code = ? AND used_by IS NULL').run(code.trim().toUpperCase());
+    return Number(info.changes) > 0;
   }
 
   // ─── сохранения ───

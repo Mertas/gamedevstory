@@ -1,0 +1,7 @@
+# Скрипты деплоя обязаны быть LF: их читают bash/systemd/nginx на сервере,
+# а рабочая копия на Windows — CRLF (core.autocrlf=true).
+deploy/post-receive text eol=lf
+deploy/rollback.sh text eol=lf
+deploy/backup.sh text eol=lf
+deploy/gds.service text eol=lf
+deploy/nginx-gds.conf text eol=lf

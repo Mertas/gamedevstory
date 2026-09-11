@@ -1,6 +1,7 @@
-// PLAN-18: начальное окно — вход, регистрация, восстановление пароля (код письмом).
+// PLAN-18/19: начальное окно — вход, регистрация (по инвайт-коду) и восстановление пароля,
+// если оно включено на сервере (на публичном сервере выключено — plan/19).
 import { useState } from 'react';
-import { apiLogin, apiRegister, apiResetConfirm, apiResetRequest } from './api';
+import { apiLogin, apiRegister, apiResetConfirm, apiResetRequest, type Features } from './api';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -15,11 +16,12 @@ const LEAD: Record<Mode, string> = {
   reset: 'Пришлём код на почту (в dev-режиме письмо падает в data/mail-out и код виден здесь).',
 };
 
-export function AuthScreen() {
+export function AuthScreen({ features }: { features: Features }) {
   const [mode, setMode] = useState<Mode>('login');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [invite, setInvite] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -27,6 +29,7 @@ export function AuthScreen() {
   const [info, setInfo] = useState('');
 
   const switchMode = (m: Mode): void => {
+    if (m === 'reset' && !features.passwordReset) return; // на публичном сервере сброса нет
     setMode(m);
     setError('');
     setInfo('');
@@ -46,7 +49,7 @@ export function AuthScreen() {
         if (!r.ok) setError(r.error ?? 'Не удалось войти');
         else location.reload();
       } else if (mode === 'register') {
-        const r = await apiRegister(login.trim(), password, email.trim());
+        const r = await apiRegister(login.trim(), password, email.trim(), invite.trim());
         if (!r.ok) setError(r.error ?? 'Не удалось зарегистрироваться');
         else location.reload();
       } else if (!codeSent) {
@@ -78,7 +81,7 @@ export function AuthScreen() {
 
   return (
     <div className="w95-desktop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="w95-window focused" style={{ position: 'relative', width: 440, zIndex: 10 }}>
+      <div className="w95-window focused" style={{ position: 'relative', width: 460, zIndex: 10 }}>
         <div className="w95-title">🖥️ Game Dev Studio — {TITLES[mode]}</div>
         <div className="w95-body" style={{ padding: 16 }}>
           <form className="w95-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
@@ -92,8 +95,15 @@ export function AuthScreen() {
             {mode === 'register' && (
               <div className="w95-form-row">
                 <label>Почта</label>
-                <input className="w95-input" value={email} placeholder="вы@пример.ру"
+                <input className="w95-input" value={email} placeholder="необязательно"
                   onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            )}
+            {mode === 'register' && features.inviteRequired && (
+              <div className="w95-form-row">
+                <label>Инвайт-код</label>
+                <input className="w95-input" value={invite} placeholder="GDS-XXXX-XXXX"
+                  onChange={(e) => setInvite(e.target.value)} />
               </div>
             )}
             {mode === 'reset' && codeSent && (
@@ -109,12 +119,10 @@ export function AuthScreen() {
                   onChange={(e) => setPassword(e.target.value)} />
               </div>
             )}
-            {(mode === 'register' || (mode === 'reset' && codeSent)) && (
+            {mode === 'register' && (
               <div className="w95-form-row">
                 <label />
-                <span className="w95-hint">
-                  {mode === 'register' ? 'Логин: латиница, цифры, _ . - · пароль от 6 символов' : 'Пароль от 6 символов'}
-                </span>
+                <span className="w95-hint">Логин: латиница, цифры, _ . - · пароль от 6 символов</span>
               </div>
             )}
 
@@ -133,7 +141,9 @@ export function AuthScreen() {
             {mode !== 'login' && <button className="w95-btn" onClick={() => switchMode('login')}>Вход</button>}
             {mode !== 'register' && <button className="w95-btn" onClick={() => switchMode('register')}>Регистрация</button>}
             <div style={{ flex: 1 }} />
-            {mode !== 'reset' && <button className="w95-btn" onClick={() => switchMode('reset')}>Забыли пароль?</button>}
+            {mode !== 'reset' && features.passwordReset && (
+              <button className="w95-btn" onClick={() => switchMode('reset')}>Забыли пароль?</button>
+            )}
           </div>
         </div>
       </div>

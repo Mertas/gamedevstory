@@ -1,0 +1,22 @@
+# systemd-юнит игрового сервера (plan/19).
+# Ставить: /etc/systemd/system/gds.service, затем systemctl daemon-reload && systemctl enable --now gds
+[Unit]
+Description=Game Dev Story server
+After=network.target
+
+[Service]
+User=gds
+WorkingDirectory=/srv/gds/current
+# секреты и настройки — вне релизов: деплой их не касается
+EnvironmentFile=/srv/gds/shared/.env
+ExecStart=/usr/bin/pnpm server
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+# минимум прав: сервису нечего делать вне своего каталога
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

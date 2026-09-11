@@ -1,9 +1,22 @@
-// PLAN-18: REST-клиент начального окна (вход, сохранения, начальный пул).
+// PLAN-18/19: REST-клиент начального окна (вход, сохранения, инвайты, начальный пул).
 // Cookie сессии — same-origin, уходит автоматически.
 export interface MeInfo {
   id: number;
   login: string;
   email: string | null;
+  /** владелец студии: видит окно «Инвайты» */
+  admin: boolean;
+}
+
+/** Что включено на этом сервере (публичный режим выключает сброс пароля — plan/19). */
+export interface Features {
+  passwordReset: boolean;
+  inviteRequired: boolean;
+}
+
+export interface SessionInfo {
+  user: MeInfo | null;
+  features: Features;
 }
 
 export interface SaveInfo {
@@ -15,6 +28,15 @@ export interface SaveInfo {
   year: number;
   money: number;
   active: boolean;
+}
+
+export interface InviteInfo {
+  code: string;
+  note: string | null;
+  created: number;
+  /** логин того, кто использовал код; null — свободен */
+  usedBy: string | null;
+  usedAt: number | null;
 }
 
 export interface PoolStaff {
@@ -45,19 +67,22 @@ async function call<T>(url: string, body?: unknown, method?: string): Promise<T 
   }
 }
 
-/** Пользователь по cookie сессии; null — не вошёл. */
-export async function apiMe(): Promise<MeInfo | null> {
+/** Сессия: пользователь (или null) + возможности сервера. */
+export async function apiMe(): Promise<SessionInfo> {
   try {
-    const d = await call<{ user: MeInfo | null }>('/api/auth/me');
-    return d.user ?? null;
+    const d = await call<{ user: MeInfo | null; features: Features }>('/api/auth/me');
+    return {
+      user: d.user ?? null,
+      features: d.features ?? { passwordReset: false, inviteRequired: true },
+    };
   } catch {
-    return null;
+    return { user: null, features: { passwordReset: false, inviteRequired: true } };
   }
 }
 
 export const apiLogin = (login: string, password: string) => call<{ user?: MeInfo }>('/api/auth/login', { login, password });
-export const apiRegister = (login: string, password: string, email: string) =>
-  call<{ user?: MeInfo }>('/api/auth/register', { login, password, email });
+export const apiRegister = (login: string, password: string, email: string, invite: string) =>
+  call<{ user?: MeInfo }>('/api/auth/register', { login, password, email, invite });
 export const apiResetRequest = (login: string) => call<{ devCode?: string }>('/api/auth/reset-request', { login });
 export const apiResetConfirm = (login: string, code: string, password: string) =>
   call<{ user?: MeInfo }>('/api/auth/reset-confirm', { login, code, password });
@@ -77,3 +102,15 @@ export async function apiPool(): Promise<PoolStaff[]> {
   const d = await call<{ staff: PoolStaff[] }>('/api/pool');
   return d.staff ?? [];
 }
+
+// ─── инвайты (только владелец; сервер отвечает 403 остальным) ───
+
+export async function apiInvites(): Promise<InviteInfo[]> {
+  const d = await call<{ invites: InviteInfo[] }>('/api/invites');
+  return d.invites ?? [];
+}
+export async function apiCreateInvites(note: string, count: number): Promise<{ ok: boolean; error?: string; invites: InviteInfo[] }> {
+  const d = await call<{ invites: InviteInfo[] }>('/api/invites', { note, count });
+  return { ok: d.ok, error: d.error, invites: d.invites ?? [] };
+}
+export const apiRevokeInvite = (code: string) => call<Record<string, never>>(`/api/invites/${encodeURIComponent(code)}`, undefined, 'DELETE');

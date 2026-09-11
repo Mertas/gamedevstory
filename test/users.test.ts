@@ -74,6 +74,39 @@ describe('PLAN-18: пользователи (SQLite)', () => {
     expect(u.listSaves(aid).length).toBe(0);
     u.close();
   });
+
+  it('владелец: admin ставится сиду, обычный игрок — не админ', () => {
+    const u = new UserService(tmpDb());
+    u.ensureUser('Mertas', '123456', undefined, true);
+    const boss = u.login('Mertas', '123456');
+    expect(boss.ok).toBe(true);
+    expect(boss.ok && boss.user.admin).toBe(true);
+    u.register('Drug', '123456');
+    const drug = u.login('Drug', '123456');
+    expect(drug.ok).toBe(true);
+    expect(drug.ok && drug.user.admin).toBe(false);
+    u.close();
+  });
+
+  it('инвайты: одноразовые, отзыв только свободных, история использованных', () => {
+    const u = new UserService(tmpDb());
+    const [a, b] = u.createInvites('Витя', 2);
+    expect(a!.code).toMatch(/^GDS-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    expect(u.inviteValid(a!.code)).toBe(true);
+    expect(u.inviteValid(a!.code.toLowerCase())).toBe(true); // регистр не важен — код диктуют руками
+    expect(u.inviteValid('GDS-XXXX-YYYY')).toBe(false);
+    const r = u.register('Vitya', '123456');
+    expect(r.ok).toBe(true);
+    expect(u.consumeInvite(a!.code, r.ok ? r.user.id : 0)).toBe(true);
+    expect(u.consumeInvite(a!.code, r.ok ? r.user.id : 0)).toBe(false); // второй раз не сжечь
+    expect(u.inviteValid(a!.code)).toBe(false); // код занят
+    expect(u.listInvites().length).toBe(2);
+    expect(u.listInvites().find((i) => i.code === a!.code)?.usedBy).toBe('Vitya');
+    expect(u.revokeInvite(b!.code)).toBe(true); // свободный отзывается
+    expect(u.revokeInvite(a!.code)).toBe(false); // использованный — история
+    expect(u.listInvites().length).toBe(1);
+    u.close();
+  });
 });
 
 describe('PLAN-18: REST — вход, cookie, создание партии, список сохранений', () => {
@@ -87,11 +120,26 @@ describe('PLAN-18: REST — вход, cookie, создание партии, с�
     const port = (srv.address() as { port: number }).port;
     const base = `http://127.0.0.1:${port}`;
     try {
+      // регистрация без инвайт-кода закрыта (plan/19)
+      const noInvite = await fetch(`${base}/api/auth/register`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ login: 'BezKoda', password: '123456' }),
+      });
+      expect(((await noInvite.json()) as { ok: boolean }).ok).toBe(false);
+
+      const code = users.createInvites('тест', 1)[0]!.code;
       const reg = await fetch(`${base}/api/auth/register`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ login: 'Mertas', password: '123456' }),
+        body: JSON.stringify({ login: 'Mertas', password: '123456', invite: code }),
       });
       expect(reg.status).toBe(200);
+
+      // код одноразовый: второй раз не пройдёт
+      const reuse = await fetch(`${base}/api/auth/register`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ login: 'Vtoroy', password: '123456', invite: code }),
+      });
+      expect(((await reuse.json()) as { ok: boolean }).ok).toBe(false);
       const cookie = reg.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
       expect(cookie).toContain('gds_session=');
 

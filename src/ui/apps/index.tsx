@@ -9,6 +9,7 @@ import { ContractsApp } from './market/Contracts';
 import { HardwareApp } from './market/Hardware';
 import { HelpApp } from './help/Help';
 import { HireApp } from './hire/HireApp';
+import { InvitesApp } from './invites/Invites';
 import { MagazinesApp } from './archive/Magazines';
 import { MailApp } from './mail/Mail';
 import { MarketingApp } from './market/Marketing';
@@ -19,6 +20,8 @@ export interface AppDef {
   title: string;
   icon: string;
   component: ComponentType;
+  /** окно только для владельца студии (инвайты; сервер проверяет права сам) */
+  adminOnly?: boolean;
 }
 
 export const APP_DEFS: AppDef[] = [
@@ -33,4 +36,5 @@ export const APP_DEFS: AppDef[] = [
   { id: 'contracts', title: 'Контракты', icon: '📝', component: memo(ContractsApp) },
   { id: 'mail', title: 'Почта', icon: '✉️', component: memo(MailApp) },
   { id: 'help', title: 'Справка', icon: '❓', component: memo(HelpApp) },
+  { id: 'invites', title: 'Инвайты', icon: '🎟️', adminOnly: true, component: memo(InvitesApp) },
 ];

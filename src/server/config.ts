@@ -14,8 +14,19 @@ export const PORT = Number(process.env.PORT ?? 3001);
 // аудит 05.09: по умолчанию слушаем только локально; LAN-доступ — явно через HOST=0.0.0.0
 export const HOST = process.env.HOST ?? '127.0.0.1';
 
-// PLAN-18: почта для восстановления пароля (dev — письмо в консоль + код на экран).
+// Деплой (plan/19): PROD=1 — публичный режим (выключает сброс пароля и пр.).
+export const PROD = process.env.PROD === '1' || process.env.NODE_ENV === 'production';
+/** Восстановление пароля: локально включено; на публике выключено (PROD=1 или PASSWORD_RESET=0). */
+export const PASSWORD_RESET = process.env.PASSWORD_RESET === '1' ? true : process.env.PASSWORD_RESET === '0' ? false : !PROD;
+/** Регистрация только по инвайт-коду: владелец выдаёт их в игре (окно «Инвайты»). */
+export const INVITE_REQUIRED = process.env.INVITE_REQUIRED !== '0';
+
+// PLAN-18/20: почта. dev — письмо в data/mail-out; smtp — nodemailer (нужен открытый исходящий
+// SMTP у хостера); api — SendPulse REST по HTTPS (VDSina блокирует SMTP, а HTTPS работает).
 export const MAIL_MODE = process.env.MAIL_MODE ?? 'dev';
+export const SENDPULSE_API_KEY = process.env.SENDPULSE_API_KEY ?? '';
+export const SENDPULSE_ID = process.env.SENDPULSE_ID ?? '';
+export const SENDPULSE_SECRET = process.env.SENDPULSE_SECRET ?? '';
 export const SMTP_HOST = process.env.SMTP_HOST ?? '';
 export const SMTP_PORT = Number(process.env.SMTP_PORT ?? 587);
 export const SMTP_USER = process.env.SMTP_USER ?? '';

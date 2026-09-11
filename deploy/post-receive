@@ -1,0 +1,81 @@
+#!/bin/bash
+# post-receive — выкладка GameDevStory (plan/19).
+# Ставить: /srv/gds.git/hooks/post-receive, затем chmod +x.
+# Весь вывод уходит в терминал того, кто сделал git push.
+set -euo pipefail
+
+BASE=/srv/gds
+REPO=/srv/gds.git
+SHARED=$BASE/shared
+KEEP=3
+PORT=3001
+
+log() { echo "[deploy] $*"; }
+
+while read -r _old new ref; do
+  [ -z "${new:-}" ] && continue
+  case "$ref" in
+    refs/heads/*) ;;
+    *) log "пропускаю $ref"; continue ;;
+  esac
+
+  N="$(date +%Y%m%d-%H%M%S)-$(git --git-dir="$REPO" rev-parse --short "$new")"
+  REL="$BASE/releases/$N"
+  mkdir -p "$REL"
+
+  log "релиз $N: распаковываю код (LF из индекса — git archive)"
+  git --git-dir="$REPO" archive "$new" | tar -x -C "$REL"
+
+  # вечное живёт вне релиза: данные и секреты деплой не трогает
+  ln -sfn "$SHARED/data" "$REL/data"
+  if [ -f "$SHARED/.env" ]; then
+    cp "$SHARED/.env" "$REL/.env"
+  else
+    log "ВНИМАНИЕ: нет $SHARED/.env — сервер поднимется без ключей LLM"
+  fi
+
+  cd "$REL"
+  log "ставлю зависимости (первый раз это долго)"
+  pnpm install --frozen-lockfile --reporter=append-only
+
+  log "гейт: типы + линт + тесты"
+  if ! pnpm check; then
+    log "ДЕПЛОЙ ОТКЛОНЁН: проверки не прошли. Прод не тронут."
+    rm -rf "$REL"
+    exit 1
+  fi
+
+  log "сборка (tsc + vite)"
+  pnpm build
+
+  if [ ! -f "$SHARED/data/gamedev.db" ]; then
+    log "контент-БД отсутствует — собираю из research/"
+    pnpm db:build
+  fi
+
+  PREV="$(readlink -f "$BASE/current" 2>/dev/null || true)"
+  ln -sfn "$REL" "$BASE/current"
+  log "перезапускаю сервис"
+  sudo systemctl restart gds
+
+  ok=0
+  for _ in $(seq 1 15); do
+    if curl -fsS --max-time 3 "http://127.0.0.1:$PORT/api/health" >/dev/null; then ok=1; break; fi
+    sleep 1
+  done
+
+  if [ "$ok" != "1" ]; then
+    log "СЕРВИС НЕ ОТВЕЧАЕТ — откатываюсь на предыдущий релиз"
+    if [ -n "$PREV" ] && [ -d "$PREV" ]; then
+      ln -sfn "$PREV" "$BASE/current"
+      sudo systemctl restart gds
+      log "откат на $PREV"
+    fi
+    exit 1
+  fi
+
+  log "готово: $N — health-check пройден"
+  ls -1dt "$BASE"/releases/*/ 2>/dev/null | tail -n +"$((KEEP + 1))" | xargs -r rm -rf
+done
+
+log "деплой завершён"

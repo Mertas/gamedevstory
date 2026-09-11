@@ -12,7 +12,8 @@ import { WindowManagerProvider } from './wm';
 import { CONFIG } from '../core/config';
 import { AuthScreen } from './AuthScreen';
 import { StartScreen } from './StartScreen';
-import { apiMe, type MeInfo } from './api';
+import { apiMe, type Features, type MeInfo } from './api';
+import { setOwner } from './owner';
 
 // следим за событиями, требующими решения игрока
 function EventWatcher() {
@@ -194,7 +195,15 @@ export function App() {
   // после «Новая игра»/«Загрузить» страница перезагружается с #play — сразу входим в партию
   const [screen, setScreen] = useState<'launcher' | 'game'>(() => (location.hash === '#play' ? 'game' : 'launcher'));
 
-  useEffect(() => { void apiMe().then(setMe); }, []);
+  const [features, setFeatures] = useState<Features>({ passwordReset: false, inviteRequired: true });
+
+  useEffect(() => {
+    void apiMe().then((s) => {
+      setMe(s.user);
+      setFeatures(s.features);
+      setOwner(Boolean(s.user?.admin)); // окно «Инвайты» — только владельцу студии
+    });
+  }, []);
 
   useEffect(() => {
     if (me && screen === 'game') startSession();
@@ -214,7 +223,7 @@ export function App() {
   }
 
   if (me === undefined) return <Boot text="⏳ Загрузка…" />;
-  if (me === null) return <AuthScreen />;
+  if (me === null) return <AuthScreen features={features} />;
   if (screen === 'launcher') return <StartScreen me={me} />;
   if (!snap.game || !snap.meta) {
     return <Boot text={snap.connected ? '⏳ Загрузка партии…' : '🔌 Нет связи с сервером. Запустите: pnpm server'} />;

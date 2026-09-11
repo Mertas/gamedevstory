@@ -1,9 +1,16 @@
-// PLAN-18: REST-API авторизации и сохранений. Cookie сессии — httpOnly (SameSite=Strict).
+// PLAN-18/19: REST авторизации, инвайтов и сохранений. Cookie сессии — httpOnly (SameSite=Strict).
 import type { Request, Response, Express } from 'express';
 import { STAFF } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
+import { INVITE_REQUIRED, PASSWORD_RESET } from './config';
 import type { Mailer } from './mailer';
-import type { SaveMeta, UserService, UserRow } from './users';
+import { RateLimit } from './ratelimit';
+import type { InviteRow, SaveMeta, UserService, UserRow } from './users';
+
+export const SESSION_COOKIE = 'gds_session';
+
+/** Минимум, нужный для чтения cookie: подходит и express Request, и WS IncomingMessage. */
+export type HeadersLike = { headers: Record<string, string | string[] | undefined> };
 
 /** Сотрудник начального пула — из него игрок выбирает двоих на старте (PLAN-18). */
 export interface PoolStaffDto {
@@ -24,11 +31,6 @@ export function initialPool(): PoolStaffDto[] {
     stats: d.stats, activeCareer: d.activeCareer,
   }));
 }
-
-export const SESSION_COOKIE = 'gds_session';
-
-/** Минимум, нужный для чтения cookie: подходит и express Request, и WS IncomingMessage. */
-export type HeadersLike = { headers: Record<string, string | string[] | undefined> };
 
 /** Жизненный цикл партий пользователя (реализация — SessionRegistry). */
 export interface SessionHooks {
@@ -74,16 +76,34 @@ function clearSession(res: Response): void {
 
 const isSecure = (req: Request): boolean => req.protocol === 'https' || (req.headers['x-forwarded-proto'] ?? '') === 'https';
 
+/** IP клиента: за nginx реальный адрес приходит в X-Forwarded-For (trust proxy = loopback). */
+const ipOf = (req: Request): string => req.ip ?? 'unknown';
+
 /** Регистрация маршрутов. Возвращает функцию «кто пришёл» (для WS-авторизации по cookie). */
 export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => UserRow | null {
   const { users, mail, sessions } = deps;
   const who = (req: HeadersLike): UserRow | null => users.userByToken(tokenFromReq(req));
 
+  // защита от перебора: вход/сброс — 8 попыток за 10 минут, регистрация — 5 в час (на IP)
+  const loginLimit = new RateLimit(8, 10 * 60 * 1000);
+  const registerLimit = new RateLimit(5, 60 * 60 * 1000);
+
+  const features = { passwordReset: PASSWORD_RESET, inviteRequired: INVITE_REQUIRED };
+
   // ─── авторизация ───
   app.post('/api/auth/register', (req, res) => {
-    const { login, password, email } = (req.body ?? {}) as { login?: string; password?: string; email?: string };
+    const { login, password, email, invite } = (req.body ?? {}) as { login?: string; password?: string; email?: string; invite?: string };
+    if (!registerLimit.allow(`reg:${ipOf(req)}`)) {
+      return void res.json({ ok: false, error: 'Слишком много попыток регистрации — попробуйте позже' });
+    }
+    const code = String(invite ?? '').trim();
+    if (INVITE_REQUIRED) {
+      if (!code) return void res.json({ ok: false, error: 'Нужен инвайт-код — его выдаёт владелец студии' });
+      if (!users.inviteValid(code)) return void res.json({ ok: false, error: 'Инвайт-код не подходит (занят или не существует)' });
+    }
     const r = users.register(String(login ?? ''), String(password ?? ''), email);
     if (!r.ok) return void res.json(r);
+    if (INVITE_REQUIRED) users.consumeInvite(code, r.user.id); // код сгорает за новичком
     const s = users.login(r.user.login, String(password));
     if (!s.ok) return void res.json(s);
     setSession(res, s.token, isSecure(req));
@@ -92,8 +112,14 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
 
   app.post('/api/auth/login', (req, res) => {
     const { login, password } = (req.body ?? {}) as { login?: string; password?: string };
-    const r = users.login(String(login ?? ''), String(password ?? ''));
+    const name = String(login ?? '').trim();
+    const key = `login:${ipOf(req)}:${name.toLowerCase()}`;
+    if (!loginLimit.allow(key)) {
+      return void res.json({ ok: false, error: 'Слишком много попыток входа — подождите 10 минут' });
+    }
+    const r = users.login(name, String(password ?? ''));
     if (!r.ok) return void res.json(r);
+    loginLimit.reset(key);
     setSession(res, r.token, isSecure(req));
     res.json({ ok: true, user: r.user });
   });
@@ -105,13 +131,20 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   });
 
   app.get('/api/auth/me', (req, res) => {
-    res.json({ ok: true, user: who(req) });
+    res.json({ ok: true, user: who(req), features });
   });
 
-  // Восстановление: dev — код возвращается на экран и печатается в консоль; smtp — уходит письмом.
+  // ─── восстановление пароля (на публичном сервере выключено: plan/19) ───
   app.post('/api/auth/reset-request', async (req, res) => {
+    if (!PASSWORD_RESET) {
+      return void res.json({ ok: false, error: 'Восстановление пароля на этом сервере недоступно — напишите владельцу студии' });
+    }
     const { login } = (req.body ?? {}) as { login?: string };
-    const r = users.startReset(String(login ?? ''));
+    const name = String(login ?? '').trim();
+    if (!loginLimit.allow(`reset:${ipOf(req)}:${name.toLowerCase()}`)) {
+      return void res.json({ ok: false, error: 'Слишком много запросов — подождите 10 минут' });
+    }
+    const r = users.startReset(name);
     if (!r.ok) return void res.json(r);
     try {
       const mode = await mail.send(r.to, 'Восстановление пароля — Game Dev Studio',
@@ -123,22 +156,55 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   });
 
   app.post('/api/auth/reset-confirm', (req, res) => {
+    if (!PASSWORD_RESET) {
+      return void res.json({ ok: false, error: 'Восстановление пароля на этом сервере недоступно — напишите владельцу студии' });
+    }
     const { login, code, password } = (req.body ?? {}) as { login?: string; code?: string; password?: string };
     const r = users.confirmReset(String(login ?? ''), String(code ?? ''), String(password ?? ''));
     if (!r.ok) return void res.json(r);
-    const s = users.login(r.user.login, String(password));
+    const s = users.login(r.user.login, String(password ?? ''));
     if (!s.ok) return void res.json(s);
     setSession(res, s.token, isSecure(req));
     res.json({ ok: true, user: s.user });
   });
 
-  // ─── сохранения ───
+  // ─── инвайты: выдаёт только владелец (серверная проверка, не только интерфейс) ───
   const withUser = (req: Request, res: Response, fn: (u: UserRow) => void): void => {
     const u = who(req);
     if (!u) return void res.status(401).json({ ok: false, error: 'Нужен вход' });
     fn(u);
   };
 
+  const withAdmin = (req: Request, res: Response, fn: (u: UserRow) => void): void => {
+    const u = who(req);
+    if (!u) return void res.status(401).json({ ok: false, error: 'Нужен вход' });
+    if (!u.admin) return void res.status(403).json({ ok: false, error: 'Инвайты выдаёт только владелец студии' });
+    fn(u);
+  };
+
+  app.get('/api/invites', (req, res) => {
+    withAdmin(req, res, () => {
+      const invites: InviteRow[] = users.listInvites();
+      res.json({ ok: true, invites });
+    });
+  });
+
+  app.post('/api/invites', (req, res) => {
+    withAdmin(req, res, () => {
+      const { note, count } = (req.body ?? {}) as { note?: string; count?: number };
+      const invites = users.createInvites(String(note ?? ''), Number(count ?? 1));
+      res.json({ ok: true, invites });
+    });
+  });
+
+  app.delete('/api/invites/:code', (req, res) => {
+    withAdmin(req, res, () => {
+      const ok = users.revokeInvite(String(req.params.code ?? ''));
+      res.json(ok ? { ok: true } : { ok: false, error: 'Код не найден или уже использован' });
+    });
+  });
+
+  // ─── пул и сохранения ───
   /** PLAN-18: начальный пул сотрудников для экрана новой игры. */
   app.get('/api/pool', (req, res) => {
     withUser(req, res, () => {
