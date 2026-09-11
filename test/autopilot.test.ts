@@ -804,4 +804,21 @@ describe('AP-09: найм и увольнения', () => {
     expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(true);
     expect(press && press.kind === 'click' ? press.label : '').toContain('Тестовый Сотрудник');
   });
+
+  it('не нанимает, если касса меньше годового фонда зарплат (иначе студия обнулится)', () => {
+    const g = fresh();
+    g.officeLevel = 1;
+    for (const s of g.staff) s.salary = 2000; // фонд зарплат 4M
+    g.money = 3000; // меньше фонда — найм запрещён (ни с методом, ни с кандидатом)
+    busy(g);
+    const pol = createAutopilotPolicy();
+    const j1: PolicyAction[] = [];
+    pol.turn(g, j1);
+    expect(j1.some((a) => a.type === 'hire')).toBe(false);
+    g.money = 9000; // касса с запасом — нанять можно
+    busy(g); // первый ход резолвнул событие, а политика ходит только «по событию»
+    const j2: PolicyAction[] = [];
+    pol.turn(g, j2);
+    expect(j2.some((a) => a.type === 'hire')).toBe(true);
+  });
 });

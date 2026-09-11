@@ -6,6 +6,7 @@ import { CONSOLES, GENRES, TYPES } from '../data/db';
 import type { GameState, Staff, StartProjectInput } from '../types';
 import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
 import { BOOSTER_KEY_JOB, boosterPrice } from '../systems/progression';
+import { salaryWithLevels } from '../formulas';
 import { candidatePool } from '../systems/staff';
 import { DIRECTION_ORDER } from '../types';
 import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
@@ -199,9 +200,16 @@ export function staffScore(state: GameState, stats: Record<StatKey, number>): nu
   return total + 1.5 * stats[weak];
 }
 
-/** Резерв на жизнь: у богатой студии ~800K, но найм возможен и в начале игры. */
+/** AP-09 (11.09): годовой фонд зарплат — найм не имеет права съесть деньги на зарплаты.
+ *  Живой случай: 8 нанятых с фондом 3.06M против 1.4M в кассе — студия обнулилась
+ *  на конец марта (день зарплат). Резерв найма = фонд (не меньше 500K — старт игры). */
+function payroll(state: GameState): number {
+  return state.staff.reduce((a, s) => a + salaryWithLevels(s.salary, s.levelUps), 0);
+}
+
+/** Резерв на жизнь: годовой фонд зарплат студии, но не меньше 500K (начало игры). */
 function hireReserve(state: GameState): number {
-  return Math.min(800, Math.max(500, Math.round(state.money * 0.2)));
+  return Math.max(500, Math.round(payroll(state)));
 }
 
 /** Самый дорогой метод, который тянем (пул сильнее) — иначе null. */
@@ -223,8 +231,8 @@ function pickBestCandidate(state: GameState, method: HireMethodId, turnedDown: S
     if (turnedDown.has(id)) continue;
     const d = STAFF.find((x) => x.id === id);
     if (!d) continue;
-    // хватает не только на найм, но и на жизнь: после сделки должен остаться резерв
-    if (state.money - (CONFIG.HIRE_METHODS[method].cost + d.hireFee) < reserve) continue;
+    // хватает на найм, на жизнь (резерв) и на зарплату новичка (годовой фонд растёт)
+    if (state.money - (CONFIG.HIRE_METHODS[method].cost + d.hireFee) < reserve + d.salary) continue;
     const score = staffScore(state, d.stats);
     if (score > bestScore) {
       bestScore = score;
