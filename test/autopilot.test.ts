@@ -397,40 +397,47 @@ describe('автопилот: политика-обёртка', () => {
   });
 });
 
-describe('AP-07: адаптивный темп (скорость при автопилоте)', () => {
-  it('старт ускоряет до 4×, уже разогнанные 8× не сбавляет', () => {
+describe('AP-12: автопилот не разгоняет темп (темп задаёт игрок)', () => {
+  it('на 1× остаётся 1×; с паузы поднимает только до 1×; 8× не сбавляет', () => {
     const h1 = makeHost(fresh());
+    h1.host.speed = 1;
     new AutopilotController(h1.host).startAutopilot();
-    expect(h1.host.speed).toBe(4);
-    expect(h1.speedLog).toEqual([4]);
+    expect(h1.host.speed).toBe(1);
+    expect(h1.speedLog).toEqual([]); // скорость не трогали вовсе
     const h2 = makeHost(fresh());
-    h2.host.speed = 8;
+    h2.host.speed = 0; // босс на паузе
     new AutopilotController(h2.host).startAutopilot();
-    expect(h2.host.speed).toBe(8); // ставку не опускаем
-    expect(h2.speedLog).toEqual([]);
+    expect(h2.host.speed).toBe(1); // паузу снимаем, разгон не включаем
+    expect(h2.speedLog).toEqual([1]);
+    const h3 = makeHost(fresh());
+    h3.host.speed = 8;
+    new AutopilotController(h3.host).startAutopilot();
+    expect(h3.host.speed).toBe(8); // ставку не опускаем
+    expect(h3.speedLog).toEqual([]);
   });
 
-  it('событие — на 1×, после закрытия возвращается ускорение', () => {
+  it('событие — на 1×, после закрытия возвращается темп игрока (не 4×)', () => {
     const h = hostWithGame();
+    h.host.speed = 2; // игрок поставил 2×
     const ap = new AutopilotController(h.host);
     ap.startAutopilot();
-    expect(h.host.speed).toBe(4);
+    expect(h.host.speed).toBe(2);
     h.host.game.pendingEvent = { type: 'info', title: 'Тест', text: 'Событие' };
     ap.maybeAutopilot();
     expect(h.host.speed).toBe(1); // драматургия: попап смотрим на человеческой скорости
     h.host.game.pendingEvent = null;
     ap.maybeAutopilot();
-    expect(h.host.speed).toBe(4); // событие закрылось — команда снова гонит время
-    expect(h.speedLog).toEqual([4, 1, 4]);
+    expect(h.host.speed).toBe(2); // назад к темпу игрока
+    expect(h.speedLog).toEqual([1, 2]);
   });
 
   it('«Взять управление» возвращает темп, который был у босса', () => {
     const h = hostWithGame();
     const ap = new AutopilotController(h.host);
     ap.startAutopilot();
-    expect(h.host.speed).toBe(4);
+    expect(h.host.speed).toBe(1); // не разгоняли
     ap.stopAutopilot(true);
-    expect(h.host.speed).toBe(1); // босс вернулся — время снова на его усмотрение
+    expect(h.host.speed).toBe(1);
     // если босс сам крутил скорость при автопилоте — его выбор не трогаем
     const h2 = hostWithGame();
     const ap2 = new AutopilotController(h2.host);

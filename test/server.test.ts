@@ -50,8 +50,8 @@ describe('GameServer: new_game (BUG-01)', () => {
   it('новая партия стартует на 1× — пауза авторежима не наследуется', () => {
     srv = makeServer();
     srv.handle({ type: 'set_speed', v: 0 }); // пауза
-    srv.handle({ type: 'set_autopilot', on: true }); // авто разгоняется, запомнив паузу
-    expect(srv.snapshot().speed).toBe(4);
+    srv.handle({ type: 'set_autopilot', on: true }); // авто снимает паузу, но НЕ разгоняет (AP-12)
+    expect(srv.snapshot().speed).toBe(1);
     srv.handle({ type: 'new_game' });
     expect(srv.snapshot().speed).toBe(1);
   });

@@ -289,7 +289,7 @@ export class AutopilotController {
   private pendingEventSince: number | null = null; // «театр»: попап висит ~2.6с
   private decisionEpoch = 0; // SRV-03: отмена решений автопилота (take_control во время LLM-запроса)
   private speedBefore = 1; // AP-07: скорость до включения автопилота (в неё вернём контроль)
-  private autoTarget = 4; // AP-07: ускоренный темп между событиями (4-8×, ниже не опускаем)
+  private autoTarget = 1; // AP-12: темп задаёт игрок (AP-07 разгонял до 4× — убрано)
   private loweredForEvent = false; // AP-07: мы сами уронили до 1× ради драматургии события
   private idleChatAt = 0; // AP-08: когда последний раз болтали просто так (реальное время)
   private session: { historyLen: number; money: number } | null = null; // AP-03: снимок на старте автосессии
@@ -317,9 +317,11 @@ export class AutopilotController {
     this.idleChatAt = Date.now(); // AP-08: первая реплика в затишье — не сразу после старта
     // AP-03: снимок для «Итогов автосессии» — что команда успеет, пока босс отдыхает
     this.session = { historyLen: this.h.game.history.length, money: this.h.game.money };
-    // AP-07: адаптивный темп — команда не ползёт на 1×; уже разогнанные 8× не опускаем
+    // AP-12: темп задаёт игрок — автопилот НЕ разгоняет до 4× (как было в AP-07).
+    // Поднимаем только паузу (0 → 1×), иначе команда физически не может играть;
+    // уже разогнанные 8× тоже не сбавляем.
     this.speedBefore = this.h.speed;
-    this.autoTarget = Math.max(4, this.h.speed);
+    this.autoTarget = Math.max(1, this.h.speed);
     if (this.h.speed < this.autoTarget) this.h.setSpeed(this.autoTarget);
     this.h.pushSystem('🤖 Босс отдал команде управление — решаем сами!');
     this.h.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
