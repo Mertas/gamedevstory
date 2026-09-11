@@ -294,6 +294,11 @@ export class GameServer {
     this.chatflow.pushSystem(text);
   }
 
+  /** 16: реплики обсуждения автопилота (из решения чата) — в очередь чата. */
+  publishDiscussion(lines: { author: string; text: string }[]): void {
+    this.chatflow.publishDiscussion(lines);
+  }
+
   // ─── M5: письма фанатов (SRV-22): логика — в mail.ts ───
   /** @internal для GameTicker: LLM-тексты и публикация писем (см. mail.ts). */
   maybeMailLetters(): void {

@@ -2,9 +2,9 @@
 // политика авто-резолва событий, и AutopilotController (SRV-22) — оркестрация сессии:
 // «театр» событий, обсуждение→решение, таймаут плана.
 import { CONFIG } from '../core/config';
-import { GENRES, TYPES, CONSOLES, TRAININGS, ADS, consoleById, genreById, typeById } from '../core/data/db';
+import { GENRES, TYPES, CONSOLES, TRAININGS, ADS, STAFF, consoleById, genreById, typeById } from '../core/data/db';
 import { startProjectAction } from '../core/engine';
-import { comboGrade, consoleAvailable } from '../core/systems/dev';
+import { consoleAvailable } from '../core/systems/dev';
 import { autopilotProjectInput, comboCostK, sequelOpportunity, type PolicyAction } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../core/types';
@@ -78,12 +78,15 @@ export function buildDecisionContext(state: GameState): {
   office: number;
   genres: string;
   types: string;
-  combos: string;
   consoles: string;
   directionPoints: number;
   sequel?: string;
   /** AP-04: свежие письма фанатов (настроение по играм) — влияют на выбор жанра */
   fans?: string;
+  /** 16: последние релизы студии — «история», человеческий мотив выбора */
+  history?: string;
+  /** 16: прошлый проект (жанр/тип/режим) — команда помнит, о чём говорила */
+  lastProject?: string;
 } {
   const unlockedGenres = GENRES.filter((g) => {
     if (g.unlockJob && g.unlockLevel) {
@@ -99,18 +102,15 @@ export function buildDecisionContext(state: GameState): {
     return true;
   });
   const licensed = CONSOLES.filter((c) => state.consoles[c.id]?.licensed && consoleAvailable(state, c.id));
-  // топ комбо по градации (S/A/B), до 10 штук
-  const gradeRank: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4, F: 5 };
-  const combos: { line: string; rank: number; cost: number }[] = [];
-  for (const g of unlockedGenres.slice(0, 20)) {
-    for (const t of unlockedTypes.slice(0, 79)) {
-      const grade = comboGrade(g.id, t.id);
-      if (grade === 'C') continue;
-      const cost = comboCostK(state, g.id, t.id, licensed[0]?.id ?? 'pc-game', 'normal');
-      combos.push({ line: `${g.ru ?? g.name} × ${t.nameRu ?? t.name} = ${grade} (~${Math.round(cost)}K)`, rank: gradeRank[grade] ?? 3, cost });
-    }
-  }
-  combos.sort((a, b) => a.rank - b.rank || a.cost - b.cost);
+  // 16: история студии и прошлый проект — человеческие мотивы выбора (таблица комбо убрана)
+  const historyLine = state.history.slice(-3).map((h) => {
+    const hg = genreById(h.genreId);
+    const ht = typeById(h.typeId);
+    return `«${h.name}» — ${hg?.ru ?? hg?.name ?? h.genreId} × ${ht?.nameRu ?? ht?.name ?? h.typeId}, ${h.score}/40`;
+  }).join('; ');
+  const lastProjectLine = state.lastGenreId && state.lastTypeId
+    ? `${genreById(state.lastGenreId)?.ru ?? state.lastGenreId} × ${typeById(state.lastTypeId)?.nameRu ?? state.lastTypeId} (режим ${state.lastMode ?? 'normal'})`
+    : undefined;
   // AP-05: подсказка о сиквеле — комбо с лучшим результатом в зале славы (если жанр/тип ещё открыты)
   const seq = sequelOpportunity(state);
   const seqGenre = seq ? unlockedGenres.find((g) => g.id === seq.genreId) : undefined;
@@ -126,17 +126,21 @@ export function buildDecisionContext(state: GameState): {
         .join('; ')
     : undefined;
   return {
-    team: state.staff.map((s) => `${s.name} (${s.activeCareer} Lv${s.careers[s.activeCareer] ?? 0}, id:${s.id})`).join('; '),
+    team: state.staff.map((s) => {
+      const persona = STAFF.find((d) => d.id === s.id)?.persona;
+      return `${s.name} (${s.activeCareer} Lv${s.careers[s.activeCareer] ?? 0}, id:${s.id}${persona ? `; личность: ${persona}` : ''})`;
+    }).join('; '),
     money: Math.round(state.money),
     research: Math.round(state.research),
     office: state.officeLevel,
     genres: unlockedGenres.map((g) => `${g.id}="${g.ru ?? g.name}"`).join(', '),
     types: unlockedTypes.map((t) => `${t.id}="${t.nameRu ?? t.name}"`).join(', '),
-    combos: combos.slice(0, 12).map((c) => c.line).join('; '),
     consoles: licensed.map((c) => `${c.id}="${c.name}"`).join(', '),
     directionPoints: state.directionPoints,
     sequel: sequelLine,
     fans,
+    history: historyLine || undefined,
+    lastProject: lastProjectLine,
   };
 }
 
@@ -242,24 +246,6 @@ export function policySteps(journal: PolicyAction[], state: GameState): Autopilo
 
 export { autopilotProjectInput };
 
-/** AP-02: почему команда выбрала именно так — градация комбо, бюджет и серия (игрок видит логику). */
-export function decisionReason(state: GameState, plan: AutopilotPlan): string {
-  const genre = genreById(plan.genreId);
-  const type = typeById(plan.typeId);
-  const combo = comboGrade(plan.genreId, plan.typeId);
-  const seq = sequelOpportunity(state);
-  const isSeq = !!seq && seq.genreId === plan.genreId && seq.typeId === plan.typeId;
-  const cost = comboCostK(state, plan.genreId, plan.typeId, plan.consoleId, plan.mode);
-  const budget = state.money > 4000 ? 'бюджет свободный' : state.money > 1200 ? 'бюджет ровный' : 'прижимаемся по деньгам';
-  const grade = combo === 'S' ? 'это S-комбо, грех не взять' : combo === 'A' ? 'крепкое A-комбо' : `комбо ${combo} — зато по деньгам сходится`;
-  const parts = [
-    isSeq ? `серия: у «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» был хит на ${seq!.score}/40 — делаем продолжение` : '',
-    grade,
-    `~${Math.round(cost)}K, ${budget}`,
-  ].filter(Boolean);
-  return parts.join('; ');
-}
-
 /** «Упор: Нишевость 6, Инновация 4» — на что чат решил сделать упор (видно игроку). */
 function dirSummary(direction: Record<string, number>): string {
   const parts = DIRECTION_ORDER.filter((a) => (direction[a] ?? 0) > 0).map((a) => `${DIRECTION_LABELS[a]} ${direction[a]}`);
@@ -282,6 +268,8 @@ export interface AutopilotHost {
   emit(): void;
   emitStep(s: AutopilotStep): void;
   pushSystem(text: string): void;
+  /** 16: реплики обсуждения из решения — в очередь чата */
+  publishDiscussion(lines: { author: string; text: string }[]): void;
   generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void>;
 }
 
@@ -439,8 +427,7 @@ export class AutopilotController {
       !this.deciding && !this.pendingDecision && !this.h.decidedThisIdle
     ) {
       this.h.decidedThisIdle = true;
-      this.h.emitStep({ kind: 'open', app: 'chat' }); // после релиза — новое обсуждение тоже видно
-      void this.h.generatePhase('autopilot_discuss');
+      this.h.emitStep({ kind: 'open', app: 'chat' }); // обсуждение видно: решение принесёт и реплики (16)
       this.pendingDecision = true;
     }
     if (this.pendingDecision && !this.h.chatThread && !this.deciding) void this.runDecision();
@@ -480,32 +467,31 @@ export class AutopilotController {
     };
     try {
       const ctx = buildDecisionContext(this.h.game);
-      // упор решает чат: решению отдаём последние реплики обсуждения (autopilot_discuss)
-      const discussion = this.h.chat.msgs
-        .filter((m) => !m.system)
-        .slice(-12)
-        .map((m) => `${m.author}: ${m.text.slice(0, 300)}`)
-        .join('\n');
-      const { text } = await this.h.llm(buildDecisionPrompt(ctx, discussion), 800);
+      // 16: обсуждение и решение — из ОДНОГО ответа команды: что решили, то и применяется
+      const { text } = await this.h.llm(buildDecisionPrompt(ctx), 900);
       if (cancelled()) return;
-      const plan = parseDecision(text);
+      const parsed = parseDecision(text);
+      const plan = parsed?.plan ?? null;
       if (plan) fitDirection(plan, this.h.game.directionPoints); // приводим упор к бюджету: перерасход ужимаем, недобор добиваем до всего пула
       const err = plan ? validateDecision(plan, this.h.game) : 'не удалось разобрать JSON';
-      if (err || !plan) {
+      if (err || !plan || !parsed) {
         console.error('[gds] автопилот: решение LLM отклонено, фолбэк:', err ?? 'null');
         const fb = autopilotProjectInput(this.h.game);
         if (fb && !cancelled()) {
           announce(fb);
-          this.h.pushSystem('📋 GigaChat не решился — команда выбрала сама (по старой доброй таблице комбо).');
+          this.h.pushSystem('📋 GigaChat не решился — команда выбрала сама.');
         }
       } else {
         const genre = genreById(plan.genreId);
         const type = typeById(plan.typeId);
         const con = consoleById(plan.consoleId);
         if (cancelled()) return;
-        this.h.pushSystem(`📋 Решено: «${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
-        // AP-02: одна строка причины — игрок понимает логику команды (градация/бюджет/серия)
-        this.h.pushSystem(`🧑‍💼 Почему так: ${decisionReason(this.h.game, plan)}.`);
+        // реплики обсуждения — из того же ответа: чат и решение не могут разойтись
+        const team = new Set(this.h.game.staff.map((s) => s.name));
+        const lines = parsed.messages.filter((m) => team.has(m.author));
+        if (lines.length) this.h.publishDiscussion(lines);
+        const namePart = plan.name ? `«${plan.name}» — ` : '';
+        this.h.pushSystem(`📋 Решено: ${namePart}«${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
         announce(plan);
       }
     } catch (e) {
@@ -513,7 +499,7 @@ export class AutopilotController {
       const fb = autopilotProjectInput(this.h.game);
       if (fb && !cancelled()) {
         announce(fb);
-        this.h.pushSystem('📋 GigaChat недоступен — команда решила по старинке.');
+        this.h.pushSystem('📋 GigaChat недоступен — команда выбрала сама.');
       }
     } finally {
       this.deciding = false;

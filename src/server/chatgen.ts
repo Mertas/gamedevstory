@@ -24,7 +24,6 @@ const PHASE_INSTRUCTIONS: Record<string, string> = {
   boost: 'Событие в разработке: кто-то предложил улучшение (см. факты). Обсудите результат: получилось или провал.',
   player: 'Босс студии написал в чат: «%TEXT%». Живо ответьте ему в своём стиле — по делу (совет, отчёт, мнение, шутка). Если разговор продолжится — пусть отвечают разные сотрудники по очереди, развивая тему и реагируя друг на друга.',
   fanmail: 'Студия получила письмо от фаната (текст: «%TEXT%»). Один сотрудник открывает обсуждение: живо отреагируйте на письмо сообразно его тону (восторг/недовольство/сдержанно) — ответьте фанату или обсудите с командой, в своём стиле, по делу.',
-  autopilot_discuss: 'Босс студии отдал команде управление и не вмешивается. Живо обсудите между собой, какую игру делать дальше (жанр, тип, платформа) — спорьте, предлагайте, шутите, в своих характерах. Обязательно решите, на что сделать УПОР в направлениях разработки (доступность, полировка, инновация, игровой мир, нишевость и т.п.): предложите 1–2 оси, поспорьте и сойдитесь на них. Решение объявят после обсуждения.',
   boss_back: 'Босс снова взял управление студией! Живо отреагируйте в своих характерах: кто-то радуется возвращению, кто-то делает вид, что всё это время усердно работал, кто-то недоволен, что самодеятельность кончилась.',
   idle: 'Затишье: в студии спокойный рабочий день, событий никаких. Одна короткая реплика — сотрудник вслух размышляет о текущем проекте или рабочих буднях (наблюдение, лёгкая шутка). Без обращения к боссу и без обсуждения решений.',
 };
@@ -210,31 +209,29 @@ export function buildMessages(phase: string, context: Record<string, unknown>, o
   ];
 }
 
-// ─── автопилот: LLM-решение «какую игру делать» (plan/14) ───
-// API по замечанию пользователя: ОДИН запрос, в ответе все параметры новой игры.
-// Упор направления LLM выбирает сам — по жанру/типу и обсуждению команды в чате (discussion).
-export function buildDecisionPrompt(
-  ctx: {
-    team: string; money: number; research: number; office: number;
-    genres: string; types: string; combos: string; consoles: string; directionPoints: number;
-    /** AP-05: удачное комбо прошлого (зал славы) — продолжение узнаваемо и дешевле */ sequel?: string;
-    /** AP-04: свежие письма фанатов — после разгрома жанр меняем */ fans?: string;
-  },
-  discussion?: string,
-): LlmMessage[] {
-  const discussionBlock = discussion && discussion.trim()
-    ? `Обсуждение команды в чате (на чём сошлись):\n${discussion.trim().slice(0, 2000)}`
-    : '';
+// ─── автопилот: решение «какую игру делать» (16): обсуждение и решение ОДНИМ ответом ───
+// Команда сама спорит и решает: реплики, жанр/тип/платформа, упор, роли, название и описание.
+// Без таблиц комбо/цен — решают как творческие люди (запрос: «обоснование не по механикам»).
+export function buildDecisionPrompt(ctx: {
+  team: string; money: number; research: number; office: number;
+  genres: string; types: string; consoles: string; directionPoints: number;
+  /** AP-05: удачное прошлое (зал славы) — можно сделать продолжение */ sequel?: string;
+  /** AP-04: свежие письма фанатов — после разгрома жанр меняем */ fans?: string;
+  /** 16: последние релизы студии — «история», человеческий мотив выбора */ history?: string;
+  /** 16: прошлый проект — о чём команда помнит */ lastProject?: string;
+}): LlmMessage[] {
   return [
     {
       role: 'system',
       content:
-        'Ты — старший сотрудник игровой студии. Босс отдал управление, команда решает сама, какую игру делать дальше. ' +
-        'Выбери ЖАНР и ТИП с максимальной градацией комбо (S лучше A, A лучше B) при бюджете, КОНСОЛЬ, РЕЖИМ, распредели очки направления и назначь роли. ' +
-        `Правила: только id из списков; комбо S или A обязательны, если есть по деньгам; сценарист (proposal) обязателен; направление — целые 0..8, сумма РОВНО ${ctx.directionPoints} (распредели все доступные очки); ` +
-        'УПОР в направлении выбери сам под жанр/тип и то, о чём договорилась команда в чате: 1–2 ведущие оси — по максимуму (до 8 каждая), остальные очки — в другие оси (до 8 каждая), свободных очков не оставляй. Пример ниже — только форма ответа, его direction нулевой, НЕ копируй его. ' +
-        'режимы: normal, speed, quality, research, budget. Ответь СТРОГО одним JSON-объектом: ' +
-        '{"genreId":"...","typeId":"...","consoleId":"...","mode":"normal","direction":{"cute":0,"realism":0,"approach":0,"niche":0,"simple":0,"innovation":0,"world":0,"polish":0},"proposalStaffId":"...","assignments":{"program":[],"graphics":[],"sound":[],"debug":[]}} — без пояснений и markdown.',
+        'Ты — команда игровой студии (несколько сотрудников с разными характерами). Босс отдал команде управление, и она сама решает, какую игру делать дальше. ' +
+        'Ответ — СТРОГО один JSON-объект: сначала живое обсуждение, потом решение. Схема: ' +
+        '{"messages":[{"author":"Имя сотрудника","text":"реплика"}],"genreId":"...","typeId":"...","consoleId":"...","mode":"normal","direction":{"cute":0,"realism":0,"approach":0,"niche":0,"simple":0,"innovation":0,"world":0,"polish":0},"proposalStaffId":"...","assignments":{"program":[],"graphics":[],"sound":[],"debug":[]},"name":"название игры","plot":"1–3 предложения — о чём игра"}. ' +
+        'Правила: ' +
+        '- messages — 2–4 реплики РАЗНЫХ сотрудников (1–2 предложения), живой разговор: идеи, сомнения, шутки; в репликах команда сходится на жанре, типе, платформе и упоре, распределяет между собой роли (кто сценарий, кто программа, кто графика, кто звук, кто отладка) и придумывает название с описанием; author — строго имя из «Команды». ' +
+        '- Говорите как творческие люди: что хочется сделать, что просят фанаты, что у команды лучше получается, продолжение удачных игр, желание попробовать новое. НЕ упоминайте рейтинги, градации, проценты, цены и «выгодность» — это разговор людей, а не калькулятора. ' +
+        `- Решение: genreId/typeId/consoleId — только id из списков; сценарист (proposalStaffId) обязателен и не входит в другие роли; у каждого сотрудника одна роль; mode: normal, speed, quality, research, budget; direction — целые 0..8, сумма РОВНО ${ctx.directionPoints} (весь пул в дело), 1–2 ведущие оси до 8; name — до 40 символов. ` +
+        '- Без пояснений и markdown вокруг JSON.',
     },
     {
       role: 'user',
@@ -243,19 +240,23 @@ export function buildDecisionPrompt(
         `Деньги: ${ctx.money}K, PR: ${ctx.research}, офис: ${ctx.office}.`,
         `Жанры: ${ctx.genres}`,
         `Типы: ${ctx.types}`,
-        `Топ комбинаций (жанр × тип = градация, ~цена): ${ctx.combos}`,
         `Доступные консоли: ${ctx.consoles}`,
-        ctx.sequel ? `Удачное прошлое (сиквел): ${ctx.sequel} — продолжение узнаваемо и дешевле в продвижении.` : '',
-        ctx.fans ? `Письма фанатов (свежие): ${ctx.fans}. Учти настроение: после разгрома этот жанр не повторяй — предложи другой; восторг — можно продолжить удачную линейку (сиквел).` : '',
-        `Очки направления: ${ctx.directionPoints} (сумма direction = ${ctx.directionPoints} — все очки в дело, свободных не оставляй).`,
-        discussionBlock,
+        ctx.history ? `История студии (последние игры): ${ctx.history}.` : '',
+        ctx.lastProject ? `Прошлый проект: ${ctx.lastProject}.` : '',
+        ctx.sequel ? `Удачное прошлое (можно сделать продолжение): ${ctx.sequel}.` : '',
+        ctx.fans ? `Письма фанатов (свежие): ${ctx.fans}. После разгрома этот жанр не повторяйте — сделайте другой; восторг — можно продолжить удачную линейку.` : '',
+        `Очки направления: ${ctx.directionPoints} (сумма direction = ${ctx.directionPoints} — все очки в дело).`,
       ].filter(Boolean).join('\n'),
     },
   ];
 }
 
-/** Распарсить JSON-решение в AutopilotPlan (null — не разобралось). */
-export function parseDecision(text: string): AutopilotPlan | null {
+/** Разбор единого ответа команды (16): план + реплики обсуждения (null — JSON не разобрался). */
+export interface DecisionResult {
+  plan: AutopilotPlan;
+  messages: ChatReply[];
+}
+export function parseDecision(text: string): DecisionResult | null {
   const json = extractJsonObject(text);
   if (!json) return null;
   const direction = (json.direction ?? {}) as Record<string, unknown>;
@@ -275,11 +276,28 @@ export function parseDecision(text: string): AutopilotPlan | null {
     typeof json.consoleId !== 'string' || typeof json.proposalStaffId !== 'string'
   ) return null;
   const mode = json.mode === 'speed' || json.mode === 'quality' || json.mode === 'research' || json.mode === 'budget' ? json.mode : 'normal';
+  // реплики обсуждения — из того же ответа (состав авторов проверяет вызывающая сторона)
+  const list = Array.isArray(json.messages) ? (json.messages as Record<string, unknown>[]) : [];
+  const messages: ChatReply[] = [];
+  for (const r of list) {
+    if (!r || typeof r !== 'object') continue;
+    const author = typeof r.author === 'string' ? r.author.trim() : '';
+    const line = typeof r.text === 'string' ? r.text.trim() : '';
+    if (author && line.length >= 4 && line.length <= 500) messages.push({ author, text: line });
+  }
+  // название ≤40 (поле мастера) и краткое описание; пустые — undefined (мастер сгенерирует сам)
+  const name = typeof json.name === 'string' ? json.name.trim().slice(0, 40) : '';
+  const plot = typeof json.plot === 'string' ? json.plot.trim().slice(0, 800) : '';
   return {
-    genreId: json.genreId, typeId: json.typeId, consoleId: json.consoleId, mode,
-    direction: dir,
-    proposalStaffId: json.proposalStaffId,
-    assignments: { program: ids('program'), graphics: ids('graphics'), sound: ids('sound'), debug: ids('debug') },
+    plan: {
+      genreId: json.genreId, typeId: json.typeId, consoleId: json.consoleId, mode,
+      direction: dir,
+      proposalStaffId: json.proposalStaffId,
+      assignments: { program: ids('program'), graphics: ids('graphics'), sound: ids('sound'), debug: ids('debug') },
+      name: name || undefined,
+      plot: plot || undefined,
+    },
+    messages,
   };
 }
 

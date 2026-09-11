@@ -184,11 +184,27 @@ export function AutopilotCursor() {
       }
       if (stopped()) return;
       await clickTarget('wiz-step-7');
-      // название и сюжет: мышь жмёт «Сгенерировать» и ЖДЁТ ответ GigaChat (title заполнен)
-      setLabel('Генерирую название и сюжет');
+      // название и сюжет: команда придумала их в решении — «печатаем» как есть (16).
+      // Не придумала — прежнее поведение: жмём «Сгенерировать» и ждём GigaChat.
       const titleInput = () =>
         document.querySelector<HTMLInputElement>('input[placeholder*="Название игры"]');
-      if (!(titleInput()?.value ?? '').trim()) {
+      const plotInput = () =>
+        document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Краткий сюжет"]');
+      const typeInto = async (el: HTMLInputElement | HTMLTextAreaElement | null, value: string): Promise<void> => {
+        if (!el || !value) return;
+        await flyTo(el, true);
+        const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (setter) setter.call(el, value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        await sleep(PAUSE_QUICK_MS);
+      };
+      if ((plan.name ?? '').trim() || (plan.plot ?? '').trim()) {
+        setLabel('Печатаю придуманное командой');
+        await typeInto(plotInput(), (plan.plot ?? '').trim());
+        await typeInto(titleInput(), (plan.name ?? '').trim());
+      } else if (!(titleInput()?.value ?? '').trim()) {
+        setLabel('Генерирую название и сюжет');
         await clickTarget('wiz-story-gen');
         const started = performance.now();
         for (;;) {

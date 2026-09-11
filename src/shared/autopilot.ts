@@ -10,6 +10,9 @@ export interface AutopilotPlan {
   direction: Record<string, number>;
   proposalStaffId: string;
   assignments: { program: string[]; graphics: string[]; sound: string[]; debug: string[] };
+  /** 16: название и краткое описание — команда придумывает в обсуждении */
+  name?: string;
+  plot?: string;
 }
 
 /** Клики по осям направления, чтобы из current попасть в want (визард стартует с прошлого проекта):

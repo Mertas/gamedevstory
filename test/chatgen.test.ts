@@ -1,7 +1,7 @@
-// Промпт решения автопилота: упор направления выбирает LLM — по жанру/типу и обсуждению
-// команды в чате, а не по пришпиленному примеру (иначе каждый проект «упор: доступность+полировка»).
+// Промпт решения автопилота (16): обсуждение и решение — ОДНИМ ответом команды;
+// без таблицы комбо и цен — решают как творческие люди (жалоба: «обоснование по механикам»).
 import { describe, expect, it } from 'vitest';
-import { buildDecisionPrompt, buildLetterPrompt, buildMessages, parseSingleMessage } from '../src/server/chatgen';
+import { buildDecisionPrompt, buildLetterPrompt, buildMessages, parseDecision, parseSingleMessage } from '../src/server/chatgen';
 
 const ctx = {
   team: 'John (proposal Lv1, id:john)',
@@ -10,51 +10,73 @@ const ctx = {
   office: 1,
   genres: 'puzzle="Пазл"',
   types: 'reverse="Реверси"',
-  combos: 'Пазл × Реверси = S (~390K)',
   consoles: 'pc-game="PC Game"',
   directionPoints: 12,
 };
 
-function promptText(discussion?: string): string {
-  return buildDecisionPrompt(ctx, discussion).map((m) => m.content).join('\n');
+type PromptCtx = Parameters<typeof buildDecisionPrompt>[0];
+function promptText(extra: Partial<PromptCtx> = {}): string {
+  return buildDecisionPrompt({ ...ctx, ...extra } as PromptCtx).map((m) => m.content).join('\n');
 }
 
-describe('buildDecisionPrompt: упор решает чат', () => {
-  it('передаёт обсуждение команды и бюджет направления из партии', () => {
-    const text = promptText('John: делаем упор на нишевость и инновации\nNewb: согласен, ниша наше всё');
-    expect(text).toContain('Обсуждение команды');
-    expect(text).toContain('John: делаем упор на нишевость и инновации');
+describe('buildDecisionPrompt: обсуждение и решение одним ответом (16)', () => {
+  it('требует реплики, роли, название и описание; бюджет направления — из партии', () => {
+    const text = promptText();
+    expect(text).toContain('"messages"');
+    expect(text).toContain('2–4 реплики');
+    expect(text).toContain('роли');
+    expect(text).toContain('"name"');
+    expect(text).toContain('"plot"');
     expect(text).toContain('сумма РОВНО 12');
-    expect(text).toContain('распредели все доступные очки');
-    expect(text).toContain('свободных очков не оставляй');
     expect(text).toContain('Очки направления: 12');
-    expect(text).toContain('УПОР в направлении выбери сам');
+    expect(text).toContain('не входит в другие роли');
   });
 
-  it('пример ответа не пришпиливает доступность/полировку (старый источник «одних и тех же осей»)', () => {
+  it('без таблицы комбо: ни градаций, ни цен как аргументов', () => {
     const text = promptText();
-    expect(text).not.toContain('"approach":5');
-    expect(text).not.toContain('"polish":5');
-    expect(text).toContain('НЕ копируй его');
+    expect(text).not.toContain('Топ комбинаций');
+    expect(text).not.toContain('S лучше A');
+    expect(text).not.toContain('(~');
+    expect(text).toContain('НЕ упоминайте рейтинги, градации');
   });
 
-  it('без обсуждения промпт остаётся валидным (решение до чата / пустой чат)', () => {
-    const text = promptText();
-    expect(text).not.toContain('Обсуждение команды');
-    expect(text).toContain('"direction"');
-  });
-
-  it('AP-04: письма фанатов попадают в промпт с правилом о смене жанра после разгрома', () => {
-    const text = buildDecisionPrompt({ ...ctx, fans: 'разгром — «Гонки»; восторг — «Рогалик»' }, undefined)
-      .map((m) => m.content)
-      .join('\n');
+  it('человеческие мотивы: история студии, продолжение удачного и письма фанатов', () => {
+    const text = promptText({ history: '«Хит» — Пазл × Реверси, 34/40', sequel: '«Пазл × Реверси» — 34/40', fans: 'восторг — «Хит»' });
+    expect(text).toContain('История студии');
+    expect(text).toContain('«Хит» — Пазл × Реверси, 34/40');
+    expect(text).toContain('можно сделать продолжение');
     expect(text).toContain('Письма фанатов');
-    expect(text).toContain('разгром — «Гонки»');
-    expect(text).toContain('жанр не повторяй');
+    expect(text).toContain('восторг — «Хит»');
+    expect(text).toContain('не повторяйте');
   });
+});
 
-  it('AP-04: без писем строки о фанатах в промпте нет (промпт не пухнет)', () => {
-    expect(promptText()).not.toContain('Письма фанатов');
+describe('parseDecision: план + реплики из одного ответа (16)', () => {
+  const base = {
+    genreId: 'puzzle', typeId: 'reverse', consoleId: 'pc-game', mode: 'normal',
+    direction: { cute: 6, polish: 6 },
+    proposalStaffId: 'john', assignments: { program: ['newb'], graphics: [], sound: [], debug: [] },
+  };
+  it('разбирает реплики, название и описание', () => {
+    const r = parseDecision(JSON.stringify({
+      ...base, name: 'Кот-Реверс', plot: 'Кот складывает пазлы в космосе.',
+      messages: [{ author: 'John', text: 'Делаем пазл про кота!' }, { author: 'Newb', text: 'Я запрограммирую ядро.' }],
+    }));
+    expect(r?.plan.name).toBe('Кот-Реверс');
+    expect(r?.plan.plot).toBe('Кот складывает пазлы в космосе.');
+    expect(r?.messages.map((m) => m.author)).toEqual(['John', 'Newb']);
+    expect(r?.plan.genreId).toBe('puzzle');
+  });
+  it('обрезает название до 40 и описание до 800; пустые — undefined, реплик нет', () => {
+    const r = parseDecision(JSON.stringify({ ...base, name: 'X'.repeat(80), plot: 'Y'.repeat(2000) }));
+    expect(r?.plan.name?.length).toBe(40);
+    expect(r?.plan.plot?.length).toBe(800);
+    const r2 = parseDecision(JSON.stringify(base));
+    expect(r2?.plan.name).toBeUndefined();
+    expect(r2?.messages).toEqual([]);
+  });
+  it('не JSON — null (фолбэк остаётся)', () => {
+    expect(parseDecision('никакого json тут нет')).toBeNull();
   });
 });
 

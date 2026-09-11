@@ -57,6 +57,20 @@ describe('GameServer: new_game (BUG-01)', () => {
   });
 });
 
+describe('GameServer: обсуждение автопилота (16)', () => {
+  it('реплики решения встают в очередь чата с шагом 2 недели', () => {
+    srv = makeServer();
+    const w = srv.game.week;
+    srv.publishDiscussion([
+      { author: 'Джон', text: 'Берём пазл — и с котами!' },
+      { author: 'Ньюб', text: 'Я запрограммирую ядро.' },
+    ]);
+    expect(srv.chat.queue.length).toBe(2);
+    expect(srv.chat.queue[0]!.week).toBe(w + 2);
+    expect(srv.chat.queue[1]!.week).toBe(w + 4);
+  });
+});
+
 describe('GameServer: importSave (SRV-02)', () => {
   it('битый/огрызок импорта не подменяет живую партию', () => {
     srv = makeServer();
@@ -121,7 +135,7 @@ describe('GameServer: автопилот и чат', () => {
     let resolveDecision: ((text: string) => void) | undefined;
     const llm: LlmFn = async (messages) => {
       const sys = messages[0]?.content ?? '';
-      if (sys.includes('старший сотрудник')) {
+      if (sys.includes('команда игровой студии')) {
         // решение «висит», пока тест не отпустит его сам
         return new Promise<{ text: string; model: string }>((resolve) => {
           resolveDecision = (text) => resolve({ text, model: 'fake' });
@@ -155,25 +169,20 @@ describe('GameServer: автопилот и чат', () => {
     expect(srv.snapshot().game.activeGame).toBeNull(); // проект не стартовал
   });
 
-  it('упор направления: решение LLM видит обсуждение чата, упор из плана доходит до хореографии', async () => {
+  it('16: решение чата — реплики и упор из одного ответа доезжают до чата и хореографии', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     let decisionUser = '';
     let resolveDecision: ((text: string) => void) | undefined;
-    let replies = 0;
     const llm: LlmFn = async (messages) => {
       const sys = messages[0]?.content ?? '';
-      if (sys.includes('старший сотрудник')) {
+      if (sys.includes('команда игровой студии')) {
         decisionUser = messages[1]?.content ?? '';
         return new Promise<{ text: string; model: string }>((resolve) => {
           resolveDecision = (text) => resolve({ text, model: 'fake' });
         });
       }
       if (sys.includes('обычный игрок')) return { text: 'Классная игра!', model: 'fake' }; // письма фанатов — не JSON
-      // обсуждение команды: живые реплики с явным упором (авторы чередуются)
-      const staff = srv!.snapshot().game.staff;
-      const author = staff[replies % staff.length]!.name;
-      replies++;
-      return { text: JSON.stringify({ message: { author, text: 'Предлагаю упор на нишевость и инновации!' } }), model: 'fake' };
+      return { text: 'не JSON', model: 'fake' };
     };
     srv = makeServer(llm);
     srv.snapshot().game.money = 1e6;
@@ -184,24 +193,41 @@ describe('GameServer: автопилот и чат', () => {
 
     for (let i = 0; i < 160 && !resolveDecision; i++) await vi.advanceTimersByTimeAsync(500);
     expect(resolveDecision).toBeTypeOf('function'); // LLM-решение уже в полёте
-    // обсуждение из чата реально попало в промпт решения + бюджет направления из партии
-    expect(decisionUser).toContain('Обсуждение команды');
-    expect(decisionUser).toContain('нишевость и инновации');
+    // промпт решения: команда и бюджет направления из партии; таблицы комбо больше нет
+    expect(decisionUser).toContain('Команда: ');
     expect(decisionUser).toContain(`Очки направления: ${srv.snapshot().game.directionPoints}`);
+    expect(decisionUser).not.toContain('Топ комбинаций');
 
     const base = autopilotProjectInput(srv.snapshot().game);
     expect(base).not.toBeNull();
-    resolveDecision!(JSON.stringify({ ...base, direction: { niche: 6, innovation: 4 } }));
+    const staff = srv.snapshot().game.staff;
+    // ОДИН ответ: живые реплики и решение — вместе (что решили, то и делают)
+    resolveDecision!(JSON.stringify({
+      ...base,
+      direction: { niche: 6, innovation: 4 },
+      name: 'Нишевая история',
+      plot: 'Маленькая игра про большое.',
+      messages: [
+        { author: staff[0]!.name, text: 'Предлагаю упор на нишевость и инновации!' },
+        { author: staff[1]!.name, text: 'Согласен — и назовём «Нишевая история».' },
+      ],
+    }));
     await vi.advanceTimersByTimeAsync(2000);
 
     const step = steps.find((s) => s.kind === 'plan');
     expect(step).toBeTruthy();
     if (step?.kind === 'plan') {
       expect(step.plan.direction).toMatchObject({ niche: 6, innovation: 4 }); // упор чата доехал до хореографии
+      expect(step.plan.name).toBe('Нишевая история'); // название команды — в мастер
       expect(Object.values(step.plan.direction).reduce((a, b) => a + b, 0)).toBe(srv.snapshot().game.directionPoints);
     }
-    // игрок видит в чате, на что решила сделать упор команда
-    expect(srv.snapshot().chat.msgs.some((m) => m.text.includes('Упор:') && m.text.includes('Нишевость 6'))).toBe(true);
+    // в чате: реплики команды, «Решено» с названием и упором — и никакого «Почему так»
+    const snap = srv.snapshot();
+    const chatAll = [...snap.chat.msgs, ...snap.chat.queue];
+    expect(chatAll.some((m) => m.text.includes('нишевость и инновации'))).toBe(true);
+    expect(chatAll.some((m) => m.text.includes('Решено:') && m.text.includes('Нишевая история'))).toBe(true);
+    expect(chatAll.some((m) => m.text.includes('Упор:') && m.text.includes('Нишевость 6'))).toBe(true);
+    expect(chatAll.some((m) => m.text.includes('Почему так'))).toBe(false);
   });
 
   it('SRV-11: второй вопрос игрока не затирает первый (FIFO)', async () => {
@@ -247,16 +273,14 @@ describe('GameServer: автопилот и чат', () => {
     const chatPrompts: string[] = [];
     let srvName = '';
     const llm: LlmFn = async (messages) => {
-      const sys = messages[0]?.content ?? '';
-      if (sys.includes('старший сотрудник')) return new Promise<{ text: string; model: string }>(() => { /* решение «висит» — не мешает */ });
       chatPrompts.push(messages[1]?.content ?? '');
       return { text: JSON.stringify({ message: { author: srvName, text: 'Ёлки-палки, давайте уже работать!' } }), model: 'fake' };
     };
     srv = makeServer(llm);
     srvName = srv.snapshot().game.staff[0]!.name; // все реплики — от одного: проверяем ротацию
-    srv.snapshot().game.money = 1e6;
     srv.handle({ type: 'set_speed', v: 8 });
-    srv.handle({ type: 'set_autopilot', on: true });
+    // серия ответов боссу (16: чат-память не зависит от автопилота — обсуждение живёт в решении)
+    srv.handle({ type: 'chat_message', text: `Босс спрашивает: как продвигается проект? ${'Расскажите подробнее, очень интересно! '.repeat(3)}` });
     for (let i = 0; i < 160 && chatPrompts.length < 4; i++) await vi.advanceTimersByTimeAsync(500);
 
     expect(chatPrompts.length).toBeGreaterThanOrEqual(4); // открытие + реплики + повтор выбора автора

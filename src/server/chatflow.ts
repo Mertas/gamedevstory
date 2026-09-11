@@ -49,7 +49,7 @@ export class ChatOrchestrator {
       return;
     }
     // событие фазы → живая серия: реплики по одной, с ответами друг другу
-    const left = phase === 'idle' ? 1 : phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : phase === 'autopilot_discuss' ? 3 : phase === 'boss_back' ? 4 : 5; // всего реплик в серии (idle — одна короткая, AP-08)
+    const left = phase === 'idle' ? 1 : phase === 'boost' ? 2 : phase === 'hire' ? 3 : phase === 'fanmail' ? 4 : phase === 'boss_back' ? 4 : 5; // всего реплик в серии (idle — одна короткая, AP-08)
     this.h.chatThread = { phase, extra: extra ?? {}, left, busy: false, nextAt: this.h.game.week, errors: 0, openingFor };
     void this.nextReply();
   }
@@ -143,6 +143,19 @@ export class ChatOrchestrator {
     this.h.chat.queue.push({
       week: this.chatFloor(), author: 'Система', avatar: '', text, system: true, trigger: 'week',
     });
+    this.h.emit();
+  }
+
+  /** 16: готовые реплики обсуждения от автопилота (уже согласованы с решением) — в очередь,
+   *  по реплике примерно за 2 недели, как живой разговор; «Решено: …» встанет за ними. */
+  publishDiscussion(lines: { author: string; text: string }[]): void {
+    let w = this.chatFloor();
+    for (const l of lines) {
+      w += 2;
+      this.h.chat.queue.push({
+        week: w, author: l.author, avatar: avatarFor(this.h.game, l.author), text: l.text, trigger: 'week',
+      });
+    }
     this.h.emit();
   }
 

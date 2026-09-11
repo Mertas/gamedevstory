@@ -1,7 +1,7 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it, vi } from 'vitest';
 import { newGame, startProjectAction, tick } from '../src/core/engine';
-import { AutopilotController, buildDecisionContext, createAutopilotPolicy, decisionReason, fitDirection, policySteps, validateDecision } from '../src/server/autopilot';
+import { AutopilotController, buildDecisionContext, createAutopilotPolicy, fitDirection, policySteps, validateDecision } from '../src/server/autopilot';
 import type { AutopilotHost } from '../src/server/autopilot';
 import { ChatOrchestrator } from '../src/server/chatflow';
 import type { ChatThread } from '../src/server/game';
@@ -21,6 +21,8 @@ function fresh(): GameState {
 function makeHost(g: GameState) {
   const speedLog: number[] = [];
   const phases: string[] = [];
+  const systems: string[] = [];
+  const discussions: { author: string; text: string }[][] = [];
   const host = {
     game: g,
     chat: resetChat(),
@@ -33,10 +35,11 @@ function makeHost(g: GameState) {
     chatThread: null,
     emit() {},
     emitStep() {},
-    pushSystem() {},
+    pushSystem(t: string) { systems.push(t); },
+    publishDiscussion(lines: { author: string; text: string }[]) { discussions.push(lines); },
     generatePhase: async (p: string) => { phases.push(p); },
   };
-  return { host: host as AutopilotHost, speedLog, phases };
+  return { host: host as AutopilotHost, speedLog, phases, systems, discussions };
 }
 
 function hostWithGame() {
@@ -107,6 +110,34 @@ describe('автопилот: validateDecision', () => {
     const plan = validPlan(g);
     plan.assignments.program = [plan.proposalStaffId];
     expect(validateDecision(plan, g)).toContain('сценарист');
+  });
+});
+
+describe('автопилот: решение чата (16) — обсуждение и план из одного ответа', () => {
+  it('реплики публикуются, план с названием ждёт клика; «Почему так» больше нет', async () => {
+    const g = fresh();
+    const h = makeHost(g);
+    const base = autopilotProjectInput(g)!;
+    const decision = {
+      genreId: base.genreId, typeId: base.typeId, consoleId: base.consoleId, mode: base.mode,
+      direction: base.direction, proposalStaffId: base.proposalStaffId, assignments: base.assignments,
+      name: 'Космические коты', plot: 'Коты покоряют космос в пазлах.',
+      messages: [
+        { author: g.staff[0]!.name, text: 'Давайте сделаем про котов в космосе!' },
+        { author: g.staff[1]!.name, text: 'Я запрограммирую, а графика — на тебе.' },
+      ],
+    };
+    h.host.llm = async () => ({ text: JSON.stringify(decision), model: 'test' });
+    const pilot = new AutopilotController(h.host);
+    h.host.autopilotOn = true;
+    await (pilot as unknown as { runDecision(): Promise<void> }).runDecision();
+    expect(h.discussions.length).toBe(1);
+    expect(h.discussions[0]!.map((m) => m.author)).toEqual([g.staff[0]!.name, g.staff[1]!.name]);
+    expect(h.host.pendingPlan?.name).toBe('Космические коты');
+    const joined = h.systems.join('\n');
+    expect(joined).toContain('Решено');
+    expect(joined).toContain('Космические коты');
+    expect(joined).not.toContain('Почему');
   });
 });
 
@@ -224,7 +255,7 @@ describe('фолбэк-политика: упор тратит весь бюдж
   });
 });
 
-describe('Ф5: причина решения (AP-02) и сиквелы (AP-05)', () => {
+describe('Ф5: сиквелы (AP-05)', () => {
   function withHit(score = 34): GameState {
     const g = fresh();
     const input = autopilotProjectInput(g)!;
@@ -235,22 +266,6 @@ describe('Ф5: причина решения (AP-02) и сиквелы (AP-05)',
     });
     return g;
   }
-
-  it('AP-02: причина решения проговаривает серию, градацию и бюджет', () => {
-    const g = withHit(34);
-    const plan = validPlan(g);
-    const why = decisionReason(g, plan);
-    expect(why).toContain('серия');
-    expect(why).toContain('34/40');
-    expect(why).toContain('K');
-  });
-
-  it('AP-02: без хита причина говорит о градации и бюджете, без «серии»', () => {
-    const g = fresh();
-    const why = decisionReason(g, validPlan(g));
-    expect(why).not.toContain('серия');
-    expect(why.toLowerCase()).toMatch(/комбо|бюджет/);
-  });
 
   it('AP-05: sequelOpportunity видит только игры зала славы', () => {
     const g = withHit(31); // ниже порога (32)
