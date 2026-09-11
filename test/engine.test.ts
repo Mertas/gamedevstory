@@ -571,3 +571,27 @@ describe('M5: 4 тона писем (движок)', () => {
     expect(letterFor(22).style).toBe('ideas');
   });
 });
+
+describe('AP-13: отладка копит дробный прогресс (слабая команда не застревает)', () => {
+  it('команда с Program=5 у каждого закрывает баги, хотя rate < 0.5 в день', () => {
+    const g = newGame(3);
+    for (const st of g.staff) {
+      st.homeWeeks = 0; // дома сидят — в отладке не участвуют (как и было задумано)
+      st.power = st.maxPower;
+      st.stats.program = 5;
+    }
+    const ag = debugGame(g, 10);
+    ag.bugs = 10;
+    ag.assignments.debug = []; // никто не назначен → вес 0.7 у всех
+    const sum = g.staff.reduce((a, st) => a + st.stats.program * 0.7, 0);
+    const rate = sum * CONFIG.DEBUG_RATE; // 2 × 5 × 0.7 × 0.03 = 0.21 бага в день
+    expect(rate).toBeLessThan(0.5); // округление в день давало 0 — это и был баг на проде
+    for (let d = 0; d < 7; d++) { tick(g); g.pendingEvent = null; }
+    expect(ag.bugs).toBeLessThan(10); // копилка сработала
+    expect(ag.debugCarry).toBeGreaterThan(0); // остаток переносится на следующий день
+    // убирается ровно столько, сколько накопилось (допуск на округления по дням)
+    const removed = 10 - ag.bugs;
+    expect(removed).toBeGreaterThanOrEqual(Math.floor(rate * 7));
+    expect(removed).toBeLessThanOrEqual(Math.ceil(rate * 7) + 1);
+  });
+});

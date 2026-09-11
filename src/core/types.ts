@@ -76,6 +76,7 @@ export interface ActiveGame {
   totalCost: number; // K
   progress: number; // 0..1 (время: дни / 100 × режим)
   bugs: number;
+  debugCarry?: number; // AP-13: остаток скорости отладки между днями (доли бага)
   weekStarted: number;
   phase: 'proposal' | 'dev' | 'debug' | 'released';
   proposalStaffId: string | null;

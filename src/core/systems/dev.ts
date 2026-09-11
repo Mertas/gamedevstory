@@ -265,7 +265,12 @@ export function debugTick(state: GameState, rng: Rng): void {
     .filter((s) => s.homeWeeks === 0)
     .map((s) => ({ program: s.stats.program, weight: assigned.has(s.id) ? 1 : 0.7 }));
   const rate = debugRate(debuggers);
-  const removed = Math.min(game.bugs, Math.max(0, Math.round(rate)));
+  // AP-13: копим дробную часть скорости между днями. Без этого команда со слабым Program
+  // (Σ Program × 0.03 < 0.5 при весах 1/0.7) каждый день округлялась до нуля и не закрывала
+  // НИ ОДНОГО бага — живой случай на проде: 35 багов, двое в офисе, отладка стоит вечно.
+  const pool = (game.debugCarry ?? 0) + rate;
+  const removed = Math.min(game.bugs, Math.max(0, Math.round(pool)));
+  game.debugCarry = pool - removed;
   game.bugs -= removed;
   if (removed > 0) {
     const pr = rng.int(CONFIG.DEBUG_PR_MIN, CONFIG.DEBUG_PR_MAX) * removed;
