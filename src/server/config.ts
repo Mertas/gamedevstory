@@ -14,4 +14,12 @@ export const PORT = Number(process.env.PORT ?? 3001);
 // аудит 05.09: по умолчанию слушаем только локально; LAN-доступ — явно через HOST=0.0.0.0
 export const HOST = process.env.HOST ?? '127.0.0.1';
 
+// PLAN-18: почта для восстановления пароля (dev — письмо в консоль + код на экран).
+export const MAIL_MODE = process.env.MAIL_MODE ?? 'dev';
+export const SMTP_HOST = process.env.SMTP_HOST ?? '';
+export const SMTP_PORT = Number(process.env.SMTP_PORT ?? 587);
+export const SMTP_USER = process.env.SMTP_USER ?? '';
+export const SMTP_PASS = process.env.SMTP_PASS ?? '';
+export const MAIL_FROM = process.env.MAIL_FROM ?? 'Game Dev Studio <no-reply@example.com>';
+
 export const gigaReady = !!(GIGACHAT_CLIENT_ID && GIGACHAT_CLIENT_SECRET);

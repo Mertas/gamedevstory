@@ -23,11 +23,24 @@ import {
 } from './systems/market';
 import { tickFanLetters } from './systems/mail';
 
-export function newGame(seed = 1): GameState {
+/** PLAN-18: что игрок выбирает на старте (экран новой игры). */
+export interface NewGameOptions {
+  /** название студии */
+  studioName?: string;
+  /** кого взять в стартовую команду — 2 id из начального пула («Initially available») */
+  staffIds?: string[];
+}
+
+/** классическая стартовая пара (фолбэк, если выбор игрока некорректен) */
+export const START_PAIR = ['newb-ownerton', 'john-gameson'] as const;
+export const DEFAULT_STUDIO_NAME = 'Game Dev Studio';
+
+export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
   const rng = createRng(seed);
   const state: GameState = {
     seed,
     saveVersion: SAVE_VERSION,
+    studioName: opts.studioName?.trim() || DEFAULT_STUDIO_NAME,
     week: 1,
     year: 1,
     money: CONFIG.START_MONEY,
@@ -69,13 +82,28 @@ export function newGame(seed = 1): GameState {
     devContrib: [],
   };
 
-  // стартовая команда: Кодер + Сценарист
-  for (const id of ['newb-ownerton', 'john-gameson']) {
+  // стартовая команда: выбор игрока (2 из начального пула) или классическая пара.
+  // PLAN-18: экран новой игры отдаёт staffIds; дубли и лишние id отсекаем.
+  const wanted = (opts.staffIds?.length ? opts.staffIds : [...START_PAIR])
+    .filter((id, i, all) => typeof id === 'string' && all.indexOf(id) === i)
+    .slice(0, 2);
+  for (const id of wanted) {
     const st = makeStaffFromData(id);
     if (st) {
       st.avatar = pickAvatar(rng);
       state.staff.push(st);
       state.hiredIds.push(st.id);
+    }
+  }
+  // страховка: невалидный выбор (таких сотрудников нет) — классическая пара
+  if (state.staff.length === 0) {
+    for (const id of START_PAIR) {
+      const st = makeStaffFromData(id);
+      if (st) {
+        st.avatar = pickAvatar(rng);
+        state.staff.push(st);
+        state.hiredIds.push(st.id);
+      }
     }
   }
 

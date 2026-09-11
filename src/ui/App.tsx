@@ -5,10 +5,14 @@ import { MessageBox } from './MessageBox';
 import { ActionToast } from './ActionToast';
 import {
   actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, clearDismissedEvKey,
-  closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, useMessageBox, useSnapshot, type MessageBoxData,
+  closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, startSession, stopSession,
+  useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
 import { WindowManagerProvider } from './wm';
 import { CONFIG } from '../core/config';
+import { AuthScreen } from './AuthScreen';
+import { StartScreen } from './StartScreen';
+import { apiMe, type MeInfo } from './api';
 
 // следим за событиями, требующими решения игрока
 function EventWatcher() {
@@ -166,26 +170,59 @@ function EventWatcher() {
   return null;
 }
 
-export function App() {
-  const snap = useSnapshot();
-  if (!snap.game || !snap.meta) {
-    return (
-      <div className="w95-desktop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="w95-window focused" style={{ position: 'relative', width: 360, zIndex: 10 }}>
-          <div className="w95-title">Game Dev Studio</div>
-          <div className="w95-body" style={{ padding: 12 }}>
-            {snap.connected
-              ? <div>🖥️ Сервер недоступен. Запустите: pnpm server</div>
-              : <div>⏳ Подключение к серверу…</div>}
-          </div>
+/** Окно ожидания (вход/партия грузятся) — тот же вид, что и раньше. */
+function Boot({ text }: { text: string }) {
+  return (
+    <div className="w95-desktop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="w95-window focused" style={{ position: 'relative', width: 360, zIndex: 10 }}>
+        <div className="w95-title">Game Dev Studio</div>
+        <div className="w95-body" style={{ padding: 12 }}>
+          <div>{text}</div>
         </div>
       </div>
-    );
+    </div>
+  );
+}
+
+/**
+ * PLAN-18: экраны — вход → начальное меню (сохранения игрока) → партия.
+ * Соединение с игровой сессией открывается только в партии.
+ */
+export function App() {
+  const snap = useSnapshot();
+  const [me, setMe] = useState<MeInfo | null | undefined>(undefined);
+  // после «Новая игра»/«Загрузить» страница перезагружается с #play — сразу входим в партию
+  const [screen, setScreen] = useState<'launcher' | 'game'>(() => (location.hash === '#play' ? 'game' : 'launcher'));
+
+  useEffect(() => { void apiMe().then(setMe); }, []);
+
+  useEffect(() => {
+    if (me && screen === 'game') startSession();
+    else stopSession();
+  }, [me, screen]);
+
+  // сервер отказал (партия не загружена — например, сервер перезапущен): назад в начальное меню
+  useEffect(() => {
+    if (snap.sessionLost && screen === 'game') exitToLauncher();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snap.sessionLost, screen]);
+
+  function exitToLauncher(): void {
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    stopSession();
+    setScreen('launcher');
+  }
+
+  if (me === undefined) return <Boot text="⏳ Загрузка…" />;
+  if (me === null) return <AuthScreen />;
+  if (screen === 'launcher') return <StartScreen me={me} />;
+  if (!snap.game || !snap.meta) {
+    return <Boot text={snap.connected ? '⏳ Загрузка партии…' : '🔌 Нет связи с сервером. Запустите: pnpm server'} />;
   }
   return (
     <WindowManagerProvider>
       <EventWatcher />
-      <Desktop />
+      <Desktop onExit={exitToLauncher} />
       <MessageBox />
       <ActionToast />
     </WindowManagerProvider>

@@ -294,3 +294,60 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   background: linear-gradient(90deg, #800000, #c00000); color: #fff; font-weight: 700; font-size: 11px;
 }
 .w95-toast-body { padding: 6px 8px; font-size: 11px; }
+/* ─── PLAN-18: начальные окна (вход, сохранения игрока, новая игра) ─── */
+.w95-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.w95-modal-wrap { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .25); }
+.w95-form { display: flex; flex-direction: column; gap: 7px; }
+.w95-form-row { display: flex; align-items: center; gap: 8px; }
+.w95-form-row > label { flex: none; width: 132px; text-align: right; }
+.w95-form-row > .w95-input { flex: 1; }
+.w95-caption { display: flex; align-items: baseline; gap: 8px; font-weight: 700; margin: 6px 0 2px; }
+.w95-caption .w95-hint { font-weight: 400; }
+.w95-note { font-size: 10px; color: #404040; min-height: 13px; }
+
+/* список сохранений — как список файлов в проводнике Win95 */
+.w95-saves {
+  border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark);
+  background: #fff; padding: 1px; min-height: 92px; max-height: 216px; overflow-y: auto;
+}
+.w95-saves-row { display: flex; align-items: center; gap: 6px; padding: 3px 5px; cursor: default; }
+.w95-saves-row:hover { background: #e4e4e4; }
+.w95-saves-row.sel { background: #000080; color: #fff; }
+.w95-saves-row.sel .w95-hint { color: #c8d0ff; }
+.w95-saves-row .ico { width: 16px; text-align: center; flex: none; }
+.w95-saves-empty { color: GrayText; padding: 10px; text-align: center; }
+
+/* выбор стартовой пары (карточка = флажок: клик по карточке отмечает кандидата) */
+.w95-pick-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 2px; }
+.w95-pick-card {
+  position: relative; width: 152px; min-height: 136px; text-align: left; padding: 5px 6px 6px; cursor: pointer;
+}
+.w95-pick-card:hover { background: #e8e8f8; }
+.w95-pick-card:focus { outline: 1px dotted #000; outline-offset: -3px; }
+/* выбранный кандидат — как выделенная строка в Windows 95: синий фон, белый текст */
+.w95-pick-card.selected, .w95-pick-card.selected:hover { background: #000080; color: #fff; }
+.w95-pick-card.selected .w95-staff-sub { color: #c8d0ff; }
+.w95-pick-head { display: flex; align-items: center; gap: 5px; }
+.w95-pick-box {
+  flex: none; width: 13px; height: 13px; line-height: 11px; text-align: center; font-size: 11px; font-weight: 700;
+  color: #000080; background: #fff; border: 1px solid;
+  border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark);
+}
+.w95-pick-stats {
+  display: grid; grid-template-columns: 42px 1fr 18px; align-items: center; gap: 2px 4px;
+  margin-top: 5px; font-size: 10px; font-variant-numeric: tabular-nums;
+}
+.w95-pick-stats .num { text-align: right; font-weight: 700; }
+.w95-pick-stats .hi { color: #00006a; }
+.w95-pick-card.selected .w95-pick-stats .hi { color: #ffff80; }
+.w95-pick-bar { height: 7px; border: 1px solid var(--w95-dark); background: #fff; }
+.w95-pick-bar > div { height: 100%; min-width: 2px; background: #000080; }
+.w95-pick-card.selected .w95-pick-bar { border-color: #fff; background: #c8d0ff; }
+.w95-pick-count { font-weight: 700; }
+.w95-pick-warn { font-size: 10px; color: #a00; }
+.w95-pick-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--w95-dark); margin-top: 10px; padding-top: 8px; }
+/* кнопки и подписи в подвале не разваливаются на строки */
+.w95-pick-foot .w95-btn { flex: none; white-space: nowrap; }
+.w95-pick-foot .w95-hint { white-space: nowrap; }
+.w95-pick-foot .w95-grow { flex: 1 1 auto; min-width: 0; }
+.w95-pick-strong { font-size: 10px; color: #404040; }

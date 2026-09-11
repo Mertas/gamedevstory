@@ -11,7 +11,7 @@ import type { MetaData } from '../shared/meta';
 import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { AutopilotController } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
-import { SaveManager, SAVE_PATH } from './save';
+import { SaveManager, SAVE_PATH, type PersistAdapter } from './save';
 import { dispatchClientAction, MAX_SPEED } from './actions';
 import { GameTicker } from './ticker';
 import { ChatOrchestrator } from './chatflow';
@@ -75,6 +75,8 @@ export interface GameServerDeps {
   llm?: LlmFn;
   story?: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
   savePath?: string;
+  /** PLAN-18: хранилище партии (у пользователей — запись в БД); по умолчанию — файл savePath */
+  persist?: PersistAdapter;
 }
 
 export class GameServer {
@@ -82,7 +84,7 @@ export class GameServer {
   chat: ChatState;
   llm: LlmFn;
   private story: (genreRu: string, typeRu: string) => Promise<{ title: string; plot: string }>;
-  private saves: SaveManager;
+  private saves: PersistAdapter;
   speed = 1;
   private readonly ticker = new GameTicker(this);
   private readonly chatflow = new ChatOrchestrator(this);
@@ -108,7 +110,7 @@ export class GameServer {
   constructor(deps: GameServerDeps = {}) {
     this.llm = deps.llm ?? generateWithFallback;
     this.story = deps.story ?? generateStory;
-    this.saves = new SaveManager(deps.savePath ?? SAVE_PATH);
+    this.saves = deps.persist ?? new SaveManager(deps.savePath ?? SAVE_PATH);
     const loaded = this.saves.read();
     this.game = loaded?.game ?? newGame(Math.floor(Math.random() * 99991) + 1);
     this.chat = loaded?.chat ?? resetChat();

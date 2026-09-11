@@ -41,6 +41,9 @@ importers:
       music-metadata-browser:
         specifier: ^2.5.11
         version: 2.5.11
+      nodemailer:
+        specifier: ^10.0.3
+        version: 10.0.3
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -1684,6 +1687,10 @@ packages:
   node-releases@2.0.54:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
     engines: {node: '>=18'}
+
+  nodemailer@10.0.3:
+    resolution: {integrity: sha512-h5c8ypcMoOIh44bIcVROvTDbjRdOJX8AXTkxMht2C92HlSjkG+/8kjoqmNPypfjQaVNaUHWyZ3tqs5I3K91F3g==}
+    engines: {node: '>=20.0.0'}
 
   object-inspect@1.13.4:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
@@ -3641,6 +3648,8 @@ snapshots:
       content-type: 2.1.0
 
   node-releases@2.0.54: {}
+
+  nodemailer@10.0.3: {}
 
   object-inspect@1.13.4: {}
 

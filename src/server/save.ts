@@ -18,30 +18,49 @@ export interface LoadedSave {
   chat: ChatState | null;
 }
 
+/** Контракт хранилища партии: файл (SaveManager) или запись в БД (DbSaveStore, sessions.ts). */
+export interface PersistAdapter {
+  read(): LoadedSave | null;
+  autosave(game: GameState, chat: ChatState, force?: boolean): void;
+  exportPayload(game: GameState, chat: ChatState): string;
+  importPayload(raw: string): LoadedSave | null;
+}
+
+/** Разбор полезной нагрузки сейва (общий для файла и БД): схема + миграция на копии. */
+export function parseSavePayload(raw: string): LoadedSave | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    const wrapped = !!parsed && typeof parsed === 'object' && 'game' in (parsed as Record<string, unknown>);
+    const candidateRaw = wrapped ? (parsed as { game: unknown }).game : parsed;
+    if (!isValidGameState(candidateRaw)) {
+      console.error('[gds] сейв не похож на GameState (структура)');
+      return null;
+    }
+    const candidate = migrateSave(JSON.parse(JSON.stringify(candidateRaw)) as GameState);
+    normalizeLegacyContrib(candidate);
+    const chat = wrapped ? (parsed as { chat?: unknown }).chat : undefined;
+    return { game: candidate, chat: chat && Array.isArray((chat as ChatState).msgs) ? (chat as ChatState) : null };
+  } catch (e) {
+    console.error('[gds] разбор сейва не удался:', String(e).slice(0, 300));
+    return null;
+  }
+}
+
 export class SaveManager {
   private lastSaveDay = 0;
 
   constructor(private readonly path: string) {}
 
-  /** Читает сейв; null — файла нет/битый (перед началом новой игры делается .corrupt-бэкап). */
+  /** Читает сейв; null — файла нет/битый (битый уходит в .corrupt-бэкап, молча не стирается). */
   read(): LoadedSave | null {
     try {
-      const raw = fs.readFileSync(this.path, 'utf8');
-      const parsed = JSON.parse(raw) as unknown;
-      // формат 2 (SRV-21): { game, chat }; формат 1 (легаси): сам GameState
-      const wrapped = !!parsed && typeof parsed === 'object' && 'game' in (parsed as Record<string, unknown>);
-      const candidate = wrapped ? (parsed as { game: unknown }).game : parsed;
-      if (isValidGameState(candidate)) {
-        migrateSave(candidate); // версия формата + repair-нормализации (adFansGained, висящая пауза)
-        normalizeLegacyContrib(candidate);
-        this.lastSaveDay = candidate.week;
-        const chat = wrapped ? (parsed as { chat?: unknown }).chat : undefined;
-        return { game: candidate, chat: chat && Array.isArray((chat as ChatState).msgs) ? (chat as ChatState) : null };
+      const loaded = parseSavePayload(fs.readFileSync(this.path, 'utf8'));
+      if (loaded) {
+        this.lastSaveDay = loaded.game.week;
+        return loaded;
       }
-      console.error('[gds] сейв не похож на GameState — начинаем новую игру');
-      this.backup('не похож на GameState');
+      if (fs.existsSync(this.path)) this.backup('не похож на GameState');
     } catch (e) {
-      // битый JSON не должен молча стирать партию: сохраняем улику и сообщаем;
       // отсутствие файла — обычный первый запуск, это НЕ повреждение
       if (fs.existsSync(this.path)) this.backup(String(e).slice(0, 300));
     }
@@ -67,27 +86,13 @@ export class SaveManager {
 
   /** Импорт: схемная проверка ДО подмены живой партии (SRV-02); бэкап pre-import внутри. */
   importPayload(raw: string): LoadedSave | null {
+    const loaded = parseSavePayload(raw);
+    if (!loaded) return null;
+    // аудит 05.09: импорт затирает текущую партию — бэкап перед перезаписью
     try {
-      const parsed = JSON.parse(raw) as unknown;
-      const wrapped = !!parsed && typeof parsed === 'object' && 'game' in (parsed as Record<string, unknown>);
-      const candidateRaw = wrapped ? (parsed as { game: unknown }).game : parsed;
-      if (!isValidGameState(candidateRaw)) {
-        console.error('[gds] импорт отклонён: файл не похож на сейв GameState');
-        return null;
-      }
-      // кандидат готовим и мигрируем на копии — живая партия не мутируется до успеха
-      const candidate = migrateSave(JSON.parse(JSON.stringify(candidateRaw)) as GameState);
-      normalizeLegacyContrib(candidate);
-      // аудит 05.09: импорт затирает текущую партию — бэкап перед перезаписью
-      try {
-        if (fs.existsSync(this.path)) fs.copyFileSync(this.path, `${this.path}.pre-import-${Date.now()}`);
-      } catch { /* бэкап не критичен */ }
-      const chat = wrapped ? (parsed as { chat?: unknown }).chat : undefined;
-      return { game: candidate, chat: chat && Array.isArray((chat as ChatState).msgs) ? (chat as ChatState) : null };
-    } catch (e) {
-      console.error('[gds] импорт сейва не удался:', String(e).slice(0, 300));
-      return null;
-    }
+      if (fs.existsSync(this.path)) fs.copyFileSync(this.path, `${this.path}.pre-import-${Date.now()}`);
+    } catch { /* бэкап не критичен */ }
+    return loaded;
   }
 
   /** Копия повреждённого сейва — «улика» рядом с файлом. */

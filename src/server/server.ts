@@ -4,17 +4,23 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import { WebSocketServer, type WebSocket } from 'ws';
+import type { Request } from 'express';
 import { PORT, HOST, gigaReady } from './config';
-import { GameServer, type ClientAction } from './game';
+import { type ClientAction } from './game';
 import { llmStatus } from './giga';
 import { createSeqGuard } from './wire';
+import { registerApi } from './api';
+import { createMailer } from './mailer';
+import { SessionRegistry } from './sessions';
+import { UserService } from './users';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const DIST = path.join(ROOT, 'dist');
 
 // SRV-06: seq/ack на WS-канале — клиент повторяет недоставленные действия после обрыва
 // (очередь с TTL); guard отсекает уже обработанные (их ack потерялся вместе с сокетом).
-const seqGuard = createSeqGuard();
+// PLAN-18: guard — на пользователя (у каждого своя партия и свой поток действий)
+const guards = new Map<number, ReturnType<typeof createSeqGuard>>();
 
 // SRV-13: heartbeat — полумёртвый сокет (Wi-Fi уснул, ноут в суспенде) не выглядит закрытым:
 // пингуем и закрываем молчунов. Backpressure: нечитающему клиенту снапшоты не копим — они
@@ -35,12 +41,23 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`[gds] сервер на http://${HOST}:${PORT}; GigaChat: ${gigaReady ? 'подключён' : 'НЕТ ключей (чат будет молчать)'}`);
 });
 
-const game = new GameServer();
+// PLAN-18: пользователи, почта, реестр партий — у каждого пользователя своя игровая сессия.
+const users = new UserService();
+users.ensureUser('Mertas', '123456'); // сид-пользователь (решено 11.09)
+const mail = createMailer();
+const registry = new SessionRegistry(users);
+// REST авторизации/сохранений; who(req) — пользователь по cookie сессии (ниже — для WS)
+const who = registerApi(app, { users, mail, sessions: registry });
+/** Активная партия по запросу (для /api/save: у каждого пользователя свой экспорт). */
+const activeGame = (req: Request) => {
+  const u = who(req);
+  return u ? registry.server(u.id) : null;
+};
 
 // SRV-07/SRV-08: последний рубеж — не терять партию при падении/остановке
 process.on('uncaughtException', (e) => {
   console.error('[gds] uncaughtException:', e);
-  try { game.saveNow(); } catch { /* noop */ }
+  try { registry.disposeAll(); } catch { /* noop */ }
   process.exit(1);
 });
 process.on('unhandledRejection', (e) => {
@@ -48,8 +65,8 @@ process.on('unhandledRejection', (e) => {
 });
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, () => {
-    console.log(`[gds] ${sig}: сохраняю партию…`);
-    try { game.saveNow(); } catch { /* noop */ }
+    console.log(`[gds] ${sig}: сохраняю партии игроков…`);
+    try { registry.disposeAll(); } catch { /* noop */ }
     process.exit(0);
   });
 }
@@ -63,6 +80,19 @@ wss.on('connection', (ws, req) => {
     ws.close(1008, 'wrong path');
     return;
   }
+  // PLAN-18: партия — по cookie сессии; без входа или без загруженного сохранения не пускаем
+  const user = who(req);
+  if (!user) {
+    ws.close(1008, 'нужен вход');
+    return;
+  }
+  const game = registry.server(user.id);
+  if (!game) {
+    ws.close(1008, 'нет активной партии');
+    return;
+  }
+  const seqGuard = guards.get(user.id) ?? createSeqGuard();
+  guards.set(user.id, seqGuard);
   ws.on('error', (e) => console.error('[gds] ws error:', String(e).slice(0, 300))); // SRV-14
   const live = ws as LiveSocket;
   live.isAlive = true; // SRV-13: сердцебиение — молчуна отключит heartbeat-тик
@@ -124,11 +154,15 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, llm: llmStatus() });
 });
 
-app.get('/api/save', (_req, res) => {
+app.get('/api/save', (req, res) => {
+  const game = activeGame(req);
+  if (!game) return void res.status(401).json({ ok: false, error: 'Нужен вход и активная партия' });
   res.type('application/json').send(game.exportSave());
 });
 
 app.post('/api/save', (req, res) => {
+  const game = activeGame(req);
+  if (!game) return void res.status(401).json({ ok: false, error: 'Нужен вход и активная партия' });
   const ok = game.importSave(typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
   res.json({ ok });
 });

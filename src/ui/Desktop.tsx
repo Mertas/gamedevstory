@@ -5,9 +5,10 @@ import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { WebampLayer } from './WebampLayer';
 import {
-  actionSetAutopilot, actionTakeControl, exportSave, importSave, newGameAction, setSpeed, showClientError,
+  actionSetAutopilot, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
   useAutopilot, useChat, useGame, useSnapshot, useSpeed,
 } from './store';
+import { NewGameForm } from './NewGameForm';
 import { typingName } from '../shared/chat';
 import { dateLabel, dayInYear } from '../shared/meta';
 import { AutopilotCursor } from './AutopilotCursor';
@@ -23,7 +24,7 @@ const DEFAULT_ICONS: Record<string, string> = {
 };
 const ICONS_KEY = 'gds-desk-icons';
 
-export function Desktop() {
+export function Desktop({ onExit }: { onExit: () => void }) {
   const wm = useWindows();
   const { wins, activeId } = useWinState();
   const wmRef = useRef(wm);
@@ -34,6 +35,7 @@ export function Desktop() {
   const autopilot = useAutopilot();
   const connected = useSnapshot().connected; // SRV-17: индикация обрыва связи (трей + баннер)
   const [startOpen, setStartOpen] = useState(false);
+  const [newGameOpen, setNewGameOpen] = useState(false); // PLAN-18: новая игра — выбор студии и пары
   const startOpenRef = useRef(startOpen);
   startOpenRef.current = startOpen;
   const fileRef = useRef<HTMLInputElement>(null);
@@ -532,6 +534,7 @@ export function Desktop() {
           {!connected && (
             <span className="w95-noconn" title="Сервер недоступен — действия копятся и уйдут после переподключения">🔌 нет связи</span>
           )}
+          <span className="w95-hint" style={{ marginRight: 8 }} title="Ваша студия (название выбрано при новой игре)">🏢 {game.studioName}</span>
           {typing && <span className="w95-hint" style={{ color: '#000080', marginRight: 6 }}>{typing} печатает…</span>}
           <button
             className="w95-btn"
@@ -579,7 +582,9 @@ export function Desktop() {
           <div className="w95-mi" onClick={() => { saveToFile(); setStartOpen(false); }}>💾 Сохранить игру…</div>
           <div className="w95-mi" onClick={() => { fileRef.current?.click(); setStartOpen(false); }}>📂 Загрузить игру…</div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" onClick={() => { if (confirm('Начать новую игру? Текущий прогресс будет потерян.')) newGameAction(); setStartOpen(false); }}>🆕 Новая игра</div>
+          <div className="w95-mi" onClick={() => { setNewGameOpen(true); setStartOpen(false); }}>🆕 Новая игра…</div>
+          <div className="w95-mi sep" />
+          <div className="w95-mi" onClick={() => { setSpeed(0); setStartOpen(false); onExit(); }}>🚪 Выход в начальное меню</div>
         </div>
       )}
 
@@ -603,6 +608,18 @@ export function Desktop() {
           e.target.value = '';
         }}
       />
+
+      {/* PLAN-18: новая игра — название студии и стартовая пара (партия создаётся в базе) */}
+      {newGameOpen && (
+        <div className="w95-modal-wrap" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="w95-window focused" style={{ position: 'relative', width: 700, zIndex: 901 }}>
+            <div className="w95-title">🆕 Новая игра</div>
+            <div className="w95-body" style={{ padding: 10 }}>
+              <NewGameForm onClose={() => setNewGameOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

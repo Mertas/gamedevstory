@@ -190,6 +190,8 @@ export type PendingEvent =
 export interface GameState {
   seed: number;
   saveVersion: number; // версия формата сейва (миграции — src/core/migrate.ts)
+  /** PLAN-18: название студии (выбор игрока на старте; у старых сейвов — «Game Dev Studio») */
+  studioName: string;
   week: number; // 1-based
   money: number; // K
   research: number; // PR

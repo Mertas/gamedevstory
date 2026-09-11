@@ -1,0 +1,188 @@
+// PLAN-18: REST-API авторизации и сохранений. Cookie сессии — httpOnly (SameSite=Strict).
+import type { Request, Response, Express } from 'express';
+import { STAFF } from '../core/data/db';
+import type { CareerId } from '../core/data/schema';
+import type { Mailer } from './mailer';
+import type { SaveMeta, UserService, UserRow } from './users';
+
+/** Сотрудник начального пула — из него игрок выбирает двоих на старте (PLAN-18). */
+export interface PoolStaffDto {
+  id: string;
+  name: string;
+  gender: string;
+  salary: number;
+  hireFee: number;
+  stats: { program: number; scenario: number; graphics: number; sound: number };
+  activeCareer: CareerId;
+}
+
+/** «Initially available» — единственный пул, доступный без найма. */
+export function initialPool(): PoolStaffDto[] {
+  // persona намеренно не отдаём: характер сотрудника игрок узнаёт уже в игре
+  return STAFF.filter((d) => d.unlock.includes('Initially available')).map((d) => ({
+    id: d.id, name: d.name, gender: d.gender, salary: d.salary, hireFee: d.hireFee,
+    stats: d.stats, activeCareer: d.activeCareer,
+  }));
+}
+
+export const SESSION_COOKIE = 'gds_session';
+
+/** Минимум, нужный для чтения cookie: подходит и express Request, и WS IncomingMessage. */
+export type HeadersLike = { headers: Record<string, string | string[] | undefined> };
+
+/** Жизненный цикл партий пользователя (реализация — SessionRegistry). */
+export interface SessionHooks {
+  /** Создать новую партию (студия + стартовая пара), сохранить и сделать текущей. */
+  create(userId: number, opts: { studioName: string; staffIds: string[] }): number;
+  /** Сделать сохранение текущим: создать/поднять GameServer пользователя на этом сейве. */
+  load(userId: number, saveId: number): void;
+  /** Удалить сохранение и (если оно активно) остановить его сессию. */
+  drop(userId: number, saveId: number): void;
+  /** Активное сохранение (для списка «продолжить»); null — ничего не загружено. */
+  activeSaveId(userId: number): number | null;
+}
+
+export interface ApiDeps {
+  users: UserService;
+  mail: Mailer;
+  sessions: SessionHooks;
+}
+
+function tokenFromReq(req: HeadersLike): string {
+  const raw = req.headers.cookie ?? '';
+  const header = Array.isArray(raw) ? raw.join('; ') : raw;
+  for (const part of header.split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    if (k === SESSION_COOKIE) return decodeURIComponent(v.join('='));
+  }
+  return '';
+}
+
+function setSession(res: Response, token: string, secure: boolean): void {
+  res.cookie(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+
+function clearSession(res: Response): void {
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
+}
+
+const isSecure = (req: Request): boolean => req.protocol === 'https' || (req.headers['x-forwarded-proto'] ?? '') === 'https';
+
+/** Регистрация маршрутов. Возвращает функцию «кто пришёл» (для WS-авторизации по cookie). */
+export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => UserRow | null {
+  const { users, mail, sessions } = deps;
+  const who = (req: HeadersLike): UserRow | null => users.userByToken(tokenFromReq(req));
+
+  // ─── авторизация ───
+  app.post('/api/auth/register', (req, res) => {
+    const { login, password, email } = (req.body ?? {}) as { login?: string; password?: string; email?: string };
+    const r = users.register(String(login ?? ''), String(password ?? ''), email);
+    if (!r.ok) return void res.json(r);
+    const s = users.login(r.user.login, String(password));
+    if (!s.ok) return void res.json(s);
+    setSession(res, s.token, isSecure(req));
+    res.json({ ok: true, user: s.user });
+  });
+
+  app.post('/api/auth/login', (req, res) => {
+    const { login, password } = (req.body ?? {}) as { login?: string; password?: string };
+    const r = users.login(String(login ?? ''), String(password ?? ''));
+    if (!r.ok) return void res.json(r);
+    setSession(res, r.token, isSecure(req));
+    res.json({ ok: true, user: r.user });
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    users.logout(tokenFromReq(req));
+    clearSession(res);
+    res.json({ ok: true });
+  });
+
+  app.get('/api/auth/me', (req, res) => {
+    res.json({ ok: true, user: who(req) });
+  });
+
+  // Восстановление: dev — код возвращается на экран и печатается в консоль; smtp — уходит письмом.
+  app.post('/api/auth/reset-request', async (req, res) => {
+    const { login } = (req.body ?? {}) as { login?: string };
+    const r = users.startReset(String(login ?? ''));
+    if (!r.ok) return void res.json(r);
+    try {
+      const mode = await mail.send(r.to, 'Восстановление пароля — Game Dev Studio',
+        `Код восстановления: ${r.code}\nКод действует 15 минут.`);
+      res.json({ ok: true, ...(mode === 'dev' ? { devCode: r.code } : {}) });
+    } catch (e) {
+      res.json({ ok: false, error: e instanceof Error ? e.message : 'Не удалось отправить письмо' });
+    }
+  });
+
+  app.post('/api/auth/reset-confirm', (req, res) => {
+    const { login, code, password } = (req.body ?? {}) as { login?: string; code?: string; password?: string };
+    const r = users.confirmReset(String(login ?? ''), String(code ?? ''), String(password ?? ''));
+    if (!r.ok) return void res.json(r);
+    const s = users.login(r.user.login, String(password));
+    if (!s.ok) return void res.json(s);
+    setSession(res, s.token, isSecure(req));
+    res.json({ ok: true, user: s.user });
+  });
+
+  // ─── сохранения ───
+  const withUser = (req: Request, res: Response, fn: (u: UserRow) => void): void => {
+    const u = who(req);
+    if (!u) return void res.status(401).json({ ok: false, error: 'Нужен вход' });
+    fn(u);
+  };
+
+  /** PLAN-18: начальный пул сотрудников для экрана новой игры. */
+  app.get('/api/pool', (req, res) => {
+    withUser(req, res, () => {
+      res.json({ ok: true, staff: initialPool() });
+    });
+  });
+
+  app.get('/api/saves', (req, res) => {
+    withUser(req, res, (u) => {
+      const list: Array<SaveMeta & { active: boolean }> = users.listSaves(u.id)
+        .map((s) => ({ ...s, active: sessions.activeSaveId(u.id) === s.id }));
+      res.json({ ok: true, saves: list });
+    });
+  });
+
+  app.post('/api/saves', (req, res) => {
+    withUser(req, res, (u) => {
+      const { studioName, staffIds } = (req.body ?? {}) as { studioName?: string; staffIds?: unknown };
+      const name = String(studioName ?? '').trim();
+      const ids = Array.isArray(staffIds) ? staffIds.filter((x): x is string => typeof x === 'string') : [];
+      if (name.length < 1 || name.length > 40) return void res.json({ ok: false, error: 'Название студии: 1–40 символов' });
+      if (ids.length !== 2) return void res.json({ ok: false, error: 'Выберите двух сотрудников' });
+      const id = sessions.create(u.id, { studioName: name, staffIds: ids });
+      res.json({ ok: true, id });
+    });
+  });
+
+  app.post('/api/saves/:id/load', (req, res) => {
+    withUser(req, res, (u) => {
+      const id = Number(req.params.id);
+      if (!users.getSave(u.id, id)) return void res.json({ ok: false, error: 'Сохранение не найдено' });
+      sessions.load(u.id, id);
+      res.json({ ok: true, id });
+    });
+  });
+
+  app.delete('/api/saves/:id', (req, res) => {
+    withUser(req, res, (u) => {
+      const id = Number(req.params.id);
+      sessions.drop(u.id, id);
+      const ok = users.deleteSave(u.id, id);
+      res.json(ok ? { ok: true } : { ok: false, error: 'Сохранение не найдено' });
+    });
+  });
+
+  return who;
+}

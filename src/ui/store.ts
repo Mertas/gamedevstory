@@ -15,10 +15,13 @@ export interface Snapshot {
   connected: boolean;
   meta: MetaData | null;
   autopilot: boolean;
+  /** PLAN-18: сервер отказал в партии (нужен вход / сохранение не загружено) — вернуться в меню */
+  sessionLost: boolean;
 }
 
 let snap: Snapshot = {
   game: null, chat: { msgs: [], queue: [], phases: {} }, speed: 1, connected: false, meta: null, autopilot: false,
+  sessionLost: false,
 };
 let actionError: string | null = null;
 let actionErrorVer = 0; // SRV-17: версия показа — повторный тот же текст тоже поднимает тост
@@ -72,7 +75,29 @@ function raiseError(text: string): void {
   emit();
 }
 
+/** PLAN-18: сокет открываем только внутри партии — в начальном меню соединение не нужно. */
+let socketWanted = false;
+
+/** PLAN-18: войти в партию (после входа/загрузки сохранения). */
+export function startSession(): void {
+  socketWanted = true;
+  const ws = (globalThis as { __gdsWs?: WebSocket }).__gdsWs;
+  // уже подключены/подключаемся — второй сокет не нужен (StrictMode монтирует эффекты дважды)
+  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+  connect();
+}
+
+/** PLAN-18: выйти в начальное меню — соединение закрываем (партия на сервере остаётся жить). */
+export function stopSession(): void {
+  socketWanted = false;
+  const ws = (globalThis as { __gdsWs?: WebSocket }).__gdsWs;
+  try { ws?.close(); } catch { /* noop */ }
+  snap = { ...snap, connected: false, game: null, sessionLost: false };
+  emit();
+}
+
 function connect(): void {
+  if (!socketWanted) return;
   // SRV-19: адрес от самой страницы (а не хардкод :3001) — в dev-режиме vite проксирует /ws
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws`);
@@ -104,7 +129,7 @@ function connect(): void {
         snap = {
           game: d.game, chat: chatSig(nextChat) === chatSig(snap.chat) ? snap.chat : nextChat,
           speed: d.speed ?? snap.speed,
-          connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot),
+          connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot), sessionLost: false,
         };
         // SRV-16: автопилот выключен — очередь шагов не доигрываем (мышь не жмёт за игрока)
         if (!snap.autopilot) autopilotQueue.length = 0;
@@ -129,15 +154,18 @@ function connect(): void {
       }
     } catch { /* игнор */ }
   };
-  ws.onclose = () => {
-    snap = { ...snap, connected: false };
+  ws.onclose = (ev) => {
+    const refused = ev?.code === 1008; // PLAN-18: сервер закрыл по политике (нужен вход / нет партии)
+    snap = { ...snap, connected: false, sessionLost: refused };
     emit();
+    // игрок вышел в начальное меню или сервер отказал — переподключаться не нужно
+    if (!socketWanted || refused) return;
     setTimeout(connect, 2000);
   };
   ws.onerror = () => ws.close();
 }
 
-connect();
+// PLAN-18: соединение открывает App (startSession) — до входа в партию сокет не нужен.
 
 // SRV-06: подчистка очереди, если ack не пришёл при живой связи (старый сервер/потеря) —
 // offline-очередь не трогаем: её судьбу решает drain() при переподключении (с отчётом о потерях)
