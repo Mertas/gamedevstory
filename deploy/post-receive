@@ -38,6 +38,12 @@ while read -r _old new ref; do
   log "ставлю зависимости (первый раз это долго)"
   pnpm install --frozen-lockfile --reporter=append-only
 
+  # контент-БД нужна уже тестам: src/core/data/db.ts открывает её readOnly при импорте
+  if [ ! -f "$SHARED/data/gamedev.db" ]; then
+    log "контент-БД отсутствует — собираю из research/ (до тестов)"
+    pnpm db:build
+  fi
+
   log "гейт: типы + линт + тесты"
   if ! pnpm check; then
     log "ДЕПЛОЙ ОТКЛОНЁН: проверки не прошли. Прод не тронут."
@@ -47,11 +53,6 @@ while read -r _old new ref; do
 
   log "сборка (tsc + vite)"
   pnpm build
-
-  if [ ! -f "$SHARED/data/gamedev.db" ]; then
-    log "контент-БД отсутствует — собираю из research/"
-    pnpm db:build
-  fi
 
   PREV="$(readlink -f "$BASE/current" 2>/dev/null || true)"
   ln -sfn "$REL" "$BASE/current"
