@@ -188,9 +188,33 @@ export type PendingEvent =
   | { type: 'info'; title: string; text: string }
   | null;
 
+/** PLAN-24: сохраняемый вид рабочего стола (фон + раскладка окон). Игровая логика его не читает. */
+export interface UiState {
+  /** id обоев из public/wallpapers или null (обычный бирюзовый стол) */
+  wallpaper?: string | null;
+  windows?: UiWindow[];
+}
+
+export interface UiWindow {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minimized: boolean;
+  maximized: boolean;
+  closed: boolean;
+  z: number;
+}
+
 export interface GameState {
   seed: number;
   saveVersion: number; // версия формата сейва (миграции — src/core/migrate.ts)
+  /**
+   * PLAN-24: вид рабочего стола, который игрок ждёт увидеть на любом устройстве, — фон и раскладка
+   * окон (какие открыты, где стоят, что свёрнуто). Игровая логика эти поля не читает.
+   */
+  ui?: UiState;
   /** PLAN-18: название студии (выбор игрока на старте; у старых сейвов — «Game Dev Studio») */
   studioName: string;
   week: number; // 1-based

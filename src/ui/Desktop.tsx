@@ -5,8 +5,8 @@ import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { WebampLayer } from './WebampLayer';
 import {
-  actionSetAutopilot, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
-  useAutopilot, useChat, useGame, useSnapshot, useSpeed,
+  actionSetAutopilot, actionSetUi, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
+  useAutopilot, useChat, useGame, useGameSelector, useSnapshot, useSpeed,
 } from './store';
 import { NewGameForm } from './NewGameForm';
 import { typingName } from '../shared/chat';
@@ -14,7 +14,7 @@ import { dateLabel, dayInYear } from '../shared/meta';
 import { AutopilotCursor } from './AutopilotCursor';
 import { useOwner } from './owner';
 import { VersionStamp } from './VersionStamp';
-import { WALLPAPERS, readWallpaper, saveWallpaper, wallpaperById } from './wallpapers';
+import { WALLPAPERS, readWallpaper, wallpaperById } from './wallpapers';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -119,8 +119,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const iconsRef = useRef<HTMLDivElement>(null);
   const [snapOn, setSnapOn] = useState<boolean>(() => { try { return localStorage.getItem('gds-desk-snap') === '1'; } catch { return false; } });
   const [deskSort, setDeskSort] = useState<'default' | 'name' | 'kind'>(() => { try { return (localStorage.getItem('gds-desk-sort') as 'default' | 'name' | 'kind') || 'default'; } catch { return 'default'; } });
-  // PLAN-24: обои рабочего стола (ПКМ по столу → «Сменить фон…»)
-  const [wallpaper, setWallpaper] = useState<string | null>(() => readWallpaper());
+  // PLAN-24: фон — часть сейва (game.ui.wallpaper), а не браузера: он должен ждать игрока везде
+  const wallpaper = useGameSelector((g) => g.ui?.wallpaper ?? null);
+  const gameUi = useGameSelector((g) => g.ui);
   const [bgPick, setBgPick] = useState(false);
   const [deskPos, setDeskPos] = useState<Record<string, { x: number; y: number }>>(() => { try { return JSON.parse(localStorage.getItem('gds-desk-pos') || '{}'); } catch { return {}; } });
   const [selIds, setSelIds] = useState<string[]>([]);
@@ -165,7 +166,16 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
   useEffect(() => { try { localStorage.setItem('gds-desk-snap', snapOn ? '1' : '0'); } catch { /* */ } }, [snapOn]);
   useEffect(() => { try { localStorage.setItem('gds-desk-sort', deskSort); } catch { /* */ } }, [deskSort]);
-  useEffect(() => { saveWallpaper(wallpaper); }, [wallpaper]);
+  // одноразовый перенос: до PLAN-24 фон жил в браузере, у прежних сейвов поля ui ещё нет
+  const bgMigrated = useRef(false);
+  useEffect(() => {
+    if (bgMigrated.current || gameUi === undefined) return;
+    bgMigrated.current = true;
+    if (gameUi.wallpaper === undefined) {
+      const stored = readWallpaper();
+      if (stored) actionSetUi({ wallpaper: stored });
+    }
+  }, [gameUi]);
   useEffect(() => { try { localStorage.setItem('gds-desk-pos', JSON.stringify(deskPos)); } catch { /* */ } }, [deskPos]);
 
   const deskItems = useMemo(() => {
@@ -475,7 +485,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
               <div
                 className={'w95-bg-item' + (wallpaper === null ? ' picked' : '')}
                 title="Обычный бирюзовый стол"
-                onClick={() => setWallpaper(null)}
+                onClick={() => actionSetUi({ wallpaper: null })}
               >
                 <div className="w95-bg-plain">🎨</div>
                 <span>Обычный (бирюза)</span>
@@ -485,7 +495,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
                   key={w.id}
                   className={'w95-bg-item' + (wallpaper === w.id ? ' picked' : '')}
                   title={w.title}
-                  onClick={() => setWallpaper(w.id)}
+                  onClick={() => actionSetUi({ wallpaper: w.id })}
                 >
                   <img src={w.thumb} alt="" draggable={false} />
                   <span>{w.title}</span>

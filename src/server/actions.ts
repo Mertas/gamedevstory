@@ -10,6 +10,7 @@ import {
   takeContractAction, trainAction, applyBoosterAction,
 } from '../core/engine';
 import type { GamedexOption, GameState } from '../core/types';
+import { sanitizeUi } from './ui-state';
 import { resetChat, type ChatState } from '../shared/chat';
 import type { AutopilotPlan } from '../shared/autopilot';
 import type { ClientAction } from './game';
@@ -56,7 +57,8 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
   }
   // автопилот (plan/14): любое действие БОССА выключает авторежим; действия виртуальной
   // мыши помечены autopilot:true и не выключают. take_control — с реакцией чата.
-  if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
+  // PLAN-24: set_ui (фон/раскладка окон) — тоже не «действие босса»: перетаскивание окна не должно сбивать автопилот
+  if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed' && msg.type !== 'set_ui') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
     if (s.autopilotOn) s.stopAutopilot(msg.type !== 'take_control');
   }
   if (msg.type === 'take_control') {
@@ -73,6 +75,13 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       }
       s.speed = v;
       s.startTicker();
+      s.emit();
+      return;
+    }
+    case 'set_ui': {
+      // PLAN-24: вид рабочего стола хранится в сейве, поэтому пишем сразу (не ждём автосейва)
+      s.game.ui = sanitizeUi(msg.ui, s.game.ui);
+      s.saveNow(); // PLAN-24: раскладка меняется часто — сохраняем сразу, чтобы не потерять при закрытии
       s.emit();
       return;
     }

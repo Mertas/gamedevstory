@@ -384,3 +384,29 @@ describe('AP-08: idle-фаза в живой сессии', () => {
     expect(all.some((m) => m.text.includes('баги спят'))).toBe(true); // idle-реплика реально дошла до чата
   });
 });
+
+describe('PLAN-24: вид рабочего стола в сейве (фон + раскладка окон)', () => {
+  it('принимает фон и окна, зажимает мусор от клиента и не считается «действием босса»', () => {
+    srv = makeServer();
+    const win = { id: 'code', x: 40, y: 30, w: 600, h: 400, z: 11, minimized: false, maximized: false, closed: false };
+    srv.handle({ type: 'set_ui', ui: { wallpaper: 'win95-setup-4k', windows: [win] } });
+    expect(srv.actionResult()).toBeNull();
+    expect(srv.snapshot().game.ui).toEqual({ wallpaper: 'win95-setup-4k', windows: [win] });
+
+    // сервер не верит клиенту: слишком длинный id обоев -> null, окна без id и с дикими числами зажимаются
+    srv.handle({
+      type: 'set_ui',
+      ui: { wallpaper: 'x'.repeat(200), windows: [{ id: 'ok', x: 1e12, y: -1e12, w: 10, h: 10, z: 5000 }, { y: 5 }, 'мусор', null] },
+    });
+    expect(srv.snapshot().game.ui).toEqual({
+      wallpaper: null,
+      windows: [{ id: 'ok', x: 20000, y: -4000, w: 120, h: 80, z: 5000, minimized: false, maximized: false, closed: false }],
+    });
+
+    // раскладка окон - не «действие босса»: перетаскивание окна не должно глушить автопилот
+    srv.handle({ type: 'set_autopilot', on: true });
+    expect(srv.snapshot().autopilot).toBe(true);
+    srv.handle({ type: 'set_ui', ui: { wallpaper: null } });
+    expect(srv.snapshot().autopilot).toBe(true);
+  });
+});

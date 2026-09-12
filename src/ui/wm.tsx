@@ -3,8 +3,10 @@
 // ререндерятся всем списком; состояние окон живёт в отдельном контексте, а Window95
 // получает своё окно пропсом и мемоизирован, поэтому двигается только оно.
 import {
-  createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
+
+import { actionSetUi, useGameSelector } from './store';
 
 export interface WinState {
   id: string;
@@ -45,6 +47,28 @@ let zCounter = 10;
 export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const [wins, setWins] = useState<WinState[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // PLAN-24: раскладка окон — часть сейва. Открытие сейва перезагружает страницу, поэтому
+  // «поднять окна один раз за сессию» = «поднять их для этого сейва».
+  const savedWins = useGameSelector((g) => g.ui?.windows);
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || !savedWins || savedWins.length === 0) return;
+    seeded.current = true;
+    zCounter = Math.max(10, ...savedWins.map((w) => w.z));
+    setWins(savedWins.map((w) => ({ ...w, flash: false })));
+  }, [savedWins]);
+
+  // изменения раскладки уходят в сейв с задержкой: перетаскивание окна — это десятки событий
+  useEffect(() => {
+    if (!seeded.current) return;
+    const t = window.setTimeout(() => {
+      actionSetUi({
+        windows: wins.map(({ id, x, y, w, h, minimized, maximized, closed, z }) => ({ id, x, y, w, h, minimized, maximized, closed, z })),
+      });
+    }, 1200);
+    return () => window.clearTimeout(t);
+  }, [wins]);
 
   const patch = useCallback((id: string, fn: (w: WinState) => WinState) => {
     setWins((ws) => {

@@ -36,6 +36,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'resolve_event' }
   | { type: 'generate_story'; genreId: string; typeId: string; reqId?: number }
   | { type: 'set_speed'; v: number }
+  | { type: 'set_ui'; ui: unknown } // PLAN-24: фон и раскладка окон в сейве
   | { type: 'new_game' }
   | { type: 'get_state' }
   // M3

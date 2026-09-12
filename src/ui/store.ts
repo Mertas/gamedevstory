@@ -2,7 +2,7 @@
 import { useRef, useSyncExternalStore } from 'react';
 import type * as React from 'react';
 import type { HireMethodId } from '../core/config';
-import type { GameState, StartProjectInput } from '../core/types';
+import type { GameState, StartProjectInput, UiWindow } from '../core/types';
 import type { ChatState } from '../shared/chat';
 import { genreById, typeById, type MetaData } from '../shared/meta';
 import { levelUpNotice, type LevelNotice } from '../shared/rank';
@@ -371,6 +371,14 @@ export function setSpeed(v: number) {
 
 export function newGameAction() {
   send({ type: 'new_game' });
+}
+
+/**
+ * PLAN-24: вид рабочего стола — часть сейва (его ждут на любом устройстве), поэтому через сервер.
+ * Сервер валидирует значения (src/server/ui-state.ts) и сохраняет сразу.
+ */
+export function actionSetUi(patch: { wallpaper?: string | null; windows?: UiWindow[] }): void {
+  send({ type: 'set_ui', ui: { ...(snap.game?.ui ?? {}), ...patch } });
 }
 
 // ─── M3: персонал ───
