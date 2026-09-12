@@ -4,7 +4,8 @@ import type * as React from 'react';
 import type { HireMethodId } from '../core/config';
 import type { GameState, StartProjectInput } from '../core/types';
 import type { ChatState } from '../shared/chat';
-import type { MetaData } from '../shared/meta';
+import { genreById, typeById, type MetaData } from '../shared/meta';
+import { levelUpNotice } from '../shared/rank';
 import type { AutopilotStep } from '../shared/autopilot';
 import { Outbox } from './outbox';
 
@@ -48,6 +49,44 @@ function chatSig(c: ChatState): string {
 function subscribe(fn: () => void): () => void {
   listeners.add(fn);
   return () => { listeners.delete(fn); };
+}
+
+// ─── PLAN-22: уровень игрока (число открытых комбо) ───
+
+let levelSeen: number | null = null;
+const combosSeen = new Set<string>();
+
+/** Сравнить набор комбо со снапшотом: новый уровень → тост, переход через порог → звание. */
+function trackLevel(g: GameState | null): void {
+  if (!g) return;
+  const combos = g.openedCombos ?? [];
+  const fresh = combos.filter((c) => !combosSeen.has(c));
+  for (const c of combos) combosSeen.add(c);
+  const prev = levelSeen;
+  levelSeen = combos.length;
+  if (prev === null || combos.length <= prev || !fresh.length) return; // первый снапшот — без тоста
+  const [gid, tid] = (fresh[fresh.length - 1] ?? '').split('|');
+  const meta = snap.meta;
+  const gg = meta && gid ? genreById(meta, gid) : null;
+  const tt = meta && tid ? typeById(meta, tid) : null;
+  const combo = `${gg?.ru ?? gid ?? '?'} × ${tt?.nameRu ?? tt?.name ?? tid ?? '?'}`;
+  const n = levelUpNotice(prev, combos.length, combo);
+  showLevelNotice(n.title, n.text);
+}
+
+let levelNotice: { title: string; text: string } | null = null;
+let levelNoticeVer = 0;
+
+/** Показать тост уровня (и звания, если порог перейдён). */
+export function showLevelNotice(title: string, text: string): void {
+  levelNotice = { title, text };
+  levelNoticeVer++;
+  emit();
+}
+
+export function useLevelNotice(): { title: string; text: string } | null {
+  useSyncExternalStore(subscribe, () => levelNoticeVer);
+  return levelNotice;
 }
 
 // ─── WebSocket ───
@@ -133,6 +172,7 @@ function connect(): void {
         };
         // SRV-16: автопилот выключен — очередь шагов не доигрываем (мышь не жмёт за игрока)
         if (!snap.autopilot) autopilotQueue.length = 0;
+        trackLevel(snap.game); // PLAN-22: новый уровень → тост
         emit();
       }
       if (d.type === 'autopilot_step' && d.step) {

@@ -80,5 +80,19 @@ export function nextRank(combos: number): { rank: Rank; need: number } | null {
   return null;
 }
 
+/** Тост о новом уровне: переход через порог — ещё и звание с заслугой (PLAN-22). */
+export function levelUpNotice(prev: number, count: number, comboName: string): { title: string; text: string } {
+  const now = rankFor(count);
+  const before = rankFor(prev);
+  if (now.name !== before.name) {
+    return { title: `🎖️ Уровень ${count}: ${now.icon} ${now.name}`, text: `Новое комбо: ${comboName}. ${now.why}` };
+  }
+  const nx = nextRank(count);
+  return {
+    title: `🎖️ Уровень ${count}`,
+    text: `Новое комбо: ${comboName}.` + (nx ? ` До звания «${nx.rank.name}» — ${nx.need}.` : ' Выше только легенды индустрии.'),
+  };
+}
+
 /** Ключ комбо для хранения в аккаунте. */
 export const comboKey = (genreId: string, typeId: string): string => `${genreId}|${typeId}`;

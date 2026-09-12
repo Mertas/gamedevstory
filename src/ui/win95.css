@@ -294,6 +294,10 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   background: linear-gradient(90deg, #800000, #c00000); color: #fff; font-weight: 700; font-size: 11px;
 }
 .w95-toast-body { padding: 6px 8px; font-size: 11px; }
+/* PLAN-22: тост уровня — та же рамка, но синяя шапка и золотая нить по низу */
+.w95-toast-level { border-color: #000080; }
+.w95-toast-level .w95-toast-bar { background: #000080; color: #ffffff; }
+.w95-toast-level .w95-toast-body { background: #ffffe1; border-top: 1px solid #000080; }
 /* ─── PLAN-18: начальные окна (вход, сохранения игрока, новая игра) ─── */
 .w95-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .w95-modal-wrap { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .25); }

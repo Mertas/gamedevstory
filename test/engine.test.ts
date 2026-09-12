@@ -8,7 +8,7 @@ import { advanceWeeks, newGame, releaseAction, resolveBoostAction, resolveEventA
 import { createRng } from '../src/core/rng';
 import { autopilotProjectInput } from '../src/core/sim/policy';
 import { isUnlocked } from '../src/shared/rules';
-import { nextRank, RANKS, rankFor } from '../src/shared/rank';
+import { levelUpNotice, nextRank, RANKS, rankFor } from '../src/shared/rank';
 import { resolveBoost } from '../src/core/systems/dev';
 import { consoleAvailable } from '../src/core/systems/dev';
 import { dateToDay, dailySales, tickMediaEvents } from '../src/core/systems/market';
@@ -627,5 +627,23 @@ describe('PLAN-22: лестница званий', () => {
     expect(rankFor(99999)).toBe(rankFor(1580)); // выше вершины — та же легенда
     expect(nextRank(0)?.need).toBe(1);
     expect(nextRank(1580)).toBeNull();
+  });
+});
+
+describe('PLAN-22: тост нового уровня', () => {
+  it('обычный шаг — просто уровень и путь до звания; переход порога — звание и заслуга', () => {
+    const plain = levelUpNotice(4, 5, 'RPG × Пиратский');
+    expect(plain.title).toBe('🎖️ Уровень 5');
+    expect(plain.text).toContain('RPG × Пиратский');
+    expect(plain.text).toContain('До звания');
+
+    const step = levelUpNotice(21, 22, 'Сим × Пиратский'); // 22 — порог Хидэтаки Миядзаки
+    expect(step.title).toContain('Уровень 22');
+    expect(step.title).toContain('Хидэтака Миядзаки');
+    expect(step.text).toContain('Dark Souls');
+
+    const top = levelUpNotice(1579, 1580, 'что угодно');
+    expect(top.title).toContain('Нолан Бушнелл');
+    expect(top.text).toContain('Atari');
   });
 });
