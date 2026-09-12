@@ -225,7 +225,7 @@ export function policySteps(journal: PolicyAction[], state: GameState): Autopilo
     } else if (a.type === 'hire' && a.staffId) {
       openApp('hire');
       goTab('team');
-      const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'нового сотрудника';
+      const name = STAFF.find((s) => s.id === a.staffId)?.name ?? a.staffId; // кандидат ещё не в штате — имя из справочника
       // PLAN-25: кандидаты зависят от метода найма — без клика по методу кнопки «Нанять» в списке нет
       if (a.method && a.method !== 'word-of-mouth') {
         steps.push({ kind: 'click', target: `hire-method-${a.method}`, label: 'Метод найма (подороже — пул сильнее)', quick: true });

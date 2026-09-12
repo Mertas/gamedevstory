@@ -1,5 +1,6 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it, vi } from 'vitest';
+import { CONFIG } from '../src/core/config';
 import { newGame, startProjectAction, tick } from '../src/core/engine';
 import { AutopilotController, buildDecisionContext, createAutopilotPolicy, fitDirection, policySteps, validateDecision } from '../src/server/autopilot';
 import type { AutopilotHost } from '../src/server/autopilot';
@@ -740,7 +741,8 @@ describe('AP-09: найм и увольнения', () => {
     g.officeLevel = 1; // методы по деньгам: online 550K — самый дорогой доступный
     g.money = 5000;
     const weak = weakKey(g); // слабая специализация ДО найма — та же, что видит политика
-    const pool = candidatePool(g, 'online');
+    // PLAN-25: UI показывает только первых HIRE_CANDIDATES — политика выбирает из того же списка
+    const pool = candidatePool(g, 'online').slice(0, CONFIG.HIRE_CANDIDATES);
     expect(pool.length).toBeGreaterThan(1);
     busy(g);
     const pol = createAutopilotPolicy();

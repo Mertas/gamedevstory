@@ -267,7 +267,7 @@ export function AutopilotCursor() {
       setLabel(step.label);
       const ok = await clickTarget(step.target, step.quick === true, step.cosmetic === true);
       // PLAN-25: молчаливый пропуск цели хуже видимой жалобы — по ней сразу ясно, какой кнопки нет
-      if (!ok) setLabel(`⚠️ Кнопка не появилась: ${step.label ?? step.target}`);
+      if (!ok) setLabel(`⚠️ Кнопка не появилась: ${step.label ?? ''} [${step.target}]`);
     };
 
     const iv = window.setInterval(() => {

@@ -23,7 +23,7 @@ export function SearchTab() {
   const pool = candidatePool(game, meta, cfg.pool);
   const officeCap = CONFIG.OFFICE_CAPACITY[game.officeLevel] ?? 4;
   const officeFull = game.staff.length >= officeCap;
-  const candidates = pool.slice(0, 3).map((id) => meta.staff.find((d) => d.id === id)).filter(Boolean);
+  const candidates = pool.slice(0, CONFIG.HIRE_CANDIDATES).map((id) => meta.staff.find((d) => d.id === id)).filter(Boolean);
 
   return (
     <>

@@ -237,7 +237,9 @@ function pickHireMethod(state: GameState): HireMethodId | null {
 function pickBestCandidate(state: GameState, method: HireMethodId, turnedDown: Set<string>, reserve: number): string | null {
   let bestId: string | null = null;
   let bestScore = -Infinity;
-  for (const id of candidatePool(state, method)) {
+  // PLAN-25: UI показывает первых HIRE_CANDIDATES кандидатов — нанять можно только их,
+  // поэтому и выбираем из того же списка (иначе кнопки «Нанять» для выбранного просто нет)
+  for (const id of candidatePool(state, method).slice(0, CONFIG.HIRE_CANDIDATES)) {
     if (turnedDown.has(id)) continue;
     const d = STAFF.find((x) => x.id === id);
     if (!d) continue;
