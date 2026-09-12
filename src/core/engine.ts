@@ -1,5 +1,6 @@
 // Движок: создание игры, тик (день), публичные действия.
 import { CONFIG, type HireMethodId } from './config';
+import { comboKey } from '../shared/rank';
 import { CONSOLES } from './data/db';
 import { createRng, rngFromState } from './rng';
 import { log } from './log';
@@ -139,6 +140,10 @@ export function startProjectAction(state: GameState, input: StartProjectInput) {
     const full: Record<DirectionAxis, number> = { cute: 0, realism: 0, approach: 0, niche: 0, simple: 0, innovation: 0, world: 0, polish: 0 };
     for (const k of Object.keys(input.direction) as DirectionAxis[]) full[k] = input.direction[k] ?? 0;
     state.lastDirection = full;
+    // PLAN-22: проект запущен — комбо считается открытым игроком (синхронизация в аккаунт на автосейве)
+    const pair = comboKey(input.genreId, input.typeId);
+    state.openedCombos = state.openedCombos ?? [];
+    if (!state.openedCombos.includes(pair)) state.openedCombos.push(pair);
   }
   return res;
 }

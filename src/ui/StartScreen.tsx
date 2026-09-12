@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { apiDeleteSave, apiLoadSave, apiLogout, apiSaves, type MeInfo, type SaveInfo } from './api';
 import { NewGameForm } from './NewGameForm';
 import { dateLabel } from '../shared/meta';
+import { useProfile } from './profile';
 
 /** «12 июня 1987 · неделя 71 · изменено 11 сент., 22:01» */
 function saveMeta(s: SaveInfo): string {
@@ -16,6 +17,11 @@ export function StartScreen({ me }: { me: MeInfo }) {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // PLAN-22: профиль = уровень игрока (число открытых комбо) и звание по порогам
+  const pr = useProfile();
+  const done = pr ? pr.count - pr.rank.from : 0;
+  const span = pr?.next ? Math.max(1, pr.next.from - pr.rank.from) : 1;
+  const blocks = Math.min(20, Math.max(0, Math.round((done / span) * 20)));
 
   const refresh = (keepSel = false): void => {
     void apiSaves()
@@ -67,6 +73,34 @@ export function StartScreen({ me }: { me: MeInfo }) {
             <NewGameForm onClose={() => { setCreating(false); refresh(); }} />
           ) : (
             <div className="w95-form">
+              {/* PLAN-22: карточка уровня — открытые комбо, звание реального разработчика и прогресс */}
+              <div className="w95-bevel-out" style={{ padding: 8, marginBottom: 10, display: 'flex', gap: 10 }}>
+                <div style={{ fontSize: 32, lineHeight: '32px', width: 40, textAlign: 'center' }} title="Звание">
+                  {pr?.rank.icon ?? '🥚'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div>
+                    <b>{pr?.rank.name ?? 'Загрузка профиля…'}</b>{' '}
+                    <span className="w95-hint">— твой уровень разработчика</span>
+                  </div>
+                  <div className="w95-hint" style={{ marginTop: 2 }}>
+                    Открыто комбо: <b>{pr?.count ?? 0}</b>
+                    {pr?.next
+                      ? <> · до звания «{pr.next.icon} {pr.next.name}» ещё <b>{pr.next.need}</b></>
+                      : pr ? <> · выше только легенды индустрии</> : null}
+                  </div>
+                  <div className="w95-bevel-in" style={{ height: 14, padding: 2, marginTop: 4 }}>
+                    <div style={{ display: 'flex', gap: 1, height: '100%' }}>
+                      {Array.from({ length: 20 }, (_, i) => (
+                        <div key={i} style={{ flex: 1, background: i < blocks ? '#000080' : 'transparent' }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="w95-hint" style={{ marginTop: 5 }}>
+                    {pr?.rank.why ?? 'Сыграйте первую игру — и узнаете, на кого вы уже похожи.'}
+                  </div>
+                </div>
+              </div>
               <div className="w95-caption">
                 <span>Мои сохранения</span>
                 <span className="w95-hint">партии в базе, у каждого игрока свои</span>

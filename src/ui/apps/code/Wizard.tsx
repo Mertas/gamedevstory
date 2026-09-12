@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Mode } from '../../../core/config';
 import { projectCost } from '../../../core/formulas';
 import {
-  comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
+  consoleAvailable, consoleById, genreById, isUnlocked, typeById,
 } from '../../../shared/meta';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../../../core/types';
 import type { DirectionAxis, Role } from '../../../core/types';
@@ -12,6 +12,7 @@ import {
   actionGenerateStory, actionStartProject, clearActionError, clearStoryResult, showClientError,
   useActionError, useStoryResult, useGame, useMeta,
 } from '../../store';
+import { useProfile } from '../../profile';
 import { MODES, ROLE_LABELS } from './shared';
 
 const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = DIRECTION_ORDER.map((id) => ({
@@ -28,7 +29,7 @@ const WIZ_STEPS = [
   { id: 7, label: 'Итог' },
 ];
 
-const COMBO_COLOR: Record<string, string> = { S: '#008000', A: '#0000cc', B: '#606060', C: '#a0a0a0' };
+
 export function ProjectWizard() {
   const game = useGame();
   const meta = useMeta();
@@ -74,16 +75,25 @@ export function ProjectWizard() {
   const actionError = useActionError();
 
   // доступные варианты — только открытые (жанры: уровни карьер; типы: + тренинги)
+  // PLAN-22: открытые игроком комбо (аккаунт, не сейв) — такие пары доступны всегда
+  const profile = useProfile();
+  const opened = useMemo(() => new Set(profile?.combos ?? []), [profile]);
+  const openedGenres = useMemo(() => new Set([...opened].map((k) => k.split('|')[0] ?? '')), [opened]);
+  const openedTypes = useMemo(() => new Set([...opened].map((k) => k.split('|')[1] ?? '')), [opened]);
+
   const consoles = useMemo(() => meta.consoles.filter((c) => {
     const cs = game.consoles[c.id];
     return cs && cs.licensed && consoleAvailable(game, c.id);
   }), [game, meta]);
   const genres = useMemo(
-    () => meta.genres.filter((gg) => isUnlocked(game, gg.unlockJob, gg.unlockLevel)),
+    () => meta.genres.filter((gg) =>
+      isUnlocked(game, gg.unlockJob, gg.unlockLevel) || openedGenres.has(gg.id)),
     [game, meta],
   );
   const types = useMemo(
-    () => meta.types.filter((t) => isUnlocked(game, t.unlockJob, t.unlockLevel, t.unlockTraining)),
+    () => meta.types.filter((t) =>
+      isUnlocked(game, t.unlockJob, t.unlockLevel, t.unlockTraining)
+      || (genreId ? opened.has(`${genreId}|${t.id}`) : openedTypes.has(t.id))),
     [game, meta],
   );
 
@@ -102,7 +112,7 @@ export function ProjectWizard() {
         mode,
       )
     : 0;
-  const combo = genre && type ? comboGrade(meta, genre.id, type.id) : null;
+
   const canAfford = cost > 0 && cost <= game.money;
 
   // шаг завершён?
@@ -264,18 +274,16 @@ export function ProjectWizard() {
                 </div>
               )}
               <div className="w95-hint">
-                {genre ? `Комбо с «${genre.ru}»: S — отлично, A — хорошо. ` : ''}
                 Открытые типы ({types.length}/{meta.types.length}); остальные — за уровни и тренинги.
+                Качество комбо узнаете, когда начнёте разработку.
               </div>
               <div className="w95-field" style={{ maxHeight: 260, overflowY: 'auto' }}>
                 {types.map((t) => {
-                  const cg = genre ? comboGrade(meta, genre.id, t.id) : null;
                   return (
                     <div key={t.id} className="w95-li" style={{ padding: '1px 4px' }} onClick={() => setTypeId(t.id)} data-autopilot={`wiz-type-${t.id}`}>
                       <label className="w95-row">
                         <input type="radio" checked={typeId === t.id} onChange={() => setTypeId(t.id)} />
                         {t.nameRu ?? t.name}
-                        {cg && <b style={{ color: COMBO_COLOR[cg] ?? '#000', marginLeft: 6 }}>({cg})</b>}
                         <span className="w95-hint">({t.popularity})</span>
                       </label>
                     </div>
@@ -378,7 +386,7 @@ export function ProjectWizard() {
                 <tbody>
                   <tr><td style={{ width: 140 }}>Платформа</td><td>{consoleData?.name}</td></tr>
                   <tr><td>Игра</td><td><b>{genre?.ru ?? '—'} × {type?.nameRu ?? type?.name ?? '—'}</b></td></tr>
-                  <tr><td>Комбо</td><td><b style={{ color: COMBO_COLOR[combo ?? ''] ?? '#000' }}>{combo ?? '—'}</b></td></tr>
+
                   <tr><td>Режим</td><td>{MODES.find((m) => m.id === mode)?.label}</td></tr>
                   <tr><td>Направление</td><td>{dirSummary}</td></tr>
                   <tr><td>Ответственные</td><td>
@@ -436,7 +444,7 @@ export function ProjectWizard() {
         <div className="w95-row" style={{ justifyContent: 'space-between' }}>
           <span>
             Стоимость: <b>{cost > 0 ? `${Math.round(cost)}K` : '—'}</b>
-            {combo && <span> · Комбо: <b style={{ color: COMBO_COLOR[combo] ?? '#000' }}>{combo}</b></span>}
+
             <span className="w95-hint"> · В кассе: {Math.round(game.money)}K</span>
             {cost > 0 && !canAfford && <span style={{ color: '#c00000' }}> — не хватает!</span>}
           </span>

@@ -261,3 +261,22 @@ describe('безопасность паролей: s2-схема, перец и 
     u.close();
   });
 });
+
+describe('PLAN-22: открытые комбо в аккаунте', () => {
+  it('addCombos дописывает только новые, combosCount = уровень', () => {
+    const file = tmpDb();
+    const u = new UserService(file);
+    const reg = u.register('Mertas', '12345678');
+    expect(reg.ok).toBe(true);
+    if (!reg.ok) throw new Error('регистрация не прошла');
+    const id = reg.user.id;
+    expect(u.listCombos(id)).toEqual([]);
+    expect(u.combosCount(id)).toBe(0);
+    expect(u.addCombos(id, ['rpg|pirate', 'table|puzzle'])).toBe(2);
+    expect(u.addCombos(id, ['rpg|pirate', 'table|puzzle'])).toBe(0); // дубликаты не считаются
+    expect(u.addCombos(id, ['rpg|pirate', 'action|racing'])).toBe(1);
+    expect(u.combosCount(id)).toBe(3); // набор только растёт
+    expect(u.listCombos(id)).toContain('action|racing');
+    u.close();
+  });
+});

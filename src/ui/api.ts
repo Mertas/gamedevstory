@@ -54,6 +54,15 @@ export interface Result {
   error?: string;
 }
 
+/** PLAN-22: профиль игрока — уровень = число открытых комбо. */
+export interface ProfileInfo {
+  ok: boolean;
+  count: number;
+  rank: { icon: string; name: string; why: string; from: number };
+  next: { icon: string; name: string; from: number; need: number } | null;
+  combos: string[];
+}
+
 async function call<T>(url: string, body?: unknown, method?: string): Promise<T & Result> {
   const res = await fetch(url, {
     method: method ?? (body === undefined ? 'GET' : 'POST'),
@@ -65,6 +74,11 @@ async function call<T>(url: string, body?: unknown, method?: string): Promise<T 
   } catch {
     return { ok: false, error: `Сервер ответил ${res.status}` } as T & Result;
   }
+}
+
+/** PLAN-22: профиль (уровень, звание, открытые комбо). */
+export async function apiProfile(): Promise<ProfileInfo> {
+  return call<ProfileInfo>('/api/profile');
 }
 
 /** Сессия: пользователь (или null) + возможности сервера. */

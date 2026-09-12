@@ -12,7 +12,15 @@ export function comboGradeFrom(table: Record<string, string>, genreOrder: string
 }
 
 /** Открыт ли жанр/тип: уровни сотрудников + пройденный тренинг. */
-export function isUnlocked(game: GameState, job: string | null, level: number | null, training?: string | null): boolean {
+export function isUnlocked(
+  game: GameState,
+  job: string | null,
+  level: number | null,
+  training?: string | null,
+  comboKey?: string,
+): boolean {
+  // PLAN-22: комбо, открытые игроком в аккаунте, доступны в любой партии — независимо от сейва
+  if (comboKey && game.openedCombos?.includes(comboKey)) return true;
   if (job && level && !game.staff.some((s) => (s.careers[job as CareerId] ?? 0) >= level)) return false;
   if (training && !game.unlockedTrainings.some((x) => x.toLowerCase().includes(training.toLowerCase()))) return false;
   return true;

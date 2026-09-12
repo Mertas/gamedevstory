@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import { advanceWeeks, newGame, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startProjectAction, tick } from '../src/core/engine';
 import { createRng } from '../src/core/rng';
+import { autopilotProjectInput } from '../src/core/sim/policy';
+import { isUnlocked } from '../src/shared/rules';
 import { resolveBoost } from '../src/core/systems/dev';
 import { consoleAvailable } from '../src/core/systems/dev';
 import { dateToDay, dailySales, tickMediaEvents } from '../src/core/systems/market';
@@ -593,5 +595,22 @@ describe('AP-13: отладка копит дробный прогресс (сл
     const removed = 10 - ag.bugs;
     expect(removed).toBeGreaterThanOrEqual(Math.floor(rate * 7));
     expect(removed).toBeLessThanOrEqual(Math.ceil(rate * 7) + 1);
+  });
+});
+
+describe('PLAN-22: открытые комбо (набор аккаунта, вне сейва)', () => {
+  it('запуск проекта записывает пару «жанр|тип» в состояние игры', () => {
+    const g = newGame(5);
+    expect(g.openedCombos ?? []).toEqual([]);
+    const input = autopilotProjectInput(g)!;
+    expect(startProjectAction(g, input).ok).toBe(true);
+    expect(g.openedCombos).toContain(`${input.genreId}|${input.typeId}`);
+  });
+
+  it('открытая пара доступна в новой партии, даже если должность не прокачана', () => {
+    const g = newGame(6);
+    expect(isUnlocked(g, 'director', 1, null, 'sim-rpg|pirate')).toBe(false);
+    g.openedCombos = ['sim-rpg|pirate'];
+    expect(isUnlocked(g, 'director', 1, null, 'sim-rpg|pirate')).toBe(true);
   });
 });

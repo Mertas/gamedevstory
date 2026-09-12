@@ -128,6 +128,11 @@ export class UserService {
         code TEXT PRIMARY KEY, note TEXT, created INTEGER NOT NULL,
         used_by INTEGER, used_at INTEGER
       );
+      -- PLAN-22: открытые комбо — прогресс аккаунта, живёт вне сейвов
+      CREATE TABLE IF NOT EXISTS user_combos (
+        user_id INTEGER NOT NULL, combo TEXT NOT NULL, first_at INTEGER NOT NULL,
+        source TEXT NOT NULL DEFAULT 'start', PRIMARY KEY (user_id, combo)
+      );
     `);
     this.migrate();
   }
@@ -307,6 +312,30 @@ export class UserService {
   revokeInvite(code: string): boolean {
     const info = this.db.prepare('DELETE FROM invites WHERE code = ? AND used_by IS NULL').run(code.trim().toUpperCase());
     return Number(info.changes) > 0;
+  }
+
+  // ─── открытые комбо (PLAN-22: уровень игрока, живёт в аккаунте, а не в сейве) ───
+
+  /** Все пары «жанр|тип», открытые игроком когда-либо. */
+  listCombos(userId: number): string[] {
+    const rows = this.db.prepare('SELECT combo FROM user_combos WHERE user_id = ? ORDER BY first_at').all(userId) as Array<{ combo: string }>;
+    return rows.map((r) => String(r.combo));
+  }
+
+  /** Дописать пары (только новые): набор открытий никогда не уменьшается. */
+  addCombos(userId: number, combos: string[], source = 'start'): number {
+    if (!combos.length) return 0;
+    const st = this.db.prepare('INSERT OR IGNORE INTO user_combos (user_id, combo, first_at, source) VALUES (?, ?, ?, ?)');
+    const now = Date.now();
+    let added = 0;
+    for (const c of combos) if (Number(st.run(userId, String(c), now, source).changes) > 0) added++;
+    return added;
+  }
+
+  /** Сколько комбо открыто — это и есть уровень игрока. */
+  combosCount(userId: number): number {
+    const row = this.db.prepare('SELECT COUNT(*) AS n FROM user_combos WHERE user_id = ?').get(userId) as { n: number };
+    return Number(row.n);
   }
 
   // ─── сохранения ───

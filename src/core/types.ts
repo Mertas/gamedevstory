@@ -209,6 +209,8 @@ export interface GameState {
   activeGame: ActiveGame | null; // проект в производстве
   released: ActiveGame[]; // выпущенные игры, ещё продающиеся
   history: GameRecord[];
+  /** PLAN-22: комбо «жанр|тип», открытые игроком (набор аккаунта, подмешивается на старте сессии) */
+  openedCombos?: string[];
   genreLevels: Record<string, number>;
   typeLevels: Record<string, number>;
   consoles: Record<string, ConsoleState>;

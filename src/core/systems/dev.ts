@@ -29,6 +29,8 @@ export function comboGrade(genreId: string, typeId: string): ComboGrade {
   return comboGradeFrom(COMBO_GRADES, GENRE_ORDER, genreId, typeId) as ComboGrade;
 }
 
+import { comboKey } from '../../shared/rank';
+
 // открыт ли жанр/тип — общее правило (shared/rules.ts, CORE-04)
 export { isUnlocked };
 
@@ -51,8 +53,9 @@ export function startProject(state: GameState, input: StartProjectInput): Action
   if (state.bankrupt) return { ok: false, error: 'Компания банкрот' };
   if (!consoleAvailable(state, input.consoleId)) return { ok: false, error: 'Консоль недоступна' };
   if (!cs.licensed) return { ok: false, error: 'Нужна лицензия на консоль' };
-  if (!isUnlocked(state, genre.unlockJob, genre.unlockLevel)) return { ok: false, error: `Жанр «${genre.name}» не открыт` };
-  if (!isUnlocked(state, type.unlockJob, type.unlockLevel, type.unlockTraining)) {
+  const pair = comboKey(input.genreId, input.typeId); // PLAN-22: открытые пары доступны всегда
+  if (!isUnlocked(state, genre.unlockJob, genre.unlockLevel, null, pair)) return { ok: false, error: `Жанр «${genre.name}» не открыт` };
+  if (!isUnlocked(state, type.unlockJob, type.unlockLevel, type.unlockTraining, pair)) {
     return { ok: false, error: `Тип «${type.name}» не открыт${type.unlockTraining ? ' (нужен тренинг)' : ''}` };
   }
   if (!state.staff.some((s) => s.id === input.proposalStaffId)) return { ok: false, error: 'Нет сценариста' };

@@ -77,6 +77,10 @@ export interface GameServerDeps {
   savePath?: string;
   /** PLAN-18: хранилище партии (у пользователей — запись в БД); по умолчанию — файл savePath */
   persist?: PersistAdapter;
+  /** PLAN-22: открытые комбо аккаунта — подмешиваются в состояние при подъёме сессии */
+  openedCombos?: string[];
+  /** PLAN-22: новые открытия уезжают в аккаунт на автосейве */
+  onCombosChanged?: (combos: string[]) => void;
 }
 
 export class GameServer {
@@ -106,6 +110,9 @@ export class GameServer {
   letterNextAt = 0;
   mailShownId = 0; // последнее письмо, опубликованное в чат
   fanReplyQueued = false; // реакция команды ждёт свободного чата
+  /** PLAN-22: сколько пар уже отправлено в аккаунт (не гоняем запись на каждом автосейве) */
+  private syncedCombos = 0;
+  private onCombosChanged?: (combos: string[]) => void;
 
   constructor(deps: GameServerDeps = {}) {
     this.llm = deps.llm ?? generateWithFallback;
@@ -116,6 +123,10 @@ export class GameServer {
     this.chat = loaded?.chat ?? resetChat();
     // BUG-01: догон консольных событий, пропущенных к текущему дню (старый сейв/пауза)
     if (loaded) consoleEvents(this.game);
+    // PLAN-22: набор аккаунта — источник правды по доступности комбо (сейв мог отстать)
+    this.onCombosChanged = deps.onCombosChanged;
+    this.game.openedCombos = [...new Set([...(this.game.openedCombos ?? []), ...(deps.openedCombos ?? [])])];
+    this.syncedCombos = this.game.openedCombos.length;
     this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
     this.startTicker();
   }
@@ -316,6 +327,12 @@ export class GameServer {
   /** @internal для GameTicker: обычный автосейв; force — в обход дебаунса по дням */
   autosave(force = false): void {
     this.saves.autosave(this.game, this.chat, force);
+    // PLAN-22: новые открытые комбо — в аккаунт (набор аккаунта растёт, из сейва не берём)
+    const combos = this.game.openedCombos ?? [];
+    if (this.onCombosChanged && combos.length > this.syncedCombos) {
+      this.syncedCombos = combos.length;
+      this.onCombosChanged(combos);
+    }
   }
 
   /** остановка тикера (тесты, graceful shutdown) */

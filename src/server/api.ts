@@ -5,6 +5,7 @@ import type { CareerId } from '../core/data/schema';
 import { INVITE_REQUIRED, PASSWORD_RESET } from './config';
 import type { Mailer } from './mailer';
 import { RateLimit } from './ratelimit';
+import { nextRank, rankFor } from '../shared/rank';
 import type { InviteRow, SaveMeta, UserService, UserRow } from './users';
 
 export const SESSION_COOKIE = 'gds_session';
@@ -181,6 +182,23 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     if (!u.admin) return void res.status(403).json({ ok: false, error: 'Инвайты выдаёт только владелец студии' });
     fn(u);
   };
+
+  // PLAN-22: профиль игрока — уровень = число открытых комбо, звание по порогам
+  app.get('/api/profile', (req, res) => {
+    withUser(req, res, (u) => {
+      const combos = users.listCombos(u.id);
+      const rank = rankFor(combos.length);
+      const next = nextRank(combos.length);
+      res.json({
+        ok: true,
+        count: combos.length,
+        rank: { icon: rank.icon, name: rank.name, why: rank.why, from: rank.from },
+        next: next ? { icon: next.rank.icon, name: next.rank.name, from: next.rank.from, need: next.need } : null,
+        total: combos.length,
+        combos,
+      });
+    });
+  });
 
   app.get('/api/invites', (req, res) => {
     withAdmin(req, res, () => {
