@@ -20,11 +20,23 @@ export interface SalesView {
   rank: number; // место по копям среди игр студии (1 — лучшая)
   total: number; // сколько всего игр у студии
   record: boolean; // рекорд студии по копям
+  scaleWeek1: number; // PLAN-30: полная первая неделя по плану — верх шкалы столбиков
+  planRevenue: number; // PLAN-30: доход по всему плану — верх шкалы линии дохода
 }
 
 /** Копии по записи: факт, если считается (PLAN-29), иначе план — сравнения на одной основе. */
 export function recordUnits(h: GameRecord): number {
   return h.paidUnits ?? h.units;
+}
+
+/**
+ * PLAN-30: копии в формате босса — до 100 тыс. точное число (до единиц), дальше «100к», «101к»…
+ * units в ядре — в тысячах, поэтому умножаем на 1000.
+ */
+export function fmtCopies(unitsK: number): string {
+  const copies = Math.round(unitsK * 1000);
+  if (copies < 100_000) return copies.toLocaleString('ru-RU');
+  return `${Math.floor(copies / 1000)}к`;
 }
 
 export function fmtUnits(u: number): string {
@@ -71,12 +83,12 @@ export function pickSalesView(released: ActiveGame[], history: GameRecord[], wee
     const sums = sumsUpTo(live.sales, week);
     // копии: факт (paidUnits) → сумма по графику → доля плана (старые сейвы, где копии дня округлены)
     const share = live.totalRevenue > 0 ? Math.min(1, sums.revenue / live.totalRevenue) : 0;
+    // Дробные копии дня есть только у планов после PLAN-29. У старых копии дня целые (0.66 → 1, 0.19 → 0),
+    // поэтому там честнее оценка по доле выручки от плана, а не счётчик.
     const raw =
-      live.paidUnits && live.paidUnits > 0
+      live.sales[0]?.unitsF !== undefined && live.paidUnits && live.paidUnits > 0
         ? live.paidUnits
-        : sums.units > 0
-          ? sums.units
-          : live.totalUnits * share;
+        : live.totalUnits * share;
     const units = Math.round(raw * 10) / 10; // дробные копии (мелкие игры продают < 1/день)
     const revenue = Math.round(live.paidRevenue ?? sums.revenue);
     const others = othersOf(history, live.name, live.releaseWeek);
@@ -92,6 +104,8 @@ export function pickSalesView(released: ActiveGame[], history: GameRecord[], wee
       rank: unitsRank(others, units),
       total: others.length + 1,
       record: isUnitsRecord(others, units),
+      scaleWeek1: live.sales.slice(0, 7).reduce((a, x) => a + (x.unitsF ?? x.units), 0),
+      planRevenue: live.totalRevenue,
     };
   }
   const last = [...history].sort((a, b) => b.releaseWeek - a.releaseWeek)[0];
@@ -111,5 +125,7 @@ export function pickSalesView(released: ActiveGame[], history: GameRecord[], wee
     rank: unitsRank(others, units),
     total: others.length + 1,
     record: isUnitsRecord(others, units),
+    scaleWeek1: 0,
+    planRevenue: 0,
   };
 }

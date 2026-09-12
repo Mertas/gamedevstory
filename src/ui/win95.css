@@ -401,6 +401,10 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .sales-name { padding: 5px 8px 0; font-weight: 700; }
 .sales-chart { display: block; margin: 4px auto 0; background: #000; border: 1px solid; border-color: #404040 #fff #fff #404040; }
 .sales-bar { fill: #1084d0; }
+.sales-bar.current { fill: #45b6ff; }
+.sales-grid { stroke: #2b4a66; stroke-width: .6; }
+.sales-axlabel { fill: #9fd0ff; font-size: 7.5px; }
+.sales-moneylabel { fill: #ffd84d; font-size: 8px; font-weight: 700; }
 .sales-line { stroke: #ffd84d; stroke-width: 1.6; }
 .sales-axis { stroke: #555; stroke-width: 1; }
 .sales-nums { display: flex; justify-content: space-between; padding: 5px 8px 0; font-weight: 700; }

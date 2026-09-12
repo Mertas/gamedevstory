@@ -127,6 +127,19 @@ export function hypeMult(fame: number, hype: number): number {
   return Math.min(CONFIG.HYPE_MULT_CAP, CONFIG.HYPE_MULT_BASE + (fame + hype) / 200);
 }
 
+/** PLAN-30: обратный easeInOutQuart — распределение продаж во времени (пик в начале, плавное быстрое затухание). */
+export function easeInOutQuart(t: number): number {
+  return t < 0.5 ? 8 * t * t * t * t : 1 - ((-2 * t + 2) ** 4) / 2;
+}
+
+// Доли дней продаж: 1 − easeInOutQuart, нормировано на 1 (сумма всех долей = 1).
+// Форма: первые ~8 недель почти плато (~65% тиража), затем S-спад к 16-й неделе, хвост ~0.
+const DAY_WEIGHTS = (() => {
+  const raw = Array.from({ length: CONFIG.SALES_DAYS }, (_, i) => 1 - easeInOutQuart((i + 0.5) / CONFIG.SALES_DAYS));
+  const sum = raw.reduce((a, b) => a + b, 0);
+  return raw.map((v) => v / sum);
+})();
+
 export interface SalesPlanInput {
   installBase: number; // тыс.
   score: number;
@@ -141,7 +154,7 @@ export interface SalesPlanInput {
 }
 
 export interface SalesPlan {
-  weeks: { week: number; units: number; revenue: number }[];
+  weeks: { week: number; units: number; revenue: number; unitsF?: number }[];
   totalUnits: number;
   totalRevenue: number;
 }
@@ -165,8 +178,8 @@ export function salesPlan(input: SalesPlanInput): SalesPlan {
     const day = input.releaseWeek + i;
     const dayInYear = ((day - 1) % CONFIG.YEAR_LENGTH) + 1;
     const winter = dayInYear >= CONFIG.WINTER_SPIKE_DAY && dayInYear <= CONFIG.WINTER_SPIKE_DAY + 6 ? 2 : 1;
-    const curve = CONFIG.SALES_CURVE[Math.floor(i / 7)] ?? 0;
-    const units = totalUnits * curve * winter / 7;
+    // PLAN-30: доля дня по обратному easeInOutQuart (вместо недельной таблицы)
+    const units = totalUnits * (DAY_WEIGHTS[i] ?? 0) * winter;
     const revenue = units * price;
     totalRevenue += revenue;
     // PLAN-29: units — целые (историческое поле), unitsF — дробь: у мелких игр продажи < 1 копии в день,

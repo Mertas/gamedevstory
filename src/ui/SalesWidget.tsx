@@ -1,10 +1,11 @@
-// PLAN-29: окошко продаж (правый верхний угол рабочего стола).
-// Пока игра продаётся — живой график копий и накопленного дохода; после окончания продаж —
-// итоговая сумма, место в студии по копям и подсветка рекорда. Сквозь окошко кликаем: мышь
-// ловит только крестик (иначе оно мешало бы и игроку, и автопилоту).
+// PLAN-29/30: окошко продаж (правый верхний угол рабочего стола).
+// Живой режим: синие столбики — продажи по НЕДЕЛЯМ (текущая неделя растёт день ото дня, шкала
+// задана полной первой неделей — она максимальная), жёлтая линия с подписью — накопленный доход,
+// слева подписи вертикальной оси. После продаж — итог, место в студии и подсветка рекорда.
+// Сквозь окошко кликаем: мышь ловит только крестик.
 import { useState } from 'react';
 import { useGameSelector } from './store';
-import { fmtUnits, pickSalesView, type SalesDay } from '../shared/sales-stats';
+import { fmtCopies, pickSalesView, type SalesDay } from '../shared/sales-stats';
 
 const CLOSED_KEY = 'gds-sales-closed';
 
@@ -16,31 +17,58 @@ function loadClosed(): Set<string> {
   }
 }
 
-function SalesChart({ sales }: { sales: SalesDay[] }) {
-  const W = 236;
-  const H = 62;
-  const n = Math.max(sales.length, 1);
-  const maxU = Math.max(0.01, ...sales.map((s) => s.unitsF ?? s.units));
-  const bw = W / n;
+/** График: столбики продаж по неделям + линия накопленного дохода + подписи вертикальной оси. */
+function SalesChart({ sales, scale, planRevenue, money }: { sales: SalesDay[]; scale: number; planRevenue: number; money: number }) {
+  const W = 240;
+  const H = 80;
+  const LEFT = 36;
+  const TOP = 6;
+  const BOT = 66;
+  const slot = (W - LEFT) / 24;
+  const weeks = Array.from({ length: 24 }, () => 0);
   let acc = 0;
-  let total = 0;
-  for (const s of sales) total += s.revenue;
-  const line = sales
-    .map((s, i) => {
-      acc += s.revenue;
-      const x = (i + 0.5) * bw;
-      const y = H - 3 - (acc / Math.max(1, total)) * (H - 10);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+  const line: string[] = [];
+  sales.forEach((s, i) => {
+    const w = Math.floor(i / 7);
+    if (w < 24) weeks[w] = (weeks[w] ?? 0) + (s.unitsF ?? s.units);
+    acc += s.revenue;
+    const x = LEFT + ((i + 0.5) / 7) * slot;
+    const y = BOT - Math.min(1, acc / Math.max(1, planRevenue)) * (BOT - TOP);
+    line.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  });
+  const current = Math.floor((sales.length - 1) / 7);
+  const yOf = (v: number) => BOT - Math.min(1, v / Math.max(0.0001, scale)) * (BOT - TOP);
+  const lastY = sales.length > 1 ? Number((line[line.length - 1] ?? '').split(',')[1]) : BOT;
   return (
-    <svg className="sales-chart" viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="График продаж">
-      {sales.map((s, i) => {
-        const h = Math.max(1, ((s.unitsF ?? s.units) / maxU) * (H - 8));
-        return <rect key={s.week} className="sales-bar" x={i * bw} y={H - 2 - h} width={Math.max(1, bw - 0.6)} height={h} />;
+    <svg className="sales-chart" viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Продажи по неделям и накопленный доход">
+      {[scale, scale / 2, 0].map((v, k) => (
+        <g key={k}>
+          <line className="sales-grid" x1={LEFT} y1={yOf(v)} x2={W - 2} y2={yOf(v)} />
+          <text className="sales-axlabel" x={LEFT - 4} y={yOf(v) + 3} textAnchor="end">
+            {fmtCopies(v)}
+          </text>
+        </g>
+      ))}
+      {weeks.map((v, w) => {
+        const y = yOf(v);
+        return (
+          <rect
+            key={w}
+            className={`sales-bar${w === current ? ' current' : ''}`}
+            x={LEFT + w * slot + 0.8}
+            y={y}
+            width={Math.max(1, slot - 1.6)}
+            height={Math.max(0.5, BOT - y)}
+          />
+        );
       })}
-      {sales.length > 1 && <polyline className="sales-line" fill="none" points={line} />}
-      <line className="sales-axis" x1="0" y1={H - 1.5} x2={W} y2={H - 1.5} />
+      {sales.length > 1 && <polyline className="sales-line" fill="none" points={line.join(' ')} />}
+      {sales.length > 1 && (
+        <text className="sales-moneylabel" x={W - 3} y={Math.max(TOP + 7, Math.min(BOT, lastY) - 3)} textAnchor="end">
+          {money}K
+        </text>
+      )}
+      <line className="sales-axis" x1={LEFT} y1={BOT} x2={W - 2} y2={BOT} />
     </svg>
   );
 }
@@ -75,10 +103,10 @@ export function SalesWidget() {
       <div className="sales-name">{view.name}</div>
       {view.live && view.sales.length > 0 ? (
         <>
-          <SalesChart sales={view.sales} />
+          <SalesChart sales={view.sales} scale={view.scaleWeek1} planRevenue={view.planRevenue} money={view.revenue} />
           <div className="sales-nums">
             <span key={`u${view.day}`} className="sales-num">
-              🛒 {fmtUnits(view.units)}
+              🛒 {fmtCopies(view.units)}
             </span>
             <span key={`r${view.day}`} className="sales-num">
               💰 {view.revenue}K
@@ -88,7 +116,7 @@ export function SalesWidget() {
       ) : (
         <div className="sales-final">
           <div className="sales-total">💰 {view.revenue}K</div>
-          <div className="sales-sub">продано {fmtUnits(view.units)} копий</div>
+          <div className="sales-sub">продано {fmtCopies(view.units)} копий</div>
           <div className="sales-sub">
             место в студии: <b>#{view.rank}</b> из {view.total}
           </div>

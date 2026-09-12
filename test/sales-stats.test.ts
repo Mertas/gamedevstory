@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { newGame } from '../src/core/engine';
 import { dailySales } from '../src/core/systems/market';
-import { fmtUnits, isUnitsRecord, pickSalesView, unitsRank } from '../src/shared/sales-stats';
+import { fmtCopies, fmtUnits, isUnitsRecord, pickSalesView, unitsRank } from '../src/shared/sales-stats';
 import type { ActiveGame, GameRecord } from '../src/core/types';
 
 const rec = (name: string, units: number, releaseWeek = 1): GameRecord =>
@@ -21,6 +21,15 @@ describe('PLAN-29 окно продаж: место и рекорд', () => {
     expect(isUnitsRecord([500, 1200], 1000)).toBe(false);
   });
 
+  it('PLAN-30: копии — точно до 100 тыс., дальше 100к/101к', () => {
+    expect(fmtCopies(34.027)).toMatch(/^34[\s\u00A0\u202F]027$/); // до единиц, с разделителем
+    expect(fmtCopies(0.405)).toBe('405');
+    expect(fmtCopies(100)).toBe('100к'); // ровно 100 000
+    expect(fmtCopies(100.4)).toBe('100к');
+    expect(fmtCopies(101.9)).toBe('101к');
+    expect(fmtCopies(950.2)).toBe('950к');
+  });
+
   it('формат копий: K и M', () => {
     expect(fmtUnits(950)).toBe('950');
     expect(fmtUnits(1.4)).toBe('1.4'); // дробные копии мелких игр
@@ -33,9 +42,9 @@ describe('PLAN-29 окно продаж: что показываем', () => {
   const active = {
     name: 'Пиксель', genreId: 'g', typeId: 't', consoleId: 'pc-game', score: 30,
     releaseWeek: 100, sales: [
-      { week: 100, units: 100, revenue: 500 },
-      { week: 101, units: 60, revenue: 300 },
-      { week: 102, units: 20, revenue: 100 },
+      { week: 100, units: 100, unitsF: 100, revenue: 500 },
+      { week: 101, units: 60, unitsF: 60, revenue: 300 },
+      { week: 102, units: 20, unitsF: 20, revenue: 100 },
     ],
     totalUnits: 180, totalRevenue: 900, ended: false,
     paidUnits: 180, paidRevenue: 920,
@@ -52,6 +61,21 @@ describe('PLAN-29 окно продаж: что показываем', () => {
     expect(v.revenue).toBe(920);
     expect(v.rank).toBe(2); // «Старая» (500) впереди: наша 180 — вторая
     expect(v.total).toBe(2);
+  });
+
+  it('старый сейв (целые копии дня): оценка по доле выручки от плана', () => {
+    const legacy = {
+      ...active,
+      paidUnits: 21, // сломанный счётчик старых планов
+      sales: [
+        { week: 100, units: 40, revenue: 500 },
+        { week: 101, units: 25, revenue: 300 },
+      ],
+    } as unknown as ActiveGame;
+    const v = pickSalesView([legacy], [rec('Старая', 500, 50)], 101)!;
+    // 180 копий плана × (800/900 выручки) ≈ 160, а не сломанные 21
+    expect(v.units).toBeGreaterThan(150);
+    expect(v.units).toBeLessThan(170);
   });
 
   it('продажи кончились: итог последней игры + рекорд', () => {
