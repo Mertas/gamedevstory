@@ -1,5 +1,6 @@
 // ─── Журналы ───
 import { useGame } from '../../store';
+import { score100 } from '../../../shared/rules';
 
 export function MagazinesApp() {
   const game = useGame();
@@ -20,7 +21,7 @@ export function MagazinesApp() {
           {[...game.history].reverse().slice(0, 15).map((h, i) => (
             <tr key={i}>
               <td>{h.name}</td>
-              <td><b>{h.score}</b>/40</td>
+              <td><b>{score100(h.score)}</b>/100</td>
               <td>{Math.round(h.units)}K</td>
             </tr>
           ))}

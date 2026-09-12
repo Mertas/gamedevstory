@@ -150,7 +150,7 @@ describe('buildLetterPrompt: 4 тона писем', () => {
   it('жанр из письма попадает в факты — конкретика', () => {
     const p = buildLetterPrompt({ ...base, sentiment: 'love', genre: 'Гонки' });
     expect(p[1]!.content).toContain('жанр: Гонки');
-    expect(p[1]!.content).toContain('30/40');
+    expect(p[1]!.content).toContain('75/100');
   });
 });
 
@@ -189,7 +189,7 @@ describe('parseSingleMessage и итоги релиза (LLM-06 в,г)', () => {
     const text = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 241 } }, {})
       .map((m) => m.content)
       .join('\n');
-    expect(text).toContain('Итоги релиза: рецензии 33/40, продажи 241K копий.');
+    expect(text).toContain('Итоги релиза: рецензии 83/100, продажи 241K копий.');
     expect(text).not.toContain('"units"');
     const big = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 2500 } }, {})
       .map((m) => m.content)
@@ -204,7 +204,7 @@ describe('parseSingleMessage и итоги релиза (LLM-06 в,г)', () => {
     }, {})
       .map((m) => m.content)
       .join('\n');
-    expect(text).toContain('Итоги релиза игры «Furry Explorers» (Приключение × Животные, PC Game): рецензии 40/40, продажи 241K копий.');
+    expect(text).toContain('Итоги релиза игры «Furry Explorers» (Приключение × Животные, PC Game): рецензии 100/100, продажи 241K копий.');
   });
 });
 

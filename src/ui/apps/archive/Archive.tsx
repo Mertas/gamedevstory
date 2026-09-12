@@ -2,6 +2,7 @@
 import { CONFIG } from '../../../core/config';
 import { dateLabel } from '../../../shared/meta';
 import { useGame, useMeta } from '../../store';
+import { score100 } from '../../../shared/rules';
 
 export function ArchiveApp() {
   const game = useGame();
@@ -14,7 +15,7 @@ export function ArchiveApp() {
         <span>Игр: <b>{game.history.length}</b></span>
         <span>Продано: <b>{Math.round(totalUnits)}K</b></span>
         <span>Доход: <b>{Math.round(totalRev)}K</b></span>
-        <span>Рекорд: <b>{Math.max(0, ...game.history.map((h) => h.score))}/40</b></span>
+        <span>Рекорд: <b>{score100(Math.max(0, ...game.history.map((h) => h.score)))}/100</b></span>
       </div>
       <table className="w95-table">
         <thead>

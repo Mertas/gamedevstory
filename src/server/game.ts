@@ -37,6 +37,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'generate_story'; genreId: string; typeId: string; reqId?: number }
   | { type: 'set_speed'; v: number }
   | { type: 'set_ui'; ui: unknown } // PLAN-24: фон и раскладка окон в сейве
+  | { type: 'autopilot_done' } // PLAN-25: клиент отыграл хореографию политики (клики применили действия)
   | { type: 'new_game' }
   | { type: 'get_state' }
   // M3
@@ -266,6 +267,11 @@ export class GameServer {
   /** @internal для GameTicker: «театр» событий, обсуждение→решение, таймаут плана */
   maybeAutopilot(): void {
     this.pilot.maybeAutopilot();
+  }
+
+  /** PLAN-25: сигнал от клиента — хореография политики отыграна, откат по дедлайну не нужен. */
+  autopilotStepsDone(): void {
+    this.pilot.autopilotStepsDone();
   }
 
   /** SRV-09: сброс сессионной чат-машины при новой игре/импорте сейва. */

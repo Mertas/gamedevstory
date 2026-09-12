@@ -1,3 +1,4 @@
+import { score100 } from '../../shared/rules';
 // Письма фанатов (M5): после релиза в окне LETTER_WINDOW_DAYS приходит письмо (шанс в день).
 // Тон — по оценке игры (≥25 любовь, ≤19 гнев, иначе нейтрально); эффект ±фанаты [Н].
 // Движок пишет текст-заготовку; сервер (game.ts) заменяет его письмом LLM (поле llm).
@@ -49,7 +50,7 @@ const FALLBACK: Record<FanLetterStyle, string[]> = {
 function fallbackText(rng: Rng, style: FanLetterStyle, gameName: string, score: number): string {
   const pool = FALLBACK[style];
   const t = pool[rng.int(0, pool.length - 1)] ?? pool[0]!;
-  return t.replace('{game}', gameName).replace('{score}', String(score));
+  return t.replace('{game}', gameName).replace('{score}', String(score100(score)));
 }
 
 // одно письмо за тик (return после первого сработавшего шанса)

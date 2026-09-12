@@ -283,6 +283,11 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   box-shadow: 2px 2px 0 rgba(0, 0, 0, .35);
 }
 
+/* PLAN-25: отметка открытого комбо в списке типов формы новой игры */
+.w95-combo-open {
+  display: inline-block; margin-left: 6px; padding: 0 4px; font-size: 10px; font-weight: 700;
+  color: #fff; background: var(--w95-navy); border-radius: 2px; vertical-align: middle;
+}
 /* ── Выбор фона рабочего стола (ПКМ по столу → «Сменить фон…», plan/24) ── */
 .w95-bg-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-height: 400px; overflow: auto; }
 .w95-bg-item {

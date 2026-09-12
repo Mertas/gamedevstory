@@ -7,7 +7,7 @@
 //   (реальный onClick → реальное действие с флагом autopilot:true)
 // - click: курсор летит к [data-autopilot=target] и нажимает кнопку
 import { useEffect, useRef, useState } from 'react';
-import { takeAutopilotStep, useAutopilot } from './store';
+import { takeAutopilotStep, useAutopilot, actionAutopilotDone } from './store';
 import { planDirClicks, type AutopilotPlan, type AutopilotStep } from '../shared/autopilot';
 import { useWindows } from './wm';
 
@@ -28,6 +28,7 @@ const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
 export function AutopilotCursor() {
   const wm = useRef(useWindows());
   const busyRef = useRef(false);
+  const playedRef = useRef(0); // PLAN-25: сколько шагов сыграно с последнего сигнала серверу
   // SRV-16: флаг автопилота в ref — интервал и хореография проверяют его без пересоздания эффекта
   const autopilot = useAutopilot();
   const autoRef = useRef(autopilot);
@@ -98,6 +99,8 @@ export function AutopilotCursor() {
     const clickTarget = async (target: string, quick = true, cosmetic = false): Promise<boolean> => {
       const el = await findTarget(target, cosmetic ? 1500 : 2500);
       if (!el) return false;
+      // PLAN-25: цель может быть ниже прокрутки окна — подводим её к видимой зоне
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       await flyTo(el, quick);
       await press(el, quick, cosmetic);
       return true;
@@ -242,14 +245,24 @@ export function AutopilotCursor() {
         return;
       }
       setLabel(step.label);
-      await clickTarget(step.target, step.quick === true, step.cosmetic === true);
+      const ok = await clickTarget(step.target, step.quick === true, step.cosmetic === true);
+      // PLAN-25: молчаливый пропуск цели хуже видимой жалобы — по ней сразу ясно, какой кнопки нет
+      if (!ok) setLabel(`⚠️ Кнопка не появилась: ${step.label ?? step.target}`);
     };
 
     const iv = window.setInterval(() => {
       if (busyRef.current) return;
       if (!autoRef.current) return; // SRV-16: после «Взять управление» очередь не доигрываем
       const step = takeAutopilotStep();
-      if (!step) return;
+      if (!step) {
+        // PLAN-25: очередь опустела после сыгранных шагов — сообщаем серверу, что откат не нужен
+        if (playedRef.current > 0) {
+          playedRef.current = 0;
+          actionAutopilotDone();
+        }
+        return;
+      }
+      playedRef.current += 1;
       busyRef.current = true;
       void playStep(step).finally(() => {
         busyRef.current = false;

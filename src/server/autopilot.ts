@@ -5,7 +5,7 @@ import { CONFIG } from '../core/config';
 import { GENRES, TYPES, CONSOLES, TRAININGS, ADS, STAFF, consoleById, genreById, typeById } from '../core/data/db';
 import { startProjectAction } from '../core/engine';
 import { consoleAvailable } from '../core/systems/dev';
-import { autopilotProjectInput, comboCostK, sequelOpportunity, type PolicyAction } from '../core/sim/policy';
+import { autopilotProjectInput, comboCostK, sequelOpportunity, type PolicyAction, resolvePendingEvent } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../core/types';
 import type { GameRecord, GameState, StartProjectInput } from '../core/types';
@@ -14,6 +14,7 @@ import type { ChatState } from '../shared/chat';
 import { buildDecisionPrompt, parseDecision } from './chatgen';
 import type { ChatThread } from './game';
 import type { LlmFn } from './giga';
+import { score100 } from '../shared/rules';
 
 /** AP-08: в затишье команда перекидывается репликой не чаще этого интервала (реальное время, мс). */
 const IDLE_CHAT_MS = 90_000;
@@ -106,7 +107,7 @@ export function buildDecisionContext(state: GameState): {
   const historyLine = state.history.slice(-3).map((h) => {
     const hg = genreById(h.genreId);
     const ht = typeById(h.typeId);
-    return `«${h.name}» — ${hg?.ru ?? hg?.name ?? h.genreId} × ${ht?.nameRu ?? ht?.name ?? h.typeId}, ${h.score}/40`;
+    return `«${h.name}» — ${hg?.ru ?? hg?.name ?? h.genreId} × ${ht?.nameRu ?? ht?.name ?? h.typeId}, ${score100(h.score)}/100`;
   }).join('; ');
   const lastProjectLine = state.lastGenreId && state.lastTypeId
     ? `${genreById(state.lastGenreId)?.ru ?? state.lastGenreId} × ${typeById(state.lastTypeId)?.nameRu ?? state.lastTypeId} (режим ${state.lastMode ?? 'normal'})`
@@ -116,7 +117,7 @@ export function buildDecisionContext(state: GameState): {
   const seqGenre = seq ? unlockedGenres.find((g) => g.id === seq.genreId) : undefined;
   const seqType = seq ? unlockedTypes.find((t) => t.id === seq.typeId) : undefined;
   const sequelLine = seq && seqGenre && seqType
-    ? `«${seqGenre.ru ?? seqGenre.name} × ${seqType.nameRu ?? seqType.name}» — ${seq.score}/40`
+    ? `«${seqGenre.ru ?? seqGenre.name} × ${seqType.nameRu ?? seqType.name}» — ${score100(seq.score)}/100`
     : undefined;
   // AP-04: свежие письма фанатов — команда их «читает»: разгром меняет жанр, восторг зовёт в сиквел
   const recentMail = state.mail.slice(-3);
@@ -205,46 +206,46 @@ export function policySteps(journal: PolicyAction[], state: GameState): Autopilo
       openApp('hire');
       goTab('team');
       const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотруднику';
-      steps.push({ kind: 'click', target: `lvl-${a.staffId}`, label: `Повышаю уровень: ${name}`, cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `lvl-${a.staffId}`, label: `Повышаю уровень: ${name}`, quick: true });
     } else if (a.type === 'train') {
       openApp('hire');
       goTab('training');
       const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотрудника';
       steps.push({ kind: 'card', staffId: a.staffId, app: 'hire', label: `Тренинг для: ${name}` });
       const t = TRAININGS.find((x) => x.id === a.trainingId);
-      steps.push({ kind: 'click', target: `train-${a.trainingId}`, label: `Тренинг: ${t?.nameRu ?? t?.name ?? a.trainingId}`, cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `train-${a.trainingId}`, label: `Тренинг: ${t?.nameRu ?? t?.name ?? a.trainingId}`, quick: true });
     } else if (a.type === 'ad') {
       openApp('marketing');
       const ad = ADS.find((x) => x.id === a.adId);
-      steps.push({ kind: 'click', target: `ad-${a.adId}`, label: `Реклама: ${ad?.nameRu ?? ad?.name ?? a.adId}`, cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `ad-${a.adId}`, label: `Реклама: ${ad?.nameRu ?? ad?.name ?? a.adId}`, quick: true });
     } else if (a.type === 'office') {
       openApp('hire');
       goTab('team');
-      steps.push({ kind: 'click', target: 'office-move', label: 'Переезжаю в новый офис', cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: 'office-move', label: 'Переезжаю в новый офис', quick: true });
     } else if (a.type === 'hire' && a.staffId) {
       openApp('hire');
       goTab('team');
       const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'нового сотрудника';
-      steps.push({ kind: 'click', target: `hire-${a.staffId}`, label: `Принимаю в команду: ${name}`, cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `hire-${a.staffId}`, label: `Принимаю в команду: ${name}`, quick: true });
     } else if (a.type === 'fire') {
       // AP-09: увольнение видно — имя из журнала (сотрудника в штате уже нет)
       openApp('hire');
       goTab('team');
       const name = a.name ?? state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотрудника';
-      steps.push({ kind: 'click', target: `fire-${a.staffId}`, label: `Увольняю: ${name}`, cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `fire-${a.staffId}`, label: `Увольняю: ${name}`, quick: true });
     } else if (a.type === 'license') {
       openApp('hardware');
       const c = CONSOLES.find((x) => x.id === a.consoleId);
-      steps.push({ kind: 'click', target: `lic-${a.consoleId}`, label: `Лицензия: ${c?.name ?? a.consoleId}`, cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `lic-${a.consoleId}`, label: `Лицензия: ${c?.name ?? a.consoleId}`, quick: true });
     } else if (a.type === 'booster') {
       openApp('hire');
       goTab('salesman');
-      steps.push({ kind: 'click', target: `booster-${a.boosterType}`, label: `Беру бустер (${a.boosterType})`, cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `booster-${a.boosterType}`, label: `Беру бустер (${a.boosterType})`, quick: true });
       // применение — в окне «Код» (панель «Бустеры»): выбрать сотрудника и нажать
       openApp('code');
       const name = state.staff.find((s) => s.id === a.staffId)?.name ?? 'сотрудника';
       steps.push({ kind: 'select', target: 'booster-staff', value: a.staffId, label: `Бустер — ${name}` });
-      steps.push({ kind: 'click', target: `booster-use-${a.boosterType}`, label: 'Применяю бустер', cosmetic: true, quick: true });
+      steps.push({ kind: 'click', target: `booster-use-${a.boosterType}`, label: 'Применяю бустер', quick: true });
     }
   }
   return steps;
@@ -287,6 +288,7 @@ export class AutopilotController {
   private pendingPlanDeadline = 0; // дедлайн самостоятельного старта, если клиент не нажал «Начать»
   private lastHadActiveGame = false; // переход activeGame→null сбрасывает decidedThisIdle
   private pendingEventSince: number | null = null; // «театр»: попап висит ~2.6с
+  private policyDeadline = 0; // PLAN-25: дедлайн, к которому клики мыши должны применить «хозяйство»
   private decisionEpoch = 0; // SRV-03: отмена решений автопилота (take_control во время LLM-запроса)
   private speedBefore = 1; // AP-07: скорость до включения автопилота (в неё вернём контроль)
   private autoTarget = 1; // AP-12: темп задаёт игрок (AP-07 разгонял до 4× — убрано)
@@ -380,11 +382,16 @@ export class AutopilotController {
     const avg = released.length ? Math.round(released.reduce((s, r) => s + r.score, 0) / released.length) : 0;
     const lines = [
       released.length ? `Игр выпущено: ${released.length}` : 'Игр выпущено: 0 — команда только разминалась.',
-      released.length ? `Средний счёт: ${avg}/40` : '',
-      best ? `Лучшая: «${best.name}» — ${best.score}/40${best.score >= CONFIG.HALL_OF_FAME ? ' — зал славы!' : ''}` : '',
+      released.length ? `Средний счёт: ${score100(avg)}/100` : '',
+      best ? `Лучшая: «${best.name}» — ${score100(best.score)}/100${best.score >= CONFIG.HALL_OF_FAME ? ' — зал славы!' : ''}` : '',
       `Деньги: ${delta >= 0 ? '+' : ''}${delta}K (${Math.round(this.session.money)}K → ${Math.round(g.money)}K)`,
     ].filter(Boolean);
     return { title: '🤖 Итоги автосессии', text: lines.join('\n') };
+  }
+
+  /** PLAN-25: клиент отыграл хореографию политики — откат не нужен. */
+  autopilotStepsDone(): void {
+    this.policyDeadline = 0;
   }
 
   maybeAutopilot(): void {
@@ -408,10 +415,16 @@ export class AutopilotController {
         this.h.emitStep({ kind: 'click', target: t.target, label: t.label });
       } else if (Date.now() - this.pendingEventSince >= 2600) {
         const journal: PolicyAction[] = [];
-        this.policy.turn(g, journal);
+        // PLAN-25: «хозяйство» политика решает на КОПИИ состояния, событие резолвим на реальном.
+        // Действия применят РЕАЛЬНЫЕ клики мыши (шаги ниже) — иначе игрок видел результат до клика
+        // («сначала левелапит, а потом нажимает кнопку»). Нет клиента — откат по дедлайну ниже.
+        this.policy.turn(structuredClone(g), journal);
+        if (g.pendingEvent) resolvePendingEvent(g, this.policy.stats);
         this.pendingEventSince = null;
-        // видимость: мышка показывает, что политика сделала «между делом» (прокачка/найм/реклама/…)
-        if (journal.length) for (const s of policySteps(journal, g)) this.h.emitStep(s);
+        if (journal.length) {
+          this.policyDeadline = Date.now() + journal.length * 3000 + 8000;
+          for (const s of policySteps(journal, g)) this.h.emitStep(s);
+        }
         this.h.emit();
       }
     } else {
@@ -452,7 +465,16 @@ export class AutopilotController {
       this.h.emit();
     }
 
-    // (4) AP-08: затишье — редкая реплика команды, чтобы паузы в чате оживали
+    // (4) PLAN-25: клиент не отыграл хореографию (нет браузера/завис) — доводим хозяйство сами
+    if (this.policyDeadline && Date.now() > this.policyDeadline) {
+      this.policyDeadline = 0;
+      const journal: PolicyAction[] = [];
+      this.policy.turn(g, journal);
+      if (journal.length) for (const s of policySteps(journal, g)) this.h.emitStep(s);
+      this.h.emit();
+    }
+
+    // (5) AP-08: затишье — редкая реплика команды, чтобы паузы в чате оживали
     this.maybeIdleChat();
   }
 

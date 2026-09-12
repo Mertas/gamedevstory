@@ -2,6 +2,7 @@
 // Порт extractJsonObject из LLMKing/src/server/llm.ts.
 import type { AutopilotPlan } from '../shared/autopilot';
 import { formatUnits } from '../core/systems/market';
+import { score100 } from '../shared/rules';
 
 interface LlmMessage { role: 'system' | 'user'; content: string }
 
@@ -76,7 +77,7 @@ export function buildLetterPrompt(letter: {
 }): LlmMessage[] {
   const genderWord = letter.gender === 'F' ? 'женщина' : 'мужчина';
   const st = LETTER_STYLES[letterStyle(letter)];
-  const gameLine = `Игра: «${letter.gameName}»${letter.genre ? ` (жанр: ${letter.genre})` : ''}, оценка критиков ${letter.score}/40.`;
+  const gameLine = `Игра: «${letter.gameName}»${letter.genre ? ` (жанр: ${letter.genre})` : ''}, оценка критиков ${score100(letter.score)}/100.`;
   return [
     {
       role: 'system',
@@ -139,7 +140,7 @@ export function buildMessages(phase: string, context: Record<string, unknown>, o
   // решала, что релиз провалился (реальный 241K). Формат — как в игре: 241K / 2.50M.
   const releaseParts = phase === 'release'
     ? [
-        ...(facts.score != null ? [`рецензии ${String(facts.score)}/40`] : []),
+        ...(facts.score != null ? [`рецензии ${String(score100(Number(facts.score)))}/100`] : []),
         ...(facts.units != null && Number.isFinite(Number(facts.units)) ? [`продажи ${formatUnits(Number(facts.units))} копий`] : []),
       ]
     : [];

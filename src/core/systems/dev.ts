@@ -11,7 +11,7 @@ import type {
   ActiveGame, ActionResult, ComboGrade, GameState, Role, Staff, StartProjectInput, Stats,
 } from '../types';
 import { DIRECTION_WEIGHTS, EMPTY_STATS } from '../types';
-import { comboGradeFrom, consoleReleased as consoleAvailable, isUnlocked } from '../../shared/rules';
+import { comboGradeFrom, consoleReleased as consoleAvailable, isUnlocked, score100 } from '../../shared/rules';
 
 export function genreById(id: string) {
   return GENRES.find((g) => g.id === id)!;
@@ -401,7 +401,7 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   if (state.history.length > 32) state.history.splice(0, state.history.length - 32);
 
   log(state, `РЕЛИЗ «${game.name}»: ${genre.name} × ${type.name} на ${consoleData.name}`);
-  log(state, `Рецензии: ${scores.join('/')} = ${total}/40 ${total >= CONFIG.HALL_OF_FAME ? '— ЗАЛ СЛАВЫ!' : ''}`);
+  log(state, `Рецензии: ${scores.join('/')} = ${score100(total)}/100 ${total >= CONFIG.HALL_OF_FAME ? '— ЗАЛ СЛАВЫ!' : ''}`);
   state.released.push(game);
   state.activeGame = null;
   state.releasePopupShown = false;
@@ -416,7 +416,7 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
     type: 'release_result',
     text:
       `🎉 «${game.name}» выпущена!\n` +
-      `Оценки критиков: ${scores.join(' · ')} = ${total}/40\n` +
+      `Оценки критиков: ${scores.join(' · ')} = ${score100(total)}/100\n` +
       `${total >= CONFIG.HALL_OF_FAME ? '🏆 ЗАЛ СЛАВЫ!' : total >= CONFIG.GRAND_PRIZE_SCORE ? 'Претендент на Гран-при!' : 'Удачи в следующий раз!'}` +
       (topContrib ? `\n\nВклад в разработку:\n${topContrib}` : ''),
   };

@@ -47,14 +47,12 @@ export interface PlayerOptions {
   resolveOnly?: boolean;
 }
 
-export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
-  let lastCombo: { genreId: string; typeId: string } | null = null;
-  // AP-09: уволенных автопилотом обратно не нанимаем — иначе «карусель» слабейших
-  // (в движке уволенный возвращается в пул кандидатов — это механика, её не трогаем)
-  const turnedDown = new Set<string>();
-
-  return {
-    turn(state: GameState, stats: PolicyStats, journal?: PolicyAction[]): void {
+/**
+ * PLAN-25: резолв висящего события (бусты, продавец, Gamedex, инфо-попапы, релиз).
+ * Вынесено из turn(): сервер решает события на РЕАЛЬНОМ состоянии, а «хозяйство»
+ * (прокачка, найм, лицензии) — на копии, чтобы клики мыши применяли действия ПОСЛЕ показа.
+ */
+export function resolvePendingEvent(state: GameState, stats: PolicyStats, journal?: PolicyAction[]): void {
       // буст — принимаем с разумной ставкой (до 30 PR), продавца — прогоняем
       if (state.pendingEvent?.type === 'boost') {
         // аудит 05.09: ставка должна быть ≤ research И ≥ 1, иначе resolveBoost
@@ -86,8 +84,20 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         if (res.ok) stats.releases++;
       }
       if (state.pendingEvent?.type === 'release_result') resolveEventAction(state);
+}
 
-      // M3: прокачка — левел-ап, если PR хватает (приоритет активной профессии)
+export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
+  let lastCombo: { genreId: string; typeId: string } | null = null;
+  // AP-09: уволенных автопилотом обратно не нанимаем — иначе «карусель» слабейших
+  // (в движке уволенный возвращается в пул кандидатов — это механика, её не трогаем)
+  const turnedDown = new Set<string>();
+
+  return {
+    turn(state: GameState, stats: PolicyStats, journal?: PolicyAction[]): void {
+      // без гейта: ветка продавца (бустеры) работает и без попапа события
+      resolvePendingEvent(state, stats, journal);
+
+// M3: прокачка — левел-ап, если PR хватает (приоритет активной профессии)
       if (state.research >= 40) {
         for (const s of [...state.staff].sort((a, b) => b.stats.scenario + b.stats.program - (a.stats.scenario + a.stats.program))) {
           const lv = s.careers[s.activeCareer] ?? 0;
@@ -450,12 +460,14 @@ function hatedGenre(state: GameState): string | null {
   return gen?.id ?? null;
 }
 
-function bestConsole(state: GameState) {
-  // PC всегда; Microx SX — если лицензия куплена
-  if (state.consoles['microx-sx']?.licensed) {
-    return CONSOLES.find((c) => c.id === 'microx-sx')!;
-  }
-  return CONSOLES.find((c) => c.id === 'pc-game')!;
+function bestConsole(state: GameState): (typeof CONSOLES)[number] {
+  // PLAN-25: лучшая из ДОСТУПНЫХ консолей по установленной базе (PC + купленные лицензии).
+  // Раньше функция знала только PC и Microx SX — из-за этого автопилот покупал лицензии,
+  // но игры для новых консолей не делал (замечание игрока).
+  // консоль годится, если она доступна по времени И лицензия куплена (PC лицензии не требует)
+  const avail = CONSOLES.filter((c) => consoleAvailable(state, c.id) && Boolean(state.consoles[c.id]?.licensed));
+  const fallback = avail[0] ?? CONSOLES.find((c) => c.id === 'pc-game')!;
+  return avail.reduce((best, c) => (c.installBase > best.installBase ? c : best), fallback);
 }
 
 // ─── помощники для автопилота (server/autopilot.ts): стоимость комбо и готовый

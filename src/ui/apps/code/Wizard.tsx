@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Mode } from '../../../core/config';
 import { projectCost } from '../../../core/formulas';
 import {
-  consoleAvailable, consoleById, genreById, isUnlocked, typeById,
+  comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
 } from '../../../shared/meta';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../../../core/types';
 import type { DirectionAxis, Role } from '../../../core/types';
@@ -285,6 +285,11 @@ export function ProjectWizard() {
                         <input type="radio" checked={typeId === t.id} onChange={() => setTypeId(t.id)} />
                         {t.nameRu ?? t.name}
                         <span className="w95-hint">({t.popularity})</span>
+                        {genreId && opened.has(`${genreId}|${t.id}`) && (
+                          <span className="w95-combo-open" title="Это комбо у вас открыто — оценка сохранится">
+                            {comboGrade(meta, genreId, t.id)}
+                          </span>
+                        )}
                       </label>
                     </div>
                   );

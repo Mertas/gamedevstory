@@ -39,3 +39,12 @@ export function consoleReleased(game: GameState, consoleId: string): boolean {
 export function consoleAvailable(game: GameState, consoleId: string): boolean {
   return !!game.consoles[consoleId]?.licensed && consoleReleased(game, consoleId);
 }
+
+/**
+ * Оценка игры в 100-балльной шкале (4 критика по 10 = 40). Внутри движка счёт остаётся /40
+ * (порог зала славы CONFIG.HALL_OF_FAME = 32, те же игры), но игроку показываем /100 — так
+ * просил пользователь: «зал славы считался не от 40/40, а 100/100», порог = 80/100.
+ */
+export function score100(score: number): number {
+  return Math.round((score / 40) * 100);
+}

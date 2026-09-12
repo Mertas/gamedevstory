@@ -373,6 +373,11 @@ export function newGameAction() {
   send({ type: 'new_game' });
 }
 
+/** PLAN-25: клиент отыграл шаги политики — серверу не нужно доводить действия самому. */
+export function actionAutopilotDone(): void {
+  send({ type: 'autopilot_done' });
+}
+
 /**
  * PLAN-24: вид рабочего стола — часть сейва (его ждут на любом устройстве), поэтому через сервер.
  * Сервер валидирует значения (src/server/ui-state.ts) и сохраняет сразу.

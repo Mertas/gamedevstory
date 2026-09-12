@@ -470,8 +470,8 @@ describe('AP-03: итоги автосессии', () => {
     if (ev?.type !== 'info') throw new Error('ожидался info-попап с итогами');
     expect(ev.title).toContain('Итоги автосессии');
     expect(ev.text).toContain('Игр выпущено: 2');
-    expect(ev.text).toContain('Средний счёт: 32/40');
-    expect(ev.text).toContain('Лучшая: «Рогалик» — 36/40 — зал славы!');
+    expect(ev.text).toContain('Средний счёт: 80/100'); // PLAN-25: оценки из 100
+    expect(ev.text).toContain('Лучшая: «Рогалик» — 90/100 — зал славы!');
     expect(ev.text).toContain('Деньги: +1500K');
   });
 
@@ -656,7 +656,7 @@ describe('видимость автопилота: журнал политики
     const card = steps.find((s) => s.kind === 'card');
     expect(card && card.kind === 'card' ? card.staffId : null).toBe(train && train.type === 'train' ? train.staffId : null);
     const press = steps.find((s) => s.kind === 'click' && s.target.startsWith('train-'));
-    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(true);
+    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(undefined); // PLAN-25: клик настоящий
   });
 
   it('левел-ап: в журнале только реально случившееся (нет ложного «office», нет найма без денег)', () => {
@@ -675,7 +675,7 @@ describe('видимость автопилота: журнал политики
     const steps = policySteps(journal, g);
     const staffId = lvl && lvl.type === 'levelup' ? lvl.staffId : '';
     const press = steps.find((s) => s.kind === 'click' && s.target === `lvl-${staffId}`);
-    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(true);
+    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(undefined); // PLAN-25: клик настоящий
   });
 
   it('бустер: покупка у продавца + применение в окне «Код» (select + нажатие)', () => {
@@ -689,7 +689,7 @@ describe('видимость автопилота: журнал политики
     expect(sel && sel.kind === 'select' ? sel.value : null).toBe(sid);
   });
 
-  it('финальные нажатия действий политики — «витринные» (действие уже применено)', () => {
+  it('нажатия действий политики — настоящие: действие применяет клик мыши (PLAN-25)', () => {
     const g = fresh();
     const steps = policySteps([
       { type: 'ad', adId: 1 }, { type: 'license', consoleId: 'microx-sx' }, { type: 'office' },
@@ -698,7 +698,7 @@ describe('видимость автопилота: журнал политики
     expect(steps.some((s) => s.kind === 'open' && s.app === 'hardware')).toBe(true);
     const finals = steps.filter((s) => s.kind === 'click' && !s.target.startsWith('hire-tab-'));
     expect(finals.length).toBe(3);
-    expect(finals.every((s) => s.kind === 'click' && s.cosmetic === true)).toBe(true);
+    expect(finals.every((s) => s.kind === 'click' && s.cosmetic === undefined)).toBe(true);
   });
 
   it('по таймауту события шаги политики уходят в emitStep (мышь сыграет их вживую)', () => {
@@ -801,14 +801,14 @@ describe('AP-09: найм и увольнения', () => {
     expect(journal.some((a) => a.type === 'fire')).toBe(false);
   });
 
-  it('увольнение видно: мышь идёт «Найм» → «Команда» → «Уволить» (витринное нажатие)', () => {
+  it('увольнение видно: мышь идёт «Найм» → «Команда» → «Уволить» (клик применяет увольнение)', () => {
     const g = fresh();
     const sid = g.staff[0]!.id;
     const steps = policySteps([{ type: 'fire', staffId: sid, name: 'Тестовый Сотрудник' }], g);
     expect(steps[0]).toEqual({ kind: 'open', app: 'hire' });
     expect(steps.some((s) => s.kind === 'click' && s.target === 'hire-tab-team')).toBe(true);
     const press = steps.find((s) => s.kind === 'click' && s.target === `fire-${sid}`);
-    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(true);
+    expect(press && press.kind === 'click' ? press.cosmetic : null).toBe(undefined); // PLAN-25: клик настоящий
     expect(press && press.kind === 'click' ? press.label : '').toContain('Тестовый Сотрудник');
   });
 
