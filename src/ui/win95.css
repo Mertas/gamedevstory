@@ -393,7 +393,8 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-pick-strong { font-size: 10px; color: #404040; }
 
 /* PLAN-29: окошко продаж — правый верхний угол; сквозь него кликаем (мышь ловит только крестик) */
-.sales-widget { position: fixed; top: 10px; right: 10px; width: 256px; z-index: 15000; pointer-events: none; padding-bottom: 8px; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; box-shadow: 1px 1px 0 #000, 3px 3px 10px rgba(0, 0, 0, .4); font-size: 11px; }
+.sales-widget { position: fixed; top: 10px; right: 10px; width: 256px; z-index: 15000; pointer-events: none; display: flex; flex-direction: column; gap: 6px; }
+.sales-panel { background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; box-shadow: 1px 1px 0 #000, 3px 3px 10px rgba(0, 0, 0, .4); font-size: 11px; padding-bottom: 8px; }
 .sales-head { display: flex; align-items: center; gap: 6px; padding: 2px 3px 2px 5px; background: linear-gradient(90deg, #000080, #1084d0); color: #fff; font-weight: 700; }
 .sales-title { flex: 1; }
 .sales-day { font-weight: 400; opacity: .85; }

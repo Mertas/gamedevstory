@@ -3,9 +3,9 @@
 // задана полной первой неделей — она максимальная), жёлтая линия с подписью — накопленный доход,
 // слева подписи вертикальной оси. После продаж — итог, место в студии и подсветка рекорда.
 // Сквозь окошко кликаем: мышь ловит только крестик.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameSelector } from './store';
-import { fmtCopies, pickSalesView, type SalesDay } from '../shared/sales-stats';
+import { fmtCopies, pickSalesViews, smoothView, type SalesDay, type SalesView } from '../shared/sales-stats';
 
 const CLOSED_KEY = 'gds-sales-closed';
 
@@ -76,53 +76,99 @@ function SalesChart({ sales, scale, planRevenue, money }: { sales: SalesDay[]; s
 export function SalesWidget() {
   const game = useGameSelector((g) => g);
   const [closed, setClosed] = useState<Set<string>>(loadClosed);
-  const view = pickSalesView(game.released, game.history, game.week);
-  if (!view || closed.has(view.key)) return null;
-  const close = () => {
-    const next = new Set(closed).add(view.key);
-    setClosed(next);
-    try {
-      localStorage.setItem(CLOSED_KEY, JSON.stringify([...next]));
-    } catch {
-      /* noop */
+  const views = pickSalesViews(game.released, game.history, game.week);
+
+  // PLAN-31: длительность игрового дня меряем по смене недели, чтобы растянуть обновления на день
+  const periodRef = useRef(1500);
+  const lastWeek = useRef({ w: -1, t: 0 }); // заполняется в эффекте (performance.now нельзя в рендере)
+  useEffect(() => {
+    const now = performance.now();
+    if (lastWeek.current.w < 0) {
+      lastWeek.current = { w: game.week, t: now };
+      return;
     }
+    if (game.week !== lastWeek.current.w) {
+      const p = now - lastWeek.current.t;
+      if (p > 150 && p < 20000) periodRef.current = p;
+      lastWeek.current = { w: game.week, t: now };
+    }
+  }, [game.week]);
+
+  // Прошло: 5 обновлений за игровой день (0.2 → 1.0), а не один рывок в конце дня
+  const dayKey = views.filter((v) => v.live).map((v) => `${v.key}:${v.day}`).join('|');
+  const [progress, setProgress] = useState(1);
+  useEffect(() => {
+    if (!dayKey) return;
+    setProgress(0);
+    const step = Math.max(60, periodRef.current / 5);
+    const id = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 1) {
+          clearInterval(id);
+          return 1;
+        }
+        return Math.round(Math.min(1, p + 0.2) * 10) / 10;
+      });
+    }, step);
+    return () => clearInterval(id);
+  }, [dayKey]);
+
+  const shown = views.filter((v) => !closed.has(v.key)).slice(0, 2);
+  if (shown.length === 0) return null;
+  const close = (key: string) => {
+    setClosed((prev) => {
+      const next = new Set(prev).add(key);
+      try {
+        localStorage.setItem(CLOSED_KEY, JSON.stringify([...next]));
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
   };
   return (
-    <div className="sales-widget" role="status">
-      <div className="sales-head">
-        <span className="sales-title">📈 Продажи</span>
-        {view.live && view.days > 0 && (
-          <span className="sales-day">
-            день {view.day} из {view.days}
-          </span>
-        )}
-        <button className="sales-x" title="Закрыть" onClick={close}>
-          ✕
-        </button>
-      </div>
-      <div className="sales-name">{view.name}</div>
-      {view.live && view.sales.length > 0 ? (
-        <>
-          <SalesChart sales={view.sales} scale={view.scaleWeek1} planRevenue={view.planRevenue} money={view.revenue} />
-          <div className="sales-nums">
-            <span key={`u${view.day}`} className="sales-num">
-              🛒 {fmtCopies(view.units)}
-            </span>
-            <span key={`r${view.day}`} className="sales-num">
-              💰 {view.revenue}K
-            </span>
+    <div className="sales-widget">
+      {shown.map((v) => {
+        const sv: SalesView = v.live ? smoothView(v, progress) : v;
+        return (
+          <div key={v.key} className="sales-panel" role="status">
+            <div className="sales-head">
+              <span className="sales-title">📈 Продажи</span>
+              {sv.live && sv.days > 0 && (
+                <span className="sales-day">
+                  день {sv.day} из {sv.days}
+                </span>
+              )}
+              <button className="sales-x" title="Закрыть" onClick={() => close(v.key)}>
+                ✕
+              </button>
+            </div>
+            <div className="sales-name">{sv.name}</div>
+            {sv.live && sv.sales.length > 0 ? (
+              <>
+                <SalesChart sales={sv.sales} scale={sv.scaleWeek1} planRevenue={sv.planRevenue} money={Math.round(sv.revenue)} />
+                <div className="sales-nums">
+                  <span key={`u${sv.day}${progress}`} className="sales-num">
+                    🛒 {fmtCopies(sv.units)}
+                  </span>
+                  <span key={`r${sv.day}${progress}`} className="sales-num">
+                    💰 {Math.round(sv.revenue)}K
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="sales-final">
+                <div className="sales-total">💰 {sv.revenue}K</div>
+                <div className="sales-sub">продано {fmtCopies(sv.units)} копий</div>
+                <div className="sales-sub">
+                  место в студии: <b>#{sv.rank}</b> из {sv.total}
+                </div>
+                {sv.record && <div className="sales-record">🏆 РЕКОРД СТУДИИ!</div>}
+              </div>
+            )}
           </div>
-        </>
-      ) : (
-        <div className="sales-final">
-          <div className="sales-total">💰 {view.revenue}K</div>
-          <div className="sales-sub">продано {fmtCopies(view.units)} копий</div>
-          <div className="sales-sub">
-            место в студии: <b>#{view.rank}</b> из {view.total}
-          </div>
-          {view.record && <div className="sales-record">🏆 РЕКОРД СТУДИИ!</div>}
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 }

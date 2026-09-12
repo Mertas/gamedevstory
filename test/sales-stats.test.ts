@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { newGame } from '../src/core/engine';
 import { dailySales } from '../src/core/systems/market';
-import { fmtCopies, fmtUnits, isUnitsRecord, pickSalesView, unitsRank } from '../src/shared/sales-stats';
+import { fmtCopies, fmtUnits, isUnitsRecord, pickSalesView, pickSalesViews, smoothView, unitsRank } from '../src/shared/sales-stats';
 import type { ActiveGame, GameRecord } from '../src/core/types';
 
 const rec = (name: string, units: number, releaseWeek = 1): GameRecord =>
@@ -116,5 +116,40 @@ describe('PLAN-29 фактический учёт продаж в ядре', () 
     const rec = g.history.at(-1)!;
     expect(rec.paidUnits).toBe(100);
     expect(rec.paidRevenue).toBe(500);
+  });
+});
+
+describe('PLAN-31: до двух панелей + сглаживание игрового дня', () => {
+  const mkLive = (name: string, releaseWeek: number, days: number) =>
+    ({
+      name, genreId: 'g', typeId: 't', consoleId: 'pc-game', score: 30, releaseWeek,
+      sales: Array.from({ length: days }, (_, i) => ({ week: releaseWeek + i, units: 10, unitsF: 10, revenue: 50 })),
+      totalUnits: days * 10, totalRevenue: days * 50, ended: false,
+      paidUnits: days * 10, paidRevenue: days * 50,
+    } as unknown as ActiveGame);
+
+  it('свежий релиз сверху; больше двух панелей не выводим', () => {
+    const a = mkLive('Старая', 90, 20);
+    const b = mkLive('Новая', 200, 5);
+    const views = pickSalesViews([a, b], [rec('Старая', 200, 90)], 200);
+    expect(views.map((v) => v.name)).toEqual(['Новая', 'Старая']);
+    expect(views).toHaveLength(2);
+    expect(pickSalesViews([a, b, mkLive('Третья', 150, 3)], [], 200)).toHaveLength(2);
+  });
+
+  it('живой релиз над итогом прошлой игры', () => {
+    const live = mkLive('Свежая', 300, 7);
+    const views = pickSalesViews([live], [rec('Прошлая', 900, 250), rec('Древняя', 100, 10)], 300);
+    expect(views.map((v) => [v.name, v.live])).toEqual([['Свежая', true], ['Прошлая', false]]);
+  });
+
+  it('сглаживание: половина дня — половина прироста последнего дня', () => {
+    const v = pickSalesViews([mkLive('Живая', 100, 3)], [], 102)[0]!;
+    expect(v.units).toBe(30);
+    const half = smoothView(v, 0.5);
+    expect(half.units).toBe(25); // 20 + 10×0.5
+    expect(half.revenue).toBe(125); // 100 + 50×0.5
+    expect(smoothView(v, 0).units).toBe(20);
+    expect(smoothView(v, 1)).toBe(v);
   });
 });

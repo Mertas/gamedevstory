@@ -75,11 +75,8 @@ function othersOf(history: GameRecord[], name: string, releaseWeek: number): num
 }
 
 /** Что показывать в окошке: живой релиз — приоритет, иначе итог последней игры студии. */
-export function pickSalesView(released: ActiveGame[], history: GameRecord[], week: number): SalesView | null {
-  const live = released
-    .filter((g) => g.releaseWeek !== null)
-    .sort((a, b) => (b.releaseWeek ?? 0) - (a.releaseWeek ?? 0))[0];
-  if (live && live.releaseWeek !== null) {
+function liveView(live: ActiveGame, history: GameRecord[], week: number): SalesView {
+  if (live.releaseWeek !== null) {
     const sums = sumsUpTo(live.sales, week);
     // копии: факт (paidUnits) → сумма по графику → доля плана (старые сейвы, где копии дня округлены)
     const share = live.totalRevenue > 0 ? Math.min(1, sums.revenue / live.totalRevenue) : 0;
@@ -108,8 +105,10 @@ export function pickSalesView(released: ActiveGame[], history: GameRecord[], wee
       planRevenue: live.totalRevenue,
     };
   }
-  const last = [...history].sort((a, b) => b.releaseWeek - a.releaseWeek)[0];
-  if (!last) return null;
+  throw new Error('liveView: релиз без недели');
+}
+
+function finalView(last: GameRecord, history: GameRecord[]): SalesView {
   const units = recordUnits(last);
   const revenue = Math.round(last.paidRevenue ?? last.revenue);
   const others = othersOf(history, last.name, last.releaseWeek);
@@ -128,4 +127,45 @@ export function pickSalesView(released: ActiveGame[], history: GameRecord[], wee
     scaleWeek1: 0,
     planRevenue: 0,
   };
+}
+
+/** Сглаживание «внутри дня» (PLAN-31): доля последнего дня ramping от 0 к 1 — 5 шагов за игровой день. */
+export function smoothView(v: SalesView, progress: number): SalesView {
+  if (!v.live || v.sales.length === 0 || progress >= 1) return v;
+  const last = v.sales[v.sales.length - 1]!;
+  const lu = last.unitsF ?? last.units;
+  const p = Math.max(0, Math.min(1, progress));
+  return {
+    ...v,
+    units: v.units - lu + lu * p,
+    revenue: v.revenue - last.revenue + last.revenue * p,
+    sales: [...v.sales.slice(0, -1), { ...last, unitsF: lu * p, revenue: last.revenue * p }],
+  };
+}
+
+/**
+ * Панели окна продаж: свежие релизы сверху (по неделе релиза), добираем итогами архива.
+ * PLAN-31: показываем не больше `limit` панелей (по умолчанию 2) — новая над предыдущей.
+ */
+export function pickSalesViews(released: ActiveGame[], history: GameRecord[], week: number, limit = 2): SalesView[] {
+  const out: SalesView[] = released
+    .filter((g) => g.releaseWeek !== null)
+    .sort((a, b) => (b.releaseWeek ?? 0) - (a.releaseWeek ?? 0))
+    .slice(0, limit)
+    .map((g) => liveView(g, history, week));
+  if (out.length < limit) {
+    const shown = new Set(out.map((v) => v.key));
+    const recs = [...history].sort((a, b) => b.releaseWeek - a.releaseWeek);
+    for (const r of recs) {
+      if (out.length >= limit) break;
+      if (shown.has(`${r.name}#${r.releaseWeek}`)) continue;
+      out.push(finalView(r, history));
+    }
+  }
+  return out;
+}
+
+/** Совместимость: первая панель (живой релиз — приоритет, иначе итог последней игры). */
+export function pickSalesView(released: ActiveGame[], history: GameRecord[], week: number): SalesView | null {
+  return pickSalesViews(released, history, week)[0] ?? null;
 }

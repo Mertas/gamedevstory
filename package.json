@@ -1,7 +1,7 @@
 {
   "name": "gamedev-story-clone",
   "private": true,
-  "version": "1.6.2",
+  "version": "1.6.3",
   "type": "module",
   "engines": { "node": ">=22.13" },
   "description": "Клон Game Dev Story (Kairosoft) — M1–M4: ядро (тик = день), Win95-UI + сервер (WS, GigaChat), персонал, рынок",
