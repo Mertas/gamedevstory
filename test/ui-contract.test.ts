@@ -56,6 +56,8 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(team).toContain('data-autopilot={`fire-${st.id}`}'); // AP-09: увольнение видно мыши
     expect(training).toContain('data-autopilot={`train-${t.id}`}');
     expect(search).toContain('data-autopilot={`hire-${c.id}`}');
+    // PLAN-25: методы найма кликабельны и с якорем — от метода зависит список кандидатов
+    expect(search).toContain('data-autopilot={`hire-method-${m}`}');
     expect(office).toContain('data-autopilot="office-move"');
     expect(salesman).toContain('data-autopilot={`booster-${b.id}`}');
     expect(marketing).toContain('data-autopilot={`ad-${a.id}`}');

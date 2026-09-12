@@ -41,11 +41,26 @@ export function AutopilotCursor() {
   const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null);
 
   useEffect(() => {
+    /** PLAN-25: элемент есть в DOM, но его окно свёрнуто/закрыто (display:none) — разворачиваем окно
+     *  по заголовку. Без этого кнопки «Нанять»/«Уволить»/тренинга формально недостижимы. */
+    const awakeWindow = (el: HTMLElement): boolean => {
+      const win = el.closest('.w95-window');
+      const title = win?.querySelector('.w95-title')?.textContent?.trim();
+      const app = title ? Object.entries(APP_TITLES).find(([, t]) => t === title)?.[0] : undefined;
+      if (!app) return false;
+      wm.current.open(app);
+      return true;
+    };
+
     const findTarget = async (target: string, timeoutMs: number): Promise<HTMLElement | null> => {
       const started = performance.now();
+      let recovered = false;
       for (;;) {
         const el = document.querySelector<HTMLElement>(`[data-autopilot="${target}"]`);
         if (el && el.getClientRects().length > 0) return el;
+        // PLAN-25: цель есть в DOM, но её окно свёрнуто/закрыто (display:none) — разворачиваем окно
+        // и ищем снова. Иначе кнопки «Нанять»/«Уволить»/тренинга формально недостижимы.
+        if (!recovered && el) recovered = awakeWindow(el);
         if (performance.now() - started >= timeoutMs) return null;
         await sleep(120);
       }
@@ -109,6 +124,7 @@ export function AutopilotCursor() {
     /** клик по карточке сотрудника: контракт с StaffCard — data-staff-id на корне карточки. */
     const clickCardIn = async (scope: () => ParentNode, staffId: string, timeoutMs: number): Promise<void> => {
       const started = performance.now();
+      let recovered = false;
       for (;;) {
         for (const el of scope().querySelectorAll<HTMLElement>(`[data-staff-id="${staffId}"]`)) {
           const card = el.closest<HTMLElement>('.w95-staff-card');
@@ -117,6 +133,10 @@ export function AutopilotCursor() {
             await press(card, true);
             return;
           }
+        }
+        if (!recovered) {
+          const any = scope().querySelector<HTMLElement>(`[data-staff-id="${staffId}"]`);
+          if (any) recovered = awakeWindow(any);
         }
         if (performance.now() - started >= timeoutMs) return;
         await sleep(120);

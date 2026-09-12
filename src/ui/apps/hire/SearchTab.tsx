@@ -30,7 +30,7 @@ export function SearchTab() {
       <b>Поиск сотрудников</b>
       <div className="w95-field">
         {(Object.keys(CONFIG.HIRE_METHODS) as HireMethodId[]).map((m) => (
-          <div key={m} className="w95-li" style={{ padding: '1px 4px' }}>
+          <div key={m} className="w95-li" style={{ padding: '1px 4px' }} onClick={() => setMethod(m)} data-autopilot={`hire-method-${m}`}>
             <label className="w95-row">
               <input
                 type="radio" checked={method === m} onChange={() => setMethod(m)}

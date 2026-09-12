@@ -33,7 +33,7 @@ export type PolicyAction =
   | { type: 'train'; staffId: string; trainingId: number }
   | { type: 'ad'; adId: number }
   | { type: 'office' }
-  | { type: 'hire'; staffId?: string }
+  | { type: 'hire'; staffId?: string; method?: HireMethodId }
   | { type: 'fire'; staffId: string; name?: string }
   | { type: 'license'; consoleId: string }
   | { type: 'booster'; boosterType: string; staffId: string };
@@ -290,7 +290,7 @@ function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction
     const res = hireByIdAction(state, method, bestId);
     if (res.ok) {
       stats.hires++;
-      journal?.push({ type: 'hire', staffId: bestId });
+      journal?.push({ type: 'hire', staffId: bestId, method }); // PLAN-25: метод нужен шагам — от него зависит список кандидатов
     }
   }
 }
