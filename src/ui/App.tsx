@@ -15,6 +15,7 @@ import { AuthScreen } from './AuthScreen';
 import { StartScreen } from './StartScreen';
 import { apiMe, type Features, type MeInfo } from './api';
 import { setOwner } from './owner';
+import { UpdateNotice } from './UpdateNotice';
 
 // следим за событиями, требующими решения игрока
 function EventWatcher() {
@@ -234,6 +235,7 @@ export function App() {
       <EventWatcher />
       <Desktop onExit={exitToLauncher} />
       <MessageBox />
+      <UpdateNotice />
       <div className="w95-toasts">
         <ActionToast />
         <LevelToast />

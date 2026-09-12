@@ -306,6 +306,15 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   position: absolute; right: 8px; bottom: 34px; padding: 0;
   color: rgba(255, 255, 255, .55); text-shadow: 1px 1px 0 rgba(0, 0, 0, .45);
 }
+/* PLAN-25: плашка «вышло обновление» — сама не исчезает, пока игрок не перезагрузит страницу */
+.w95-update {
+  position: fixed; right: 8px; top: 10px; z-index: 9700; cursor: pointer; max-width: 330px;
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; font-size: 11px;
+  background: var(--w95-face); border: 2px solid;
+  border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .4);
+}
+.w95-update span { color: #404040; }
 /* ── Тосты: окна-сообщения Win95 (пачка растёт снизу вверх над таскбаром) ── */
 .w95-toasts {
   position: fixed; right: 8px; bottom: 36px; z-index: 9600;

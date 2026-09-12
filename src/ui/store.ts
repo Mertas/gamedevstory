@@ -149,6 +149,7 @@ function connect(): void {
     if (dropped > 0) raiseError(`Связь пропала: ${dropped} ${actionsWord(dropped)} не доставлено`);
     for (const it of ready) ws.send(it.data);
     send({ type: 'get_state' });
+    void checkBuild(); // PLAN-25: сервер мог перезапуститься с новой сборкой — старый бандл надо обновить
   };
   ws.onmessage = (e) => {
     try {
@@ -374,6 +375,39 @@ export function newGameAction() {
 }
 
 /** PLAN-25: клиент отыграл шаги политики — серверу не нужно доводить действия самому. */
+// ─── PLAN-25: свежесть клиента ───
+// Реальный случай: вкладка осталась на старом бандле после деплоя, и «фиксы не работают» —
+// WebSocket переподключается, а JavaScript в SPA не перезагружается сам.
+let serverBuild: string | null = null;
+let updateReady = false;
+let updateVer = 0;
+
+/** Сервер перезапущен с другой сборкой — предложить перезагрузку. */
+export function useUpdateReady(): boolean {
+  useSyncExternalStore(subscribe, () => updateVer);
+  return updateReady;
+}
+
+export function reloadForUpdate(): void {
+  location.reload();
+}
+
+async function checkBuild(): Promise<void> {
+  try {
+    const r = await fetch('/api/health');
+    const j = (await r.json()) as { build?: string };
+    if (!j.build) return;
+    if (serverBuild === null) serverBuild = j.build;
+    else if (j.build !== serverBuild && !updateReady) {
+      updateReady = true;
+      updateVer++;
+      emit();
+    }
+  } catch {
+    /* нет связи — не страшно, проверим на следующем подключении */
+  }
+}
+
 export function actionAutopilotDone(): void {
   send({ type: 'autopilot_done' });
 }
