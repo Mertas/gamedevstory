@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   comboMult, debugRate, distributePoints, fanMult, judgeScore, pricePerCopy, projectCost,
-  reviewTotal, salesPlan, totalBugs, weeklyPoints, hypeMult,
+  reviewTotal, salesPlan, totalBugs, weeklyPoints, hypeMult, weekFactor, baseWeekShares,
 } from '../src/core/formulas';
 import { comboGrade } from '../src/core/systems/dev';
 import { CONFIG } from '../src/core/config';
@@ -114,16 +114,16 @@ describe('продажи', () => {
     expect(plan.totalUnits).toBeLessThan(25);
     expect(plan.totalRevenue).toBeGreaterThan(200);
   });
-  it('зимний пик: декабрь (день 245) даёт ×2', () => {
+  it('PLAN-32: неделя с 1 мая (день года 30) продаёт в 1.5–2 раза сильнее', () => {
+    // релиз 24: 1 мая попадает в первую неделю (дни 24…30)
     const plan = salesPlan({
-      installBase: 500, score: 20, combo: 'C', pop: 'B',
-      fans: 0, fame: 10, hype: 10, sequel: false, consoleMult: 1, releaseWeek: 244,
+      installBase: 1000, score: 20, combo: 'C', pop: 'B',
+      fans: 0, fame: 10, hype: 10, sequel: false, consoleMult: 1, releaseWeek: 24,
     });
-    const spike = plan.weeks.find((w) => w.week === 245)!;
-    const normal = plan.weeks.find((w) => w.week === 244)!;
-    // сравниваем дробные копии дня: целые у мелких игр округляются в ноль (PLAN-29/30)
-    const sf = (w: { units: number; unitsF?: number }) => w.unitsF ?? w.units;
-    expect(sf(spike)).toBeGreaterThan(sf(normal) * 1.8);
+    const wk = (n: number) => plan.weeks.slice(n * 7, n * 7 + 7).reduce((a, w) => a + (w.unitsF ?? w.units), 0);
+    expect(weekFactor(24, 0).high).toBe(true);
+    // у праздничной недели надбавка ×1.5+ сверх базы, у соседней — разброс максимум +15%
+    expect(wk(0)).toBeGreaterThan(wk(1) * 1.2);
   });
   it('хит (36+, S, A-популярность) на 6M-консоли → ~1M копий (1000 в тыс.)', () => {
     const plan = salesPlan({
@@ -196,17 +196,36 @@ describe('направление (09 §2.3: 10 очков = норма)', () => 
   });
 });
 
-describe('PLAN-30: распределение продаж (обратный easeInOutQuart)', () => {
-  it('пик в начале, плавное быстрое затухание, сумма дней = тираж', () => {
+describe('PLAN-32: распределение продаж (обратный easeOutCubic, праздники, разброс)', () => {
+  it('база: ранние недели заметно различимы, хвост к нулю, сумма = 1', () => {
+    const bw = baseWeekShares();
+    expect(bw[0]!).toBeGreaterThan(bw[1]! * 1.08);
+    expect(bw[1]!).toBeGreaterThan(bw[2]! * 1.08);
+    expect(bw[15]!).toBeLessThan(bw[0]! * 0.15);
+    expect(bw.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 3);
+  });
+
+  it('множители недель: праздник ×1.5–2, иначе ±15%; в окне апреля праздники есть', () => {
+    for (let w = 0; w < 24; w++) {
+      const f = weekFactor(1, w);
+      if (f.high) {
+        expect(f.factor).toBeGreaterThanOrEqual(1.5);
+        expect(f.factor).toBeLessThanOrEqual(2);
+      } else {
+        expect(f.factor).toBeGreaterThanOrEqual(0.85);
+        expect(f.factor).toBeLessThanOrEqual(1.15);
+      }
+    }
+    expect(Array.from({ length: 24 }, (_, w) => weekFactor(1, w).high).some(Boolean)).toBe(true);
+  });
+
+  it('сумма за жизнь держится в прежних пределах (разброс нормирован, праздники — сверху)', () => {
     const plan = salesPlan({
       installBase: 1000, score: 20, combo: 'C', pop: 'B',
       fans: 0, fame: 10, hype: 10, sequel: false, consoleMult: 1, releaseWeek: 1,
     });
-    const wk = (n: number) => plan.weeks.slice(n * 7, n * 7 + 7).reduce((a, w) => a + (w.unitsF ?? w.units), 0);
-    expect(wk(0)).toBeGreaterThanOrEqual(wk(1)); // первая неделя — максимум
-    expect(wk(0)).toBeGreaterThan(wk(11) * 1.5); // неделя 1 заметно выше середины
-    expect(wk(15)).toBeLessThan(wk(0) * 0.25); // к 16-й неделе почти затихло
     const total = plan.weeks.reduce((a, w) => a + (w.unitsF ?? w.units), 0);
-    expect(Math.abs(total - plan.totalUnits)).toBeLessThan(plan.totalUnits * 0.05);
+    expect(total).toBeGreaterThan(plan.totalUnits * 0.95);
+    expect(total).toBeLessThan(plan.totalUnits * 1.3);
   });
 });

@@ -127,18 +127,64 @@ export function hypeMult(fame: number, hype: number): number {
   return Math.min(CONFIG.HYPE_MULT_CAP, CONFIG.HYPE_MULT_BASE + (fame + hype) / 200);
 }
 
-/** PLAN-30: обратный easeInOutQuart — распределение продаж во времени (пик в начале, плавное быстрое затухание). */
-export function easeInOutQuart(t: number): number {
-  return t < 0.5 ? 8 * t * t * t * t : 1 - ((-2 * t + 2) ** 4) / 2;
+/** PLAN-32: easeOutCubic — база распределения: пик в начале, плавный спад, ранние недели различимы. */
+export function easeOutCubic(t: number): number {
+  return 1 - (1 - t) ** 3;
 }
 
-// Доли дней продаж: 1 − easeInOutQuart, нормировано на 1 (сумма всех долей = 1).
-// Форма: первые ~8 недель почти плато (~65% тиража), затем S-спад к 16-й неделе, хвост ~0.
-const DAY_WEIGHTS = (() => {
-  const raw = Array.from({ length: CONFIG.SALES_DAYS }, (_, i) => 1 - easeInOutQuart((i + 0.5) / CONFIG.SALES_DAYS));
-  const sum = raw.reduce((a, b) => a + b, 0);
-  return raw.map((v) => v / sum);
-})();
+/** Детерминированный шум 0..1 по паре чисел: стабилен для релиза, разный у разных релизов. */
+function mix01(a: number, b: number): number {
+  let h = (Math.imul(a, 374761393) + Math.imul(b, 668265263)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+const WEEKS = Math.ceil(CONFIG.SALES_DAYS / 7);
+
+/** База: недельные доли (сумма = 1) от обратного easeOutCubic — без разброса и праздников. */
+export function baseWeekShares(): number[] {
+  const picks = Array.from({ length: CONFIG.SALES_DAYS }, (_, i) => 1 - easeOutCubic((i + 0.5) / CONFIG.SALES_DAYS));
+  const sum = picks.reduce((a, b) => a + b, 0);
+  const weeks = Array.from({ length: WEEKS }, () => 0);
+  picks.forEach((v, i) => {
+    const w = Math.floor(i / 7);
+    weeks[w] = (weeks[w] ?? 0) + v / sum;
+  });
+  return weeks;
+}
+
+/** PLAN-32: недельный множитель — праздничная неделя ×1.5–2, остальные гуляют ±15%. */
+export function weekFactor(releaseWeek: number, w: number): { high: boolean; factor: number } {
+  let high = false;
+  for (let i = 7 * w; i < 7 * w + 7; i++) {
+    const doy = ((releaseWeek + i - 1) % CONFIG.YEAR_LENGTH) + 1;
+    if (CONFIG.HOLIDAY_DOY.includes(doy)) high = true;
+    for (const [a, b] of CONFIG.HOLIDAY_RANGES) if (doy >= a && doy <= b) high = true;
+  }
+  const noise = mix01(releaseWeek, w * 131 + (high ? 7 : 3));
+  const factor = high
+    ? CONFIG.HOLIDAY_MULT_MIN + (CONFIG.HOLIDAY_MULT_MAX - CONFIG.HOLIDAY_MULT_MIN) * noise
+    : 1 - CONFIG.WEEK_WOBBLE + 2 * CONFIG.WEEK_WOBBLE * noise;
+  return { high, factor };
+}
+
+/** Веса дней релиза: база × недельные множители. Разброс нормирован (база в сумме = 1),
+ *  праздничные недели дают надбавку СВЕРХ нормы. */
+function dayWeights(releaseWeek: number): number[] {
+  const base = Array.from({ length: CONFIG.SALES_DAYS }, (_, i) => 1 - easeOutCubic((i + 0.5) / CONFIG.SALES_DAYS));
+  const wkRaw = Array.from({ length: WEEKS }, () => 0);
+  base.forEach((v, i) => {
+    const w = Math.floor(i / 7);
+    wkRaw[w] = (wkRaw[w] ?? 0) + v;
+  });
+  const factors = Array.from({ length: WEEKS }, (_, w) => weekFactor(releaseWeek, w));
+  let norm = 0;
+  factors.forEach((f, w) => {
+    norm += (wkRaw[w] ?? 0) * (f.high ? 1 : f.factor);
+  });
+  const k = norm > 0 ? 1 / norm : 1;
+  return base.map((v, i) => v * (factors[Math.floor(i / 7)]?.factor ?? 1) * k);
+}
 
 export interface SalesPlanInput {
   installBase: number; // тыс.
@@ -173,13 +219,12 @@ export function salesPlan(input: SalesPlanInput): SalesPlan {
   const price = pricePerCopy(input.consoleMult);
   const weeks: { week: number; units: number; revenue: number; unitsF: number }[] = [];
   let totalRevenue = 0;
-  // продажи по ДНЯМ: 168 дней (= 24 недели), дневные доли = недельные / 7
+  // PLAN-32: доли дней — база (обратный easeOutCubic) + разброс недель ±15% + праздничные ×1.5–2
+  const weights = dayWeights(input.releaseWeek);
+  // продажи по ДНЯМ: 168 дней (= 24 недели)
   for (let i = 0; i < CONFIG.SALES_DAYS; i++) {
     const day = input.releaseWeek + i;
-    const dayInYear = ((day - 1) % CONFIG.YEAR_LENGTH) + 1;
-    const winter = dayInYear >= CONFIG.WINTER_SPIKE_DAY && dayInYear <= CONFIG.WINTER_SPIKE_DAY + 6 ? 2 : 1;
-    // PLAN-30: доля дня по обратному easeInOutQuart (вместо недельной таблицы)
-    const units = totalUnits * (DAY_WEIGHTS[i] ?? 0) * winter;
+    const units = totalUnits * (weights[i] ?? 0);
     const revenue = units * price;
     totalRevenue += revenue;
     // PLAN-29: units — целые (историческое поле), unitsF — дробь: у мелких игр продажи < 1 копии в день,

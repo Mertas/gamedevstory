@@ -409,10 +409,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .sales-line { stroke: #ffd84d; stroke-width: 1.6; }
 .sales-axis { stroke: #555; stroke-width: 1; }
 .sales-nums { display: flex; justify-content: space-between; padding: 5px 8px 0; font-weight: 700; }
-.sales-num { animation: salesPulse .5s ease-out; }
 .sales-final { padding: 5px 8px 0; text-align: center; }
 .sales-total { font-size: 18px; font-weight: 700; }
 .sales-sub { margin-top: 2px; }
-.sales-record { margin-top: 5px; font-weight: 700; color: #7a2b00; animation: salesRecord 1s ease-in-out infinite; text-shadow: 0 0 6px #ffd700, 0 0 12px #ffb400; }
-@keyframes salesPulse { from { transform: scale(1.35); color: #006000; } to { transform: scale(1); } }
-@keyframes salesRecord { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.08); filter: brightness(1.4); } }
+.sales-record { margin-top: 5px; font-weight: 700; color: #7a2b00; text-shadow: 0 0 6px #ffd700, 0 0 12px #ffb400; }
