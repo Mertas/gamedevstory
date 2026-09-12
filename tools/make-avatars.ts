@@ -1,43 +1,37 @@
-// Генерация аватарок сотрудников: 48 случайных иконок из LLMKing/data/icons → public/avatars (48×48).
-// Запуск: pnpm avatars (один раз; файлы кладутся в public/)
+// Импорт аватарок сотрудников из LLMPics → public/avatars/<staffId>.png (48×48).
+// Источник — проект «Иконки сотрудников GDS» (E:/MY/LLMPics): берём ВЫБРАННЫЙ вариант каждой цели.
+// У кого иконки нет — остаётся случайная avatar-NN.png (фолбэк в UI: StaffAvatar).
+// Запуск: pnpm avatars
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const SRC_DIR = 'E:/MY/LLMKing/data/icons';
+const LLMPICS_PROJECT = 'E:/MY/LLMPics/data/projects/gds-staff-icons';
 const OUT_DIR = path.join(ROOT, 'public', 'avatars');
-const COUNT = 48;
+const SIZE = 48;
 
-const files = fs.readdirSync(SRC_DIR).filter((f) => f.endsWith('.png'));
-if (files.length < COUNT) {
-  console.error(`В ${SRC_DIR} только ${files.length} файлов — нужно >= ${COUNT}`);
+interface StoredSubject { id: string; selected?: string | null }
+
+const subjectsFile = path.join(LLMPICS_PROJECT, 'subjects.json');
+if (!fs.existsSync(subjectsFile)) {
+  console.error(`Нет данных LLMPics: ${subjectsFile}\nСначала запусти LLMPics (E:/MY/LLMPics) и сгенерируй иконки.`);
   process.exit(1);
 }
-
-// детерминированный выбор: перемешиваем фиксированным сидом
-const seed = 20260831;
-let s = seed >>> 0;
-const rnd = () => {
-  s = (s + 0x6d2b79f5) >>> 0;
-  let t = s;
-  t = ((t ^ (t >>> 15)) * (t | 1)) >>> 0;
-  t = ((t ^ (t >>> 7)) * (t | 61)) >>> 0;
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-const picked = [...files].sort(() => rnd() - 0.5).slice(0, COUNT);
+const { subjects } = JSON.parse(fs.readFileSync(subjectsFile, 'utf8')) as { subjects: StoredSubject[] };
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
-let ok = 0;
-for (let i = 0; i < picked.length; i++) {
-  const name = `avatar-${String(i + 1).padStart(2, '0')}.png`;
-  const out = path.join(OUT_DIR, name);
-  if (fs.existsSync(out)) { ok++; continue; }
-  await sharp(path.join(SRC_DIR, picked[i]!))
-    .resize(48, 48, { fit: 'cover' })
+let imported = 0;
+let absent = 0;
+for (const s of subjects) {
+  if (!s.selected) { absent++; continue; }
+  const src = path.join(LLMPICS_PROJECT, 'icons', s.selected);
+  if (!fs.existsSync(src)) { absent++; continue; }
+  await sharp(src)
+    .resize(SIZE, SIZE, { kernel: 'nearest' })
     .png()
-    .toFile(out);
-  ok++;
+    .toFile(path.join(OUT_DIR, `${s.id}.png`));
+  imported++;
 }
-console.log(`OK: ${ok}/${COUNT} аватарок → public/avatars/`);
+console.log(`OK: импортировано ${imported}/${subjects.length} иконок → public/avatars/ (без выбранной иконки: ${absent})`);
