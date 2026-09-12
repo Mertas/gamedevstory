@@ -635,7 +635,9 @@ describe('PLAN-22: тост нового уровня', () => {
     // в начале лестницы почти каждый комбо — новый порог (0,1,2,…), «обычный» шаг ищем там,
     // где шаг больше единицы: 20 → 21 (Нобуо Уэмацу держится до 22)
     const plain = levelUpNotice(20, 21, 'RPG × Пиратский');
-    expect(plain.title).toBe('🎖️ Уровень 21');
+    expect(plain.title).toBe('Уровень 21');
+    expect(plain.crossed).toBe(false);
+    expect(plain.icon).toBe('🎼'); // Нобуо Уэмацу держится с 20 до 21
     expect(plain.text).toContain('RPG × Пиратский');
     expect(plain.text).toContain('До звания');
 

@@ -234,8 +234,10 @@ export function App() {
       <EventWatcher />
       <Desktop onExit={exitToLauncher} />
       <MessageBox />
-      <ActionToast />
-      <LevelToast />
+      <div className="w95-toasts">
+        <ActionToast />
+        <LevelToast />
+      </div>
     </WindowManagerProvider>
   );
 }

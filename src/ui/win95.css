@@ -283,21 +283,31 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   box-shadow: 2px 2px 0 rgba(0, 0, 0, .35);
 }
 
+/* ── Версия игры: низ рабочего стола, вход, выбор сохранения (plan/23) ── */
+.w95-version { font-size: 10px; color: #808080; text-align: center; padding: 4px 0 2px; }
+.w95-desktop-version {
+  position: absolute; right: 8px; bottom: 34px; padding: 0;
+  color: rgba(255, 255, 255, .55); text-shadow: 1px 1px 0 rgba(0, 0, 0, .45);
+}
+/* ── Тосты: окна-сообщения Win95 (пачка растёт снизу вверх над таскбаром) ── */
+.w95-toasts {
+  position: fixed; right: 8px; bottom: 36px; z-index: 9600;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-end;
+}
 .w95-toast {
-  position: fixed; right: 8px; bottom: 36px; z-index: 9600; width: 300px; cursor: pointer;
-  background: var(--w95-face); border: 2px solid;
-  border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  width: 320px; cursor: pointer; display: flex; flex-direction: column;
+  background: var(--w95-face);
+  border: 2px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
   box-shadow: 3px 3px 0 rgba(0, 0, 0, .4);
 }
-.w95-toast-bar {
-  height: 18px; display: flex; align-items: center; padding: 0 4px;
-  background: linear-gradient(90deg, #800000, #c00000); color: #fff; font-weight: 700; font-size: 11px;
-}
-.w95-toast-body { padding: 6px 8px; font-size: 11px; }
-/* PLAN-22: тост уровня — та же рамка, но синяя шапка и золотая нить по низу */
-.w95-toast-level { border-color: #000080; }
-.w95-toast-level .w95-toast-bar { background: #000080; color: #ffffff; }
-.w95-toast-level .w95-toast-body { background: #ffffe1; border-top: 1px solid #000080; }
+.w95-toast .w95-titlebar { cursor: pointer; }
+.w95-toast-tbar-ico { font-size: 11px; }
+.w95-toast-client { display: flex; gap: 9px; padding: 8px 8px 10px; align-items: flex-start; }
+.w95-toast-big { font-size: 26px; line-height: 28px; width: 30px; text-align: center; }
+.w95-toast-big-err { color: #c00000; }
+.w95-toast-head { font-weight: 700; font-size: 11px; margin-bottom: 3px; }
+.w95-toast-text { font-size: 11px; line-height: 1.35; }
+
 /* ─── PLAN-18: начальные окна (вход, сохранения игрока, новая игра) ─── */
 .w95-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .w95-modal-wrap { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .25); }

@@ -1,5 +1,5 @@
-// SRV-17: тост ошибок действий. Раньше ошибку видел только визард (CodeApp) — ошибки найма,
-// событий, сейвов и потерянных при обрыве действий молчали. Автоскрытие ~5 с, клик — скрыть сразу.
+// SRV-17: тост ошибок действий — теперь окно-сообщение в стиле Win95 (как MessageBox:
+// шапка с ✕ и красная иконка в теле). Автоскрытие ~5 с, клик — скрыть сразу.
 import { useEffect, useState } from 'react';
 import { useActionError, useActionErrorVer } from './store';
 
@@ -20,10 +20,18 @@ export function ActionToast() {
     return () => window.clearTimeout(t);
   }, [err, ver]);
   if (!shown) return null;
+  const close = (): void => setShown(null);
   return (
-    <div className="w95-toast" role="alert" title="Закрыть" onClick={() => setShown(null)}>
-      <div className="w95-toast-bar">⚠ Ошибка</div>
-      <div className="w95-toast-body">{shown}</div>
+    <div className="w95-toast" role="alert" title="Закрыть" onClick={close}>
+      <div className="w95-titlebar">
+        <span className="w95-toast-tbar-ico">⚠</span>
+        <span className="w95-title">Ошибка</span>
+        <button className="w95-btn w95-tbtn" onClick={close}>✕</button>
+      </div>
+      <div className="w95-toast-client">
+        <div className="w95-toast-big w95-toast-big-err">⛔</div>
+        <div className="w95-toast-text">{shown}</div>
+      </div>
     </div>
   );
 }

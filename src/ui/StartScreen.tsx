@@ -4,6 +4,7 @@ import { apiDeleteSave, apiLoadSave, apiLogout, apiSaves, type MeInfo, type Save
 import { NewGameForm } from './NewGameForm';
 import { dateLabel } from '../shared/meta';
 import { useProfile } from './profile';
+import { VersionStamp } from './VersionStamp';
 
 /** «12 июня 1987 · неделя 71 · изменено 11 сент., 22:01» */
 function saveMeta(s: SaveInfo): string {
@@ -145,6 +146,7 @@ export function StartScreen({ me }: { me: MeInfo }) {
                   <button className="w95-btn" onClick={() => refresh(true)}>🔄 Обновить</button>
                   <button className="w95-btn" onClick={() => void apiLogout().then(() => location.reload())}>🚪 Сменить пользователя</button>
                 </div>
+                <VersionStamp />
               </div>
             </div>
           )}

@@ -8,6 +8,7 @@ import type { Request } from 'express';
 import { PORT, HOST, gigaReady } from './config';
 import { type ClientAction } from './game';
 import { llmStatus } from './giga';
+import { gameVersion, buildId } from './version';
 import { createSeqGuard } from './wire';
 import { registerApi } from './api';
 import { createMailer } from './mailer';
@@ -158,7 +159,7 @@ wss.on('close', () => clearInterval(heartbeat));
 
 // ─── HTTP: экспорт/импорт сейва ───
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, llm: llmStatus() });
+  res.json({ ok: true, llm: llmStatus(), version: gameVersion(), build: buildId() });
 });
 
 app.get('/api/save', (req, res) => {

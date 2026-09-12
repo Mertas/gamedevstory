@@ -81,17 +81,23 @@ export function nextRank(combos: number): { rank: Rank; need: number } | null {
 }
 
 /** Тост о новом уровне: переход через порог — ещё и звание с заслугой (PLAN-22). */
-export function levelUpNotice(prev: number, count: number, comboName: string): { title: string; text: string } {
+export interface LevelNotice {
+  title: string;      // шапка окна
+  text: string;       // тело
+  icon: string;       // крупная иконка в теле (эмодзи звания)
+  name: string;       // имя звания строкой (жирным в теле)
+  crossed: boolean;   // перешли на новое звание (а не просто +1 комбо)
+}
+
+export function levelUpNotice(prev: number, count: number, comboName: string): LevelNotice {
   const now = rankFor(count);
   const before = rankFor(prev);
-  if (now.name !== before.name) {
-    return { title: `🎖️ Уровень ${count}: ${now.icon} ${now.name}`, text: `Новое комбо: ${comboName}. ${now.why}` };
-  }
+  const crossed = now.name !== before.name;
   const nx = nextRank(count);
-  return {
-    title: `🎖️ Уровень ${count}`,
-    text: `Новое комбо: ${comboName}.` + (nx ? ` До звания «${nx.rank.name}» — ${nx.need}.` : ' Выше только легенды индустрии.'),
-  };
+  const text = crossed
+    ? `Новое комбо: ${comboName}. ${now.why}`
+    : `Новое комбо: ${comboName}.` + (nx ? ` До звания «${nx.rank.name}» — ${nx.need}.` : ' Выше только легенды индустрии.');
+  return { title: crossed ? `Уровень ${count}: ${now.name}` : `Уровень ${count}`, text, icon: now.icon, name: now.name, crossed };
 }
 
 /** Ключ комбо для хранения в аккаунте. */

@@ -2,6 +2,7 @@
 // если оно включено на сервере (на публичном сервере выключено — plan/19).
 import { useState } from 'react';
 import { apiLogin, apiRegister, apiResetConfirm, apiResetRequest, type Features } from './api';
+import { VersionStamp } from './VersionStamp';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -145,6 +146,7 @@ export function AuthScreen({ features }: { features: Features }) {
               <button className="w95-btn" onClick={() => switchMode('reset')}>Забыли пароль?</button>
             )}
           </div>
+          <VersionStamp />
         </div>
       </div>
     </div>

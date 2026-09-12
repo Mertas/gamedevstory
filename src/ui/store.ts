@@ -5,7 +5,7 @@ import type { HireMethodId } from '../core/config';
 import type { GameState, StartProjectInput } from '../core/types';
 import type { ChatState } from '../shared/chat';
 import { genreById, typeById, type MetaData } from '../shared/meta';
-import { levelUpNotice } from '../shared/rank';
+import { levelUpNotice, type LevelNotice } from '../shared/rank';
 import type { AutopilotStep } from '../shared/autopilot';
 import { Outbox } from './outbox';
 
@@ -70,21 +70,20 @@ function trackLevel(g: GameState | null): void {
   const gg = meta && gid ? genreById(meta, gid) : null;
   const tt = meta && tid ? typeById(meta, tid) : null;
   const combo = `${gg?.ru ?? gid ?? '?'} × ${tt?.nameRu ?? tt?.name ?? tid ?? '?'}`;
-  const n = levelUpNotice(prev, combos.length, combo);
-  showLevelNotice(n.title, n.text);
+  showLevelNotice(levelUpNotice(prev, combos.length, combo));
 }
 
-let levelNotice: { title: string; text: string } | null = null;
+let levelNotice: LevelNotice | null = null;
 let levelNoticeVer = 0;
 
-/** Показать тост уровня (и звания, если порог перейдён). */
-export function showLevelNotice(title: string, text: string): void {
-  levelNotice = { title, text };
+/** Показать тост уровня (и звание, если порог перейдён). */
+export function showLevelNotice(n: LevelNotice): void {
+  levelNotice = n;
   levelNoticeVer++;
   emit();
 }
 
-export function useLevelNotice(): { title: string; text: string } | null {
+export function useLevelNotice(): LevelNotice | null {
   useSyncExternalStore(subscribe, () => levelNoticeVer);
   return levelNotice;
 }

@@ -13,6 +13,7 @@ import { typingName } from '../shared/chat';
 import { dateLabel, dayInYear } from '../shared/meta';
 import { AutopilotCursor } from './AutopilotCursor';
 import { useOwner } from './owner';
+import { VersionStamp } from './VersionStamp';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -484,6 +485,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
       <AutopilotCursor />
 
       {/* панель задач */}
+      <VersionStamp className="w95-desktop-version" />
       <div className="w95-taskbar" onMouseDown={(e) => e.stopPropagation()}>
         <button
           className={`w95-btn w95-start-btn ${startOpen ? 'active' : ''}`}

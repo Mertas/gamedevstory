@@ -2,10 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
+import { buildDefine } from './build-define';
+
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  define: buildDefine,
   resolve: {
     alias: {
       // Winamp: локальные исходники (webamp + workspace-пакеты) вместо npm-пакета.
