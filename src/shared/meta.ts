@@ -1,7 +1,7 @@
 // Метаданные игры для клиента (сервер шлёт один раз при подключении) + чистые хелперы.
 import type { CareerId } from '../core/data/schema';
 import type { GameState } from '../core/types';
-import { comboGradeFrom } from './rules';
+import { comboGradeFrom, staffMatchesPool } from './rules';
 
 export interface MetaData {
   genres: { id: string; name: string; ru: string; popularity: string; costWan: number; unlockJob: string | null; unlockLevel: number | null }[];
@@ -77,8 +77,5 @@ export function dateLabel(week: number): string {
 // кандидаты для метода найма (логика как в движке, но на клиентских данных)
 
 export function candidatePool(game: GameState, meta: MetaData, unlock: string[]): string[] {
-  return meta.staff
-    .filter((d) => !game.hiredIds.includes(d.id))
-    .filter((d) => unlock.some((u) => d.unlock.includes(u)))
-    .map((d) => d.id);
+  return meta.staff.filter((d) => !game.hiredIds.includes(d.id) && staffMatchesPool(d.unlock, unlock)).map((d) => d.id);
 }

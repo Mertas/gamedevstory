@@ -5,6 +5,7 @@ import { salaryWithLevels } from '../formulas';
 import { log } from '../log';
 import type { Rng } from '../rng';
 import type { ActionResult, GameState, Staff } from '../types';
+import { staffMatchesPool } from '../../shared/rules';
 
 export function makeStaffFromData(id: string): Staff | null {
   const d = STAFF.find((s) => s.id === id);
@@ -37,11 +38,7 @@ export function pickAvatar(rng: Rng): string {
 // пул кандидатов для метода найма: не нанятые сотрудники, чей unlock подходит
 export function candidatePool(state: GameState, method: HireMethodId): string[] {
   const cfg = CONFIG.HIRE_METHODS[method];
-  return STAFF.filter(
-    (d) =>
-      !state.hiredIds.includes(d.id) &&
-      cfg.pool.some((p) => d.unlock.includes(p) || (p === 'Word of Mouth' && d.unlock === 'Initially available')),
-  ).map((d) => d.id);
+  return STAFF.filter((d) => !state.hiredIds.includes(d.id) && staffMatchesPool(d.unlock, cfg.pool)).map((d) => d.id);
 }
 
 export function hireStaff(

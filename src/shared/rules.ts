@@ -48,3 +48,12 @@ export function consoleAvailable(game: GameState, consoleId: string): boolean {
 export function score100(score: number): number {
   return Math.round((score / 40) * 100);
 }
+
+/**
+ * PLAN-25: подходит ли сотрудник под пул метода найма. Правило ОДНО для движка и интерфейса —
+ * раньше оно было скопировано в двух местах, и копии разошлись: движок добавлял «сразу доступных»
+ * в методы с пулом «Word of Mouth», а интерфейс нет (автопилот пытался нанять того, кого в списке нет).
+ */
+export function staffMatchesPool(staffUnlock: string, pool: string[]): boolean {
+  return pool.some((p) => staffUnlock.includes(p) || (p === 'Word of Mouth' && staffUnlock === 'Initially available'));
+}
