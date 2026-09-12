@@ -99,6 +99,8 @@ export interface ActiveGame {
   totalRevenue: number;
   ended: boolean; // снята с продаж
   mediaMult?: number; // множитель остатка продаж от медиа-событий (статья/TV/баг), 1 = нет
+  paidUnits?: number; // PLAN-29: ФАКТ продано копий (с медиа-множителем) — для окна «Продажи»
+  paidRevenue?: number; // PLAN-29: ФАКТ доход (K) — механики не читают, только отчёт
 }
 
 export interface GameRecord {
@@ -115,6 +117,8 @@ export interface GameRecord {
   attrs: Stats;
   bugs: number;
   awards: string[];
+  paidUnits?: number; // PLAN-29: факт по копям (заполняется при снятии с продаж)
+  paidRevenue?: number; // PLAN-29: факт по деньгам (K)
   contrib?: Record<string, number>; // вклад сотрудников (имя → очки), для отчёта
 }
 

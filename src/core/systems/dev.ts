@@ -397,6 +397,9 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
     attrs: { ...game.points },
     bugs: Math.round(game.bugs),
     awards: [],
+    // PLAN-29: факт продаж копится, пока игра в продаже (заполнится в dailySales при снятии)
+    paidUnits: 0,
+    paidRevenue: 0,
   });
   if (state.history.length > 32) state.history.splice(0, state.history.length - 32);
 

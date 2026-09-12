@@ -13,6 +13,12 @@ export function dailySales(state: GameState): void {
     const entry = game.sales.find((s) => s.week === state.week);
     if (!entry || (cs && cs.removedAtWeek !== null && cs.removedAtWeek <= state.week)) {
       game.ended = true;
+      // PLAN-29: итог в архив — фактические цифры (для окна «Продажи»)
+      const rec = state.history.find((h) => h.name === game.name && h.releaseWeek === game.releaseWeek);
+      if (rec) {
+        rec.paidUnits = Math.round(game.paidUnits ?? 0);
+        rec.paidRevenue = Math.round(game.paidRevenue ?? 0);
+      }
       log(state, `«${game.name}» снята с продаж (итого ${formatUnits(game.totalUnits)}, ${Math.round(game.totalRevenue)}K)`);
       continue;
     }
@@ -20,6 +26,9 @@ export function dailySales(state: GameState): void {
     const mult = game.mediaMult ?? 1;
     state.money += entry.revenue * mult;
     state.fans += entry.units * mult * CONFIG.FAN_PER_UNIT;
+    // PLAN-29: фактический учёт для окна «Продажи» (механики не меняются — только цифры)
+    game.paidUnits = (game.paidUnits ?? 0) + entry.units * mult;
+    game.paidRevenue = (game.paidRevenue ?? 0) + entry.revenue * mult;
   }
   state.released = state.released.filter((g) => !g.ended);
 }

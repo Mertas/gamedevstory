@@ -391,3 +391,23 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-pick-foot .w95-hint { white-space: nowrap; }
 .w95-pick-foot .w95-grow { flex: 1 1 auto; min-width: 0; }
 .w95-pick-strong { font-size: 10px; color: #404040; }
+
+/* PLAN-29: окошко продаж — правый верхний угол; сквозь него кликаем (мышь ловит только крестик) */
+.sales-widget { position: fixed; top: 10px; right: 10px; width: 256px; z-index: 15000; pointer-events: none; padding-bottom: 8px; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; box-shadow: 1px 1px 0 #000, 3px 3px 10px rgba(0, 0, 0, .4); font-size: 11px; }
+.sales-head { display: flex; align-items: center; gap: 6px; padding: 2px 3px 2px 5px; background: linear-gradient(90deg, #000080, #1084d0); color: #fff; font-weight: 700; }
+.sales-title { flex: 1; }
+.sales-day { font-weight: 400; opacity: .85; }
+.sales-x { pointer-events: auto; width: 16px; height: 15px; padding: 0; line-height: 1; background: #c0c0c0; border: 1px solid; border-color: #fff #404040 #404040 #fff; color: #000; font-size: 9px; cursor: pointer; }
+.sales-name { padding: 5px 8px 0; font-weight: 700; }
+.sales-chart { display: block; margin: 4px auto 0; background: #000; border: 1px solid; border-color: #404040 #fff #fff #404040; }
+.sales-bar { fill: #1084d0; }
+.sales-line { stroke: #ffd84d; stroke-width: 1.6; }
+.sales-axis { stroke: #555; stroke-width: 1; }
+.sales-nums { display: flex; justify-content: space-between; padding: 5px 8px 0; font-weight: 700; }
+.sales-num { animation: salesPulse .5s ease-out; }
+.sales-final { padding: 5px 8px 0; text-align: center; }
+.sales-total { font-size: 18px; font-weight: 700; }
+.sales-sub { margin-top: 2px; }
+.sales-record { margin-top: 5px; font-weight: 700; color: #7a2b00; animation: salesRecord 1s ease-in-out infinite; text-shadow: 0 0 6px #ffd700, 0 0 12px #ffb400; }
+@keyframes salesPulse { from { transform: scale(1.35); color: #006000; } to { transform: scale(1); } }
+@keyframes salesRecord { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.08); filter: brightness(1.4); } }
