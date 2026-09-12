@@ -8,6 +8,7 @@ import { advanceWeeks, newGame, releaseAction, resolveBoostAction, resolveEventA
 import { createRng } from '../src/core/rng';
 import { autopilotProjectInput } from '../src/core/sim/policy';
 import { isUnlocked } from '../src/shared/rules';
+import { nextRank, RANKS, rankFor } from '../src/shared/rank';
 import { resolveBoost } from '../src/core/systems/dev';
 import { consoleAvailable } from '../src/core/systems/dev';
 import { dateToDay, dailySales, tickMediaEvents } from '../src/core/systems/market';
@@ -612,5 +613,19 @@ describe('PLAN-22: открытые комбо (набор аккаунта, в�
     expect(isUnlocked(g, 'director', 1, null, 'sim-rpg|pirate')).toBe(false);
     g.openedCombos = ['sim-rpg|pirate'];
     expect(isUnlocked(g, 'director', 1, null, 'sim-rpg|pirate')).toBe(true);
+  });
+});
+
+describe('PLAN-22: лестница званий', () => {
+  it('пороги растут, покрывают всю шкалу, вершина — последнее звание', () => {
+    expect(RANKS[0]!.from).toBe(0);
+    for (let i = 1; i < RANKS.length; i++) expect(RANKS[i]!.from).toBeGreaterThan(RANKS[i - 1]!.from);
+    expect(RANKS.length).toBeGreaterThanOrEqual(40); // порогов много — звание меняется часто
+    expect(rankFor(0).name).toBe(RANKS[0]!.name);
+    expect(rankFor(1).name).toBe('Лукас Поуп');
+    expect(rankFor(1580).name).toBe(RANKS[RANKS.length - 1]!.name);
+    expect(rankFor(99999)).toBe(rankFor(1580)); // выше вершины — та же легенда
+    expect(nextRank(0)?.need).toBe(1);
+    expect(nextRank(1580)).toBeNull();
   });
 });
