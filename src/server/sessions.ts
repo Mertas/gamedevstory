@@ -88,6 +88,20 @@ export class SessionRegistry implements SessionHooks {
     });
   }
 
+  /**
+   * PLAN-27: сессия для подключения. После перезапуска сервера реестр пуст, и раньше вкладка
+   * получала «нет активной партии» и вылетала в меню сохранений, хотя партия цела в БД —
+   * поэтому при подключении без живой сессии поднимаем последнее сохранение игрока.
+   */
+  attach(userId: number): GameServer | null {
+    const cur = this.live.get(userId);
+    if (cur) return cur.server;
+    const last = this.users.listSaves(userId)[0]?.id;
+    if (last == null) return null;
+    this.load(userId, last);
+    return this.server(userId);
+  }
+
   /** Активная игровая сессия пользователя (null — партия не загружена). */
   server(userId: number): GameServer | null {
     return this.live.get(userId)?.server ?? null;

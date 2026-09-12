@@ -97,7 +97,8 @@ wss.on('connection', (ws, req) => {
     ws.close(1008, 'нужен вход');
     return;
   }
-  const game = registry.server(user.id);
+  // PLAN-27: без живой сессии поднимаем последнюю партию игрока (переживает перезапуск сервера)
+  const game = registry.attach(user.id);
   if (!game) {
     ws.close(1008, 'нет активной партии');
     return;

@@ -226,9 +226,26 @@ export function App() {
 
   if (me === undefined) return <Boot text="⏳ Загрузка…" />;
   if (me === null) return <AuthScreen features={features} />;
-  if (screen === 'launcher') return <StartScreen me={me} />;
+  if (screen === 'launcher') {
+    return (
+      <>
+        <StartScreen me={me} />
+        <UpdateNotice />
+      </>
+    );
+  }
   if (!snap.game || !snap.meta) {
-    return <Boot text={snap.connected ? '⏳ Загрузка партии…' : '🔌 Нет связи с сервером. Запустите: pnpm server'} />;
+    return (
+      <Boot
+        text={
+          snap.connected
+            ? '⏳ Загрузка партии…'
+            : location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+              ? '🔌 Нет связи с сервером. Запустите: pnpm server'
+              : '🔌 Нет связи с сервером — переподключаюсь…'
+        }
+      />
+    );
   }
   return (
     <WindowManagerProvider>

@@ -280,3 +280,30 @@ describe('PLAN-22: открытые комбо в аккаунте', () => {
     u.close();
   });
 });
+
+describe('PLAN-27: партия переживает перезапуск сервера', () => {
+  it('пустой реестр (после деплоя) + подключение → поднимается последнее сохранение', () => {
+    const users = new UserService(tmpDb());
+    const r1 = new SessionRegistry(users);
+    const reg = users.register('Mertas', '12345678');
+    expect(reg.ok).toBe(true);
+    const uid = reg.ok ? reg.user.id : 0;
+    const saveId = r1.create(uid, { studioName: 'Тёплый Ламповый', staffIds: ['dee-coder', 's-presso'] });
+
+    // перезапуск сервера: реестр пуст, как в свежем процессе
+    const r2 = new SessionRegistry(users);
+    expect(r2.server(uid)).toBeNull(); // раньше это давало «нет активной партии» и вылет в меню
+    expect(r2.attach(uid)).not.toBeNull();
+    expect(r2.activeSaveId(uid)).toBe(saveId);
+    expect(r2.server(uid)?.game.studioName).toBe('Тёплый Ламповый');
+
+    // у кого сохранений нет — честный отказ (клиент уйдёт в меню новых партий)
+    const fresh = users.register('Pustoy', '12345678');
+    const freshId = fresh.ok ? fresh.user.id : 0;
+    expect(users.listSaves(freshId).length).toBe(0);
+    expect(r2.attach(freshId)).toBeNull();
+
+    r2.disposeAll();
+    users.close();
+  });
+});

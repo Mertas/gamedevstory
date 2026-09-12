@@ -401,9 +401,10 @@ export function reloadForUpdate(): void {
   location.reload();
 }
 
-async function checkBuild(): Promise<void> {
+async function checkBuild(retries = 0): Promise<void> {
   try {
     const r = await fetch('/api/health');
+    if (!r.ok) throw new Error(`health ${r.status}`);
     const j = (await r.json()) as { build?: string };
     if (!j.build) return;
     if (serverBuild === null) serverBuild = j.build;
@@ -413,7 +414,9 @@ async function checkBuild(): Promise<void> {
       emit();
     }
   } catch {
-    /* нет связи — не страшно, проверим на следующем подключении */
+    // PLAN-27: деплой перезапускает сервер — health отвечает не сразу, доводим проверку
+    // до успеха (иначе плашка обновления не появлялась именно в момент, когда она нужна)
+    if (!updateReady && retries < 40) setTimeout(() => void checkBuild(retries + 1), 3000);
   }
 }
 
