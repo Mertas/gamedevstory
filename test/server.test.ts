@@ -403,6 +403,10 @@ describe('PLAN-24: вид рабочего стола в сейве (фон + р
       windows: [{ id: 'ok', x: 20000, y: -4000, w: 120, h: 80, z: 5000, minimized: false, maximized: false, closed: false }],
     });
 
+    // расстановка иконок: мусорные ключи и дикие координаты не проходят
+    srv.handle({ type: 'set_ui', ui: { icons: { code: { x: 4, y: 4 }, 'Плохой ключ!': { x: 1, y: 1 }, ok: { x: 1e9, y: -1e9 }, broken: { x: 'нет' } } } });
+    expect(srv.snapshot().game.ui?.icons).toEqual({ code: { x: 4, y: 4 }, ok: { x: 20000, y: -2000 } });
+
     // раскладка окон - не «действие босса»: перетаскивание окна не должно глушить автопилот
     srv.handle({ type: 'set_autopilot', on: true });
     expect(srv.snapshot().autopilot).toBe(true);

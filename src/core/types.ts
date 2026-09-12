@@ -193,6 +193,8 @@ export interface UiState {
   /** id обоев из public/wallpapers или null (обычный бирюзовый стол) */
   wallpaper?: string | null;
   windows?: UiWindow[];
+  /** расстановка иконок на столе: id приложения → координаты верхнего левого угла */
+  icons?: Record<string, { x: number; y: number }>;
 }
 
 export interface UiWindow {

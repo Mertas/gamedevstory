@@ -377,7 +377,7 @@ export function newGameAction() {
  * PLAN-24: вид рабочего стола — часть сейва (его ждут на любом устройстве), поэтому через сервер.
  * Сервер валидирует значения (src/server/ui-state.ts) и сохраняет сразу.
  */
-export function actionSetUi(patch: { wallpaper?: string | null; windows?: UiWindow[] }): void {
+export function actionSetUi(patch: { wallpaper?: string | null; windows?: UiWindow[]; icons?: Record<string, { x: number; y: number }> }): void {
   send({ type: 'set_ui', ui: { ...(snap.game?.ui ?? {}), ...patch } });
 }
 

@@ -4,6 +4,7 @@
 import type { UiState, UiWindow } from '../core/types';
 
 const MAX_WINDOWS = 40;
+const MAX_ICONS = 60;
 const MAX_ID = 40;
 const MAX_WALLPAPER = 64;
 
@@ -37,6 +38,19 @@ export function sanitizeUi(raw: unknown, prev: UiState | undefined): UiState {
       .slice(0, MAX_WINDOWS)
       .map(oneWindow)
       .filter((w): w is UiWindow => w !== null);
+  }
+  if (r.icons && typeof r.icons === 'object' && !Array.isArray(r.icons)) {
+    // ключи — id приложений: пропускаем только «похожие на id», координаты зажимаем
+    const icons: Record<string, { x: number; y: number }> = {};
+    for (const [k, v] of Object.entries(r.icons as Record<string, unknown>).slice(0, MAX_ICONS)) {
+      if (k.length > MAX_ID || !/^[a-z0-9_-]+$/.test(k) || !v || typeof v !== 'object') continue;
+      const o = v as Record<string, unknown>;
+      const x = num(o.x, -2000, 20000);
+      const y = num(o.y, -2000, 20000);
+      if (x === null || y === null) continue;
+      icons[k] = { x, y };
+    }
+    out.icons = icons;
   }
   return out;
 }

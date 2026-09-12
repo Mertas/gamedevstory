@@ -123,7 +123,10 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const wallpaper = useGameSelector((g) => g.ui?.wallpaper ?? null);
   const gameUi = useGameSelector((g) => g.ui);
   const [bgPick, setBgPick] = useState(false);
-  const [deskPos, setDeskPos] = useState<Record<string, { x: number; y: number }>>(() => { try { return JSON.parse(localStorage.getItem('gds-desk-pos') || '{}'); } catch { return {}; } });
+  // PLAN-24: расстановка иконок — часть сейва (как фон и окна). Локально держим зеркало для перетаскивания.
+  const savedIcons = useGameSelector((g) => g.ui?.icons);
+  const [deskPos, setDeskPos] = useState<Record<string, { x: number; y: number }>>({});
+  const iconsSeeded = useRef(false);
   const [selIds, setSelIds] = useState<string[]>([]);
   const [selBox, setSelBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const boxRef = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
@@ -176,7 +179,25 @@ export function Desktop({ onExit }: { onExit: () => void }) {
       if (stored) actionSetUi({ wallpaper: stored });
     }
   }, [gameUi]);
-  useEffect(() => { try { localStorage.setItem('gds-desk-pos', JSON.stringify(deskPos)); } catch { /* */ } }, [deskPos]);
+  // подъём расстановки из сейва; если её там ещё нет — одноразовый перенос из браузера
+  useEffect(() => {
+    if (iconsSeeded.current) return;
+    iconsSeeded.current = true;
+    if (savedIcons && Object.keys(savedIcons).length > 0) {
+      setDeskPos(savedIcons);
+      return;
+    }
+    try {
+      const legacy = JSON.parse(localStorage.getItem('gds-desk-pos') || '{}') as Record<string, { x: number; y: number }>;
+      if (legacy && Object.keys(legacy).length > 0) setDeskPos(legacy);
+    } catch { /* мусор в localStorage — просто раскладываем по сетке */ }
+  }, [savedIcons]);
+  // изменения расстановки уходят в сейв с задержкой (перетаскивание — десятки событий)
+  useEffect(() => {
+    if (!iconsSeeded.current) return;
+    const t = window.setTimeout(() => actionSetUi({ icons: deskPos }), 1200);
+    return () => window.clearTimeout(t);
+  }, [deskPos]);
 
   const deskItems = useMemo(() => {
     const items = apps.map((d) => ({ id: d.id, title: d.title, icon: d.icon, iconFile: DEFAULT_ICONS[d.id], kind: 'app', open: () => wm.open(d.id) }));
