@@ -5,6 +5,7 @@ export interface SalesDay {
   week: number;
   units: number;
   revenue: number;
+  unitsF?: number; // PLAN-29: дробные копии дня (у мелких игр продажи < 1/день)
 }
 
 export interface SalesView {
@@ -29,6 +30,7 @@ export function recordUnits(h: GameRecord): number {
 export function fmtUnits(u: number): string {
   if (u >= 1_000_000) return `${(u / 1_000_000).toFixed(2)}M`;
   if (u >= 1000) return `${(u / 1000).toFixed(2)}K`;
+  if (u < 10 && !Number.isInteger(u)) return u.toFixed(1); // дробные копии мелких игр
   return `${Math.round(u)}`;
 }
 
@@ -37,7 +39,7 @@ export function sumsUpTo(sales: SalesDay[], day: number): { units: number; reven
   let revenue = 0;
   for (const s of sales) {
     if (s.week <= day) {
-      units += s.units;
+      units += s.unitsF ?? s.units;
       revenue += s.revenue;
     }
   }
@@ -67,7 +69,15 @@ export function pickSalesView(released: ActiveGame[], history: GameRecord[], wee
     .sort((a, b) => (b.releaseWeek ?? 0) - (a.releaseWeek ?? 0))[0];
   if (live && live.releaseWeek !== null) {
     const sums = sumsUpTo(live.sales, week);
-    const units = Math.round(live.paidUnits ?? sums.units);
+    // копии: факт (paidUnits) → сумма по графику → доля плана (старые сейвы, где копии дня округлены)
+    const share = live.totalRevenue > 0 ? Math.min(1, sums.revenue / live.totalRevenue) : 0;
+    const raw =
+      live.paidUnits && live.paidUnits > 0
+        ? live.paidUnits
+        : sums.units > 0
+          ? sums.units
+          : live.totalUnits * share;
+    const units = Math.round(raw * 10) / 10; // дробные копии (мелкие игры продают < 1/день)
     const revenue = Math.round(live.paidRevenue ?? sums.revenue);
     const others = othersOf(history, live.name, live.releaseWeek);
     return {

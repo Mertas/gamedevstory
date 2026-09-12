@@ -23,6 +23,7 @@ describe('PLAN-29 окно продаж: место и рекорд', () => {
 
   it('формат копий: K и M', () => {
     expect(fmtUnits(950)).toBe('950');
+    expect(fmtUnits(1.4)).toBe('1.4'); // дробные копии мелких игр
     expect(fmtUnits(12_340)).toBe('12.34K');
     expect(fmtUnits(2_500_000)).toBe('2.50M');
   });

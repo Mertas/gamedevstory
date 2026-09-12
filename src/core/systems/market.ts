@@ -27,7 +27,7 @@ export function dailySales(state: GameState): void {
     state.money += entry.revenue * mult;
     state.fans += entry.units * mult * CONFIG.FAN_PER_UNIT;
     // PLAN-29: фактический учёт для окна «Продажи» (механики не меняются — только цифры)
-    game.paidUnits = (game.paidUnits ?? 0) + entry.units * mult;
+    game.paidUnits = (game.paidUnits ?? 0) + (entry.unitsF ?? entry.units) * mult;
     game.paidRevenue = (game.paidRevenue ?? 0) + entry.revenue * mult;
   }
   state.released = state.released.filter((g) => !g.ended);

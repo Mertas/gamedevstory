@@ -94,7 +94,7 @@ export interface ActiveGame {
   judgeScores: number[];
   reviewMessages: string[];
   releaseWeek: number | null;
-  sales: { week: number; units: number; revenue: number }[];
+  sales: { week: number; units: number; revenue: number; unitsF?: number }[];
   totalUnits: number;
   totalRevenue: number;
   ended: boolean; // снята с продаж

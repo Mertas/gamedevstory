@@ -158,7 +158,7 @@ export function salesPlan(input: SalesPlanInput): SalesPlan {
     (input.sequel ? CONFIG.SEQUEL_MULT : 1);
   const totalUnits = input.installBase * CONFIG.SALES_BASE_RATE * share;
   const price = pricePerCopy(input.consoleMult);
-  const weeks: { week: number; units: number; revenue: number }[] = [];
+  const weeks: { week: number; units: number; revenue: number; unitsF: number }[] = [];
   let totalRevenue = 0;
   // продажи по ДНЯМ: 168 дней (= 24 недели), дневные доли = недельные / 7
   for (let i = 0; i < CONFIG.SALES_DAYS; i++) {
@@ -169,7 +169,9 @@ export function salesPlan(input: SalesPlanInput): SalesPlan {
     const units = totalUnits * curve * winter / 7;
     const revenue = units * price;
     totalRevenue += revenue;
-    weeks.push({ week: day, units: Math.round(units), revenue: Math.round(revenue) });
+    // PLAN-29: units — целые (историческое поле), unitsF — дробь: у мелких игр продажи < 1 копии в день,
+    // и по округлённым нулям график/копилка копий были бы пустыми
+    weeks.push({ week: day, units: Math.round(units), revenue: Math.round(revenue), unitsF: Math.round(units * 100) / 100 });
   }
   return { weeks, totalUnits: Math.round(totalUnits), totalRevenue: Math.round(totalRevenue) };
 }

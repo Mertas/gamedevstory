@@ -20,7 +20,7 @@ function SalesChart({ sales }: { sales: SalesDay[] }) {
   const W = 236;
   const H = 62;
   const n = Math.max(sales.length, 1);
-  const maxU = Math.max(1, ...sales.map((s) => s.units));
+  const maxU = Math.max(0.01, ...sales.map((s) => s.unitsF ?? s.units));
   const bw = W / n;
   let acc = 0;
   let total = 0;
@@ -36,7 +36,7 @@ function SalesChart({ sales }: { sales: SalesDay[] }) {
   return (
     <svg className="sales-chart" viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="График продаж">
       {sales.map((s, i) => {
-        const h = Math.max(1, (s.units / maxU) * (H - 8));
+        const h = Math.max(1, ((s.unitsF ?? s.units) / maxU) * (H - 8));
         return <rect key={s.week} className="sales-bar" x={i * bw} y={H - 2 - h} width={Math.max(1, bw - 0.6)} height={h} />;
       })}
       {sales.length > 1 && <polyline className="sales-line" fill="none" points={line} />}
