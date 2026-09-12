@@ -45,7 +45,7 @@ export function useProfile(): ProfileInfo | null {
   useEffect(() => {
     const fn = (): void => bump((v) => v + 1);
     listeners.add(fn);
-    ensureProfile();
+    ensureProfile(true); // PLAN-22: экран перемонтировали (выход в меню) — тянем свежий уровень
     return () => {
       listeners.delete(fn);
     };

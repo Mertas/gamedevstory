@@ -327,7 +327,11 @@ export class GameServer {
   /** @internal для GameTicker: обычный автосейв; force — в обход дебаунса по дням */
   autosave(force = false): void {
     this.saves.autosave(this.game, this.chat, force);
-    // PLAN-22: новые открытые комбо — в аккаунт (набор аккаунта растёт, из сейва не берём)
+    this.flushCombos();
+  }
+
+  /** PLAN-22: сразу отдать новые комбо в аккаунт (не ждём автосейв — уровень в меню должен быть свежим). */
+  flushCombos(): void {
     const combos = this.game.openedCombos ?? [];
     if (this.onCombosChanged && combos.length > this.syncedCombos) {
       this.syncedCombos = combos.length;
