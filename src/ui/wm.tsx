@@ -53,8 +53,11 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const savedWins = useGameSelector((g) => g.ui?.windows);
   const seeded = useRef(false);
   useEffect(() => {
-    if (seeded.current || !savedWins || savedWins.length === 0) return;
+    if (seeded.current) return;
+    // Desktop монтируется только с загруженным сейвом, поэтому первый прогон эффекта — это «сейв поднят».
+    // Флаг ставим всегда, иначе в НОВОЙ партии (окон в сейве ещё нет) раскладка не сохранялась бы вовсе.
     seeded.current = true;
+    if (!savedWins || savedWins.length === 0) return; // окон в сейве нет — стол пустой, как и был
     zCounter = Math.max(10, ...savedWins.map((w) => w.z));
     setWins(savedWins.map((w) => ({ ...w, flash: false })));
   }, [savedWins]);
