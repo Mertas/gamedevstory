@@ -42,7 +42,9 @@ export class GameTicker {
   private step(): void {
     try {
       const { game, chat } = this.host;
-      if (this.host.speed <= 0 || game.bankrupt) return;
+      // PLAN-25: попап события и хореография автопилота обязаны жить И на паузе — пауза
+      // останавливает игровое ВРЕМЯ, а не логику сессии. Иначе игрок, поставивший игру на паузу,
+      // навсегда застревал на неразрешённом попапе (автопилот не мог дойти до его резолва).
       if (game.pendingEvent) {
         // пульс: пока событие ждёт решения, шлём state ~раз в 1.5с. Клиент, потерявший
         // попап (клик ушёл в оборванный WS), вернёт его; открытый попап не пересоздаётся
@@ -54,8 +56,9 @@ export class GameTicker {
         // аудит 06.09: театр автопилота обязан работать И при висящем событии —
         // иначе мышь не летит к «Выпустить игру», и событие никто не резолвит
         this.host.maybeAutopilot();
-        return;
+        return; // время не идёт: тика дня нет, но попап и мышь живут
       }
+      if (this.host.speed <= 0 || game.bankrupt) return;
       tick(game);
       deliverChat(game, chat);
       this.host.maybeTriggerPhases();

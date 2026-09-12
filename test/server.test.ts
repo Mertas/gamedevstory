@@ -414,3 +414,25 @@ describe('PLAN-24: вид рабочего стола в сейве (фон + р
     expect(srv.snapshot().autopilot).toBe(true);
   });
 });
+
+describe('PLAN-25: пауза не блокирует резолв события (автопилот)', () => {
+  it('событие на скорости 0 всё равно закрывается автопилотом', async () => {
+    vi.useFakeTimers();
+    srv = makeServer();
+    srv.snapshot().game.money = 5000;
+    // берём info-событие: у Gamedex своя проверка «выставка идёт», а здесь важен сам механизм
+    srv.snapshot().game.pendingEvent = {
+      type: 'info',
+      title: 'Тестовое событие',
+      text: 'Должно закрыться само на паузе',
+    } as unknown as ReturnType<typeof srv.snapshot>['game']['pendingEvent'];
+    srv.handle({ type: 'set_speed', v: 0 }); // игрок на паузе
+    srv.handle({ type: 'set_autopilot', on: true }); // автопилот снимает паузу (AP-12: 0→1×)
+    expect(srv.snapshot().speed).toBe(1);
+    srv.handle({ type: 'set_speed', v: 0 }); // …и сразу снова пауза: цикл не должен встать
+    // на паузе интервал тикера вдвое длиннее, а отсчёт «театра» начинается с первого тика
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(srv.snapshot().game.pendingEvent ?? null).toBeNull(); // попап закрыт, цикла не застрял
+    vi.useRealTimers();
+  });
+});

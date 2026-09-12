@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
+import { StaffAvatar } from '../../StaffAvatar';
 import { actionChangeCareer, actionFire, actionLevelUp, useGame } from '../../store';
 
 export function TeamTab() {
@@ -24,7 +25,7 @@ export function TeamTab() {
               <tr key={st.id}>
                 <td>
                   <span className="w95-row">
-                    {st.avatar ? <img src={st.avatar} alt="" style={{ width: 20, height: 20 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : null}
+                    <StaffAvatar staff={st} size={20} />
                     {st.name}
                   </span>
                 </td>
