@@ -23,6 +23,16 @@ export const MAX_SPEED = 8;
 export type ActionOutcome = { ok: boolean; error?: string; popup?: { title: string; text: string } };
 
 /** Всё, что диспетчеру нужно от сессии (GameServer подходит структурно). */
+let autopilotLogSink: ((entry: Record<string, unknown>) => void) | null = null;
+/** PLAN-26: куда писать журнал промахов автопилота (задаёт слой api.ts → UserService). */
+export function setAutopilotLogSink(fn: ((entry: Record<string, unknown>) => void) | null): void {
+  autopilotLogSink = fn;
+}
+
+export function writeAutopilotLog(entry: Record<string, unknown>): void {
+  autopilotLogSink?.(entry);
+}
+
 export interface SessionHost {
   game: GameState;
   chat: ChatState;
@@ -61,7 +71,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
   // автопилот (plan/14): любое действие БОССА выключает авторежим; действия виртуальной
   // мыши помечены autopilot:true и не выключают. take_control — с реакцией чата.
   // PLAN-24: set_ui (фон/раскладка окон) — тоже не «действие босса»: перетаскивание окна не должно сбивать автопилот
-  if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed' && msg.type !== 'set_ui' && msg.type !== 'autopilot_done') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
+  if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed' && msg.type !== 'set_ui' && msg.type !== 'autopilot_done' && msg.type !== 'autopilot_log') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
     if (s.autopilotOn) s.stopAutopilot(msg.type !== 'take_control');
   }
   if (msg.type === 'take_control') {
@@ -79,6 +89,11 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.speed = v;
       s.startTicker();
       s.emit();
+      return;
+    }
+    case 'autopilot_log': {
+      // PLAN-26: промах автопилота — просто в журнал, игру не трогаем
+      if (msg.entry && typeof msg.entry === 'object') autopilotLogSink?.(msg.entry as Record<string, unknown>);
       return;
     }
     case 'autopilot_done': {

@@ -12,7 +12,7 @@ import { generateStory, generateWithFallback, type LlmFn } from './giga';
 import { AutopilotController } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH, type PersistAdapter } from './save';
-import { dispatchClientAction, MAX_SPEED } from './actions';
+import { writeAutopilotLog, dispatchClientAction, MAX_SPEED } from './actions';
 import { GameTicker } from './ticker';
 import { ChatOrchestrator } from './chatflow';
 import { MailService } from './mail';
@@ -38,6 +38,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'set_speed'; v: number }
   | { type: 'set_ui'; ui: unknown } // PLAN-24: фон и раскладка окон в сейве
   | { type: 'autopilot_done' } // PLAN-25: клиент отыграл хореографию политики (клики применили действия)
+  | { type: 'autopilot_log'; entry: unknown } // PLAN-26: журнал промахов автопилота
   | { type: 'new_game' }
   | { type: 'get_state' }
   // M3
@@ -267,6 +268,11 @@ export class GameServer {
   /** @internal для GameTicker: «театр» событий, обсуждение→решение, таймаут плана */
   maybeAutopilot(): void {
     this.pilot.maybeAutopilot();
+  }
+
+  /** PLAN-26: журнал промахов автопилота (клиентские отчёты + серверные сигналы). */
+  logAutopilot(entry: Record<string, unknown>): void {
+    writeAutopilotLog(entry);
   }
 
   /** PLAN-25: сигнал от клиента — хореография политики отыграна, откат по дедлайну не нужен. */

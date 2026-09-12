@@ -129,6 +129,11 @@ export class UserService {
         used_by INTEGER, used_at INTEGER
       );
       -- PLAN-22: открытые комбо — прогресс аккаунта, живёт вне сейвов
+      CREATE TABLE IF NOT EXISTS autopilot_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL,
+        build TEXT, kind TEXT NOT NULL, target TEXT, label TEXT, step_kind TEXT, app TEXT,
+        dom TEXT, extra TEXT
+      );
       CREATE TABLE IF NOT EXISTS user_combos (
         user_id INTEGER NOT NULL, combo TEXT NOT NULL, first_at INTEGER NOT NULL,
         source TEXT NOT NULL DEFAULT 'start', PRIMARY KEY (user_id, combo)
@@ -202,6 +207,33 @@ export class UserService {
 
   logout(token: string): void {
     this.db.prepare('DELETE FROM sessions WHERE token = ?').run(sha256(token));
+  }
+
+  /**
+   * PLAN-26: журнал промахов автопилота (цель не найдена/скрыта/перекрыта) — пишется из клиента,
+   * читается sqlite-запросом. Храним последние 4000 строк: это диагностика, а не телеметрия.
+   */
+  logAutopilot(entry: Record<string, unknown>): void {
+    try {
+      this.db.prepare(
+        `INSERT INTO autopilot_log (ts, build, kind, target, label, step_kind, app, dom, extra)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        Date.now(),
+        entry.serverBuild != null ? String(entry.serverBuild).slice(0, 64) : null,
+        String(entry.kind ?? 'unknown').slice(0, 64),
+        entry.target != null ? String(entry.target).slice(0, 140) : null,
+        entry.label != null ? String(entry.label).slice(0, 220) : null,
+        entry.stepKind != null ? String(entry.stepKind).slice(0, 32) : null,
+        (entry.dom as Record<string, unknown> | null)?.windowApp != null
+          ? String((entry.dom as Record<string, unknown>).windowApp).slice(0, 64) : null,
+        JSON.stringify(entry.dom ?? null).slice(0, 4000),
+        JSON.stringify({ ...entry, kind: undefined, target: undefined, label: undefined, stepKind: undefined, dom: undefined }).slice(0, 6000),
+      );
+      this.db.prepare('DELETE FROM autopilot_log WHERE id < (SELECT MAX(id) - 4000 FROM autopilot_log)').run();
+    } catch (e) {
+      console.error('[gds] лог автопилота не записался:', String(e).slice(0, 200));
+    }
   }
 
   /** Сколько активных сессий у игрока (диагностика/отладка). */

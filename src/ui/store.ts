@@ -9,6 +9,7 @@ import { levelUpNotice, type LevelNotice } from '../shared/rank';
 import type { AutopilotStep } from '../shared/autopilot';
 import { Outbox } from './outbox';
 
+import { APP_VERSION, BUILD_DATE } from '../shared/version';
 export interface Snapshot {
   game: GameState | null;
   chat: ChatState;
@@ -405,6 +406,33 @@ async function checkBuild(): Promise<void> {
     }
   } catch {
     /* нет связи — не страшно, проверим на следующем подключении */
+  }
+}
+
+/**
+ * PLAN-26: промах автопилота (кнопка не найдена/скрыта/перекрыта) — в журнал на сервере.
+ * Собираем всё, что нужно для разбора: шаг, DOM-контекст цели, последние шаги, сборки, состояние партии.
+ */
+export function reportAutopilotIssue(kind: string, data: Record<string, unknown>): void {
+  try {
+    const g = snap.game as GameState | null;
+    send({
+      type: 'autopilot_log',
+      entry: {
+        kind,
+        ...data,
+        clientVersion: APP_VERSION,
+        clientBuild: BUILD_DATE,
+        serverBuild,
+        ua: navigator.userAgent.slice(0, 160),
+        viewport: { w: window.innerWidth, h: window.innerHeight },
+        game: g
+          ? { week: g.week, year: g.year, money: Math.round(g.money), phase: g.activeGame?.phase ?? null, staff: g.staff.length, office: g.officeLevel }
+          : null,
+      },
+    });
+  } catch {
+    /* журнал не должен мешать игре */
   }
 }
 

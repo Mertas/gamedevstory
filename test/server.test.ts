@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { GameServer } from '../src/server/game';
+import { setAutopilotLogSink } from '../src/server/actions';
 import type { LlmFn } from '../src/server/giga';
 import { newGame } from '../src/core/engine';
 import { autopilotProjectInput } from '../src/core/sim/policy';
@@ -434,5 +435,19 @@ describe('PLAN-25: пауза не блокирует резолв событи�
     await vi.advanceTimersByTimeAsync(9000);
     expect(srv.snapshot().game.pendingEvent ?? null).toBeNull(); // попап закрыт, цикла не застрял
     vi.useRealTimers();
+  });
+});
+
+describe('PLAN-26: журнал промахов автопилота', () => {
+  it('сообщение autopilot_log доходит до приёмника и не выключает автопилот', () => {
+    srv = makeServer();
+    const seen: Array<Record<string, unknown>> = [];
+    setAutopilotLogSink((e) => seen.push(e));
+    srv.handle({ type: 'set_autopilot', on: true });
+    srv.handle({ type: 'autopilot_log', entry: { kind: 'target-missing', target: 'hire-x', label: 'Принимаю' } });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.target).toBe('hire-x');
+    expect(srv.snapshot().autopilot).toBe(true); // лог — не «действие босса»
+    setAutopilotLogSink(null);
   });
 });

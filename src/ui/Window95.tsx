@@ -119,6 +119,7 @@ export const Window95 = memo(function Window95({ win, title, icon, iconUrl, focu
   // иначе визард и формы теряют всё локальное состояние
   return (
     <div
+      data-app={win.id}
       className={`w95-window ${focused ? 'focused' : ''} ${win.maximized ? 'maximized' : ''}`}
       style={{
         left: win.x,

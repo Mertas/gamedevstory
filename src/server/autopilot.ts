@@ -282,6 +282,8 @@ export interface AutopilotHost {
   /** 16: реплики обсуждения из решения — в очередь чата */
   publishDiscussion(lines: { author: string; text: string }[]): void;
   generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void>;
+  /** PLAN-26: журнал промахов (клиент не отыграл шаги — писал сам сервер) */
+  logAutopilot?(entry: Record<string, unknown>): void;
 }
 
 /** Оркестрация автопилота (SRV-22): «театр» событий, обсуждение→решение, таймаут плана. */
@@ -472,6 +474,14 @@ export class AutopilotController {
     // (4) PLAN-25: клиент не отыграл хореографию (нет браузера/завис) — доводим хозяйство сами
     if (this.policyDeadline && Date.now() > this.policyDeadline) {
       this.policyDeadline = 0;
+      // PLAN-26: клиент не отыграл хореографию — сигнал в журнал (иначе такие случаи невидимы)
+      this.h.logAutopilot?.({
+        kind: 'deadline-fallback',
+        target: null,
+        label: 'клиент не отыграл шаги за дедлайн — хозяйство применил сервер',
+        dom: null,
+        recent: [],
+      });
       const journal: PolicyAction[] = [];
       this.policy.turn(g, journal);
       if (journal.length) for (const s of policySteps(journal, g)) this.h.emitStep(s);

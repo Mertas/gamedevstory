@@ -7,7 +7,7 @@
 //   (реальный onClick → реальное действие с флагом autopilot:true)
 // - click: курсор летит к [data-autopilot=target] и нажимает кнопку
 import { useEffect, useRef, useState } from 'react';
-import { takeAutopilotStep, useAutopilot, actionAutopilotDone } from './store';
+import { takeAutopilotStep, useAutopilot, actionAutopilotDone, reportAutopilotIssue } from './store';
 import { planDirClicks, type AutopilotPlan, type AutopilotStep } from '../shared/autopilot';
 import { useWindows } from './wm';
 
@@ -29,6 +29,8 @@ export function AutopilotCursor() {
   const wm = useRef(useWindows());
   const busyRef = useRef(false);
   const playedRef = useRef(0); // PLAN-25: сколько шагов сыграно с последнего сигнала серверу
+  // PLAN-26: последние шаги — в журнал промахов, чтобы видеть последовательность
+  const recentRef = useRef<Array<Record<string, unknown>>>([]);
   // SRV-16: флаг автопилота в ref — интервал и хореография проверяют его без пересоздания эффекта
   const autopilot = useAutopilot();
   const autoRef = useRef(autopilot);
@@ -114,31 +116,88 @@ export function AutopilotCursor() {
     const clickTarget = async (target: string, quick = true, cosmetic = false): Promise<boolean> => {
       const el = await findTarget(target, cosmetic ? 1500 : 2500);
       if (!el) return false;
-      // PLAN-25: цель может быть ниже прокрутки окна — подводим её к видимой зоне
-      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      // PLAN-25/26: подводим цель к видимой зоне (маленькое окно, длинный список) и поднимаем
+      // её окно, если оно перекрыто другим — иначе игрок видит клик поверх чужого приложения
+      el.scrollIntoView({ block: 'center', inline: 'nearest' });
+      await raiseIfCovered(el);
       await flyTo(el, quick);
       await press(el, quick, cosmetic);
       return true;
     };
 
     /** клик по карточке сотрудника: контракт с StaffCard — data-staff-id на корне карточки. */
-    const clickCardIn = async (scope: () => ParentNode, staffId: string, timeoutMs: number): Promise<void> => {
+    // ─── PLAN-26: журнал промахов — собираем всё, что нужно для разбора (вместо гаданий) ───
+    const describeTarget = (target: string, el: HTMLElement | null): Record<string, unknown> => {
+      const found = el ?? document.querySelector<HTMLElement>(`[data-autopilot="${target}"]`);
+      const win = found?.closest<HTMLElement>('.w95-window') ?? null;
+      const rectOf = (e: Element | null): Record<string, number> | null => {
+        if (!e) return null;
+        const r = e.getBoundingClientRect();
+        return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+      };
+      let covered: string | false | null = null;
+      if (found) {
+        const r = found.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          covered = top && top !== found && !found.contains(top)
+            ? (top.closest<HTMLElement>('.w95-window')?.querySelector('.w95-title')?.textContent?.trim() ?? top.tagName)
+            : false;
+        }
+      }
+      return {
+        exists: !!found,
+        rects: found ? found.getClientRects().length : 0,
+        display: found ? getComputedStyle(found).display : null,
+        covered,
+        windowApp: win?.getAttribute('data-app') ?? null,
+        windowTitle: win?.querySelector('.w95-title')?.textContent?.trim() ?? null,
+        windowRect: rectOf(win),
+      };
+    };
+    const reportMiss = (kind: string, step: { kind: string; target?: string; label?: string; quick?: boolean; cosmetic?: boolean }): void => {
+      reportAutopilotIssue(kind, {
+        target: step.target ?? null,
+        label: step.label ?? null,
+        stepKind: step.kind,
+        quick: step.quick === true,
+        cosmetic: step.cosmetic === true,
+        dom: step.target ? describeTarget(step.target, null) : null,
+        recent: recentRef.current.slice(-8),
+      });
+    };
+    /** PLAN-26: цель под другим окном (например, поверх — полноэкранное приложение) — поднимаем её окно. */
+    const raiseIfCovered = async (el: HTMLElement): Promise<void> => {
+      const app = el.closest<HTMLElement>('.w95-window')?.getAttribute('data-app');
+      if (!app) return;
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      if (top && top !== el && !el.contains(top)) {
+        wm.current.focus(app);
+        await sleep(150); // окно перерисовывается поверх — только потом летим и жмём
+      }
+    };
+
+    const clickCardIn = async (scope: () => ParentNode, staffId: string, timeoutMs: number): Promise<boolean> => {
       const started = performance.now();
       let recovered = false;
       for (;;) {
         for (const el of scope().querySelectorAll<HTMLElement>(`[data-staff-id="${staffId}"]`)) {
           const card = el.closest<HTMLElement>('.w95-staff-card');
           if (card && card.getClientRects().length > 0) {
+            card.scrollIntoView({ block: 'center', inline: 'nearest' });
+            await raiseIfCovered(card);
             await flyTo(card, true);
             await press(card, true);
-            return;
+            return true;
           }
         }
         if (!recovered) {
           const any = scope().querySelector<HTMLElement>(`[data-staff-id="${staffId}"]`);
           if (any) recovered = awakeWindow(any);
         }
-        if (performance.now() - started >= timeoutMs) return;
+        if (performance.now() - started >= timeoutMs) return false;
         await sleep(120);
       }
     };
@@ -147,7 +206,7 @@ export function AutopilotCursor() {
       const anchor = document.querySelector<HTMLElement>('[data-autopilot="wiz-step-6"]');
       return anchor?.closest<HTMLElement>('.w95-window') ?? document;
     };
-    const clickCard = (staffId: string): Promise<void> => clickCardIn(wizardScope, staffId, 2000);
+    const clickCard = (staffId: string): Promise<boolean> => clickCardIn(wizardScope, staffId, 2000);
     /** скоуп окна приложения по якорям его вкладок (шаг card: выбор сотрудника в «Найме») */
     const appScope = (app: string): ParentNode => {
       const anchor = document.querySelector<HTMLElement>(`[data-autopilot^="${app}-tab-"]`);
@@ -244,6 +303,12 @@ export function AutopilotCursor() {
 
     const playStep = async (step: AutopilotStep): Promise<void> => {
       if (!autoRef.current) return; // SRV-16: босс вернул управление — шаг не играем
+      recentRef.current.push({
+        at: Date.now(), kind: step.kind,
+        target: (step as { target?: string }).target ?? null,
+        label: (step as { label?: string }).label ?? null,
+      });
+      if (recentRef.current.length > 20) recentRef.current.shift();
       if (step.kind === 'open') {
         setLabel(`Открываю «${APP_TITLES[step.app] ?? step.app}»`);
         wm.current.open(step.app);
@@ -256,7 +321,8 @@ export function AutopilotCursor() {
       }
       if (step.kind === 'card') {
         setLabel(step.label ?? 'Выбираю сотрудника');
-        await clickCardIn(() => appScope(step.app), step.staffId, 1500);
+        const okCard = await clickCardIn(() => appScope(step.app), step.staffId, 1500);
+        if (!okCard) reportMiss('card-missing', { kind: 'card', target: `staff:${step.staffId}`, label: step.label });
         return;
       }
       if (step.kind === 'select') {
@@ -267,7 +333,10 @@ export function AutopilotCursor() {
       setLabel(step.label);
       const ok = await clickTarget(step.target, step.quick === true, step.cosmetic === true);
       // PLAN-25: молчаливый пропуск цели хуже видимой жалобы — по ней сразу ясно, какой кнопки нет
-      if (!ok) setLabel(`⚠️ Кнопка не появилась: ${step.label ?? ''} [${step.target}]`);
+      if (!ok) {
+        reportMiss('target-missing', step as { kind: string; target?: string; label?: string; quick?: boolean; cosmetic?: boolean });
+        setLabel(`⚠️ Кнопка не появилась: ${step.label ?? ''} [${step.target}]`);
+      }
     };
 
     const iv = window.setInterval(() => {
