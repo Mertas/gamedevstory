@@ -283,6 +283,18 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   box-shadow: 2px 2px 0 rgba(0, 0, 0, .35);
 }
 
+/* ── Выбор фона рабочего стола (ПКМ по столу → «Сменить фон…», plan/24) ── */
+.w95-bg-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-height: 400px; overflow: auto; }
+.w95-bg-item {
+  width: 150px; padding: 3px; cursor: pointer; background: var(--w95-face);
+  border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+}
+.w95-bg-item:hover { background: #d8d4cc; }
+.w95-bg-item.picked { outline: 2px solid var(--w95-navy); outline-offset: -1px; }
+.w95-bg-item img { display: block; width: 142px; height: 90px; object-fit: cover; image-rendering: auto; }
+.w95-bg-item span { display: block; font-size: 10px; text-align: center; padding-top: 3px; line-height: 1.2; }
+.w95-bg-plain { display: flex; align-items: center; justify-content: center; height: 90px; font-size: 30px;
+  background: linear-gradient(160deg, #109090 0%, #008080 55%, #006060 100%); }
 /* ── Версия игры: низ рабочего стола, вход, выбор сохранения (plan/23) ── */
 .w95-version { font-size: 10px; color: #808080; text-align: center; padding: 4px 0 2px; }
 .w95-desktop-version {

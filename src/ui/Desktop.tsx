@@ -14,6 +14,7 @@ import { dateLabel, dayInYear } from '../shared/meta';
 import { AutopilotCursor } from './AutopilotCursor';
 import { useOwner } from './owner';
 import { VersionStamp } from './VersionStamp';
+import { WALLPAPERS, readWallpaper, saveWallpaper, wallpaperById } from './wallpapers';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -118,6 +119,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const iconsRef = useRef<HTMLDivElement>(null);
   const [snapOn, setSnapOn] = useState<boolean>(() => { try { return localStorage.getItem('gds-desk-snap') === '1'; } catch { return false; } });
   const [deskSort, setDeskSort] = useState<'default' | 'name' | 'kind'>(() => { try { return (localStorage.getItem('gds-desk-sort') as 'default' | 'name' | 'kind') || 'default'; } catch { return 'default'; } });
+  // PLAN-24: обои рабочего стола (ПКМ по столу → «Сменить фон…»)
+  const [wallpaper, setWallpaper] = useState<string | null>(() => readWallpaper());
+  const [bgPick, setBgPick] = useState(false);
   const [deskPos, setDeskPos] = useState<Record<string, { x: number; y: number }>>(() => { try { return JSON.parse(localStorage.getItem('gds-desk-pos') || '{}'); } catch { return {}; } });
   const [selIds, setSelIds] = useState<string[]>([]);
   const [selBox, setSelBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -161,6 +165,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
   useEffect(() => { try { localStorage.setItem('gds-desk-snap', snapOn ? '1' : '0'); } catch { /* */ } }, [snapOn]);
   useEffect(() => { try { localStorage.setItem('gds-desk-sort', deskSort); } catch { /* */ } }, [deskSort]);
+  useEffect(() => { saveWallpaper(wallpaper); }, [wallpaper]);
   useEffect(() => { try { localStorage.setItem('gds-desk-pos', JSON.stringify(deskPos)); } catch { /* */ } }, [deskPos]);
 
   const deskItems = useMemo(() => {
@@ -364,8 +369,12 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
   const typing = typingName(game, chat);
 
+  const wp = wallpaperById(wallpaper);
   return (
-    <div className="w95-desktop" onMouseDown={(e) => {
+    <div
+      className="w95-desktop"
+      style={wp ? { backgroundImage: `url(${wp.file})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+      onMouseDown={(e) => {
       setStartOpen(false);
       // клик по свободному месту — снять выделение иконок
       const t = e.target as HTMLElement;
@@ -450,8 +459,45 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           <div className="w95-mi" onClick={() => { setDeskSort('default'); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{deskSort === 'default' ? '✓' : ''}</span>Сортировать по порядку
           </div>
+          <div className="w95-mi sep" />
+          <div className="w95-mi" onClick={() => { setBgPick(true); setCtxMenu(null); }}>
+            <span style={{ width: 16 }}>{wp ? '✓' : ''}</span>Сменить фон…
+          </div>
         </div>
       ))}
+
+      {/* PLAN-24: выбор обоев (ПКМ по столу → «Сменить фон…»). Выбор применяется сразу — живое превью */}
+      {bgPick && (
+        <div className="w95-modal" onClick={() => setBgPick(false)}>
+          <div className="w95-modal-box" onClick={(e) => e.stopPropagation()}>
+            <b style={{ marginBottom: 6 }}>Сменить фон рабочего стола</b>
+            <div className="w95-bg-grid">
+              <div
+                className={'w95-bg-item' + (wallpaper === null ? ' picked' : '')}
+                title="Обычный бирюзовый стол"
+                onClick={() => setWallpaper(null)}
+              >
+                <div className="w95-bg-plain">🎨</div>
+                <span>Обычный (бирюза)</span>
+              </div>
+              {WALLPAPERS.map((w) => (
+                <div
+                  key={w.id}
+                  className={'w95-bg-item' + (wallpaper === w.id ? ' picked' : '')}
+                  title={w.title}
+                  onClick={() => setWallpaper(w.id)}
+                >
+                  <img src={w.thumb} alt="" draggable={false} />
+                  <span>{w.title}</span>
+                </div>
+              ))}
+            </div>
+            <div className="w95-row" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
+              <button className="w95-btn" onClick={() => setBgPick(false)}>Закрыть</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* выбор иконки приложения (ПКМ по иконке → «Сменить иконку…») */}
       {pickFor && (
