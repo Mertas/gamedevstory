@@ -9,7 +9,7 @@ import { typingName } from '../../shared/chat';
  * по имени в текущей команде: она свежее и совпадает с карточками найма. Цепочка:
  * персональная → иконка из сообщения → эмодзи.
  */
-function ChatAvatar({ name, legacy, size = 32 }: { name: string; legacy?: string; size?: number }) {
+function ChatAvatar({ name, legacy, size = 48 }: { name: string; legacy?: string; size?: number }) {
   const id = useGameSelector((g) => g.staff.find((s) => s.name === name)?.id ?? '');
   const [stage, setStage] = useState(0); // 0 — персональная, 1 — из сообщения, 2 — эмодзи
   const src = stage === 0 && id ? `avatars/${id}.png` : stage <= 1 && legacy ? legacy : '';

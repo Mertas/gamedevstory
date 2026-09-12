@@ -172,7 +172,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* ── Чат ── */
 .w95-chat { display: flex; flex-direction: column; height: 100%; background: #fff; }
 .w95-chat-msg { display: flex; gap: 6px; padding: 4px 6px; border-bottom: 1px solid #e8e4dc; }
-.w95-chat-msg .w95-avatar { width: 32px; height: 32px; border: 1px solid var(--w95-dark); background: #c0c0c0; flex: none; }
+.w95-chat-msg .w95-avatar { width: 48px; height: 48px; border: 1px solid var(--w95-dark); background: #c0c0c0; flex: none; image-rendering: pixelated; }
 .w95-chat-msg .w95-cname { font-weight: 700; color: #000080; }
 .w95-chat-msg .w95-ctext { white-space: pre-wrap; word-break: break-word; }
 .w95-chat-msg.self { background: #eef3fb; }
