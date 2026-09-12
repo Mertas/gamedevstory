@@ -460,14 +460,28 @@ function hatedGenre(state: GameState): string | null {
   return gen?.id ?? null;
 }
 
-function bestConsole(state: GameState): (typeof CONSOLES)[number] {
-  // PLAN-25: лучшая из ДОСТУПНЫХ консолей по установленной базе (PC + купленные лицензии).
-  // Раньше функция знала только PC и Microx SX — из-за этого автопилот покупал лицензии,
-  // но игры для новых консолей не делал (замечание игрока).
-  // консоль годится, если она доступна по времени И лицензия куплена (PC лицензии не требует)
+/** Доступные консоли (по времени и с купленной лицензией), отсортированы по установленной базе. */
+function availableConsoles(state: GameState): (typeof CONSOLES)[number][] {
+  // PLAN-25: раньше знали только PC и Microx SX — игры для остальных купленных консолей не делались.
+  // Консоль годится, если доступна по времени И лицензия куплена (consoleAvailable лицензию не смотрит).
   const avail = CONSOLES.filter((c) => consoleAvailable(state, c.id) && Boolean(state.consoles[c.id]?.licensed));
-  const fallback = avail[0] ?? CONSOLES.find((c) => c.id === 'pc-game')!;
-  return avail.reduce((best, c) => (c.installBase > best.installBase ? c : best), fallback);
+  const pc = CONSOLES.find((c) => c.id === 'pc-game')!;
+  return (avail.length ? avail : [pc]).slice().sort((a, b) => b.installBase - a.installBase);
+}
+
+function bestConsole(state: GameState): (typeof CONSOLES)[number] {
+  return availableConsoles(state)[0]!;
+}
+
+/**
+ * PLAN-25: лучшая консоль, на которой проект ещё влезает в деньги. Без этой проверки автопилот
+ * выбрал бы самую крупную консоль и на слабой студии не смог бы стартовать проект вовсе.
+ */
+function bestConsoleFor(
+  state: GameState, genreId: string, typeId: string, mode: 'normal' | 'speed' | 'quality' | 'research' | 'budget',
+): (typeof CONSOLES)[number] {
+  const list = availableConsoles(state);
+  return list.find((c) => comboCostK(state, genreId, typeId, c.id, mode) <= state.money) ?? list[0]!;
 }
 
 // ─── помощники для автопилота (server/autopilot.ts): стоимость комбо и готовый
@@ -503,7 +517,8 @@ export function autopilotProjectInput(state: GameState): StartProjectInput | nul
   if (!combo && avoid) combo = pickBestCombo(state, null, avoid);
   if (!combo) combo = sequel ?? pickBestCombo(state, null);
   if (!combo) return null;
-  const consoleData = bestConsole(state);
+  const mode = state.money > 600 ? 'quality' : 'normal';
+  const consoleData = bestConsoleFor(state, combo.genreId, combo.typeId, mode);
   if (!consoleAvailable(state, consoleData.id)) return null;
   const proposalStaff = [...state.staff]
     .sort((a, b) => {
@@ -515,7 +530,7 @@ export function autopilotProjectInput(state: GameState): StartProjectInput | nul
     consoleId: consoleData.id,
     genreId: combo.genreId,
     typeId: combo.typeId,
-    mode: state.money > 600 ? 'quality' : 'normal',
+    mode,
     direction: defaultDirection(state),
     proposalStaffId: proposalStaff.id,
     assignments: assignRoles(state, proposalStaff.id),
@@ -564,7 +579,8 @@ export function startNextProject(
   if (state.bankrupt) return;
   const combo = pickBestCombo(state, lastCombo);
   if (!combo) return;
-  const consoleData = bestConsole(state);
+  const mode = state.money > 600 ? 'quality' : 'normal';
+  const consoleData = bestConsoleFor(state, combo.genreId, combo.typeId, mode);
   if (!consoleAvailable(state, consoleData.id)) return;
 
   // сценарист: лучший scenario, с ротацией
@@ -580,7 +596,7 @@ export function startNextProject(
     consoleId: consoleData.id,
     genreId: combo.genreId,
     typeId: combo.typeId,
-    mode: state.money > 600 ? 'quality' : 'normal',
+    mode,
     direction: defaultDirection(state), // весь бюджет в доступность + полировку → Fun + немного всего
     proposalStaffId: proposalStaff.id,
     assignments: assignRoles(state, proposalStaff.id),
