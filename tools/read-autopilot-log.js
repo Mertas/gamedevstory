@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- это node-скрипт (CommonJS), а не часть бандла */
 // PLAN-26: читалка журнала промахов автопилота. Локально: node tools/read-autopilot-log.js <путь к users.db>
 // На сервере: scp tools/read-autopilot-log.js gds-vdsina:/tmp/ && ssh gds-vdsina "node /tmp/read-autopilot-log.js"
 

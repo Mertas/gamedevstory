@@ -177,7 +177,15 @@ function connect(): void {
         emit();
       }
       if (d.type === 'autopilot_step' && d.step) {
-        autopilotQueue.push(d.step as AutopilotStep);
+        const st = d.step as AutopilotStep;
+        // PLAN-26b: попап на экране один — прежние шаги по нему заведомо устарели
+        if (st.kind === 'click' && st.target.startsWith('mb-')) {
+          for (let i = autopilotQueue.length - 1; i >= 0; i--) {
+            const q = autopilotQueue[i]!;
+            if (q.kind === 'click' && q.target.startsWith('mb-')) autopilotQueue.splice(i, 1);
+          }
+        }
+        autopilotQueue.push(st);
         emit();
       }
       if (d.type === 'action_result') {
@@ -413,13 +421,26 @@ async function checkBuild(): Promise<void> {
  * PLAN-26: промах автопилота (кнопка не найдена/скрыта/перекрыта) — в журнал на сервере.
  * Собираем всё, что нужно для разбора: шаг, DOM-контекст цели, последние шаги, сборки, состояние партии.
  */
+const reportSeen = new Map<string, { at: number; skipped: number }>();
+
 export function reportAutopilotIssue(kind: string, data: Record<string, unknown>): void {
   try {
+    // PLAN-26b: один и тот же промах (kind+target) шлём не чаще раза в 30 с — не спамим базой,
+    // повторы считаем и прикладываем числом к следующей записи.
+    const key = `${kind}|${String(data.target ?? '')}`;
+    const now = Date.now();
+    const prev = reportSeen.get(key);
+    if (prev && now - prev.at < 30_000) {
+      prev.skipped++;
+      return;
+    }
+    reportSeen.set(key, { at: now, skipped: 0 });
     const g = snap.game as GameState | null;
     send({
       type: 'autopilot_log',
       entry: {
         kind,
+        suppressed: prev ? prev.skipped : 0,
         ...data,
         clientVersion: APP_VERSION,
         clientBuild: BUILD_DATE,

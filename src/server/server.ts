@@ -48,7 +48,7 @@ const server = app.listen(PORT, HOST, () => {
 // PLAN-18: пользователи, почта, реестр партий — у каждого пользователя своя игровая сессия.
 const users = new UserService();
 // PLAN-26: журнал промахов автопилота пишем в ту же базу (users.db), читаем sqlite-запросом
-setAutopilotLogSink((entry) => users.logAutopilot(entry));
+setAutopilotLogSink((entry) => users.logAutopilot({ serverBuild: buildId(), ...entry }));
 // прод без перца = пароли, которые можно перебирать по одной базе: не стартуем
 if (process.env.PROD === '1' && !process.env.GDS_PEPPER) {
   console.error('[gds] GDS_PEPPER не задан — в проде пароли без перца запрещены');

@@ -126,6 +126,17 @@ export function AutopilotCursor() {
     };
 
     /** клик по карточке сотрудника: контракт с StaffCard — data-staff-id на корне карточки. */
+    /** PLAN-26b: кнопка текущего попапа (MessageBox вешает якорь на главную кнопку попапа). */
+    const waitForPopup = async (timeoutMs = 1200): Promise<HTMLElement | null> => {
+      const started = performance.now();
+      for (;;) {
+        const el = document.querySelector<HTMLElement>('[data-autopilot^="mb-"]');
+        if (el && el.getClientRects().length > 0) return el;
+        if (performance.now() - started >= timeoutMs) return null;
+        await sleep(150);
+      }
+    };
+
     // ─── PLAN-26: журнал промахов — собираем всё, что нужно для разбора (вместо гаданий) ───
     const describeTarget = (target: string, el: HTMLElement | null): Record<string, unknown> => {
       const found = el ?? document.querySelector<HTMLElement>(`[data-autopilot="${target}"]`);
@@ -328,6 +339,16 @@ export function AutopilotCursor() {
       if (step.kind === 'select') {
         setLabel(step.label ?? 'Выбираю значение');
         await selectValue(step.target, step.value);
+        return;
+      }
+      // PLAN-26b: попап одноразовый. Шаг mb-* означает «закрой текущий попап», а не «нажми
+      // вот эту кнопку»: попапа нет — дело уже сделано (сервер закрыл его сам), это не промах.
+      if (step.kind === 'click' && step.target.startsWith('mb-')) {
+        setLabel(step.label ?? 'Отвечаю на попап');
+        const btn = await waitForPopup();
+        if (!btn) return;
+        await flyTo(btn, true);
+        await press(btn, true);
         return;
       }
       setLabel(step.label);
