@@ -178,7 +178,7 @@ export function ChatApp() {
           </div>
         </div>
         <div className="chat-side-cap">Игроки</div>
-        {(roster ?? []).map((u) => (
+        {(roster ?? []).filter((u) => u.userId !== meId).map((u) => (
           <div key={u.userId} className={`chat-item ${view === u.userId ? 'active' : ''}`} onClick={() => setView(u.userId)}>
             <span className="chat-dot" title={STATUS_TEXT[u.status]}>
               {STATUS_ICON[u.status]}

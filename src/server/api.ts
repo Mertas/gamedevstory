@@ -260,7 +260,8 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     withUser(req, res, (u) => {
       const now = Date.now();
       const unread = users.dmUnread(u.id);
-      const rows = users.roster().map((r) => {
+      // SER-30: себя в списке разговоров не показываем
+      const rows = users.roster().filter((r) => r.userId !== u.id).map((r) => {
         const live = sessions.server(r.userId) !== null;
         const typing = (sessions.server(r.userId)?.lastTypingAt ?? 0) > now - 5000;
         const idle = r.updated > 0 ? now - r.updated : Number.POSITIVE_INFINITY;
