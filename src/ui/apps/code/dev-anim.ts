@@ -5,6 +5,8 @@
 // Числа строго неубывающие: вниз показания опускает только setProject (партия/происшествие).
 // v1.13.3 (plan/32): suspend() по visibilitychange (фоновая вкладка не копит очередь),
 // сторож кадров (исключение не убивает цикл), стоп-лимиты очереди и эффектов, компакция без аллокаций.
+// M2 (v1.14.0): «вода» — замах, squash по вектору, блик капли, штрихи-струи, двойная рябь,
+// пружинные полоски, всплеск у источника; каркас M3 — тихий планировщик и очередь праздников.
 import type { DevContrib, Stats } from '../../../core/types';
 import {
   ANIM_ATTRS,
@@ -31,6 +33,14 @@ const MAX_PENDING = 96;
 const SPARK_CAP = 600;
 const RIPPLE_CAP = 120;
 const GHOST_CAP = 32;
+/** M3-каркас: тихий планировщик — пороги простоя (сек) и каденция режимов. */
+const IDLE_QUIET = 2.0;
+const IDLE_ASLEEP = 4.5;
+const QUIET_MS = 280;
+const ASLEEP_MS = 900;
+/** Пружина полоски (меморандум plan/33: stiffness ≈120, damping ≈20). */
+const SPRING_K = 120;
+const SPRING_C = 20;
 
 interface Chip {
   kind: 'chip' | 'mine';
@@ -64,6 +74,15 @@ interface Ripple {
   t: number;
   life: number;
   c: string;
+  lw: number; // толщина кольца
+  r0: number; // радиус на старте
+  r1: number; // радиус к концу
+  a0: number; // стартовая альфа
+}
+
+interface Cue {
+  tier: 1 | 2 | 3 | 4;
+  fn: () => void;
 }
 
 interface Spark {
@@ -103,8 +122,11 @@ export class DevAnim {
   private readonly root: HTMLElement;
   private readonly ctx: CanvasRenderingContext2D;
 
-  private raf = 0;
+  private timerId = 0;
+  private timerKind: 'none' | 'raf' | 'to' = 'none';
   private dead = false;
+  private mode: 'active' | 'quiet' | 'asleep' = 'active';
+  private lastWorkAt = 0;
   private last = 0;
   private dpr = 1;
   private w = 0;
@@ -145,6 +167,14 @@ export class DevAnim {
   private flashes: FlashRec[] = [];
   private lastGhostAt = zeroRec();
   private lastErrorAt = 0;
+  // M2: пружинное показание полоски (отдельно от счётчика) и всплеск у источника
+  private barVal = zeros();
+  private barVel = zeros();
+  private puffAt = new Map<string, number>();
+  // M3-каркас: очередь праздников и подписки на ввод (пробуждение тихого режима)
+  private cues: Cue[] = [];
+  private cueLastAt = 0;
+  private rootDisposers: Array<() => void> = [];
 
   constructor(canvas: HTMLCanvasElement, root: HTMLElement) {
     this.canvas = canvas;
@@ -153,15 +183,24 @@ export class DevAnim {
     if (!ctx) throw new Error('canvas 2d недоступен');
     this.ctx = ctx;
     this.last = performance.now() / 1000;
+    this.lastWorkAt = this.last;
     this.measure();
     document.addEventListener('visibilitychange', this.onVisibility);
-    this.raf = requestAnimationFrame(this.frame);
+    // M3-каркас: любой ввод мгновенно будит тихий режим (латентность 0)
+    for (const ev of ['pointerenter', 'pointerdown', 'focusin', 'keydown', 'scroll'] as const) {
+      const h = () => this.wake();
+      root.addEventListener(ev, h, { passive: true });
+      this.rootDisposers.push(() => root.removeEventListener(ev, h));
+    }
+    this.scheduleNext();
   }
 
   destroy(): void {
     this.dead = true;
-    cancelAnimationFrame(this.raf);
+    this.cancelTimer();
     document.removeEventListener('visibilitychange', this.onVisibility);
+    for (const d of this.rootDisposers) d();
+    this.rootDisposers = [];
     for (const f of this.flashes) f.el.classList.remove('w95-attr-flash');
     this.flashes = [];
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -182,9 +221,13 @@ export class DevAnim {
     this.beaten = falses();
     for (const a of ANIM_ATTRS) this.elsNotch[a]?.classList.remove('beat');
     for (const a of ANIM_ATTRS) this.top[a] = barScaleTop(this.rec[a], this.shown[a]);
+    this.barVal = { ...real };
+    this.barVel = zeros();
+    this.cues = [];
     this.lastNum = { fun: -1, creativity: -1, graphics: -1, sound: -1 };
     // мгновенный слепок в DOM (эффект до первой отрисовки — без мигания пустых полосок)
     this.drawStatic(performance.now() / 1000, 0.25);
+    this.wake();
   }
 
   /** Новый игровой день: цель из игры + вклад за день → план волны с размазом по такту. */
@@ -203,7 +246,7 @@ export class DevAnim {
       this.pending = [];
     }
     this.measure();
-    if (!this.raf && !this.dead) this.raf = requestAnimationFrame(this.frame);
+    this.wake();
 
     const gaps = zeros();
     for (const a of ANIM_ATTRS) {
@@ -226,6 +269,7 @@ export class DevAnim {
 
   /** Мины багов: от первого сотрудника к счётчику «Баги» (1 мина = 1 баг). */
   spawnMines(n: number): void {
+    this.wake();
     const root = this.root;
     const fromEl = root.querySelector<HTMLElement>('[data-staff-id]');
     const toEl = root.querySelector<HTMLElement>('[data-bugs]');
@@ -344,6 +388,12 @@ export class DevAnim {
     chip.cy2 = to.y - 24 - Math.random() * 12;
     chip.t0 = now + Math.random() * 0.02;
     this.chips.push(chip);
+    // M2: всплеск у источника — «капля отрывается» (не чаще 0.18 с на сотрудника)
+    const lastPuff = this.puffAt.get(p.staffId) ?? 0;
+    if (now - lastPuff > 0.18) {
+      this.puffAt.set(p.staffId, now);
+      this.ripples.push({ x: from.x, y: from.y, t: 0, life: 0.26, c: '#ffffff', lw: 1, r0: 1, r1: 9, a0: 0.5 });
+    }
   }
 
   private land(c: Chip, now: number): void {
@@ -356,8 +406,9 @@ export class DevAnim {
     this.shown[c.attr] += c.weight;
     const [x, y] = this.bez(c, 1);
     if (this.ripples.length < RIPPLE_CAP) {
-      this.ripples.push({ x, y, t: 0, life: 0.45, c: COLORS[c.attr] });
-      if (c.heavy > 0.5) this.ripples.push({ x, y, t: 0, life: 0.62, c: COLORS[c.attr] });
+      // M2: двойная рябь — быстрая яркая + медленная мягкая
+      this.ripples.push({ x, y, t: 0, life: 0.32, c: COLORS[c.attr], lw: 1, r0: 1.5, r1: 30, a0: 0.7 });
+      this.ripples.push({ x, y, t: 0, life: 0.62, c: COLORS[c.attr], lw: 1.5, r0: 2, r1: 52, a0: c.heavy > 0.5 ? 0.55 : 0.38 });
     }
     const n = c.heavy > 0.5 ? 7 : 4;
     for (let i = 0; i < n; i++) {
@@ -382,13 +433,19 @@ export class DevAnim {
       this.flashAt[c.attr] = now;
       this.flashEl(this.elsWrap[c.attr], now);
     }
-    // решение босса: при превышении рекорда студии — празднование, затем шкала переставляется
+    // решение босса: при превышении рекорда студии — празднование. Через очередь M3-каркаса:
+    // тиры не накладываются, событие не стартует поверх волны (полные правила — в M3).
     if (!this.beaten[c.attr] && this.shown[c.attr] > recordThreshold(this.rec[c.attr])) {
       this.beaten[c.attr] = true;
-      if (this.ghosts.length < GHOST_CAP) {
-        this.ghosts.push({ x, y: y - 6, t: 0, life: 1.15, text: 'РЕКОРД!', gold: true });
-      }
-      this.elsNotch[c.attr]?.classList.add('beat');
+      const gx = x;
+      const gy = y - 6;
+      const attr = c.attr;
+      this.enqueue(1, () => {
+        if (this.ghosts.length < GHOST_CAP) {
+          this.ghosts.push({ x: gx, y: gy, t: 0, life: 1.15, text: 'РЕКОРД!', gold: true });
+        }
+        this.elsNotch[attr]?.classList.add('beat');
+      });
     }
   }
 
@@ -419,9 +476,18 @@ export class DevAnim {
       const topTarget = barScaleTop(this.rec[a], this.shown[a]);
       this.top[a] += (topTarget - this.top[a]) * Math.min(1, dt / 0.22);
       if (Math.abs(topTarget - this.top[a]) < 0.5) this.top[a] = topTarget;
+      // M2: пружина — полоска доезжает с лёгким перелётом (stiffness 120, damping 20)
+      const targetVal = this.shown[a];
+      const sdt = Math.min(dt, 0.05);
+      this.barVel[a] += (SPRING_K * (targetVal - this.barVal[a]) - SPRING_C * this.barVel[a]) * sdt;
+      this.barVal[a] += this.barVel[a] * sdt;
+      if (Math.abs(targetVal - this.barVal[a]) < 0.3 && Math.abs(this.barVel[a]) < 2) {
+        this.barVal[a] = targetVal;
+        this.barVel[a] = 0;
+      }
       const fill = this.elsFill[a];
       if (fill) {
-        const pct = Math.max(0, Math.min(100, (this.shown[a] / Math.max(1, this.top[a])) * 100));
+        const pct = Math.max(0, Math.min(100, (this.barVal[a] / Math.max(1, this.top[a])) * 100));
         const w = `${pct.toFixed(2)}%`;
         if (fill.style.width !== w) fill.style.width = w;
       }
@@ -500,11 +566,22 @@ export class DevAnim {
   private drawChip(c: Chip, t: number): void {
     const ctx = this.ctx;
     const col = COLORS[c.attr];
-    const [x, y] = this.bez(c, t);
+    // M2: замах — в первые 8% жизни точка чуть оттянута назад (вылет «с замахом»)
+    const te = t < 0.08 ? t - (0.08 - t) * 0.4 : t;
+    const [x, y] = this.bez(c, Math.max(0, te));
     const fade = t < 0.1 ? t / 0.1 : t > 0.92 ? Math.max(0, (1 - t) / 0.08) : 1;
-    // след-призраки: та же кривая с отставанием, дискретно без blur
+
+    // направление и скорость — по производной кривой (squash и штрихи)
+    const d1 = Math.min(1, te + 0.02);
+    const d0 = Math.max(0, te - 0.02);
+    const [xa, ya] = this.bez(c, d1);
+    const [xb, yb] = this.bez(c, d0);
+    const ang = Math.atan2(ya - yb, xa - xb);
+    const speed = Math.hypot(xa - xb, ya - yb) / 0.04;
+
+    // след: дискретные призраки
     for (let i = TAIL; i >= 1; i--) {
-      const [tx, ty] = this.bez(c, Math.max(0, t - i * 0.05));
+      const [tx, ty] = this.bez(c, Math.max(0, te - i * 0.05));
       const rr = Math.max(0.6, (2.0 + c.heavy * 2.4) * (1 - i * 0.14));
       ctx.globalAlpha = 0.1 * ((TAIL - i + 1) / TAIL) * (1 - t * 0.35) * fade;
       ctx.fillStyle = col;
@@ -512,6 +589,18 @@ export class DevAnim {
       ctx.arc(tx, ty, rr, 0, Math.PI * 2);
       ctx.fill();
     }
+    // M2: тяжёлым — ещё и штрих-струя вдоль вектора
+    if (c.heavy > 0.5) {
+      const [sx, sy] = this.bez(c, Math.max(0, te - 0.09));
+      ctx.globalAlpha = 0.16 * c.heavy * fade;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.5 + c.heavy;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
     const R = c.kind === 'mine' ? 6.2 : c.heavy > 0 ? 2.6 + c.heavy * 2.8 : 3.1;
     if (c.heavy > 0.35) {
       // «люминофор»: лёгкое свечение тяжёлых частиц (внутри окна, хром не трогаем)
@@ -521,10 +610,85 @@ export class DevAnim {
       ctx.arc(x, y, R + 2.8, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // M2: squash & stretch вдоль вектора скорости (капля вытягивается по движению)
+    const stretch = 1 + Math.min(0.22, speed / 2600) + c.heavy * 0.1;
+    const squash = 1 / Math.sqrt(stretch);
     ctx.globalAlpha = fade;
-    if (c.kind === 'mine') this.drawMine(x, y, R);
-    else this.drawShape(c.attr, x, y, R);
+    if (c.kind === 'mine') {
+      this.drawMine(x, y, R);
+    } else {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(ang);
+      ctx.scale(stretch, squash);
+      this.drawShape(c.attr, 0, 0, R);
+      if (R > 2) {
+        // блик капли (спекуляр) — «вода»
+        ctx.globalAlpha = 0.75 * fade;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-R * 0.32, -R * 0.36, Math.max(0.7, R * 0.26), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
     ctx.globalAlpha = 1;
+  }
+
+  // ─── M3-каркас: тихий планировщик (active → quiet → asleep) ───
+
+  private cancelTimer(): void {
+    if (this.timerKind === 'raf') cancelAnimationFrame(this.timerId);
+    else if (this.timerKind === 'to') clearTimeout(this.timerId);
+    this.timerKind = 'none';
+    this.timerId = 0;
+  }
+
+  /** Единственный владелец цикла: rAF в active, setTimeout в quiet/asleep. */
+  private scheduleNext(): void {
+    if (this.dead || this.timerKind !== 'none') return;
+    if (this.mode === 'active') {
+      this.timerKind = 'raf';
+      this.timerId = requestAnimationFrame(this.frame);
+    } else {
+      this.timerKind = 'to';
+      this.timerId = window.setTimeout(this.timeoutFrame, this.mode === 'quiet' ? QUIET_MS : ASLEEP_MS);
+    }
+  }
+
+  private timeoutFrame = (): void => {
+    this.timerKind = 'none';
+    this.timerId = 0;
+    this.frame(performance.now());
+  };
+
+  /** Пробуждение: событие важнее экономии — мгновенный переход в active. */
+  private wake(): void {
+    this.lastWorkAt = performance.now() / 1000;
+    this.mode = 'active';
+    if (this.timerKind === 'to') this.cancelTimer();
+    this.scheduleNext();
+  }
+
+  /** Есть ли работа (plan/32 §3.2). */
+  private hasWork(): boolean {
+    if (this.pending.length || this.chips.length || this.ripples.length || this.sparks.length || this.ghosts.length) {
+      return true;
+    }
+    if (this.flashes.length || this.cues.length) return true;
+    for (const a of ANIM_ATTRS) {
+      if (Math.abs(this.top[a] - barScaleTop(this.rec[a], this.shown[a])) >= 0.5) return true;
+      if (Math.abs(Math.round(this.shown[a]) - this.lastNum[a]) >= 1) return true;
+      if (Math.abs(this.barVal[a] - this.shown[a]) >= 0.15) return true;
+    }
+    return false;
+  }
+
+  /** M3-каркас: очередь праздников — тиры не накладываются (полные правила — в M3). */
+  private enqueue(tier: Cue['tier'], fn: () => void): void {
+    if (this.cues.length >= 4) return;
+    this.cues.push({ tier, fn });
   }
 
   /** Сброс незавершённой работы без зачисления: очередь/частицы/вспышки; числа догонят сами. */
@@ -555,12 +719,14 @@ export class DevAnim {
     } else {
       this.last = performance.now() / 1000;
       this.measure();
-      if (!this.raf && !this.dead) this.raf = requestAnimationFrame(this.frame);
+      this.wake();
     }
   };
 
   /** Кадр: сторож (plan/32 §1) — исключение внутри не убивает анимацию, цикл продолжается. */
   private frame = (ms: number): void => {
+    this.timerKind = 'none';
+    this.timerId = 0;
     if (this.dead) return;
     try {
       this.tick(ms);
@@ -571,7 +737,7 @@ export class DevAnim {
         console.error('[gds] dev-anim: кадр упал — цикл продолжается', e);
       }
     } finally {
-      if (!this.dead) this.raf = requestAnimationFrame(this.frame);
+      this.scheduleNext();
     }
   };
 
@@ -579,8 +745,8 @@ export class DevAnim {
   private tick(ms: number): void {
     const ctx = this.ctx;
     const now = ms / 1000;
-    let dt = now - this.last;
-    if (dt < 0) dt = 0;
+    const dtRaw = Math.min(5, Math.max(0, now - this.last));
+    let dt = dtRaw;
     if (dt > 0.05) dt = 0.05;
     this.last = now;
 
@@ -594,12 +760,19 @@ export class DevAnim {
         // решение босса: числа строго неубывающие внутри партии — догон только вверх,
         // вниз показания опускает лишь явный setProject (смена партии / происшествие)
         if (this.target[a] > this.shown[a]) {
-          this.shown[a] += (this.target[a] - this.shown[a]) * Math.min(1, dt / 0.25);
+          this.shown[a] += (this.target[a] - this.shown[a]) * Math.min(1, dtRaw / 0.25);
           if (this.target[a] - this.shown[a] < 0.5) this.shown[a] = this.target[a];
         }
       }
-      this.drawStatic(now, dt);
+      this.drawStatic(now, dtRaw);
       this.sweepFlashes(now);
+      if (this.hasWork()) {
+        this.lastWorkAt = now;
+      } else if (this.mode === 'active' && now - this.lastWorkAt > IDLE_QUIET) {
+        this.mode = 'quiet';
+      } else if (this.mode === 'quiet' && now - this.lastWorkAt > IDLE_ASLEEP) {
+        this.mode = 'asleep';
+      }
       return;
     }
 
@@ -638,11 +811,11 @@ export class DevAnim {
       rp.t += dt;
       const a = 1 - rp.t / rp.life;
       if (a <= 0) continue;
-      ctx.globalAlpha = a * 0.55;
+      ctx.globalAlpha = a * rp.a0;
       ctx.strokeStyle = rp.c;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = rp.lw;
       ctx.beginPath();
-      ctx.arc(rp.x, rp.y, 1.5 + rp.t * 44, 0, Math.PI * 2);
+      ctx.arc(rp.x, rp.y, rp.r0 + (rp.r1 - rp.r0) * Math.min(1, rp.t / rp.life), 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
       this.ripples[wr++] = rp;
@@ -684,8 +857,24 @@ export class DevAnim {
     }
     this.ghosts.length = wg;
 
-    // 4) полоски и цифры
-    this.drawStatic(now, dt);
+    // 4) очередь праздников (M3-каркас): не поверх волны, пауза ≥0.25 с между событиями
+    if (this.cues.length && (this.chips.length === 0 || now - this.cueLastAt > 0.25)) {
+      const cue = this.cues.shift()!;
+      this.cueLastAt = now;
+      cue.fn();
+    }
+
+    // 5) полоски и цифры
+    this.drawStatic(now, dtRaw);
     this.sweepFlashes(now);
+
+    // M3-каркас: тихий режим — нет работы → ступень вниз; любая работа освежает таймер
+    if (this.hasWork()) {
+      this.lastWorkAt = now;
+    } else if (this.mode === 'active' && now - this.lastWorkAt > IDLE_QUIET) {
+      this.mode = 'quiet';
+    } else if (this.mode === 'quiet' && now - this.lastWorkAt > IDLE_ASLEEP) {
+      this.mode = 'asleep';
+    }
   }
 }
