@@ -35,6 +35,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'resolve_salesman' }
   | { type: 'resolve_gamedex'; option: string }
   | { type: 'resolve_event' }
+  | { type: 'user_typing' } // SER-27: игрок печатает (для панели разговоров)
   | { type: 'generate_story'; genreId: string; typeId: string; reqId?: number }
   | { type: 'set_speed'; v: number }
   | { type: 'set_ui'; ui: unknown } // PLAN-24: фон и раскладка окон в сейве
@@ -160,6 +161,8 @@ export class GameServer {
   lastAction: { ok: boolean; error?: string } | null = null;
   // ─── автопилот (plan/14): состояние сессии; логика — в autopilot.ts (AutopilotController) ───
   autopilotOn = false;
+  /** SER-27: когда игрок последний раз печатал в чате (для статуса «печатает» в панели). */
+  lastTypingAt = 0;
   pendingPlan: AutopilotPlan | null = null; // решение, ждёт клика «Начать» клиента
   decidedThisIdle = false; // решение для текущего простоя уже сделано
   private stepListeners = new Set<(s: AutopilotStep) => void>();

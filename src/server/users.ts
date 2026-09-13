@@ -418,6 +418,49 @@ export class UserService {
 
   private lbCache: { at: number; data: { rows: LeaderboardRow[]; total: number } } | null = null;
 
+  /**
+   * SER-27: игроки для панели «Разговоры»: логин, студия, последняя игра, время записи сейва.
+   * Сканируем по одному свежему сейву на игрока — панель небольшая, стоимость ок.
+   */
+  roster(): Array<{ userId: number; login: string; studio: string; updated: number; lastGame: { name: string; score: number; units: number } | null }> {
+    const us = this.db.prepare('SELECT id, login FROM users ORDER BY id').all() as Array<{ id: number; login: string }>;
+    const getSave = this.db.prepare('SELECT studio_name AS studio, updated, payload FROM saves WHERE user_id = ? ORDER BY updated DESC LIMIT 1');
+    return us.map((u) => {
+      const s = getSave.get(u.id) as { studio: unknown; updated: unknown; payload: unknown } | undefined;
+      let lastGame: { name: string; score: number; units: number } | null = null;
+      if (s) {
+        try {
+          const p = JSON.parse(String(s.payload)) as {
+            game?: { history?: Array<{ name?: string; score?: number; units?: number; paidUnits?: number }> };
+          };
+          const h = p.game?.history?.[(p.game.history?.length ?? 0) - 1];
+          if (h?.name) {
+            lastGame = {
+              name: String(h.name),
+              score: Math.round(h.score ?? 0),
+              units: Math.round((h.paidUnits ?? h.units ?? 0) * 10) / 10,
+            };
+          }
+        } catch {
+          /* битый payload — просто без игры */
+        }
+      }
+      return {
+        userId: Number(u.id),
+        login: String(u.login),
+        studio: s ? String(s.studio) : '',
+        updated: s ? Number(s.updated) : 0,
+        lastGame,
+      };
+    });
+  }
+
+  /** SER-25: все занятые названия студий (для гарантированно свободного от LLM). */
+  studioNames(): string[] {
+    const rows = this.db.prepare('SELECT DISTINCT studio_name AS n FROM saves').all() as Array<{ n: unknown }>;
+    return rows.map((r) => String(r.n));
+  }
+
   listSaves(userId: number): SaveMeta[] {
     const rows = this.db.prepare(
       'SELECT id, studio_name AS studioName, created, updated, week, year, money FROM saves WHERE user_id = ? ORDER BY updated DESC',

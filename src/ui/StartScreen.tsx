@@ -5,11 +5,12 @@ import { NewGameForm } from './NewGameForm';
 import { dateLabel } from '../shared/meta';
 import { useProfile } from './profile';
 import { VersionStamp } from './VersionStamp';
+import { fmtK } from '../shared/nums';
 
 /** «12 июня 1987 · неделя 71 · изменено 11 сент., 22:01» */
 function saveMeta(s: SaveInfo): string {
   const when = new Date(s.updated).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  return `${dateLabel(s.week)} · неделя ${s.week} · касса ${Math.round(s.money)}K · изменено ${when}`;
+  return `${dateLabel(s.week)} · неделя ${s.week} · касса ${fmtK(s.money)} · изменено ${when}`;
 }
 
 export function StartScreen({ me }: { me: MeInfo }) {

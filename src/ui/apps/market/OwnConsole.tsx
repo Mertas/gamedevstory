@@ -1,6 +1,7 @@
 // ─── Железо: своя консоль ───
 import { useState } from 'react';
 import { actionStartOwnConsole, useGame } from '../../store';
+import { fmtK } from '../../../shared/nums';
 
 const OC_TYPES = [
   { id: 'console', label: 'Стационарная (6,000K)' },
@@ -70,7 +71,7 @@ export function OwnConsolePanel() {
         disabled={game.officeLevel < 3 || hwCount < 1 || game.money < cost}
         onClick={() => actionStartOwnConsole(name, kind, cpu, media)}
       >
-        Начать разработку (от {cost}K)
+        Начать разработку (от {fmtK(cost)})
       </button>
     </div>
   );

@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameSelector } from './store';
 import { fmtCopies, pickSalesViews, smoothView, type SalesDay, type SalesView } from '../shared/sales-stats';
+import { fmtK } from '../shared/nums';
 
 const CLOSED_KEY = 'gds-sales-closed';
 
@@ -65,7 +66,7 @@ function SalesChart({ sales, scale, planRevenue, money }: { sales: SalesDay[]; s
       {sales.length > 1 && <polyline className="sales-line" fill="none" points={line.join(' ')} />}
       {sales.length > 1 && (
         <text className="sales-moneylabel" x={W - 3} y={Math.max(TOP + 7, Math.min(BOT, lastY) - 3)} textAnchor="end">
-          {money}K
+          {fmtK(money)}
         </text>
       )}
       <line className="sales-axis" x1={LEFT} y1={BOT} x2={W - 2} y2={BOT} />
@@ -172,14 +173,14 @@ export function SalesWidget() {
                     🛒 {fmtCopies(sv.units)}
                   </span>
                   <span key={`r${sv.day}${progress}`} className="sales-num">
-                    💰 {Math.round(sv.revenue)}K
+                    💰 {fmtK(sv.revenue)}
                   </span>
                 </div>
               </>
             ) : (
               <div className="sales-final">
                 <div className="sales-line1">
-                  💰 {sv.revenue}K · 🛒 {fmtCopies(sv.units)} копий
+                  💰 {fmtK(sv.revenue)} · 🛒 {fmtCopies(sv.units)} копий
                 </div>
                 <div className="sales-sub">
                   место в студии: <b>#{sv.rank}</b> из {sv.total}

@@ -354,6 +354,11 @@ export function actionDismissSalesman() {
 export function actionResolveGamedex(option: string) {
   send({ type: 'resolve_gamedex', option });
 }
+export function actionTyping() {
+  // SER-27: «печатает» для панели разговоров (не действие босса)
+  send({ type: 'user_typing' });
+}
+
 export function actionResolveEvent(auto = false) {
   // SER-23: авто-закрытие окна прессы после релиза не должно выглядеть действием босса
   // (иначе сервер выключает автопилот и отдаёт управление игроку)

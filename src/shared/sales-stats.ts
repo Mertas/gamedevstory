@@ -36,7 +36,7 @@ export function recordUnits(h: GameRecord): number {
 export function fmtCopies(unitsK: number): string {
   const copies = Math.round(unitsK * 1000);
   if (copies < 100_000) return copies.toLocaleString('ru-RU');
-  return `${Math.floor(copies / 1000)}к`;
+  return `${Math.floor(copies / 1000).toLocaleString('ru-RU')}к`;
 }
 
 export function fmtUnits(u: number): string {

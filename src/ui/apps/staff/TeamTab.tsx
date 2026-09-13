@@ -4,6 +4,7 @@ import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
 import { StaffAvatar } from '../../StaffAvatar';
 import { actionChangeCareer, actionFire, actionLevelUp, useGame } from '../../store';
+import { fmtK } from '../../../shared/nums';
 
 export function TeamTab() {
   const game = useGame();
@@ -35,7 +36,7 @@ export function TeamTab() {
                 <td>{st.stats.graphics}</td>
                 <td>{st.stats.sound}</td>
                 <td>{st.power}/{st.maxPower}</td>
-                <td>{Math.round(st.salary * Math.pow(1.2, st.levelUps))}K</td>
+                <td>{fmtK(st.salary * Math.pow(1.2, st.levelUps))}</td>
                 <td>
                   {price && lv < 5 && (
                     <button className="w95-btn" disabled={game.research < price} data-autopilot={`lvl-${st.id}`} onClick={() => actionLevelUp(st.id)} title={`${price} PR`}>

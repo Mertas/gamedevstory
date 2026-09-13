@@ -15,6 +15,7 @@ import { AutopilotCursor } from './AutopilotCursor';
 import { useOwner } from './owner';
 import { VersionStamp } from './VersionStamp';
 import { WALLPAPERS, readWallpaper, wallpaperById } from './wallpapers';
+import { fmtK } from '../shared/nums';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -631,7 +632,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           </button>
           <span className="w95-hint" style={{ marginRight: 6 }}>❤ {Math.round(game.fans)}</span>
           <span className="w95-hint" style={{ marginRight: 6 }}>🔬 {Math.round(game.research)} PR</span>
-          <span className="w95-tray-money" style={{ fontWeight: 'bold', marginRight: 6 }}>💰 {Math.round(game.money)}K</span>
+          <span className="w95-tray-money" style={{ fontWeight: 'bold', marginRight: 6 }}>💰 {fmtK(game.money)}</span>
           <div className="w95-speed">
             {[0, 0.5, 1, 2, 4, 8].map((v) => (
               <button key={v} className={`w95-btn ${speed === v ? 'on pressed' : ''}`} onClick={() => setSpeed(v)}>

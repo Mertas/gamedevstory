@@ -14,6 +14,7 @@ import {
 } from '../../store';
 import { useProfile } from '../../profile';
 import { MODES, ROLE_LABELS } from './shared';
+import { fmtK } from '../../../shared/nums';
 
 const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = DIRECTION_ORDER.map((id) => ({
   id, label: DIRECTION_LABELS[id],
@@ -231,7 +232,7 @@ export function ProjectWizard() {
                     <label className="w95-row">
                       <input type="radio" checked={consoleId === c.id} onChange={() => setConsoleId(c.id)} />
                       <b>{c.name}</b>
-                      <span className="w95-hint">база: {c.installBase}K · множитель ×{c.costMult}</span>
+                      <span className="w95-hint">база: {fmtK(c.installBase)} · множитель ×{c.costMult}</span>
                     </label>
                   </div>
                 ))}
@@ -254,7 +255,7 @@ export function ProjectWizard() {
                   <div key={gg.id} className="w95-li" style={{ padding: '1px 4px' }} onClick={() => setGenreId(gg.id)} data-autopilot={`wiz-genre-${gg.id}`}>
                     <label className="w95-row">
                       <input type="radio" checked={genreId === gg.id} onChange={() => setGenreId(gg.id)} />
-                      {gg.ru} <span className="w95-hint">(база {gg.costWan / 10}K)</span>
+                      {gg.ru} <span className="w95-hint">(база {fmtK(gg.costWan / 10)})</span>
                     </label>
                   </div>
                 ))}
@@ -398,7 +399,7 @@ export function ProjectWizard() {
                     Сценарий: {assignedNames('proposal')} · Программирование: {assignedNames('program')} · Графика: {assignedNames('graphics')} · Звук: {assignedNames('sound')} · Отладка: {assignedNames('debug')}
                   </td></tr>
                   <tr><td>Стоимость</td><td>
-                    <b>{Math.round(cost)}K</b>
+                    <b>{fmtK(cost)}</b>
                     {!canAfford && cost > 0 && <span style={{ color: '#c00000' }}> — не хватает денег!</span>}
                   </td></tr>
                 </tbody>
@@ -450,7 +451,7 @@ export function ProjectWizard() {
           <span>
             Стоимость: <b>{cost > 0 ? `${Math.round(cost)}K` : '—'}</b>
 
-            <span className="w95-hint"> · В кассе: {Math.round(game.money)}K</span>
+            <span className="w95-hint"> · В кассе: {fmtK(game.money)}</span>
             {cost > 0 && !canAfford && <span style={{ color: '#c00000' }}> — не хватает!</span>}
           </span>
           <span className="w95-row" style={{ gap: 4 }}>

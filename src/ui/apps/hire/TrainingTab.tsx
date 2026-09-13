@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { StaffCard } from '../../StaffCard';
 import { actionTrain, useGame, useMeta } from '../../store';
+import { fmtK } from '../../../shared/nums';
 
 export function TrainingTab() {
   const game = useGame();
@@ -30,7 +31,7 @@ export function TrainingTab() {
           {meta.trainings.map((t) => (
             <tr key={t.id}>
               <td>{t.nameRu ?? t.name}</td>
-              <td>{Math.round((t.costWan ?? 0) / 10)}K</td>
+              <td>{fmtK((t.costWan ?? 0) / 10)}</td>
               <td>−{t.power ?? 0}</td>
               <td>{t.program ?? '—'}</td>
               <td>{t.scenario ?? '—'}</td>

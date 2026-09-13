@@ -1,5 +1,6 @@
 // ─── Найм: переезд офиса (кнопка во вкладке «Команда») — UI-08: вынесено из OtherApps.tsx ───
 import { actionMoveOffice, useGame } from '../../store';
+import { fmtK } from '../../../shared/nums';
 
 export function OfficeMove() {
   const game = useGame();
@@ -11,7 +12,7 @@ export function OfficeMove() {
     const ready = readyYear && readyMoney && readyRelease;
     const lacks = [
       !readyYear ? `год 4+ (сейчас ${game.year})` : null,
-      !readyMoney ? `≥1000K (есть ${Math.round(game.money)}K)` : null,
+      !readyMoney ? `≥{fmtK(1000)} (есть ${fmtK(game.money)})` : null,
       !readyRelease ? 'хотя бы один релиз' : null,
     ].filter(Boolean) as string[];
     return (
@@ -31,7 +32,7 @@ export function OfficeMove() {
   const ready = readyYear && readyMoney;
   const lacks = [
     !readyYear ? `7-й год (осталось ${7 - game.year} г.)` : null,
-    !readyMoney ? `3500K на счету (есть ${Math.round(game.money)}K)` : null,
+    !readyMoney ? `{fmtK(3500)} на счету (есть ${fmtK(game.money)})` : null,
   ].filter(Boolean) as string[];
   return (
     <div className="w95-row">

@@ -1,6 +1,7 @@
 // ─── Маркетинг ───
 import { CONFIG } from '../../../core/config';
 import { actionBuyAd, useGame, useMeta } from '../../store';
+import { fmtK } from '../../../shared/nums';
 
 export function MarketingApp() {
   const game = useGame();
@@ -31,7 +32,7 @@ export function MarketingApp() {
             return (
               <tr key={a.id}>
                 <td>{a.nameRu ?? a.name}</td>
-                <td>{cost}K</td>
+                <td>{fmtK(cost)}</td>
                 <td>{a.office}</td>
                 <td>{cap > 0 ? `${Math.round(got)}/${cap}` : '—'}</td>
                 <td>

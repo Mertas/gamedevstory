@@ -1,6 +1,7 @@
 // ─── Журналы ───
 import { useGame } from '../../store';
 import { score100 } from '../../../shared/rules';
+import { fmtK } from '../../../shared/nums';
 
 export function MagazinesApp() {
   const game = useGame();
@@ -22,7 +23,7 @@ export function MagazinesApp() {
             <tr key={i}>
               <td>{h.name}</td>
               <td><b>{score100(h.score)}</b>/100</td>
-              <td>{Math.round(h.units)}K</td>
+              <td>{fmtK(h.units)}</td>
             </tr>
           ))}
         </tbody>

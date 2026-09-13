@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
 import { actionBuyBooster, actionBuyCareerManual, actionBuyDeadBull, useGame, useMeta } from '../../store';
+import { fmtK } from '../../../shared/nums';
 
 export function SalesmanPanel() {
   const game = useGame();
@@ -39,7 +40,7 @@ export function SalesmanPanel() {
           })}
           <tr>
             <td>Dead Bull <span className="w95-hint">(+POWER, +10 PR)</span></td>
-            <td>{deadBullPrice}K</td>
+            <td>{fmtK(deadBullPrice)}</td>
             <td>
               <select className="w95-input" value={staffId} onChange={(e) => setStaffId(e.target.value)}>
                 <option value="">— сотрудник —</option>
@@ -50,7 +51,7 @@ export function SalesmanPanel() {
           </tr>
           <tr>
             <td>Руководство по смене профессии</td>
-            <td>{manualPrice}K</td>
+            <td>{fmtK(manualPrice)}</td>
             <td>
               <select className="w95-input" value={staffId} onChange={(e) => setStaffId(e.target.value)}>
                 <option value="">— сотрудник —</option>

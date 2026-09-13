@@ -179,3 +179,30 @@ export async function generateStory(genreRu: string, typeRu: string): Promise<{ 
   if (!title || !plot) throw new Error('GigaChat: не удалось разобрать название и сюжет');
   return { title, plot };
 }
+
+/** SER-25: пачка названий для студии — уникальность проверяет вызывающая сторона. */
+export async function generateStudioNames(count = 8): Promise<string[]> {
+  if (!gigaReady) throw new Error('GigaChat недоступен');
+  const out = await generateWithFallback(
+    [
+      {
+        role: 'system',
+        content: 'Ты придумываешь названия для игровых студий. Отвечай ТОЛЬКО JSON-массивом строк, без пояснений.',
+      },
+      {
+        role: 'user',
+        content: `Придумай ${count} разных названий для игровой студии: по-русски, 2–3 слова, без кавычек и точек, в духе геймдева и ретро-игр (коты, пиксели, белки, дискеты, кубики). Не длиннее 30 символов. Формат: ["Название 1", "Название 2", ...]`,
+      },
+    ],
+    500,
+  );
+  const m = out.text.match(/\[[\s\S]*\]/);
+  if (!m) throw new Error('нет массива в ответе');
+  const parsed = JSON.parse(m[0]) as unknown;
+  if (!Array.isArray(parsed)) throw new Error('не массив');
+  const clean = parsed
+    .map((t) => String(t ?? '').replace(/["«»]/g, '').trim().slice(0, 40))
+    .filter((t) => t.length >= 3);
+  if (clean.length === 0) throw new Error('пустые названия');
+  return clean;
+}

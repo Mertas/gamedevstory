@@ -1,6 +1,7 @@
 // ─── Железо ───
 import { actionBuyLicense, useGame, useMeta } from '../../store';
 import { OwnConsolePanel } from './OwnConsole';
+import { fmtK } from '../../../shared/nums';
 
 export function HardwareApp() {
   const game = useGame();
@@ -23,7 +24,7 @@ export function HardwareApp() {
                   const avail = cs.availableAtWeek;
                   return avail !== null && avail > game.week ? `через ${Math.round((avail - game.week) / 7)} нед.` : 'да';
                 })()}</td>
-                <td>{cs.base}K</td>
+                <td>{fmtK(cs.base)}</td>
                 <td>{c.licenseCost === 0 ? 'бесплатно' : `${Math.round(c.licenseCost)}K`}</td>
                 <td>
                   {cs.licensed

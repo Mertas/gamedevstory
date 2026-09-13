@@ -1,7 +1,8 @@
 // PLAN-18: новая игра — название студии и двое сотрудников из начального пула.
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState , useRef } from 'react';
 import { apiCreateSave, apiPool, type PoolStaff } from './api';
 import { CAREER_LABELS } from '../shared/careers';
+import { fmtK } from '../shared/nums';
 
 const ROLE_EMOJI: Record<string, string> = {
   coder: '💻', writer: '✍️', designer: '🎨', sound: '🔊',
@@ -26,6 +27,9 @@ const NAME_IDEAS = ['Пиксель-Плюс', 'Байт и К°', 'Софт-С�
 export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const [pool, setPool] = useState<PoolStaff[] | null>(null);
   const [name, setName] = useState('Game Dev Studio');
+  // SER-25: имя студии предлагает GigaChat (кнопка «Случайно» — тоже LLM; на провале — локальный список)
+  const [nameBusy, setNameBusy] = useState(false);
+  const nameTouched = useRef(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [warn, setWarn] = useState('');
   const [busy, setBusy] = useState(false);
@@ -70,6 +74,25 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
     }
   }
 
+  const rollName = async (force: boolean) => {
+    if (!force && nameTouched.current) return; // игрок уже правил поле — не затираем LLM-ответом
+    setNameBusy(true);
+    const local = NAME_IDEAS[Math.floor(Math.random() * NAME_IDEAS.length)] ?? 'Game Dev Studio';
+    try {
+      const r = await fetch('/api/studio-name');
+      const j = (await r.json()) as { ok?: boolean; name?: string };
+      setName((cur) => (j?.ok && j.name ? j.name : force || !nameTouched.current ? local : cur));
+    } catch {
+      setName((cur) => (force || !nameTouched.current ? local : cur));
+    } finally {
+      setNameBusy(false);
+    }
+  };
+  useEffect(() => {
+    void rollName(false); // при открытии формы имя студии приходит от GigaChat
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const chosen = (pool ?? []).filter((s) => picked.includes(s.id));
   const ready = name.trim().length > 0 && picked.length === 2 && !busy;
   const payroll = chosen.reduce((sum, s) => sum + s.salary, 0);
@@ -78,11 +101,26 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
     <div className="w95-form">
       <div className="w95-form-row">
         <label>Название студии</label>
-        <input className="w95-input" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
-        <button className="w95-btn" style={{ flex: 'none' }}
-          title="Подставить случайное название"
-          onClick={() => setName(NAME_IDEAS[Math.floor(Math.random() * NAME_IDEAS.length)] ?? 'Game Dev Studio')}>
-          🎲 Случайно
+        <input
+          className="w95-input"
+          maxLength={40}
+          value={name}
+          onChange={(e) => {
+            nameTouched.current = true;
+            setName(e.target.value);
+          }}
+        />
+        <button
+          className="w95-btn"
+          style={{ flex: 'none' }}
+          title="Сгенерировать название студии (GigaChat)"
+          disabled={nameBusy}
+          onClick={() => {
+            nameTouched.current = false;
+            void rollName(true);
+          }}
+        >
+          {nameBusy ? '🎲 …' : '🎲 Случайно'}
         </button>
       </div>
 
@@ -149,7 +187,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
             ))}
             <span className="w95-pick-strong">
               · сильные стороны: {chosen.map((s) => STATS.find(([k]) => k === bestStat(s))?.[1]).join(', ')}
-              {' '}· зарплата {payroll}K в год
+              {' '}· зарплата {fmtK(payroll)} в год
             </span>
           </span>
         )}

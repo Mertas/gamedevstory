@@ -7,6 +7,7 @@ import { setSpeed, useAutopilot, useGameSelector, useSpeed } from './store';
 import { CRITICS } from '../core/data/critics';
 import { pressVerdict } from '../shared/rules';
 import { beatsRecord, recordKey, studioRecords, type RecordEntry } from '../shared/records';
+import { fmtInt } from '../shared/nums';
 
 const SEEN_KEY = 'gds-press-seen';
 const INTRO_MS = 3000; // вступление: за это время обычно прилетают LLM-тексты
@@ -110,10 +111,10 @@ export function PressModal() {
   const recs = studioRecords(game.history, recordKey(rec));
   const topContrib = Object.entries(rec.contrib ?? {}).sort((x, y) => y[1] - x[1])[0];
   const recRows: Array<{ label: string; value: number; text: string; best: RecordEntry | null; low?: boolean }> = [
-    { label: 'Программирование', value: a.fun ?? 0, text: `${Math.round(a.fun ?? 0)}`, best: recs.dirs.fun },
-    { label: 'Сценарий', value: a.creativity ?? 0, text: `${Math.round(a.creativity ?? 0)}`, best: recs.dirs.creativity },
-    { label: 'Графика', value: a.graphics ?? 0, text: `${Math.round(a.graphics ?? 0)}`, best: recs.dirs.graphics },
-    { label: 'Звук', value: a.sound ?? 0, text: `${Math.round(a.sound ?? 0)}`, best: recs.dirs.sound },
+    { label: 'Программирование', value: a.fun ?? 0, text: `${fmtInt(a.fun ?? 0)}`, best: recs.dirs.fun },
+    { label: 'Сценарий', value: a.creativity ?? 0, text: `${fmtInt(a.creativity ?? 0)}`, best: recs.dirs.creativity },
+    { label: 'Графика', value: a.graphics ?? 0, text: `${fmtInt(a.graphics ?? 0)}`, best: recs.dirs.graphics },
+    { label: 'Звук', value: a.sound ?? 0, text: `${fmtInt(a.sound ?? 0)}`, best: recs.dirs.sound },
     {
       label: 'Сумма направлений',
       value: Math.round(a.fun ?? 0) + Math.round(a.creativity ?? 0) + Math.round(a.graphics ?? 0) + Math.round(a.sound ?? 0),

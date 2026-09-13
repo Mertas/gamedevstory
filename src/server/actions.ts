@@ -40,6 +40,8 @@ export interface SessionHost {
   chat: ChatState;
   speed: number;
   autopilotOn: boolean;
+  /** SER-27: время последнего «печатает» (панель разговоров) */
+  lastTypingAt: number;
   lastAction: { ok: boolean; error?: string } | null;
   pendingPlan: AutopilotPlan | null;
   decidedThisIdle: boolean;
@@ -73,11 +75,16 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
   // автопилот (plan/14): любое действие БОССА выключает авторежим; действия виртуальной
   // мыши помечены autopilot:true и не выключают. take_control — с реакцией чата.
   // PLAN-24: set_ui (фон/раскладка окон) — тоже не «действие босса»: перетаскивание окна не должно сбивать автопилот
-  if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed' && msg.type !== 'set_ui' && msg.type !== 'autopilot_done' && msg.type !== 'autopilot_log') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
+  if (!msg.autopilot && msg.type !== 'get_state' && msg.type !== 'set_speed' && msg.type !== 'set_ui' && msg.type !== 'autopilot_done' && msg.type !== 'autopilot_log' && msg.type !== 'user_typing') { // SRV-15: пауза/скорость — не «действие босса» (plan/14)
     if (s.autopilotOn) s.stopAutopilot(msg.type !== 'take_control');
   }
   if (msg.type === 'take_control') {
     s.emit();
+    return;
+  }
+  if (msg.type === 'user_typing') {
+    // SER-27: печатает игрок — просто отметка времени, игру не трогаем
+    s.lastTypingAt = Date.now();
     return;
   }
   switch (msg.type) {

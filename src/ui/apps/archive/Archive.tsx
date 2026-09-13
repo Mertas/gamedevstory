@@ -3,6 +3,7 @@ import { CONFIG } from '../../../core/config';
 import { dateLabel } from '../../../shared/meta';
 import { useGame, useMeta } from '../../store';
 import { score100 } from '../../../shared/rules';
+import { fmtK } from '../../../shared/nums';
 
 export function ArchiveApp() {
   const game = useGame();
@@ -13,8 +14,8 @@ export function ArchiveApp() {
     <div className="w95-panel" style={{ overflowY: 'auto', height: '100%' }}>
       <div className="w95-legend">
         <span>Игр: <b>{game.history.length}</b></span>
-        <span>Продано: <b>{Math.round(totalUnits)}K</b></span>
-        <span>Доход: <b>{Math.round(totalRev)}K</b></span>
+        <span>Продано: <b>{fmtK(totalUnits)}</b></span>
+        <span>Доход: <b>{fmtK(totalRev)}</b></span>
         <span>Рекорд: <b>{score100(Math.max(0, ...game.history.map((h) => h.score)))}/100</b></span>
       </div>
       <table className="w95-table">
@@ -30,8 +31,8 @@ export function ArchiveApp() {
               <td>{meta.genres.find((g) => g.id === h.genreId)?.ru ?? h.genreId} × {meta.types.find((t) => t.id === h.typeId)?.nameRu ?? h.typeId}</td>
               <td>{meta.consoles.find((c) => c.id === h.consoleId)?.name ?? h.consoleId}</td>
               <td><b>{h.score}</b>{h.score >= CONFIG.HALL_OF_FAME ? ' 🏆' : ''}</td>
-              <td>{Math.round(h.units)}K</td>
-              <td>{Math.round(h.revenue)}K</td>
+              <td>{fmtK(h.units)}</td>
+              <td>{fmtK(h.revenue)}</td>
               <td>{h.contrib ? Object.entries(h.contrib).map(([n, v]) => `${n} ${v}`).join(' · ') : '—'}</td>
             </tr>
           ))}

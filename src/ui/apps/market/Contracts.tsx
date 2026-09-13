@@ -1,6 +1,7 @@
 // ─── Контракты ───
 import { useState } from 'react';
 import { actionTakeContract, useGame, useMeta } from '../../store';
+import { fmtInt, fmtK } from '../../../shared/nums';
 
 export function ContractsApp() {
   const game = useGame();
@@ -38,7 +39,7 @@ export function ContractsApp() {
               <td className="w95-hint">
                 П{c.reqProgram ?? '—'} С{c.reqScenario ?? '—'} Г{c.reqGraphics ?? '—'} З{c.reqSound ?? '—'}
               </td>
-              <td>{c.rewardMin ?? 0}–{c.rewardMax ?? 0}K + {c.prMin ?? 0}–{c.prMax ?? 0} PR</td>
+              <td>{fmtInt(c.rewardMin ?? 0)}–{fmtK(c.rewardMax ?? 0)} + {c.prMin ?? 0}–{c.prMax ?? 0} PR</td>
               <td>
                 {selId === c.id ? (
                   <button className="w95-btn" onClick={() => setSelId(null)}>отмена</button>

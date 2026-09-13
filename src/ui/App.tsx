@@ -18,6 +18,7 @@ import { setOwner } from './owner';
 import { UpdateNotice } from './UpdateNotice';
 import { SalesWidget } from './SalesWidget';
 import { PressModal } from './PressModal';
+import { fmtK } from '../shared/nums';
 
 // следим за событиями, требующими решения игрока
 function EventWatcher() {
@@ -109,7 +110,7 @@ function EventWatcher() {
                   </button>
                 ) : (
                   <div key={id} style={{ color: 'GrayText', fontSize: 12 }}>
-                    {o.label} — {o.cost}K (не хватает {o.cost - money}K)
+                    {o.label} — {fmtK(o.cost)} (не хватает {fmtK(o.cost - money)})
                   </div>
                 ),
               )}

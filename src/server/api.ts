@@ -3,6 +3,7 @@ import type { Request, Response, Express } from 'express';
 import { STAFF } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
 import { INVITE_REQUIRED, PASSWORD_RESET } from './config';
+import { generateStudioNames } from './giga';
 import type { Mailer } from './mailer';
 import { RateLimit } from './ratelimit';
 import { nextRank, rankFor } from '../shared/rank';
@@ -43,6 +44,8 @@ export interface SessionHooks {
   drop(userId: number, saveId: number): void;
   /** Активное сохранение (для списка «продолжить»); null — ничего не загружено. */
   activeSaveId(userId: number): number | null;
+  /** SER-27: живая сессия игрока (null — не в игре) — для статусов панели «Разговоры». */
+  server(userId: number): { lastTypingAt: number } | null;
 }
 
 export interface ApiDeps {
@@ -231,9 +234,43 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   });
 
   // PLAN-34: мировой список игр всех аккаунтов — «место среди всех» в окне продаж
+  // SER-27: панель «Разговоры» — все игроки со статусом и последней игрой
+  app.get('/api/roster', (req, res) => {
+    withUser(req, res, (u) => {
+      const now = Date.now();
+      const rows = users.roster().map((r) => {
+        const live = sessions.server(r.userId) !== null;
+        const typing = (sessions.server(r.userId)?.lastTypingAt ?? 0) > now - 5000;
+        const idle = r.updated > 0 ? now - r.updated : Number.POSITIVE_INFINITY;
+        const status = typing ? 'typing' : !live || idle > 20 * 60_000 ? 'offline' : idle > 3 * 60_000 ? 'away' : 'online';
+        return { ...r, status };
+      });
+      res.json({ ok: true, me: u.id, rows });
+    });
+  });
+
   app.get('/api/leaderboard', (req, res) => {
     withUser(req, res, () => {
       res.json({ ok: true, ...users.leaderboard() });
+    });
+  });
+
+  // SER-25: имя студии от GigaChat; занятые имена из выдачи отбрасываются, при полной занятости —
+  // ещё раунд генерации. На провале LLM клиент подставит локальное название сам.
+  app.get('/api/studio-name', (req, res) => {
+    void withUser(req, res, async () => {
+      try {
+        const taken = new Set(users.studioNames().map((n) => n.trim().toLowerCase()));
+        for (let round = 0; round < 3; round++) {
+          const names = await generateStudioNames(8);
+          const free = names.find((n) => !taken.has(n.trim().toLowerCase()));
+          if (free) return void res.json({ ok: true, name: free });
+        }
+        res.json({ ok: false, error: 'все варианты заняты' });
+      } catch (e) {
+        console.warn('[gds] имя студии: LLM не ответил:', String(e).slice(0, 140));
+        res.json({ ok: false, error: 'LLM недоступен' });
+      }
     });
   });
 

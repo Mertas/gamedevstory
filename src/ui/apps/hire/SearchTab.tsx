@@ -5,6 +5,7 @@ import type { HireMethodId } from '../../../core/config';
 import { candidatePool } from '../../../shared/meta';
 import { CAREER_LABELS } from '../../careers';
 import { actionHire, useGame, useMeta } from '../../store';
+import { fmtK } from '../../../shared/nums';
 
 const METHOD_LABELS: Record<HireMethodId, string> = {
   'word-of-mouth': 'По знакомству ($50K)',
@@ -52,7 +53,7 @@ export function SearchTab() {
                   <td>{c.name}</td>
                   <td>{CAREER_LABELS[c.activeCareer] ?? c.activeCareer}</td>
                   <td>П{c.stats.program} С{c.stats.scenario} Г{c.stats.graphics} З{c.stats.sound}</td>
-                  <td>взнос {Math.round(c.hireFee)}K</td>
+                  <td>взнос {fmtK(c.hireFee)}</td>
                   <td>{Math.round(c.salary)}K/год</td>
                   <td>
                     <button
