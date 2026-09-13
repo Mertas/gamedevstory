@@ -14,6 +14,16 @@ export type LlmFn = (messages: LlmMessage[], maxTokens: number) => Promise<{ tex
 
 let gigaToken: string | null = null;
 let gigaExp = 0;
+// SER-21: Сбер отвечает пустотой на всплески запросов (у игры их много: фазы, письма, автопилот,
+// пресса). Держим минимальный зазор между ВСЕМИ запросами к GigaChat — сглаживает лимиты.
+let gigaLastAt = 0;
+const GIGA_MIN_GAP_MS = 650;
+
+async function gigaGap(): Promise<void> {
+  const wait = GIGA_MIN_GAP_MS - (Date.now() - gigaLastAt);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  gigaLastAt = Date.now();
+}
 
 function gigaPost(url: string, headers: Record<string, string>, body: string, timeoutMs = LLM_TIMEOUT_MS): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -53,6 +63,7 @@ async function gigaTokenOrThrow(): Promise<string> {
 }
 
 async function gigaChat(model: string, messages: LlmMessage[], maxTokens: number, timeoutMs = LLM_TIMEOUT_MS): Promise<string> {
+  await gigaGap();
   const token = await gigaTokenOrThrow();
   const d = await gigaPost(`${GIGA_BASE}/chat/completions`, {
     'Content-Type': 'application/json',
@@ -60,7 +71,11 @@ async function gigaChat(model: string, messages: LlmMessage[], maxTokens: number
     'Authorization': `Bearer ${token}`,
   }, JSON.stringify({ model, messages, temperature: 0.9, max_tokens: maxTokens }), timeoutMs);
   const content = (d.choices as Array<{ message?: { content?: unknown } }> | undefined)?.[0]?.message?.content;
-  if (typeof content !== 'string' || !content.trim()) throw new Error(`GigaChat ${model}: пустой ответ`);
+  if (typeof content !== 'string' || !content.trim()) {
+    const status = typeof d.status === 'number' ? d.status : null;
+    const msg = typeof d.message === 'string' ? d.message.slice(0, 80) : '';
+    throw new Error(status ? `GigaChat ${model}: API ${status}${msg ? ` (${msg})` : ''}` : `GigaChat ${model}: пустой ответ`);
+  }
   return content;
 }
 
@@ -114,7 +129,7 @@ export async function generateWithFallback(messages: LlmMessage[], maxTokens = 8
       }
     }
     if (Date.now() + 1500 >= deadline) break;
-    await new Promise((r) => setTimeout(r, 1500)); // пауза перед повтором
+    await new Promise((r) => setTimeout(r, 2500)); // пауза перед повтором (SER-21: лимиты Сбера)
   }
   throw lastErr instanceof Error ? lastErr : new Error('GigaChat не ответил');
 }
