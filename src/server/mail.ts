@@ -74,7 +74,15 @@ export class MailService {
       const t = text.trim().replace(/^["«]|["»]$/g, '').slice(0, 700);
       if (t.length >= 20) letter.text = t; // иначе оставляем заготовку движка
     } catch (e) {
-      console.error('[gds] LLM-текст письма не получен — остаётся заготовка:', String(e).slice(0, 200));
+      // SER-22: тихо повторяем — письмо остаётся в очереди, в чат ничего не пишем.
+      letter.llmTries = (letter.llmTries ?? 0) + 1;
+      console.error(`[gds] LLM-текст письма не получен (попытка ${letter.llmTries}) — повторим позже:`, String(e).slice(0, 160));
+      if (letter.llmTries < 5) {
+        this.h.letterBusy = false;
+        this.h.emit();
+        return;
+      }
+      // после пяти тихих попыток — публикуем заготовку движка (без системных сообщений)
     }
     letter.llm = true;
     this.h.letterBusy = false;

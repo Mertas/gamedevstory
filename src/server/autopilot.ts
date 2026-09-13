@@ -287,6 +287,22 @@ export interface AutopilotHost {
 }
 
 /** Оркестрация автопилота (SRV-22): «театр» событий, обсуждение→решение, таймаут плана. */
+// SER-22: чем команда занята, пока автопилот ждёт нормальный ответ GigaChat.
+const IDLE_FUN = [
+  'Может, по кофе? Тут за углом новый автомат.',
+  'Пока решаем — зарубимся в «Космических пиратов»?',
+  'Перекур! Кто со мной на балкон?',
+  'Я принёс настолки: «Колонизаторы», кто со мной?',
+  'Хватит думать — пойдём в аркаду напротив, у меня жетоны остались.',
+  'Чай? Печеньки у Декстера в тумбочке, я видел.',
+  'Ставлю на то, что следующий проект будет про животных.',
+  'Пятнадцать минут отдыха — и мы снова гении.',
+  'Кто помнит, где мой стикер-пак с котиками? Показать?',
+  'А давайте в пятницу пиццу за счёт студии?',
+  'Поймал себя на мысли, что придумываю игру про перекуры.',
+  'Разомнёмся? Я знаю упражнение для пальцев программиста.',
+];
+
 export class AutopilotController {
   private readonly policy = createAutopilotPolicy();
   private deciding = false; // LLM-решение в процессе
@@ -511,43 +527,67 @@ export class AutopilotController {
     };
     try {
       const ctx = buildDecisionContext(this.h.game);
-      // 16: обсуждение и решение — из ОДНОГО ответа команды: что решили, то и применяется
-      const { text } = await this.h.llm(buildDecisionPrompt(ctx), 900);
-      if (cancelled()) return;
-      const parsed = parseDecision(text);
-      const plan = parsed?.plan ?? null;
-      if (plan) fitDirection(plan, this.h.game.directionPoints); // приводим упор к бюджету: перерасход ужимаем, недобор добиваем до всего пула
-      const err = plan ? validateDecision(plan, this.h.game) : 'не удалось разобрать JSON';
-      if (err || !plan || !parsed) {
-        console.error('[gds] автопилот: решение LLM отклонено, фолбэк:', err ?? 'null');
-        const fb = autopilotProjectInput(this.h.game);
-        if (fb && !cancelled()) {
-          announce(fb);
-          this.h.pushSystem('📋 GigaChat не решился — команда выбрала сама.');
+      // SER-22: ждём НОРМАЛЬНЫЙ ответ GigaChat — на пустых/битых ответах тихо повторяем. Никаких
+      // системных сообщений об ошибках: команда в это время живёт своей жизнью (перекуры, кофе).
+      const startedAt = Date.now();
+      let attempt = 0;
+      let lastFunAt = 0;
+      let final: NonNullable<ReturnType<typeof parseDecision>> | null = null;
+      while (!cancelled()) {
+        attempt++;
+        try {
+          // 16: обсуждение и решение — из ОДНОГО ответа команды: что решили, то и применяется
+          const { text } = await this.h.llm(buildDecisionPrompt(ctx), 900);
+          if (cancelled()) return;
+          const p = parseDecision(text);
+          const pl = p?.plan ?? null;
+          if (pl) fitDirection(pl, this.h.game.directionPoints);
+          const err = pl ? validateDecision(pl, this.h.game) : 'не удалось разобрать JSON';
+          if (!err && pl && p) {
+            final = p;
+            break;
+          }
+          console.log(`[gds] автопилот: ответ не принят (попытка ${attempt}):`, err ?? 'null');
+        } catch (e) {
+          console.log(`[gds] автопилот: ответ не получен (попытка ${attempt}):`, String(e).slice(0, 140));
         }
-      } else {
+        const waited = Date.now() - startedAt;
+        if (waited > 12_000 && Date.now() - lastFunAt > 20_000) {
+          lastFunAt = Date.now();
+          this.postIdleFun();
+        }
+        if (waited > 30 * 60_000) break; // страховка: полчаса ожидания — решаем сами, объявим как обычное
+        await new Promise((r) => setTimeout(r, Math.min(15_000, 3000 + attempt * 1500)));
+      }
+      if (final && final.plan && !cancelled()) {
+        const plan = final.plan;
         const genre = genreById(plan.genreId);
         const type = typeById(plan.typeId);
         const con = consoleById(plan.consoleId);
         if (cancelled()) return;
         // реплики обсуждения — из того же ответа: чат и решение не могут разойтись
         const team = new Set(this.h.game.staff.map((s) => s.name));
-        const lines = parsed.messages.filter((m) => team.has(m.author));
+        const lines = final.messages.filter((m) => team.has(m.author));
         if (lines.length) this.h.publishDiscussion(lines);
         const namePart = plan.name ? `«${plan.name}» — ` : '';
         this.h.pushSystem(`📋 Решено: ${namePart}«${genre?.ru ?? genre?.name ?? plan.genreId} × ${type?.nameRu ?? type?.name ?? plan.typeId}» на ${con?.name ?? plan.consoleId}. ${dirSummary(plan.direction)}`);
         announce(plan);
-      }
-    } catch (e) {
-      console.error('[gds] автопилот: решение не получено, фолбэк:', String(e).slice(0, 200));
-      const fb = autopilotProjectInput(this.h.game);
-      if (fb && !cancelled()) {
-        announce(fb);
-        this.h.pushSystem('📋 GigaChat недоступен — команда выбрала сама.');
+      } else if (!cancelled()) {
+        const fb = autopilotProjectInput(this.h.game);
+        if (fb) announce(fb); // страховочный выбор — без системных сообщений об ошибке
       }
     } finally {
       this.deciding = false;
       this.h.emit();
     }
+  }
+
+  /** SER-22: пока ждём нормальный ответ GigaChat, команда коротает время по-человечески. */
+  private postIdleFun(): void {
+    const staff = this.h.game.staff;
+    if (staff.length === 0) return;
+    const who = staff[Math.floor(Math.random() * staff.length)]!;
+    const line = IDLE_FUN[Math.floor(Math.random() * IDLE_FUN.length)]!;
+    this.h.publishDiscussion([{ author: who.name, text: line }]);
   }
 }

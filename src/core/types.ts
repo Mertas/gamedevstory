@@ -178,6 +178,8 @@ export interface FanLetter {
   sentiment: 'love' | 'neutral' | 'hate';
   /** стиль письма (4 тона); в старых сейвах нет — сервер возьмёт по sentiment */
   style?: FanLetterStyle;
+  /** SER-22: число тихих попыток дорисовать текст LLM (после 5 — заготовка движка) */
+  llmTries?: number;
   /** жанр игры — для конкретики в тексте письма */
   genre?: string;
   fansDelta: number; // эффект уже применён к state.fans

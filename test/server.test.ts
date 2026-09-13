@@ -367,6 +367,11 @@ describe('AP-08: idle-фаза в живой сессии', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     const llm: LlmFn = async (messages) => {
       const sys = messages[0]?.content ?? '';
+      if (sys.includes('команда игровой студии')) {
+        // SER-22: автопилот ждёт НОРМАЛЬНЫЙ ответ и переспрашивает — даём гарантированно валидный
+        // план прямо из политики (так же поступают соседние тесты решения)
+        return { text: JSON.stringify(autopilotProjectInput(srv!.snapshot().game)), model: 'fake' };
+      }
       if (sys.includes('корпоративный чат')) {
         const name = srv!.snapshot().game.staff[0]!.name;
         const idle = messages.some((m) => m.content.includes('Затишье')); // инструкция idle-фазы
