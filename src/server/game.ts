@@ -375,7 +375,7 @@ export class GameServer {
         texts.every(
           (t) => MESSAGES.some((m) => m.message === t) || RU_FALLBACKS.has(t),
         );
-      if (!isFallback || this.game.week - (rec.releaseWeek ?? 0) > 20) return;
+      if (!isFallback) return; // возраст не ограничиваем: при быстром темпе 20 «дней» — это минута
     }
     const facts = [
       `Игра: «${rec.name}»`,
