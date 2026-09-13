@@ -12,7 +12,7 @@ export function OfficeMove() {
     const ready = readyYear && readyMoney && readyRelease;
     const lacks = [
       !readyYear ? `год 4+ (сейчас ${game.year})` : null,
-      !readyMoney ? `≥{fmtK(1000)} (есть ${fmtK(game.money)})` : null,
+      !readyMoney ? `≥${fmtK(1000)} (есть ${fmtK(game.money)})` : null,
       !readyRelease ? 'хотя бы один релиз' : null,
     ].filter(Boolean) as string[];
     return (
