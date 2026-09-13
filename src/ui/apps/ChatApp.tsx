@@ -68,6 +68,7 @@ export function ChatApp() {
   const [dmDraft, setDmDraft] = useState('');
   const dmRef = useRef<HTMLDivElement>(null);
   const dmLoadRef = useRef<() => void>(() => {}); // SER-28: мгновенное обновление после отправки
+  const rosterLoadRef = useRef<() => void>(() => {}); // бейдж непрочитанного гаснет сразу после открытия
   const typeSentRef = useRef(0);
   useEffect(() => {
     let alive = true;
@@ -82,6 +83,7 @@ export function ChatApp() {
         })
         .catch(() => {});
     };
+    rosterLoadRef.current = load;
     load();
     const id = setInterval(load, 20_000);
     return () => {
@@ -108,6 +110,7 @@ export function ChatApp() {
         .catch(() => {});
     };
     dmLoadRef.current = load;
+    rosterLoadRef.current(); // отметка прочтения уже ушла — обновим бейджи
     setDm(null);
     load();
     const id = setInterval(load, 4000);
