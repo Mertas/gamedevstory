@@ -75,3 +75,18 @@ certbot --nginx -d game.mertas.space --redirect --agree-tos -m <почта> --no
 клиент сам переключается на `wss://`.
 
 **Резерв, если DNS-записи менять нельзя:** бесплатный поддомен DuckDNS → `server_name <имя>.duckdns.org;` → тот же `certbot --nginx -d <имя>.duckdns.org`.
+
+## Важно: post-receive на сервере — копия, а не симлинк
+
+Активный хук живёт в `/srv/gds.git/hooks/post-receive` и обновляется вручную (файл root'а, но каталог
+принадлежит `gds`, поэтому sudo не нужен):
+
+```sh
+git show HEAD:deploy/post-receive > /tmp/pr-lf   # именно из git-объекта: рабочая копия на Windows — CRLF
+scp /tmp/pr-lf gds-vdsina:/tmp/pr-lf
+ssh gds-vdsina "mv /srv/gds.git/hooks/post-receive /tmp/pr-old && \
+  cp /tmp/pr-lf /srv/gds.git/hooks/post-receive && chmod 755 /srv/gds.git/hooks/post-receive"
+```
+
+Хук передаёт сборке `GDS_COMMIT_AT` — дату и время коммита для штампа версии в углу экрана.
+Без обновления хука штамп потеряет время.
