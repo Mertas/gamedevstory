@@ -453,9 +453,15 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .press-skip { pointer-events: auto; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; padding: 3px 10px; cursor: pointer; }
 @keyframes pressIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
 .press-scores { padding: 6px 12px 0; font-size: 11px; opacity: .85; }
-.press-records { margin: 8px 12px 0; border-top: 1px solid #808080; box-shadow: 0 -1px 0 #fff; padding-top: 6px; }
-.press-rec-row { display: flex; align-items: baseline; gap: 6px; font-size: 11px; padding: 1px 0; }
-.press-rec-label { width: 130px; color: #000080; }
+.press-records {
+  margin: 8px 12px 0; border-top: 1px solid #808080; box-shadow: 0 -1px 0 #fff; padding-top: 6px;
+  /* M4.5: три общие колонки на все строки — метки «рекорд!» выстроены в столбец, не лесенкой */
+  display: grid; grid-template-columns: 1fr max-content max-content; gap: 2px 8px; align-items: baseline;
+  font-size: 11px;
+}
+.press-rec-row { display: contents; }
+.press-rec-label { text-align: right; color: #000080; }
+.press-rec-value { text-align: right; }
 .press-rec-value { font-weight: 700; }
 .press-new { color: #7a2b00; font-weight: 700; text-shadow: 0 0 5px #ffd700; }
 .press-rec-best { opacity: .65; }

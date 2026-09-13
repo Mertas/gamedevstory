@@ -365,6 +365,9 @@ export function AutopilotCursor() {
       if (!autoRef.current) return; // SRV-16: после «Взять управление» очередь не доигрываем
       const step = takeAutopilotStep();
       if (!step) {
+        // M4.5: очередь пуста — ярлык авто-мыши гаснет, чтобы не висеть над модалками
+        // (кейс: «🧾 Выпустить игру» висел поверх итога прессы). Предупреждения (⚠️) оставляем.
+        setLabel((l) => (l && !l.startsWith('⚠️') ? '' : l));
         // PLAN-25: очередь опустела после сыгранных шагов — сообщаем серверу, что откат не нужен
         if (playedRef.current > 0) {
           playedRef.current = 0;
