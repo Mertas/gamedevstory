@@ -116,8 +116,8 @@ export function PressModal() {
     { label: 'Звук', value: a.sound ?? 0, text: `${Math.round(a.sound ?? 0)}`, best: recs.dirs.sound },
     {
       label: 'Сумма направлений',
-      value: (a.fun ?? 0) + (a.creativity ?? 0) + (a.graphics ?? 0) + (a.sound ?? 0),
-      text: `${Math.round((a.fun ?? 0) + (a.creativity ?? 0) + (a.graphics ?? 0) + (a.sound ?? 0))}`,
+      value: Math.round(a.fun ?? 0) + Math.round(a.creativity ?? 0) + Math.round(a.graphics ?? 0) + Math.round(a.sound ?? 0),
+      text: `${Math.round(a.fun ?? 0) + Math.round(a.creativity ?? 0) + Math.round(a.graphics ?? 0) + Math.round(a.sound ?? 0)}`,
       best: recs.sum,
     },
     ...(rec.bugsTotal != null

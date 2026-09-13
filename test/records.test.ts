@@ -50,6 +50,13 @@ describe('PLAN-30: книга рекордов студии', () => {
     expect(r.contrib).toEqual({ value: 900, who: 'Петя', game: 'B' });
   });
 
+  it('дробные очки старых записей округляются', () => {
+    const frac = [rec('F', 1, { fun: 7866.055, creativity: 6591.58, graphics: 4720.23, sound: 2345.27 })];
+    const r = studioRecords(frac);
+    expect(r.dirs.fun).toEqual({ value: 7866, game: 'F' });
+    expect(r.sum).toEqual({ value: 21523, game: 'F' });
+  });
+
   it('beatsRecord: пустая книга — уже рекорд; иначе строгое сравнение', () => {
     expect(beatsRecord(10, null)).toBe(true);
     expect(beatsRecord(10, { value: 9, game: 'X' })).toBe(true);

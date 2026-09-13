@@ -28,11 +28,12 @@ export function studioRecords(history: GameRecord[], skipKey?: string): StudioRe
   for (const g of history) {
     if (skipKey != null && recordKey(g) === skipKey) continue;
     const a = g.attrs ?? ({} as GameRecord['attrs']);
+    // старые записи хранят дробные очки — округляем до целых, как и показываем
     const pairs: Array<['fun' | 'creativity' | 'graphics' | 'sound', number]> = [
-      ['fun', a.fun ?? 0],
-      ['creativity', a.creativity ?? 0],
-      ['graphics', a.graphics ?? 0],
-      ['sound', a.sound ?? 0],
+      ['fun', Math.round(a.fun ?? 0)],
+      ['creativity', Math.round(a.creativity ?? 0)],
+      ['graphics', Math.round(a.graphics ?? 0)],
+      ['sound', Math.round(a.sound ?? 0)],
     ];
     for (const [k, v] of pairs) {
       if (dirs[k] === null || v > dirs[k]!.value) dirs[k] = { value: v, game: g.name };
