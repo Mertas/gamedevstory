@@ -445,9 +445,9 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .press-new { color: #7a2b00; font-weight: 700; text-shadow: 0 0 5px #ffd700; }
 .press-rec-best { opacity: .65; }
 .w95-chat-more { display: flex; justify-content: center; padding: 4px 0 8px; }
-/* SER-27: панель «Разговоры» в чате */
-.w95-chat { display: flex; }
-.chat-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+/* SER-27: панель «Разговоры» в чате (базовый .w95-chat — колоночный, здесь раскладываем в ряд) */
+.w95-chat { flex-direction: row; }
+.chat-main { display: flex; flex-direction: column; flex: 1; min-width: 0; height: 100%; }
 .chat-side { width: 154px; flex: none; overflow-y: auto; border-right: 2px solid; border-color: #808080 #fff #fff #808080; display: flex; flex-direction: column; }
 .chat-item { display: flex; gap: 6px; padding: 4px 6px; cursor: pointer; align-items: center; }
 .chat-item:hover { background: #d8d8d8; }
