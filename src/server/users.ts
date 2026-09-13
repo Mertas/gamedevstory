@@ -96,6 +96,14 @@ function needsRehash(stored: string): boolean {
 
 const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex');
 
+/** PLAN-34: строка мирового списка (игра аккаунта по проданным копиям). */
+export interface LeaderboardRow {
+  name: string;
+  units: number;
+  revenue: number;
+  studio: string;
+}
+
 export class UserService {
   private readonly db: SqliteDatabase;
 
@@ -371,6 +379,44 @@ export class UserService {
   }
 
   // ─── сохранения ───
+
+  /**
+   * PLAN-34: мировой список — все выпущенные игры всех аккаунтов, по проданным копиям.
+   * Читает истории из payload'ов сохранений; кэш 60 с (окно продаж спрашивает часто).
+   */
+  leaderboard(limit = 500): { rows: LeaderboardRow[]; total: number } {
+    const now = Date.now();
+    if (this.lbCache && now - this.lbCache.at < 60_000) return this.lbCache.data;
+    const rows: LeaderboardRow[] = [];
+    const saves = this.db.prepare('SELECT studio_name AS studio, payload FROM saves').all() as Array<{
+      studio: string;
+      payload: string;
+    }>;
+    for (const s of saves) {
+      try {
+        const parsed = JSON.parse(s.payload) as {
+          game?: { history?: Array<{ name?: string; units?: number; revenue?: number; paidUnits?: number; paidRevenue?: number }> };
+        };
+        for (const h of parsed.game?.history ?? []) {
+          if (!h?.name) continue;
+          rows.push({
+            name: String(h.name),
+            units: h.paidUnits ?? h.units ?? 0, // та же основа сравнения, что в окне продаж
+            revenue: Math.round(h.paidRevenue ?? h.revenue ?? 0),
+            studio: String(s.studio ?? ''),
+          });
+        }
+      } catch {
+        /* битый payload — пропускаем */
+      }
+    }
+    rows.sort((a, b) => b.units - a.units);
+    const data = { rows: rows.slice(0, limit), total: rows.length };
+    this.lbCache = { at: now, data };
+    return data;
+  }
+
+  private lbCache: { at: number; data: { rows: LeaderboardRow[]; total: number } } | null = null;
 
   listSaves(userId: number): SaveMeta[] {
     const rows = this.db.prepare(

@@ -410,6 +410,6 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .sales-axis { stroke: #555; stroke-width: 1; }
 .sales-nums { display: flex; justify-content: space-between; padding: 5px 8px 0; font-weight: 700; }
 .sales-final { padding: 5px 8px 0; text-align: center; }
-.sales-total { font-size: 18px; font-weight: 700; }
+.sales-line1 { font-size: 14px; font-weight: 700; }
 .sales-sub { margin-top: 2px; }
 .sales-record { margin-top: 5px; font-weight: 700; color: #7a2b00; text-shadow: 0 0 6px #ffd700, 0 0 12px #ffb400; }

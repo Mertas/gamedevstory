@@ -113,6 +113,28 @@ export function SalesWidget() {
     return () => clearInterval(id);
   }, [dayKey]);
 
+  // PLAN-34: мировой список (все аккаунты) — «место среди всех» и отметки топ-10/рекорда мира
+  const [lb, setLb] = useState<{ rows: Array<{ units: number }>; total: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      fetch('/api/leaderboard')
+        .then((r) => (r.ok ? (r.json() as Promise<{ rows?: Array<{ units: number }>; total?: number }>) : null))
+        .then((j) => {
+          if (alive && j?.rows && typeof j.total === 'number') setLb({ rows: j.rows, total: j.total });
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 120_000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+  const worldOf = (units: number): { rank: number; total: number } | null =>
+    lb ? { rank: 1 + lb.rows.filter((r) => r.units > units).length, total: lb.total } : null;
+
   const shown = views.filter((v) => !closed.has(v.key)).slice(0, 2);
   if (shown.length === 0) return null;
   const close = (key: string) => {
@@ -130,15 +152,11 @@ export function SalesWidget() {
     <div className="sales-widget">
       {shown.map((v) => {
         const sv: SalesView = v.live ? smoothView(v, progress) : v;
+        const world = sv.live ? null : worldOf(sv.units);
         return (
           <div key={v.key} className="sales-panel" role="status">
             <div className="sales-head">
               <span className="sales-title">📈 Продажи</span>
-              {sv.live && sv.days > 0 && (
-                <span className="sales-day">
-                  день {sv.day} из {sv.days}
-                </span>
-              )}
               <button className="sales-x" title="Закрыть" onClick={() => close(v.key)}>
                 ✕
               </button>
@@ -158,12 +176,20 @@ export function SalesWidget() {
               </>
             ) : (
               <div className="sales-final">
-                <div className="sales-total">💰 {sv.revenue}K</div>
-                <div className="sales-sub">продано {fmtCopies(sv.units)} копий</div>
+                <div className="sales-line1">
+                  💰 {sv.revenue}K · 🛒 {fmtCopies(sv.units)} копий
+                </div>
                 <div className="sales-sub">
                   место в студии: <b>#{sv.rank}</b> из {sv.total}
                 </div>
+                {world && (
+                  <div className="sales-sub">
+                    среди всех игроков: <b>#{world.rank}</b> из {world.total}
+                  </div>
+                )}
                 {sv.record && <div className="sales-record">🏆 РЕКОРД СТУДИИ!</div>}
+                {world && world.rank === 1 && <div className="sales-record">🏆 РЕКОРД МИРА — лучшая игра всех!</div>}
+                {world && world.rank > 1 && world.rank <= 10 && <div className="sales-record">🏆 ТОП-10 среди всех игроков!</div>}
               </div>
             )}
           </div>

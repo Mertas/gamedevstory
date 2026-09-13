@@ -230,6 +230,13 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     });
   });
 
+  // PLAN-34: мировой список игр всех аккаунтов — «место среди всех» в окне продаж
+  app.get('/api/leaderboard', (req, res) => {
+    withUser(req, res, () => {
+      res.json({ ok: true, ...users.leaderboard() });
+    });
+  });
+
   app.get('/api/saves', (req, res) => {
     withUser(req, res, (u) => {
       const list: Array<SaveMeta & { active: boolean }> = users.listSaves(u.id)

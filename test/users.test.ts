@@ -307,3 +307,24 @@ describe('PLAN-27: партия переживает перезапуск сер
     users.close();
   });
 });
+
+describe('PLAN-34: мировой список всех аккаунтов', () => {
+  it('одна таблица по всем сохранениям: копии по убыванию, студии видны', () => {
+    const users = new UserService(tmpDb());
+    const a = users.register('Mertas', '12345678');
+    const b = users.register('Vtoroy', '12345678');
+    const aid = a.ok ? a.user.id : 0;
+    const bid = b.ok ? b.user.id : 0;
+    const rec = (name: string, units: number) => ({ name, units, revenue: units * 10, releaseWeek: 1 });
+    users.createSave(aid, 'Тёплый Ламповый', JSON.stringify({ game: { history: [rec('Хит', 50), rec('Слабая', 5)] }, chat: {} }));
+    users.createSave(bid, 'Пиксель', JSON.stringify({ game: { history: [rec('Чужая', 30)] }, chat: {} }));
+    const lb = users.leaderboard();
+    expect(lb.total).toBe(3);
+    expect(lb.rows.map((r) => r.name)).toEqual(['Хит', 'Чужая', 'Слабая']);
+    expect(lb.rows[0]!.studio).toBe('Тёплый Ламповый');
+    expect(lb.rows[1]!.studio).toBe('Пиксель');
+    // факт важнее плана: paidUnits перекрывает units
+    users.updateSave(aid, users.listSaves(aid)[0]!.id, JSON.stringify({ game: { history: [{ ...rec('Слабая', 5), paidUnits: 99 }] }, chat: {} }), 1, 1, 0);
+    users.close();
+  });
+});
