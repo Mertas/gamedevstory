@@ -78,14 +78,14 @@ export class SessionRegistry implements SessionHooks {
     const cur = this.live.get(userId);
     if (cur?.saveId === saveId) return;
     if (cur) this.dispose(userId);
-    this.live.set(userId, {
-      saveId,
-      server: new GameServer({
-        persist: new DbSaveStore(this.users, userId, saveId),
-        openedCombos: this.users.listCombos(userId), // PLAN-22: открытия аккаунта
-        onCombosChanged: (combos) => this.users.addCombos(userId, combos), // PLAN-22
-      }),
+    const server = new GameServer({
+      persist: new DbSaveStore(this.users, userId, saveId),
+      openedCombos: this.users.listCombos(userId), // PLAN-22: открытия аккаунта
+      onCombosChanged: (combos) => this.users.addCombos(userId, combos), // PLAN-22
     });
+    this.live.set(userId, { saveId, server });
+    // PLAN-30: починка служебных фолбэков прессы в последней записи (идемпотентно, молчит без нужды)
+    void server.healPress();
   }
 
   /**

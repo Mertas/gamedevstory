@@ -1,6 +1,6 @@
 // Игровая сессия на сервере: состояние + тикер + действия + чат-фазы (GigaChat) + автосейв.
 import { type HireMethodId } from '../core/config';
-import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
+import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, MESSAGES, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
 import { CRITICS } from '../core/data/critics'; // PLAN-30: 10 журналов
 import type { CareerId } from '../core/data/schema';
 import { newGame } from '../core/engine';
@@ -9,7 +9,7 @@ import { type GameState, type StartProjectInput } from '../core/types';
 import { resetChat, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 
-import { generateStory, generateWithFallback, type LlmFn } from './giga';
+import { generateStory, generateWithFallback, type LlmFn, type LlmMessage } from './giga';
 import { AutopilotController } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH, type PersistAdapter } from './save';
@@ -85,6 +85,57 @@ export interface GameServerDeps {
   openedCombos?: string[];
   /** PLAN-22: новые открытия уезжают в аккаунт на автосейве */
   onCombosChanged?: (combos: string[]) => void;
+}
+
+// ─── PLAN-30: пресса — общий промпт и разбор ответа (релиз и самолечение) ───
+
+/**
+ * Сообщение LLM: {{facts}} и {{critics}} подставляются построчно вызывающим кодом.
+ * Промпт требует ровно 10 реплик, тон — по оценке критика.
+ */
+function buildPressMessages(facts: string, critics: string): LlmMessage[] {
+  return [
+    {
+      role: 'system',
+      content: 'Ты пишешь короткие рецензии для игровой прессы. Отвечай ТОЛЬКО JSON-массивом из 10 строк, без пояснений.',
+    },
+    {
+      role: 'user',
+      content: `Ниже игра и десять критиков со своими оценками. Напиши для каждого ОДИН короткий отзыв (1–2 предложения) В ЕГО МАНЕРЕ, на русском. Тон согласуй с оценкой: 3–4 разгром, 5–6 прохлада, 7–8 похвала с оговорками, 9–10 восторг. Без имён, только реплика.\n\nИгра:\n${facts}\n\nКритики:\n${critics}\n\nФормат ответа: ["текст 1", "текст 2", ..., "текст 10"]`,
+    },
+  ];
+}
+
+
+/** Строка «1. Имя, журнал «…», характер. Его оценка: X/10» для десяти критиков. */
+function criticsLine(scores: number[]): string {
+  return CRITICS.map((c, i) => `${i + 1}. ${c.name}, журнал «${c.magazine}», ${c.persona}. Его оценка: ${scores[i] ?? 0}/10`).join('\n');
+}
+
+/** Разбор ответа: только массив ровно из 10 непустых строк; причина отказа — в лог. */
+function parsePressAnswer(text: string, attempt: number): string[] | null {
+  const m = text.match(/\[[\s\S]*\]/);
+  if (!m) {
+    console.warn(`[gds] пресса: попытка ${attempt} — в ответе нет массива:`, text.slice(0, 160));
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(m[0]);
+  } catch (e) {
+    console.warn(`[gds] пресса: попытка ${attempt} — битый JSON:`, String(e).slice(0, 100));
+    return null;
+  }
+  if (!Array.isArray(parsed) || parsed.length !== CRITICS.length) {
+    console.warn(`[gds] пресса: попытка ${attempt} — не 10 строк:`, JSON.stringify(parsed).slice(0, 140));
+    return null;
+  }
+  const clean = parsed.map((t) => String(t ?? '').trim().slice(0, 300));
+  if (clean.some((t) => t.length < 5)) {
+    console.warn(`[gds] пресса: попытка ${attempt} — пустые строки`);
+    return null;
+  }
+  return clean;
 }
 
 export class GameServer {
@@ -311,84 +362,85 @@ export class GameServer {
       console.warn('[gds] пресса: пропуск —', g ? `фаза ${g.phase}, оценок ${g.judgeScores.length}` : 'нет активной игры');
       return;
     }
-    try {
-      const genre = genreById(g.genreId);
-      const type = typeById(g.typeId);
-      const cons = consoleById(g.consoleId);
-      const contrib = Object.entries(g.contribTotal ?? {})
-        .map(([sid, v]) => [this.game.staff.find((s) => s.id === sid)?.name ?? sid, Math.round(v)] as const)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([n, v]) => `${n} (${v})`)
-        .join(', ');
-      const facts = [
-        `Игра: «${g.name}»`,
-        `Описание: ${g.plot || 'без описания'}`,
-        `Формула: ${genre?.ru ?? g.genreId} × ${type?.nameRu ?? type?.name ?? g.typeId}`,
-        `Консоль: ${cons?.name ?? g.consoleId}`,
-        `Режим: ${g.mode}`,
-        `Багов на релизе: ${Math.round(g.bugs)}`,
-        `Оценка прессы: ${g.score}/100`,
-        contrib ? `Вклад команды (топ-3): ${contrib}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n');
-      const critics = CRITICS.map(
-        (c, i) => `${i + 1}. ${c.name}, журнал «${c.magazine}», ${c.persona}. Его оценка: ${g.judgeScores[i]}/10`,
-      ).join('\n');
-      let texts: string[] | null = null;
-      for (let attempt = 1; attempt <= 2 && texts === null; attempt++) {
-        const out = await this.llm(
-          [
-            {
-              role: 'system',
-              content:
-                'Ты пишешь короткие рецензии для игровой прессы. Отвечай ТОЛЬКО JSON-массивом из 10 строк, без пояснений.',
-            },
-            {
-              role: 'user',
-              content: `Ниже игра и десять критиков со своими оценками. Напиши для каждого ОДИН короткий отзыв (1–2 предложения) В ЕГО МАНЕРЕ, на русском. Тон согласуй с оценкой: 3–4 разгром, 5–6 прохлада, 7–8 похвала с оговорками, 9–10 восторг. Без имён, только реплика.\n\nИгра:\n${facts}\n\nКритики:\n${critics}\n\nФормат ответа: ["текст 1", "текст 2", ..., "текст 10"]`,
-            },
-          ],
-          1400, // PLAN-30: 10 отзывов с запасом (замер: ~640 символов ответа)
-        );
-        const m = out.text.match(/\[[\s\S]*\]/);
-        if (!m) {
-          console.warn(`[gds] пресса: попытка ${attempt} — в ответе нет массива:`, out.text.slice(0, 160));
-          continue;
-        }
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(m[0]);
-        } catch (e) {
-          console.warn(`[gds] пресса: попытка ${attempt} — битый JSON:`, String(e).slice(0, 100));
-          continue;
-        }
-        if (!Array.isArray(parsed) || parsed.length !== CRITICS.length) {
-          console.warn(`[gds] пресса: попытка ${attempt} — не 10 строк:`, JSON.stringify(parsed).slice(0, 140));
-          continue;
-        }
-        const clean = parsed.map((t) => String(t ?? '').trim().slice(0, 300));
-        if (clean.some((t) => t.length < 5)) {
-          console.warn(`[gds] пресса: попытка ${attempt} — пустые строки`);
-          continue;
-        }
-        texts = clean;
+    const genre = genreById(g.genreId);
+    const type = typeById(g.typeId);
+    const cons = consoleById(g.consoleId);
+    const contrib = Object.entries(g.contribTotal ?? {})
+      .map(([sid, v]) => [this.game.staff.find((s) => s.id === sid)?.name ?? sid, Math.round(v)] as const)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([n, v]) => `${n} (${v})`)
+      .join(', ');
+    const facts = [
+      `Игра: «${g.name}»`,
+      `Описание: ${g.plot || 'без описания'}`,
+      `Формула: ${genre?.ru ?? g.genreId} × ${type?.nameRu ?? type?.name ?? g.typeId}`,
+      `Консоль: ${cons?.name ?? g.consoleId}`,
+      `Режим: ${g.mode}`,
+      `Багов на релизе: ${Math.round(g.bugs)}`,
+      `Оценка прессы: ${g.score}/100`,
+      contrib ? `Вклад команды (топ-3): ${contrib}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const texts = await this.runPress(facts, criticsLine(g.judgeScores));
+    if (texts === null) return;
+    g.reviewMessages = texts;
+    const rec = this.game.history[this.game.history.length - 1];
+    if (rec && rec.releaseWeek === g.releaseWeek && rec.name === g.name) rec.reviewMessages = [...texts];
+    console.log('[gds] пресса: 10 отзывов готовы');
+    this.emit();
+    this.saveNow();
+  }
+
+  /**
+   * PLAN-30: самолечение прессы. Если в последней записи архива лежат только служебные фолбэки
+   * из контента (старые английские строки, которые до модалки нигде не показывались) — пишем
+   * отзывы заново. Идемпотентно: после успеха тексты не совпадают с контентом, и проверка молчит.
+   */
+  async healPress(): Promise<void> {
+    const rec = this.game.history[this.game.history.length - 1];
+    if (!rec || (rec.judgeScores?.length ?? 0) !== CRITICS.length) return;
+    const texts = rec.reviewMessages ?? [];
+    if (texts.length === 0 || !texts.every((t) => MESSAGES.some((m) => m.message === t))) return;
+    if (this.game.week - (rec.releaseWeek ?? 0) > 20) return;
+    const facts = [
+      `Игра: «${rec.name}»`,
+      `Описание: ${rec.plot || 'без описания'}`,
+      `Формула: ${genreById(rec.genreId)?.ru ?? rec.genreId} × ${typeById(rec.typeId)?.nameRu ?? typeById(rec.typeId)?.name ?? rec.typeId}`,
+      `Консоль: ${consoleById(rec.consoleId)?.name ?? rec.consoleId}`,
+      `Оценка прессы: ${rec.score ?? 0}/100`,
+      rec.contrib && Object.keys(rec.contrib).length > 0
+        ? `Вклад команды (топ-3): ${Object.entries(rec.contrib)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([n, v]) => `${n} (${Math.round(v)})`)
+            .join(', ')}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const fresh = await this.runPress(facts, criticsLine(rec.judgeScores ?? []));
+    if (fresh === null) return;
+    rec.reviewMessages = fresh;
+    console.log('[gds] пресса: запись вылечена — 10 отзывов готовы');
+    this.emit();
+    this.saveNow();
+  }
+
+  /** PLAN-30: две попытки — GigaChat иногда отвечает пустым/битым; причина отказа — в лог. */
+  private async runPress(facts: string, critics: string): Promise<string[] | null> {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const out = await this.llm(buildPressMessages(facts, critics), 1400);
+        const texts = parsePressAnswer(out.text, attempt);
+        if (texts !== null) return texts;
+      } catch (e) {
+        console.warn(`[gds] пресса: попытка ${attempt} — ошибка LLM:`, String(e).slice(0, 120));
       }
-      if (texts === null) {
-        console.warn('[gds] пресса: за две попытки валидных 10 отзывов нет — остаются фолбэки');
-        return;
-      }
-      g.reviewMessages = texts;
-      console.log('[gds] пресса: 10 отзывов готовы');
-      g.reviewMessages = texts;
-      const rec = this.game.history[this.game.history.length - 1];
-      if (rec && rec.releaseWeek === g.releaseWeek && rec.name === g.name) rec.reviewMessages = [...texts];
-      this.emit();
-      this.saveNow();
-    } catch (e) {
-      console.error('[gds] пресса не сгенерировалась:', String(e).slice(0, 200));
     }
+    console.warn('[gds] пресса: за две попытки валидных 10 отзывов нет — остаются фолбэки');
+    return null;
   }
 
   /** SRV-22: реплика игрока — в очередь FIFO, если команда ещё отвечает (вызывает диспетчер). */
