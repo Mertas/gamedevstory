@@ -1,7 +1,7 @@
 // Игровая сессия на сервере: состояние + тикер + действия + чат-фазы (GigaChat) + автосейв.
 import { type HireMethodId } from '../core/config';
 import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, MESSAGES, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
-import { CRITICS } from '../core/data/critics'; // PLAN-30: 10 журналов
+import { CRITICS, PRESS_FALLBACK_RU } from '../core/data/critics'; // PLAN-30: 10 журналов
 import type { CareerId } from '../core/data/schema';
 import { newGame } from '../core/engine';
 import { consoleEvents } from '../core/systems/market';
@@ -111,6 +111,9 @@ function buildPressMessages(facts: string, critics: string): LlmMessage[] {
 function criticsLine(scores: number[]): string {
   return CRITICS.map((c, i) => `${i + 1}. ${c.name}, журнал «${c.magazine}», ${c.persona}. Его оценка: ${scores[i] ?? 0}/10`).join('\n');
 }
+
+/** Все русские фолбэки одним набором — для проверки самолечения. */
+const RU_FALLBACKS = new Set(Object.values(PRESS_FALLBACK_RU).flat());
 
 /** Разбор ответа: только массив ровно из 10 непустых строк; причина отказа — в лог. */
 function parsePressAnswer(text: string, attempt: number): string[] | null {
@@ -356,54 +359,24 @@ export class GameServer {
    * PLAN-30: тексты десяти критиков после релиза — один батч-запрос к LLM.
    * В reviewMessages уже лежат фолбэки (по оценке), поэтому провал LLM ничего не ломает.
    */
-  async generatePress(): Promise<void> {
-    const g = this.game.activeGame;
-    if (!g || g.phase !== 'released' || g.score === null || g.judgeScores.length !== CRITICS.length) {
-      console.warn('[gds] пресса: пропуск —', g ? `фаза ${g.phase}, оценок ${g.judgeScores.length}` : 'нет активной игры');
+  async generatePress(force = false): Promise<void> {
+    // PLAN-30: цель — ПОСЛЕДНЯЯ ЗАПИСЬ архива, а не activeGame: релиз обнуляет activeGame (dev.ts),
+    // поэтому раньше генерация после выпуска уходила в «нет активной игры». Запись живёт всегда.
+    const rec = this.game.history[this.game.history.length - 1];
+    if (!rec || (rec.judgeScores?.length ?? 0) !== CRITICS.length) {
+      console.warn('[gds] пресса: пропуск —', rec ? `оценок ${rec.judgeScores?.length ?? 0}` : 'нет записей');
       return;
     }
-    const genre = genreById(g.genreId);
-    const type = typeById(g.typeId);
-    const cons = consoleById(g.consoleId);
-    const contrib = Object.entries(g.contribTotal ?? {})
-      .map(([sid, v]) => [this.game.staff.find((s) => s.id === sid)?.name ?? sid, Math.round(v)] as const)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([n, v]) => `${n} (${v})`)
-      .join(', ');
-    const facts = [
-      `Игра: «${g.name}»`,
-      `Описание: ${g.plot || 'без описания'}`,
-      `Формула: ${genre?.ru ?? g.genreId} × ${type?.nameRu ?? type?.name ?? g.typeId}`,
-      `Консоль: ${cons?.name ?? g.consoleId}`,
-      `Режим: ${g.mode}`,
-      `Багов на релизе: ${Math.round(g.bugs)}`,
-      `Оценка прессы: ${g.score}/100`,
-      contrib ? `Вклад команды (топ-3): ${contrib}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    const texts = await this.runPress(facts, criticsLine(g.judgeScores));
-    if (texts === null) return;
-    g.reviewMessages = texts;
-    const rec = this.game.history[this.game.history.length - 1];
-    if (rec && rec.releaseWeek === g.releaseWeek && rec.name === g.name) rec.reviewMessages = [...texts];
-    console.log('[gds] пресса: 10 отзывов готовы');
-    this.emit();
-    this.saveNow();
-  }
-
-  /**
-   * PLAN-30: самолечение прессы. Если в последней записи архива лежат только служебные фолбэки
-   * из контента (старые английские строки, которые до модалки нигде не показывались) — пишем
-   * отзывы заново. Идемпотентно: после успеха тексты не совпадают с контентом, и проверка молчит.
-   */
-  async healPress(): Promise<void> {
-    const rec = this.game.history[this.game.history.length - 1];
-    if (!rec || (rec.judgeScores?.length ?? 0) !== CRITICS.length) return;
-    const texts = rec.reviewMessages ?? [];
-    if (texts.length === 0 || !texts.every((t) => MESSAGES.some((m) => m.message === t))) return;
-    if (this.game.week - (rec.releaseWeek ?? 0) > 20) return;
+    if (!force) {
+      // самолечение: трогаем только записи со служебными фолбэками и не старше 20 игровых дней
+      const texts = rec.reviewMessages ?? [];
+      const isFallback =
+        texts.length > 0 &&
+        texts.every(
+          (t) => MESSAGES.some((m) => m.message === t) || RU_FALLBACKS.has(t),
+        );
+      if (!isFallback || this.game.week - (rec.releaseWeek ?? 0) > 20) return;
+    }
     const facts = [
       `Игра: «${rec.name}»`,
       `Описание: ${rec.plot || 'без описания'}`,
@@ -420,10 +393,10 @@ export class GameServer {
     ]
       .filter(Boolean)
       .join('\n');
-    const fresh = await this.runPress(facts, criticsLine(rec.judgeScores ?? []));
-    if (fresh === null) return;
-    rec.reviewMessages = fresh;
-    console.log('[gds] пресса: запись вылечена — 10 отзывов готовы');
+    const texts = await this.runPress(facts, criticsLine(rec.judgeScores ?? []));
+    if (texts === null) return;
+    rec.reviewMessages = texts;
+    console.log(force ? '[gds] пресса: 10 отзывов готовы' : '[gds] пресса: запись вылечена — 10 отзывов готовы');
     this.emit();
     this.saveNow();
   }

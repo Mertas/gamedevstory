@@ -10,7 +10,8 @@ import { pressVerdict } from '../shared/rules';
 const SEEN_KEY = 'gds-press-seen';
 const INTRO_MS = 3000; // вступление: за это время обычно прилетают LLM-тексты
 const CARD_MS = 4000; // решение босса: ~4 с на карточку
-const AUTOPILOT_MS = 15000; // с включённым автопилотом долго театр не держим
+const FINAL_MS = 10000; // с автопилотом итог закрывается сам через 10 секунд
+const FINAL_LIMIT_MS = 60000; // без автопилота — минутный предохранитель, чтобы игра не стояла вечно
 
 function loadSeen(): Set<string> {
   try {
@@ -63,13 +64,13 @@ export function PressModal() {
     return () => clearTimeout(t);
   }, [openKey, step]);
 
-  // Автопилот: общий предохранитель
+  // Предохранитель ТОЛЬКО на итоговой карточке: показ карточек никогда не обрываем
   useEffect(() => {
-    if (!openKey || !autopilot) return;
-    const t = setTimeout(() => finish(), AUTOPILOT_MS);
+    if (!openKey || step < total) return;
+    const t = setTimeout(() => finish(), autopilot ? FINAL_MS : FINAL_LIMIT_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openKey, autopilot]);
+  }, [openKey, autopilot, step, total]);
 
   const finish = () => {
     if (openKey) {

@@ -35,7 +35,7 @@ export function writeAutopilotLog(entry: Record<string, unknown>): void {
 
 export interface SessionHost {
   /** PLAN-30: тексты критиков после релиза (опционально — тесты обходятся без LLM) */
-  generatePress?(): void;
+  generatePress?(force?: boolean): void;
   game: GameState;
   chat: ChatState;
   speed: number;
@@ -151,7 +151,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
           type: rt?.nameRu ?? rt?.name ?? g?.typeId ?? '',
           console: rc?.name ?? g?.consoleId ?? '',
         });
-        void s.generatePress?.(); // PLAN-30: тексты 10 критиков (фолбэки уже в сейве)
+        void s.generatePress?.(true); // PLAN-30: тексты 10 критиков (фолбэки уже в сейве)
         s.saveNow(); // SRV-08: дорогое действие — сразу на диск
       }
       s.emit();

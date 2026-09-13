@@ -85,7 +85,7 @@ export class SessionRegistry implements SessionHooks {
     });
     this.live.set(userId, { saveId, server });
     // PLAN-30: починка служебных фолбэков прессы в последней записи (идемпотентно, молчит без нужды)
-    void server.healPress();
+    void server.generatePress();
   }
 
   /**
