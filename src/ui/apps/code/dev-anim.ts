@@ -2,6 +2,7 @@
 // Один rAF на окно, пул частиц, стратифицированный размаз по такту, счётчики мимо React.
 // Геометрия меряется один раз на такт; координаты — в системе контента (учёт скролла).
 // Никаких setState на прилёт, никаких per-particle таймеров и animationend.
+// Числа строго неубывающие: вниз показания опускает только setProject (партия/происшествие).
 import type { DevContrib, Stats } from '../../../core/types';
 import {
   ANIM_ATTRS,
@@ -403,7 +404,8 @@ export class DevAnim {
     if (now - this.lastWrite >= 0.06) {
       this.lastWrite = now;
       for (const a of ANIM_ATTRS) {
-        const v = Math.round(this.shown[a]);
+        // страховка монотонности: показанное число не уменьшается (сброс — только setProject)
+        const v = Math.max(Math.round(this.shown[a]), this.lastNum[a]);
         if (v !== this.lastNum[a]) {
           this.lastNum[a] = v;
           const el = this.elsNum[a];
@@ -515,8 +517,12 @@ export class DevAnim {
         this.chips = [];
       }
       for (const a of ANIM_ATTRS) {
-        this.shown[a] += (this.target[a] - this.shown[a]) * Math.min(1, dt / 0.25);
-        if (Math.abs(this.target[a] - this.shown[a]) < 0.5) this.shown[a] = this.target[a];
+        // решение босса: числа строго неубывающие внутри партии — догон только вверх,
+        // вниз показания опускает лишь явный setProject (смена партии / происшествие)
+        if (this.target[a] > this.shown[a]) {
+          this.shown[a] += (this.target[a] - this.shown[a]) * Math.min(1, dt / 0.25);
+          if (this.target[a] - this.shown[a] < 0.5) this.shown[a] = this.target[a];
+        }
       }
       this.drawStatic(now, dt);
       this.sweepFlashes(now);
