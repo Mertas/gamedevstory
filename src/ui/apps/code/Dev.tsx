@@ -6,7 +6,6 @@ import { consoleById, genreById, typeById } from '../../../shared/meta';
 import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
 import { studioRecords } from '../../../shared/records';
-import { fmtInt } from '../../../shared/nums';
 import { DevAnim } from './dev-anim';
 import { ReleasePanel } from './Release';
 import { MODES, ROLE_LABELS } from './shared';
@@ -116,10 +115,10 @@ export function DevStatus() {
   const type = typeById(meta, g.typeId);
   const consoleData = consoleById(meta, g.consoleId);
   const attrs = [
-    { id: 'fun' as const, k: 'Fun', v: Math.round(g.points.fun), c: '#000080' },
-    { id: 'creativity' as const, k: 'Creativity', v: Math.round(g.points.creativity), c: '#800080' },
-    { id: 'graphics' as const, k: 'Graphics', v: Math.round(g.points.graphics), c: '#008000' },
-    { id: 'sound' as const, k: 'Sound', v: Math.round(g.points.sound), c: '#808000' },
+    { id: 'fun' as const, k: 'Fun', c: '#000080' },
+    { id: 'creativity' as const, k: 'Creativity', c: '#800080' },
+    { id: 'graphics' as const, k: 'Graphics', c: '#008000' },
+    { id: 'sound' as const, k: 'Sound', c: '#808000' },
   ];
 
   return (
@@ -141,7 +140,9 @@ export function DevStatus() {
         {attrs.map((a) => (
           <div key={a.id} data-attr={a.id}>
             <div className="w95-row" style={{ justifyContent: 'space-between' }}>
-              <span style={{ color: a.c }}>{a.k}</span><span className="dev-num">{fmtInt(a.v)}</span>
+              <span style={{ color: a.c }}>{a.k}</span>
+              {/* число пишет ТОЛЬКО движок (монотонно); React сюда не вмешивается */}
+              <span className="dev-num" />
             </div>
             <div className="w95-progress dev-bar">
               <div style={{ width: '0%', background: a.c }} />
