@@ -142,6 +142,16 @@ export class UserService {
         build TEXT, kind TEXT NOT NULL, target TEXT, label TEXT, step_kind TEXT, app TEXT,
         dom TEXT, extra TEXT
       );
+      CREATE TABLE IF NOT EXISTS dm_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_user INTEGER NOT NULL,
+        to_user INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        created INTEGER NOT NULL,
+        read_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS dm_pair ON dm_messages(from_user, to_user, id);
+      CREATE INDEX IF NOT EXISTS dm_inbox ON dm_messages(to_user, read_at);
       CREATE TABLE IF NOT EXISTS user_combos (
         user_id INTEGER NOT NULL, combo TEXT NOT NULL, first_at INTEGER NOT NULL,
         source TEXT NOT NULL DEFAULT 'start', PRIMARY KEY (user_id, combo)
@@ -453,6 +463,50 @@ export class UserService {
         lastGame,
       };
     });
+  }
+
+  // ─── SER-28: личные сообщения между игроками ───
+
+  /** История пары (последние limit, от старых к новым). */
+  dmHistory(a: number, b: number, limit = 100): Array<{ id: number; from: number; to: number; text: string; created: number; read: boolean }> {
+    const rows = this.db
+      .prepare(
+        `SELECT id, from_user AS f, to_user AS t, text, created, read_at AS readAt FROM dm_messages
+          WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?)
+          ORDER BY id DESC LIMIT ?`,
+      )
+      .all(a, b, b, a, limit) as Array<{ id: number; f: number; t: number; text: string; created: number; readAt: number | null }>;
+    return rows.reverse().map((r) => ({
+      id: Number(r.id),
+      from: Number(r.f),
+      to: Number(r.t),
+      text: String(r.text),
+      created: Number(r.created),
+      read: r.readAt != null,
+    }));
+  }
+
+  dmSend(from: number, to: number, text: string): void {
+    this.db.prepare('INSERT INTO dm_messages (from_user, to_user, text, created) VALUES (?, ?, ?, ?)').run(from, to, text, Date.now());
+  }
+
+  dmMarkRead(me: number, peer: number): void {
+    this.db.prepare('UPDATE dm_messages SET read_at = ? WHERE to_user = ? AND from_user = ? AND read_at IS NULL').run(Date.now(), me, peer);
+  }
+
+  /** Непрочитанные по отправителям: { userId: count }. */
+  dmUnread(me: number): Record<number, number> {
+    const rows = this.db
+      .prepare('SELECT from_user AS f, COUNT(*) AS n FROM dm_messages WHERE to_user = ? AND read_at IS NULL GROUP BY from_user')
+      .all(me) as Array<{ f: number; n: number }>;
+    const out: Record<number, number> = {};
+    for (const r of rows) out[Number(r.f)] = Number(r.n);
+    return out;
+  }
+
+  userLogin(id: number): string | null {
+    const r = this.db.prepare('SELECT login FROM users WHERE id = ?').get(id) as { login?: unknown } | undefined;
+    return r ? String(r.login) : null;
   }
 
   /** SER-25: все занятые названия студий (для гарантированно свободного от LLM). */

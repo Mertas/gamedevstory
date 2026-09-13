@@ -234,16 +234,38 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   });
 
   // PLAN-34: мировой список игр всех аккаунтов — «место среди всех» в окне продаж
+  // SER-28: личные сообщения между игроками (история, отправка, отметка прочтения)
+  app.get('/api/dm/:userId', (req, res) => {
+    withUser(req, res, (u) => {
+      const peer = Number(req.params.userId);
+      if (!Number.isInteger(peer) || peer <= 0 || peer === u.id) return void res.json({ ok: false, error: 'некорректный собеседник' });
+      users.dmMarkRead(u.id, peer);
+      res.json({ ok: true, rows: users.dmHistory(u.id, peer) });
+    });
+  });
+
+  app.post('/api/dm/:userId', (req, res) => {
+    withUser(req, res, (u) => {
+      const peer = Number(req.params.userId);
+      if (!Number.isInteger(peer) || peer <= 0 || peer === u.id) return void res.json({ ok: false, error: 'некорректный собеседник' });
+      const text = String((req.body ?? {}).text ?? '').trim().slice(0, 1000);
+      if (text.length < 1) return void res.json({ ok: false, error: 'пустое сообщение' });
+      users.dmSend(u.id, peer, text);
+      res.json({ ok: true });
+    });
+  });
+
   // SER-27: панель «Разговоры» — все игроки со статусом и последней игрой
   app.get('/api/roster', (req, res) => {
     withUser(req, res, (u) => {
       const now = Date.now();
+      const unread = users.dmUnread(u.id);
       const rows = users.roster().map((r) => {
         const live = sessions.server(r.userId) !== null;
         const typing = (sessions.server(r.userId)?.lastTypingAt ?? 0) > now - 5000;
         const idle = r.updated > 0 ? now - r.updated : Number.POSITIVE_INFINITY;
         const status = typing ? 'typing' : !live || idle > 20 * 60_000 ? 'offline' : idle > 3 * 60_000 ? 'away' : 'online';
-        return { ...r, status };
+        return { ...r, status, unread: unread[r.userId] ?? 0 };
       });
       res.json({ ok: true, me: u.id, rows });
     });

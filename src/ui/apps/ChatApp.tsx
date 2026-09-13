@@ -39,6 +39,15 @@ interface RosterUser {
   updated: number;
   status: 'online' | 'away' | 'offline' | 'typing';
   lastGame: { name: string; score: number; units: number } | null;
+  unread?: number;
+}
+
+interface DmMsg {
+  id: number;
+  from: number;
+  to: number;
+  text: string;
+  created: number;
 }
 
 const STATUS_ICON: Record<RosterUser['status'], string> = { online: '🟢', away: '🟡', offline: '⚪', typing: '✏️' };
@@ -54,14 +63,21 @@ export function ChatApp() {
   // SER-27: панель «Разговоры» — команда + все зарегистрированные игроки со статусами
   const [roster, setRoster] = useState<RosterUser[] | null>(null);
   const [view, setView] = useState<'team' | number>('team');
+  const [meId, setMeId] = useState(0);
+  const [dm, setDm] = useState<DmMsg[] | null>(null);
+  const [dmDraft, setDmDraft] = useState('');
+  const dmRef = useRef<HTMLDivElement>(null);
   const typeSentRef = useRef(0);
   useEffect(() => {
     let alive = true;
     const load = () => {
       fetch('/api/roster')
-        .then((r) => (r.ok ? (r.json() as Promise<{ ok?: boolean; rows?: RosterUser[] }>) : null))
+        .then((r) => (r.ok ? (r.json() as Promise<{ ok?: boolean; rows?: RosterUser[]; me?: number }>) : null))
         .then((j) => {
-          if (alive && j?.ok && j.rows) setRoster(j.rows);
+          if (alive && j?.ok && j.rows) {
+            setRoster(j.rows);
+            if (typeof j.me === 'number') setMeId(j.me);
+          }
         })
         .catch(() => {});
     };
@@ -73,6 +89,45 @@ export function ChatApp() {
     };
   }, []);
   const pick = typeof view === 'number' ? (roster?.find((u) => u.userId === view) ?? null) : null;
+
+  // SER-28: переписка с выбранным игроком (поллинг раз в 4 секунды, отметка прочтения на сервере)
+  const peerId = typeof view === 'number' ? view : 0;
+  useEffect(() => {
+    if (!peerId) {
+      setDm(null);
+      return;
+    }
+    let alive = true;
+    const load = () => {
+      fetch(`/api/dm/${peerId}`)
+        .then((r) => (r.ok ? (r.json() as Promise<{ ok?: boolean; rows?: DmMsg[] }>) : null))
+        .then((j) => {
+          if (alive && j?.ok && j.rows) setDm(j.rows);
+        })
+        .catch(() => {});
+    };
+    setDm(null);
+    load();
+    const id = setInterval(load, 4000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [peerId]);
+  useEffect(() => {
+    const el = dmRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [dm?.length, peerId]);
+  const sendDm = () => {
+    const t = dmDraft.trim();
+    if (t.length < 1 || !peerId) return;
+    setDmDraft('');
+    fetch(`/api/dm/${peerId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: t }),
+    }).catch(() => {});
+  };
   // SER-24: в ленте — последние 100 сообщений; если есть более старые, вверху ленты (внутри
   // прокрутки) появляется кнопка подгрузки ещё сотни.
   const [limit, setLimit] = useState(100);
@@ -125,33 +180,63 @@ export function ChatApp() {
               <div className="chat-item-name">{u.login}</div>
               <div className="chat-sub">{u.lastGame ? `${u.lastGame.name} · ${u.lastGame.score}/100` : u.studio || 'ещё без игр'}</div>
             </div>
+            {u.unread ? <span className="chat-badge">{u.unread}</span> : null}
           </div>
         ))}
         {!roster && <div className="chat-sub" style={{ padding: '4px 8px' }}>⏳ …</div>}
       </div>
       {view !== 'team' ? (
-        <div className="chat-main chat-user-card">
+        <div className="chat-main">
           {pick ? (
             <>
-              <div className="chat-card-name">
-                {STATUS_ICON[pick.status]} {pick.login} — {STATUS_TEXT[pick.status]}
+              <div className="chat-user-head">
+                <div>
+                  {STATUS_ICON[pick.status]} <b>{pick.login}</b> — {STATUS_TEXT[pick.status]}
+                </div>
+                <div className="chat-sub">
+                  {pick.studio || '—'}
+                  {pick.lastGame ? ` · ${pick.lastGame.name} · ${pick.lastGame.score}/100 · ${fmtCopies(pick.lastGame.units)} копий` : ' · ещё без игр'}
+                </div>
               </div>
-              <div>Студия: <b>{pick.studio || '—'}</b></div>
-              {pick.lastGame ? (
-                <>
-                  <div>Последняя игра: <b>{pick.lastGame.name}</b></div>
-                  <div>Оценка прессы: <b>{pick.lastGame.score}/100</b></div>
-                  <div>Продано: <b>{fmtCopies(pick.lastGame.units)} копий</b></div>
-                </>
-              ) : (
-                <div>Игр пока нет.</div>
-              )}
-              <div className="chat-sub" style={{ marginTop: 8 }}>
-                Личная переписка появится позже — пока можно только заглянуть.
+              <div ref={dmRef} className="w95-scroll dm-scroll" style={{ flex: 1 }}>
+                {dm === null && <div className="w95-hint" style={{ padding: 10 }}>⏳ Загружаю переписку…</div>}
+                {dm?.length === 0 && <div className="w95-hint" style={{ padding: 10 }}>Пока пусто — напиши первым.</div>}
+                {(dm ?? []).map((m) => (
+                  <div key={m.id} className={`dm-msg ${m.from === meId ? 'self' : ''}`}>
+                    <div className="dm-bubble">{m.text}</div>
+                    <div className="dm-when">
+                      {m.from === meId ? 'Вы' : pick.login} ·{' '}
+                      {new Date(m.created).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="w95-chat-input">
+                <input
+                  className="w95-input"
+                  style={{ flex: 1 }}
+                  value={dmDraft}
+                  maxLength={1000}
+                  placeholder={`Написать ${pick.login}…`}
+                  onChange={(e) => {
+                    setDmDraft(e.target.value);
+                    const now = Date.now();
+                    if (now - typeSentRef.current > 3000) {
+                      typeSentRef.current = now;
+                      actionTyping();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') sendDm();
+                  }}
+                />
+                <button className="w95-btn" onClick={sendDm}>
+                  Отправить
+                </button>
               </div>
             </>
           ) : (
-            <div className="chat-sub">Игрок не найден.</div>
+            <div className="chat-sub" style={{ padding: 10 }}>Игрок не найден.</div>
           )}
         </div>
       ) : (
