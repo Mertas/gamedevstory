@@ -444,3 +444,4 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .press-rec-value { font-weight: 700; }
 .press-new { color: #7a2b00; font-weight: 700; text-shadow: 0 0 5px #ffd700; }
 .press-rec-best { opacity: .65; }
+.w95-chat-more { display: flex; justify-content: center; padding: 4px 0 8px; }

@@ -1,5 +1,5 @@
 // Приложение «Чат»: лента корпоративного чата + ввод сообщений игроку.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useChat, useGameSelector, actionChatMessage } from '../store';
 import { typingName } from '../../shared/chat';
 
@@ -38,11 +38,30 @@ export function ChatApp() {
   const typing = useGameSelector((g) => typingName(g, chat));
   const typingAvatar = useGameSelector((g) => (typing ? g.staff.find((s) => s.name === typing)?.avatar ?? '' : ''));
   const [draft, setDraft] = useState('');
+  // SER-24: в ленте — последние 100 сообщений; если есть более старые, вверху ленты (внутри
+  // прокрутки) появляется кнопка подгрузки ещё сотни.
+  const [limit, setLimit] = useState(100);
+  const keepRef = useRef<number | null>(null); // позиция просмотра при подгрузке старых
+  const from = Math.max(0, chat.msgs.length - limit);
 
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [chat.msgs.length, typing]);
+
+  // подгрузка старых не должна «прыгать»: сдвигаем вид на высоту добавленного сверху
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el || keepRef.current === null) return;
+    el.scrollTop += el.scrollHeight - keepRef.current;
+    keepRef.current = null;
+  });
+
+  const moreOlder = () => {
+    const el = listRef.current;
+    if (el) keepRef.current = el.scrollHeight;
+    setLimit((v) => v + 100);
+  };
 
   const send = () => {
     const t = draft.trim();
@@ -54,8 +73,15 @@ export function ChatApp() {
   return (
     <div className="w95-chat">
       <div ref={listRef} className="w95-scroll" style={{ flex: 1 }}>
-        {chat.msgs.map((m, i) => (
-          <div key={i} className={`w95-chat-msg ${m.system ? 'system' : ''} ${m.author === 'Вы' ? 'self' : ''}`}>
+        {from > 0 && (
+          <div className="w95-chat-more">
+            <button className="w95-btn" onClick={moreOlder}>
+              ⬆ Показать более старые
+            </button>
+          </div>
+        )}
+        {chat.msgs.slice(from).map((m, i) => (
+          <div key={from + i} className={`w95-chat-msg ${m.system ? 'system' : ''} ${m.author === 'Вы' ? 'self' : ''}`}>
             <ChatAvatar name={m.author} legacy={m.avatar} />
             <div style={{ flex: 1 }}>
               <div className="w95-cname">{m.author}</div>
