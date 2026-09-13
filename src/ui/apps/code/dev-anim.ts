@@ -3,6 +3,8 @@
 // Геометрия меряется один раз на такт; координаты — в системе контента (учёт скролла).
 // Никаких setState на прилёт, никаких per-particle таймеров и animationend.
 // Числа строго неубывающие: вниз показания опускает только setProject (партия/происшествие).
+// v1.13.3 (plan/32): suspend() по visibilitychange (фоновая вкладка не копит очередь),
+// сторож кадров (исключение не убивает цикл), стоп-лимиты очереди и эффектов, компакция без аллокаций.
 import type { DevContrib, Stats } from '../../../core/types';
 import {
   ANIM_ATTRS,
@@ -23,6 +25,12 @@ const COLORS: Record<AnimAttr, string> = {
 /** Пул: одновременно живых частиц с запасом (бюджет волны ~48/такт, скорость ≤ 8×). */
 const MAX_ALIVE = 320;
 const TAIL = 3;
+/** Стоп-лимит очереди (2 волны): предохранитель от непланового простоя кадров. */
+const MAX_PENDING = 96;
+/** Лимиты эффектов: без них на 8× живёт вдвое больше бюджета (plan/32 §1). */
+const SPARK_CAP = 600;
+const RIPPLE_CAP = 120;
+const GHOST_CAP = 32;
 
 interface Chip {
   kind: 'chip' | 'mine';
@@ -135,6 +143,8 @@ export class DevAnim {
   private lastWrite = 0;
   private flashAt = zeroRec();
   private flashes: FlashRec[] = [];
+  private lastGhostAt = zeroRec();
+  private lastErrorAt = 0;
 
   constructor(canvas: HTMLCanvasElement, root: HTMLElement) {
     this.canvas = canvas;
@@ -144,12 +154,14 @@ export class DevAnim {
     this.ctx = ctx;
     this.last = performance.now() / 1000;
     this.measure();
+    document.addEventListener('visibilitychange', this.onVisibility);
     this.raf = requestAnimationFrame(this.frame);
   }
 
   destroy(): void {
     this.dead = true;
     cancelAnimationFrame(this.raf);
+    document.removeEventListener('visibilitychange', this.onVisibility);
     for (const f of this.flashes) f.el.classList.remove('w95-attr-flash');
     this.flashes = [];
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -168,6 +180,7 @@ export class DevAnim {
     this.sparks = [];
     this.ghosts = [];
     this.beaten = falses();
+    for (const a of ANIM_ATTRS) this.elsNotch[a]?.classList.remove('beat');
     for (const a of ANIM_ATTRS) this.top[a] = barScaleTop(this.rec[a], this.shown[a]);
     this.lastNum = { fun: -1, creativity: -1, graphics: -1, sound: -1 };
     // мгновенный слепок в DOM (эффект до первой отрисовки — без мигания пустых полосок)
@@ -180,6 +193,15 @@ export class DevAnim {
     this.tickSec = 1 / this.speed;
     this.target = { ...target };
     for (const a of ANIM_ATTRS) this.rec[a] = rec[a] ?? 0;
+    // Инвариант (plan/32 §2): очередь не растёт безгранично. При переполнении — не копим,
+    // а зачисляем мгновенно: числа остаются честными, память не течёт.
+    if (this.pending.length >= MAX_PENDING) {
+      for (const p of this.pending) {
+        this.reserved[p.attr] -= p.weight;
+        this.shown[p.attr] += p.weight;
+      }
+      this.pending = [];
+    }
     this.measure();
 
     const gaps = zeros();
@@ -332,10 +354,13 @@ export class DevAnim {
     }
     this.shown[c.attr] += c.weight;
     const [x, y] = this.bez(c, 1);
-    this.ripples.push({ x, y, t: 0, life: 0.45, c: COLORS[c.attr] });
-    if (c.heavy > 0.5) this.ripples.push({ x, y, t: 0, life: 0.62, c: COLORS[c.attr] });
+    if (this.ripples.length < RIPPLE_CAP) {
+      this.ripples.push({ x, y, t: 0, life: 0.45, c: COLORS[c.attr] });
+      if (c.heavy > 0.5) this.ripples.push({ x, y, t: 0, life: 0.62, c: COLORS[c.attr] });
+    }
     const n = c.heavy > 0.5 ? 7 : 4;
     for (let i = 0; i < n; i++) {
+      if (this.sparks.length >= SPARK_CAP) break;
       const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.1;
       const sp = 28 + Math.random() * 74;
       this.sparks.push({
@@ -347,7 +372,11 @@ export class DevAnim {
         c: Math.random() < 0.25 ? '#ffffff' : COLORS[c.attr],
       });
     }
-    if (c.weight > 20) this.ghosts.push({ x, y, t: 0, life: 0.55, text: `+${c.weight}`, gold: false });
+    // «+N»: не больше одного на направление за такт (иначе на 8× — 211 fillText/кадр)
+    if (c.weight > 20 && this.ghosts.length < GHOST_CAP && now - this.lastGhostAt[c.attr] >= this.tickSec * 0.9) {
+      this.lastGhostAt[c.attr] = now;
+      this.ghosts.push({ x, y, t: 0, life: 0.55, text: `+${c.weight}`, gold: false });
+    }
     if (now - this.flashAt[c.attr] > 0.45) {
       this.flashAt[c.attr] = now;
       this.flashEl(this.elsWrap[c.attr], now);
@@ -355,7 +384,9 @@ export class DevAnim {
     // решение босса: при превышении рекорда студии — празднование, затем шкала переставляется
     if (!this.beaten[c.attr] && this.shown[c.attr] > recordThreshold(this.rec[c.attr])) {
       this.beaten[c.attr] = true;
-      this.ghosts.push({ x, y: y - 6, t: 0, life: 1.15, text: 'РЕКОРД!', gold: true });
+      if (this.ghosts.length < GHOST_CAP) {
+        this.ghosts.push({ x, y: y - 6, t: 0, life: 1.15, text: 'РЕКОРД!', gold: true });
+      }
       this.elsNotch[c.attr]?.classList.add('beat');
     }
   }
@@ -495,8 +526,55 @@ export class DevAnim {
     ctx.globalAlpha = 1;
   }
 
+  /** Сброс незавершённой работы без зачисления: очередь/частицы/вспышки; числа догонят сами. */
+  private dropWork(): void {
+    if (this.pending.length) {
+      for (const p of this.pending) this.reserved[p.attr] -= p.weight;
+      this.pending = [];
+    }
+    if (this.chips.length) {
+      for (const c of this.chips) this.reserved[c.attr] -= c.weight;
+      this.chips = [];
+    }
+    if (this.flashes.length) {
+      for (const f of this.flashes) f.el.classList.remove('w95-attr-flash');
+      this.flashes = [];
+    }
+  }
+
+  /**
+   * v1.13.3 (plan/32 §2): вкладка ушла в фон — JS-слушатели работают, а rAF-кадров нет;
+   * без этой паузы очередь копила бы ~155 МБ за час на 8×. Возврат — замер и нулевая дельта.
+   */
+  private onVisibility = (): void => {
+    if (this.dead) return;
+    if (document.hidden) {
+      this.dropWork();
+      this.last = performance.now() / 1000;
+    } else {
+      this.last = performance.now() / 1000;
+      this.measure();
+    }
+  };
+
+  /** Кадр: сторож (plan/32 §1) — исключение внутри не убивает анимацию, цикл продолжается. */
   private frame = (ms: number): void => {
     if (this.dead) return;
+    try {
+      this.tick(ms);
+    } catch (e) {
+      const now = performance.now() / 1000;
+      if (now - this.lastErrorAt > 5) {
+        this.lastErrorAt = now;
+        console.error('[gds] dev-anim: кадр упал — цикл продолжается', e);
+      }
+    } finally {
+      if (!this.dead) this.raf = requestAnimationFrame(this.frame);
+    }
+  };
+
+  /** Тело кадра: симуляция и отрисовка. Без аллокаций на кадр (компакция массивов на месте). */
+  private tick(ms: number): void {
     const ctx = this.ctx;
     const now = ms / 1000;
     let dt = now - this.last;
@@ -504,18 +582,12 @@ export class DevAnim {
     if (dt > 0.05) dt = 0.05;
     this.last = now;
 
-    const hidden = this.root.offsetParent === null || this.root.clientWidth === 0 || this.w === 0;
+    const hidden =
+      document.hidden || this.root.offsetParent === null || this.root.clientWidth === 0 || this.w === 0;
     if (hidden) {
-      // окно скрыто/свёрнуто: не рисуем и не копим; показания быстро догоняют цель,
-      // волна сбрасывается — никаких «выстрелов» пачками при возврате
-      if (this.pending.length) {
-        for (const p of this.pending) this.reserved[p.attr] -= p.weight;
-        this.pending = [];
-      }
-      if (this.chips.length) {
-        for (const c of this.chips) this.reserved[c.attr] -= c.weight;
-        this.chips = [];
-      }
+      // окно скрыто/свёрнуто/вкладка в фоне: не рисуем и не копим; показания быстро догоняют
+      // цель, волна сбрасывается — никаких «выстрелов» пачками при возврате
+      this.dropWork();
       for (const a of ANIM_ATTRS) {
         // решение босса: числа строго неубывающие внутри партии — догон только вверх,
         // вниз показания опускает лишь явный setProject (смена партии / происшествие)
@@ -526,41 +598,44 @@ export class DevAnim {
       }
       this.drawStatic(now, dt);
       this.sweepFlashes(now);
-      this.raf = requestAnimationFrame(this.frame);
       return;
     }
 
-    // 1) запуск запланированных частиц (размаз по такту)
+    // 1) запуск запланированных частиц (размаз по такту) — компакция на месте
     if (this.pending.length) {
-      const rest: Pending[] = [];
-      for (const p of this.pending) {
+      let wp = 0;
+      for (let i = 0; i < this.pending.length; i++) {
+        const p = this.pending[i]!;
         if (p.launchAt <= now) this.launch(p, now);
-        else rest.push(p);
+        else this.pending[wp++] = p;
       }
-      this.pending = rest;
+      this.pending.length = wp;
     }
 
     // 2) симуляция и отрисовка
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
 
-    const alive: Chip[] = [];
-    for (const c of this.chips) {
+    let wc = 0;
+    for (let i = 0; i < this.chips.length; i++) {
+      const c = this.chips[i]!;
       const t = (now - c.t0) / c.life;
       if (t >= 1) {
         this.land(c, now);
         continue;
       }
       if (t >= 0) this.drawChip(c, t);
-      alive.push(c);
+      this.chips[wc++] = c;
     }
-    this.chips = alive;
+    this.chips.length = wc;
 
-    // 3) эффекты: рябь, искры, призраки чисел
-    this.ripples = this.ripples.filter((rp) => {
+    // 3) эффекты: рябь, искры, призраки чисел — обновление и отрисовка одним проходом
+    let wr = 0;
+    for (let i = 0; i < this.ripples.length; i++) {
+      const rp = this.ripples[i]!;
       rp.t += dt;
       const a = 1 - rp.t / rp.life;
-      if (a <= 0) return false;
+      if (a <= 0) continue;
       ctx.globalAlpha = a * 0.55;
       ctx.strokeStyle = rp.c;
       ctx.lineWidth = 1;
@@ -568,11 +643,15 @@ export class DevAnim {
       ctx.arc(rp.x, rp.y, 1.5 + rp.t * 44, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
-      return true;
-    });
-    this.sparks = this.sparks.filter((s) => {
+      this.ripples[wr++] = rp;
+    }
+    this.ripples.length = wr;
+
+    let ws = 0;
+    for (let i = 0; i < this.sparks.length; i++) {
+      const s = this.sparks[i]!;
       s.t += dt;
-      if (s.t >= s.life) return false;
+      if (s.t >= s.life) continue;
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.vy += 140 * dt;
@@ -580,23 +659,31 @@ export class DevAnim {
       ctx.fillStyle = s.c;
       ctx.fillRect(Math.round(s.x), Math.round(s.y), 2, 2);
       ctx.globalAlpha = 1;
-      return true;
-    });
-    this.ghosts = this.ghosts.filter((g) => {
+      this.sparks[ws++] = s;
+    }
+    this.sparks.length = ws;
+
+    let wg = 0;
+    let fontSet = '';
+    for (let i = 0; i < this.ghosts.length; i++) {
+      const g = this.ghosts[i]!;
       g.t += dt;
-      if (g.t >= g.life) return false;
+      if (g.t >= g.life) continue;
+      const f = `bold ${g.gold ? 12 : 11}px ${this.font}`;
+      if (f !== fontSet) {
+        ctx.font = f;
+        fontSet = f;
+      }
       ctx.globalAlpha = Math.min(1, (1 - g.t / g.life) * 2);
-      ctx.font = `bold ${g.gold ? 12 : 11}px ${this.font}`;
       ctx.fillStyle = g.gold ? '#b8860b' : '#303030';
       ctx.fillText(g.text, g.x - 10, g.y - 6 - g.t * 26);
       ctx.globalAlpha = 1;
-      return true;
-    });
+      this.ghosts[wg++] = g;
+    }
+    this.ghosts.length = wg;
 
     // 4) полоски и цифры
     this.drawStatic(now, dt);
     this.sweepFlashes(now);
-
-    this.raf = requestAnimationFrame(this.frame);
-  };
+  }
 }
