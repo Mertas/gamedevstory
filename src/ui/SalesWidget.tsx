@@ -96,18 +96,20 @@ export function SalesWidget() {
 
   // Прошло: 5 обновлений за игровой день (0.2 → 1.0), а не один рывок в конце дня
   const dayKey = views.filter((v) => v.live).map((v) => `${v.key}:${v.day}`).join('|');
-  const [progress, setProgress] = useState(1);
+  // PLAN-35: прогресс дня хранится ВМЕСТЕ со своим ключом. Раньше прогресс жил отдельно: на смене
+  // дня первый кадр рисовался со старым прогрессом (0.2–1.0) и новым полным днём продаж — полоска
+  // и линия дохода прыгали вверх, а следующим кадром падали почти в ноль. Теперь чужой день = 0.
+  const [pr, setPr] = useState({ day: '', p: 1 });
+  const progress = pr.day === dayKey ? pr.p : 0;
   useEffect(() => {
     if (!dayKey) return;
-    setProgress(0);
+    setPr((x) => (x.day === dayKey ? x : { day: dayKey, p: 0 }));
     const step = Math.max(60, periodRef.current / 5);
     const id = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 1) {
-          clearInterval(id);
-          return 1;
-        }
-        return Math.round(Math.min(1, p + 0.2) * 10) / 10;
+      setPr((x) => {
+        if (x.day !== dayKey) return { day: dayKey, p: 0.2 };
+        if (x.p >= 1) return x;
+        return { day: dayKey, p: Math.round(Math.min(1, x.p + 0.2) * 10) / 10 };
       });
     }, step);
     return () => clearInterval(id);
