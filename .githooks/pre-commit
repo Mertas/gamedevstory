@@ -1,0 +1,16 @@
+#!/bin/sh
+# PLAN-33: каждый коммит обязан нести новую версию в package.json.
+# Бампай перед коммитом: pnpm version patch|minor|major --no-git-tag-version
+# (схема MAJOR.MINOR.PATCH — plan/23_Версионирование.md; осознанно выбирай уровень).
+head_ver=$(git show HEAD:package.json 2>/dev/null | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1)
+stage_ver=$(git show :package.json 2>/dev/null | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1)
+if [ -z "$stage_ver" ]; then
+  echo "✋ package.json не в индексе — версия не проверена. Сделай: git add package.json"
+  exit 1
+fi
+if [ "$head_ver" = "$stage_ver" ]; then
+  echo "✋ Версия в package.json не изменилась ($stage_ver) — коммит без бампа версии запрещён."
+  echo "   Бампани: pnpm version patch|minor|major --no-git-tag-version"
+  exit 1
+fi
+echo "✔ версия: ${head_ver:-нет} → $stage_ver"

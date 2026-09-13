@@ -5,3 +5,6 @@ deploy/rollback.sh text eol=lf
 deploy/backup.sh text eol=lf
 deploy/gds.service text eol=lf
 deploy/nginx-gds.conf text eol=lf
+
+# Хуки — тоже bash-скрипты: только LF, иначе sh на Windows/сервере ломается.
+.githooks/* text eol=lf

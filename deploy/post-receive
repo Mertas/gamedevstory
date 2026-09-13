@@ -35,6 +35,8 @@ while read -r _old new ref; do
   fi
 
   cd "$REL"
+  # PLAN-33: дата и время коммита — в штамп версии (у релиза нет .git, берём из bare-репозитория)
+  export GDS_COMMIT_AT="$(git --git-dir="$REPO" log -1 --format=%cd --date=format:%d.%m.%Y_%H:%M "$new" | tr '_' ' ')"
   log "ставлю зависимости (первый раз это долго)"
   pnpm install --frozen-lockfile --reporter=append-only
 

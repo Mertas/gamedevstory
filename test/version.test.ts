@@ -1,7 +1,7 @@
 // PLAN-23: версия игры — из package.json, у клиента через vite define.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { APP_VERSION, BUILD_DATE, versionLabel, versionTitle } from '../src/shared/version';
+import { APP_VERSION, BUILD_DATE, COMMIT_AT, versionLabel, versionTitle } from '../src/shared/version';
 import { gameVersion, buildId } from '../src/server/version';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
@@ -13,9 +13,10 @@ describe('PLAN-23 версионирование', () => {
     expect(gameVersion()).toBe(pkg.version);
   });
 
-  it('подпись версии — «vX.Y.Z · ДД.ММ.ГГГГ»', () => {
+  it('подпись версии — «vX.Y.Z · ДД.ММ.ГГГГ ЧЧ:ММ» (дата/время последнего коммита)', () => {
     expect(versionLabel()).toMatch(/^v\d+\.\d+\.\d+/);
-    if (BUILD_DATE) expect(versionLabel()).toContain(BUILD_DATE.split('-').reverse().join('.'));
+    if (COMMIT_AT) expect(versionLabel()).toContain(COMMIT_AT); // PLAN-33: время последнего коммита
+    else if (BUILD_DATE) expect(versionLabel()).toContain(BUILD_DATE.split('-').reverse().join('.'));
     expect(versionTitle()).toContain(versionLabel());
   });
 
