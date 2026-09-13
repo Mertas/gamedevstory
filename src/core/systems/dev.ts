@@ -92,6 +92,7 @@ export function startProject(state: GameState, input: StartProjectInput): Action
     totalCost: cost,
     progress: 0,
     bugs: 0,
+    bugsTotal: 0, // PLAN-30: счётчик всех багов за разработку
     weekStarted: state.week,
     phase: 'proposal',
     proposalStaffId: input.proposalStaffId,
@@ -207,6 +208,7 @@ export function devTick(state: GameState, rng: Rng): void {
   // баги пропорционально прогрессу
   const total = totalBugs(game.totalCost, game.mode, game.comboGrade);
   game.bugs += (total * daily) / game.totalCost;
+    game.bugsTotal = (game.bugsTotal ?? 0) + (total * daily) / game.totalCost; // PLAN-30: всего за разработку
 
   // исследования
   const researchMult = game.mode === 'research' ? CONFIG.RESEARCH_MODE_MULT : 1;
@@ -402,6 +404,7 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
     year: state.year,
     attrs: { ...game.points },
     bugs: Math.round(game.bugs),
+    bugsTotal: Math.round(game.bugsTotal ?? 0),
     awards: [],
     // PLAN-29: факт продаж копится, пока игра в продаже (заполнится в dailySales при снятии)
     paidUnits: 0,
@@ -473,6 +476,7 @@ export function resolveBoost(state: GameState, rng: Rng, accept: boolean, amount
   } else {
     const bugs = rng.int(CONFIG.BOOST_FAIL_BUGS[0], CONFIG.BOOST_FAIL_BUGS[1]);
     game.bugs += bugs;
+    game.bugsTotal = (game.bugsTotal ?? 0) + bugs;
     log(state, `Улучшение провалилось: +${bugs} багов!`);
     state.pendingEvent = {
       type: 'boost_result',

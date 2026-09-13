@@ -162,14 +162,10 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'release_result') {
-      popup({
-        title: 'Оценки критиков',
-        autopilotTarget: 'mb-ok',
-        text: ev.text,
-        buttons: [
-          { label: 'Ок', onClick: () => actionResolveEvent() },
-        ],
-      });
+      // PLAN-30: попап «Оценки критиков» больше не нужен — оценки, вклады и рекорды в модалке прессы.
+      // Событие закрываем сами (иначе пауза-ожидание заблокирует игру).
+      actionResolveEvent();
+      return;
     }
   }, [ev, snap.game, boostAmount, mb]);
   return null;

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { setSpeed, useAutopilot, useGameSelector, useSpeed } from './store';
 import { CRITICS } from '../core/data/critics';
 import { pressVerdict } from '../shared/rules';
+import { beatsRecord, recordKey, studioRecords, type RecordEntry } from '../shared/records';
 
 const SEEN_KEY = 'gds-press-seen';
 const INTRO_MS = 3000; // вступление: за это время обычно прилетают LLM-тексты
@@ -104,16 +105,41 @@ export function PressModal() {
   const texts = rec.reviewMessages ?? [];
   const score = rec.score ?? 0;
   const next = () => setStep((s) => Math.min(total, s + 1));
+  // Книга рекордов: сравниваем эту игру с остальными (себя исключаем)
+  const a = rec.attrs ?? ({ fun: 0, creativity: 0, graphics: 0, sound: 0 } as NonNullable<typeof rec.attrs>);
+  const recs = studioRecords(game.history, recordKey(rec));
+  const topContrib = Object.entries(rec.contrib ?? {}).sort((x, y) => y[1] - x[1])[0];
+  const recRows: Array<{ label: string; value: number; text: string; best: RecordEntry | null; low?: boolean }> = [
+    { label: 'Программирование', value: a.fun ?? 0, text: `${Math.round(a.fun ?? 0)}`, best: recs.dirs.fun },
+    { label: 'Сценарий', value: a.creativity ?? 0, text: `${Math.round(a.creativity ?? 0)}`, best: recs.dirs.creativity },
+    { label: 'Графика', value: a.graphics ?? 0, text: `${Math.round(a.graphics ?? 0)}`, best: recs.dirs.graphics },
+    { label: 'Звук', value: a.sound ?? 0, text: `${Math.round(a.sound ?? 0)}`, best: recs.dirs.sound },
+    {
+      label: 'Сумма направлений',
+      value: (a.fun ?? 0) + (a.creativity ?? 0) + (a.graphics ?? 0) + (a.sound ?? 0),
+      text: `${Math.round((a.fun ?? 0) + (a.creativity ?? 0) + (a.graphics ?? 0) + (a.sound ?? 0))}`,
+      best: recs.sum,
+    },
+    ...(rec.bugsTotal != null
+      ? [{ label: 'Багов за разработку', value: rec.bugsTotal, text: `${rec.bugsTotal}`, best: recs.bugs, low: true }]
+      : []),
+    {
+      label: 'Лучший вклад',
+      value: topContrib ? Math.round(topContrib[1]) : 0,
+      text: topContrib ? `${topContrib[0]} ${Math.round(topContrib[1])}` : '—',
+      best: recs.contrib ? { value: recs.contrib.value, game: recs.contrib.game } : null,
+    },
+  ];
   return (
     <div className="press-overlay" onClick={next} role="dialog" aria-label="Пресса об игре">
       {step < 0 && (
-        <div className="press-card press-intro" key="intro" onClick={(e) => e.stopPropagation()}>
+        <div className="press-card press-intro" key="intro" onClick={next}>
           <div className="press-mag">📰 Пресса о «{rec.name}»</div>
           <div className="press-wait">Критики расходятся по редакциям…</div>
         </div>
       )}
       {step >= 0 && step < total && (
-        <div className="press-card" key={`card-${step}`} onClick={(e) => e.stopPropagation()}>
+        <div className="press-card" key={`card-${step}`} onClick={next}>
           <div className="press-mag">
             <span className="press-mag-name">{CRITICS[step]?.magazine ?? 'Пресса'}</span>
             <span className="press-step">
@@ -138,22 +164,29 @@ export function PressModal() {
           <div className="press-mag">📰 Итог прессы</div>
           <div className="press-total">«{rec.name}» — {score}/100</div>
           <div className="press-verdict">{pressVerdict(score)}</div>
-          
+          <div className="press-scores">Оценки журналов: {scores.join(' · ')}</div>
+          <div className="press-records">
+            {recRows.map((r) => {
+              const fresh = beatsRecord(r.value, r.best, r.low ? 'low' : 'high');
+              return (
+                <div className="press-rec-row" key={r.label}>
+                  <span className="press-rec-label">{r.label}</span>
+                  <span className="press-rec-value">{r.text}</span>
+                  <span className={fresh ? 'press-new' : 'press-rec-best'}>
+                    {fresh
+                      ? '🏆 рекорд!'
+                      : r.best
+                        ? `· ${r.low ? 'минимум' : 'рекорд'} ${r.best.value}${r.best.game === rec.name ? '' : ` («${r.best.game}»)`}`
+                        : ''}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
           <button className="w95-btn press-ok" onClick={finish}>
             Ок
           </button>
         </div>
-      )}
-      {total > 0 && step < total && (
-        <button
-          className="press-skip"
-          onClick={(e) => {
-            e.stopPropagation();
-            setStep(total);
-          }}
-        >
-          Пропустить всё ›
-        </button>
       )}
     </div>
   );

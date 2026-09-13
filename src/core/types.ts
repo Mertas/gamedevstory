@@ -76,6 +76,8 @@ export interface ActiveGame {
   totalCost: number; // K
   progress: number; // 0..1 (время: дни / 100 × режим)
   bugs: number;
+  /** PLAN-30: всего багов за разработку (с учётом исправленных) */
+  bugsTotal?: number;
   debugCarry?: number; // AP-13: остаток скорости отладки между днями (доли бага)
   weekStarted: number;
   phase: 'proposal' | 'dev' | 'debug' | 'released';
@@ -119,6 +121,8 @@ export interface GameRecord {
   year: number;
   attrs: Stats;
   bugs: number;
+  /** PLAN-30: всего багов за разработку (с учётом исправленных) */
+  bugsTotal?: number;
   awards: string[];
   paidUnits?: number; // PLAN-29: факт по копям (заполняется при снятии с продаж)
   paidRevenue?: number; // PLAN-29: факт по деньгам (K)
