@@ -6,6 +6,7 @@ import { consoleById, genreById, typeById } from '../../../shared/meta';
 import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
 import { studioRecords } from '../../../shared/records';
+import { resolveFx } from '../../../shared/dev-anim';
 import { DevAnim } from './dev-anim';
 import { ReleasePanel } from './Release';
 import { MODES, ROLE_LABELS } from './shared';
@@ -22,6 +23,11 @@ export function DevStatus() {
   // мины: 1 мина = 1 баг; аккумулятор дробного прироста багов между тиками
   const lastBugsRef = useRef(0);
   const bugsAccRef = useRef(0);
+  // M3.8: уровень эффектов — выбор игрока («Эффекты экрана…») важнее системной настройки
+  const fx = useMemo(
+    () => resolveFx(game.ui?.fx, safeReducedMotion()),
+    [game.ui?.fx],
+  );
   const g = game.activeGame;
   const gKey = g ? `${g.genreId}:${g.typeId}:${g.totalCost}` : '';
   const hasGame = !!g;
@@ -53,6 +59,11 @@ export function DevStatus() {
       engineRef.current = null;
     };
   }, [hasGame]);
+
+  // M3.8: уровень эффектов — применяем на лету (и при (пере)создании движка)
+  useEffect(() => {
+    engineRef.current?.setEffects(fx);
+  }, [fx, hasGame]);
 
   // смена проекта: показания мгновенно выравниваются (без анимации «из нуля»)
   useEffect(() => {
@@ -124,7 +135,7 @@ export function DevStatus() {
   ];
 
   return (
-    <div className="w95-panel" style={{ overflowY: 'auto', height: '100%', position: 'relative' }} ref={rootRef}>
+    <div className={`w95-panel dev-fx-${fx}`} style={{ overflowY: 'auto', height: '100%', position: 'relative' }} ref={rootRef}>
       {/* M1: canvas-слой анимации вклада (частицы, рябь, искры) — поверх контента, клики сквозь */}
       <canvas ref={canvasRef} className="dev-anim-canvas" aria-hidden="true" />
       <div className="w95-row" style={{ justifyContent: 'space-between' }}>
@@ -208,4 +219,13 @@ export function DevStatus() {
       <ReleasePanel />
     </div>
   );
+}
+
+/** M3.8: prefers-reduced-motion без падения в окружениях без matchMedia (тесты). */
+function safeReducedMotion(): boolean {
+  try {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
 }

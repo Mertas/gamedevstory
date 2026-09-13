@@ -7,6 +7,20 @@ export type AnimAttr = keyof Stats;
 /** Фиксированный порядок направлений (стабильные цвета и раскладка волны). */
 export const ANIM_ATTRS: readonly AnimAttr[] = ['fun', 'creativity', 'graphics', 'sound'];
 
+/** M3.8 (plan/31 §9.8): уровень эффектов экрана разработки — тумблер в «Эффекты экрана…». */
+export type FxLevel = 'min' | 'mid' | 'full';
+
+export const FX_LEVELS: readonly FxLevel[] = ['full', 'mid', 'min'];
+
+/**
+ * Что показывать: явный выбор игрока (сохранён в game.ui.fx) важнее всего;
+ * если не выбран — уважаем prefers-reduced-motion (тогда «минимум», иначе «полно»).
+ */
+export function resolveFx(saved: unknown, prefersReduced = false): FxLevel {
+  if (saved === 'min' || saved === 'mid' || saved === 'full') return saved;
+  return prefersReduced ? 'min' : 'full';
+}
+
 /** Бюджет: максимум частиц на направление за один игровой день. */
 export const PARTICLES_PER_ATTR_TICK = 12;
 

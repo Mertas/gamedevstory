@@ -208,6 +208,8 @@ export interface UiState {
   windows?: UiWindow[];
   /** расстановка иконок на столе: id приложения → координаты верхнего левого угла */
   icons?: Record<string, { x: number; y: number }>;
+  /** M3.8: уровень эффектов экрана разработки; не задан — авто (prefers-reduced-motion) */
+  fx?: 'min' | 'mid' | 'full';
 }
 
 export interface UiWindow {

@@ -15,6 +15,23 @@ import { AutopilotCursor } from './AutopilotCursor';
 import { useOwner } from './owner';
 import { VersionStamp } from './VersionStamp';
 import { WALLPAPERS, readWallpaper, wallpaperById } from './wallpapers';
+import { resolveFx } from '../shared/dev-anim';
+
+/** M3.8 (plan/31 §9.8): уровни эффектов экрана разработки — «Эффекты экрана…» в ПКМ по столу. */
+const FX_ROWS: Array<{ id: 'full' | 'mid' | 'min'; title: string; hint: string }> = [
+  { id: 'full', title: 'Полно — вся вода', hint: 'капли, рябь, праздники, жизнь простоя (по умолчанию)' },
+  { id: 'mid', title: 'Средне — без амбиента', hint: 'рабочая вода: капли и рябь; без сценок простоя, дождя и тряски' },
+  { id: 'min', title: 'Минимум — сухо', hint: 'ничего не летит: числа и полоски сразу (для слабых машин)' },
+];
+
+/** M3.8: prefers-reduced-motion без падения там, где matchMedia нет (тесты/старые среды). */
+function safeReducedMotion(): boolean {
+  try {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
 import { fmtK } from '../shared/nums';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
@@ -123,7 +140,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   // PLAN-24: фон — часть сейва (game.ui.wallpaper), а не браузера: он должен ждать игрока везде
   const wallpaper = useGameSelector((g) => g.ui?.wallpaper ?? null);
   const gameUi = useGameSelector((g) => g.ui);
+  const fxLevel = resolveFx(gameUi?.fx, safeReducedMotion());
   const [bgPick, setBgPick] = useState(false);
+  const [fxPick, setFxPick] = useState(false);
   // PLAN-24: расстановка иконок — часть сейва (как фон и окна). Локально держим зеркало для перетаскивания.
   const savedIcons = useGameSelector((g) => g.ui?.icons);
   const [deskPos, setDeskPos] = useState<Record<string, { x: number; y: number }>>({});
@@ -495,6 +514,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           <div className="w95-mi" onClick={() => { setBgPick(true); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{wp ? '✓' : ''}</span>Сменить фон…
           </div>
+          <div className="w95-mi" onClick={() => { setFxPick(true); setCtxMenu(null); }}>
+            <span style={{ width: 16 }}>{''}</span>Эффекты экрана…
+          </div>
         </div>
       ))}
 
@@ -526,6 +548,34 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             </div>
             <div className="w95-row" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
               <button className="w95-btn" onClick={() => setBgPick(false)}>Закрыть</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* M3.8: эффекты экрана — мини/средне/полно (plan/31 §9.8); выбор хранится в сейве (game.ui.fx) */}
+      {fxPick && (
+        <div className="w95-modal" onClick={() => setFxPick(false)}>
+          <div className="w95-modal-box" onClick={(e) => e.stopPropagation()}>
+            <b style={{ marginBottom: 6 }}>Эффекты экрана</b>
+            <div className="w95-fx-list">
+              {FX_ROWS.map((row) => (
+                <div
+                  key={row.id}
+                  className={'w95-fx-row' + (fxLevel === row.id ? ' picked' : '')}
+                  onClick={() => actionSetUi({ fx: row.id })}
+                >
+                  <span className="w95-fx-check">{fxLevel === row.id ? '✓' : ''}</span>
+                  <span>
+                    <b>{row.title}</b>
+                    <span className="w95-hint">{gameUi?.fx === undefined && fxLevel === row.id ? ' · авто' : ''}</span>
+                    <div className="w95-hint">{row.hint}</div>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="w95-row" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
+              <button className="w95-btn" onClick={() => setFxPick(false)}>Закрыть</button>
             </div>
           </div>
         </div>

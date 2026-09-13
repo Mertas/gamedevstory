@@ -16,7 +16,7 @@ import {
   barScaleTop,
   planWave,
   recordThreshold,
-  type AnimAttr,
+  type AnimAttr,  type FxLevel,
 } from '../../../shared/dev-anim';
 import { fmtInt } from '../../../shared/nums';
 
@@ -139,6 +139,8 @@ export class DevAnim {
   private timerKind: 'none' | 'raf' | 'to' = 'none';
   private dead = false;
   private mode: 'active' | 'quiet' | 'asleep' = 'active';
+  /** M3.8: уровень эффектов (мини/средне/полно) — тумблер «Эффекты экрана…» */
+  private fx: FxLevel = 'full';
   private lastWorkAt = 0;
   private last = 0;
   private dpr = 1;
@@ -277,6 +279,33 @@ export class DevAnim {
     this.wake();
   }
 
+  /** M3.8 (plan/31 §9.8): тумблер эффектов — применяется на лету, без перемонтирования окна. */
+  setEffects(level: FxLevel): void {
+    if (level === this.fx) return;
+    this.fx = level;
+    if (level !== 'full') {
+      // гасим видимое сразу; «в воздухе» зачисляем — числа остаются честными
+      for (const p of this.pending) {
+        this.reserved[p.attr] -= p.weight;
+        this.shown[p.attr] += p.weight;
+      }
+      this.pending.length = 0;
+      for (const c of this.chips) this.pool.push(c);
+      this.chips.length = 0;
+      this.ripples.length = 0;
+      this.sparks.length = 0;
+      this.ghosts.length = 0;
+      this.bolts.length = 0;
+      this.rainUntil = 0;
+      this.scene = null;
+      if (this.shaking) {
+        this.shaking = false;
+        this.root.style.transform = '';
+      }
+    }
+    this.wake();
+  }
+
   /** Новый игровой день: цель из игры + вклад за день → план волны с размазом по такту. */
   setWave(
     target: Stats,
@@ -330,6 +359,7 @@ export class DevAnim {
   /** Мины багов: от первого сотрудника к счётчику «Баги» (1 мина = 1 баг). */
   spawnMines(n: number): void {
     this.wake();
+    if (this.fx === 'min') return; // «минимум»: мины не летят (счётчик багов ведёт React)
     const root = this.root;
     const fromEl = root.querySelector<HTMLElement>('[data-staff-id]');
     const toEl = root.querySelector<HTMLElement>('[data-bugs]');
@@ -439,10 +469,15 @@ export class DevAnim {
   private launch(p: Pending, now: number): void {
     const from = this.srcPos.get(p.staffId);
     const to = this.barEdge[p.attr];
-    if (!from || !this.w || this.chips.length >= MAX_ALIVE) {
-      // источника нет / перегруз: зачисляем мгновенно — счётчик честный
+    if (!from || !this.w || this.chips.length >= MAX_ALIVE || this.fx === 'min') {
+      // источника нет / перегруз / режим «минимум»: зачисляем мгновенно — счётчик честный
       this.reserved[p.attr] -= p.weight;
       this.shown[p.attr] += p.weight;
+      // «минимум»: частиц нет, но рекорд всё равно отмечаем засечкой (статичная метка)
+      if (this.fx === 'min' && !this.beaten[p.attr] && this.shown[p.attr] > recordThreshold(this.rec[p.attr])) {
+        this.beaten[p.attr] = true;
+        this.elsNotch[p.attr]?.classList.add('beat');
+      }
       return;
     }
     const chip = this.pool.pop() ?? ({} as Chip);
@@ -479,11 +514,13 @@ export class DevAnim {
     this.shown[c.attr] += c.weight;
     const [x, y] = this.bez(c, 1);
     if (this.ripples.length < RIPPLE_CAP) {
-      // M2: двойная рябь — быстрая яркая + медленная мягкая
+      // M2: двойная рябь — быстрая яркая + медленная мягкая («средне» — только быстрая)
       this.ripples.push({ x, y, t: 0, life: 0.32, c: COLORS[c.attr], lw: 1, r0: 1.5, r1: 30, a0: 0.7 });
-      this.ripples.push({ x, y, t: 0, life: 0.62, c: COLORS[c.attr], lw: 1.5, r0: 2, r1: 52, a0: c.heavy > 0.5 ? 0.55 : 0.38 });
+      if (this.fx === 'full') {
+        this.ripples.push({ x, y, t: 0, life: 0.62, c: COLORS[c.attr], lw: 1.5, r0: 2, r1: 52, a0: c.heavy > 0.5 ? 0.55 : 0.38 });
+      }
     }
-    const n = c.heavy > 0.5 ? 7 : 4;
+    const n = this.fx === 'mid' ? 2 : c.heavy > 0.5 ? 7 : 4;
     for (let i = 0; i < n; i++) {
       if (this.sparks.length >= SPARK_CAP) break;
       const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.1;
@@ -518,9 +555,11 @@ export class DevAnim {
           this.ghosts.push({ x: gx, y: gy, t: 0, life: this.celebLife(1.15), text: 'РЕКОРД!', gold: true });
         }
         this.elsNotch[attr]?.classList.add('beat');
-        // молния по полоске + толчок бара пружиной (+4%, пружина вернёт)
-        this.bolts.push({ attr, t: 0, life: this.celebLife(0.5) });
-        this.barVel[attr] += this.top[attr] * 0.04 * 11;
+        // молния по полоске + толчок бара пружиной (+4%, пружина вернёт) — только «полно»
+        if (this.fx === 'full') {
+          this.bolts.push({ attr, t: 0, life: this.celebLife(0.5) });
+          this.barVel[attr] += this.top[attr] * 0.04 * 11;
+        }
       });
       // T2: все четыре рекорда взяты — супер-праздник (один раз за партию)
       if (!this.t2Done && ANIM_ATTRS.every((k) => this.beaten[k])) {
@@ -560,20 +599,24 @@ export class DevAnim {
 
   /** M3: амбиент простоя — дыхание кромок, флажки вех, диод автосейва, редкая сценка. */
   private drawAmbient(now: number): void {
+    if (this.fx === 'min') return;
     const ctx = this.ctx;
-    let i = 0;
-    for (const a of ANIM_ATTRS) {
-      const r = this.barRect[a];
-      if (r) {
-        const pct = Math.max(0, Math.min(1, this.barVal[a] / Math.max(1, this.top[a])));
-        const edge = r.x0 + (r.x1 - r.x0) * pct;
-        const phase = now * (Math.PI * 2 / 5.5) + i * 1.7;
-        ctx.globalAlpha = 0.1 + 0.05 * Math.sin(phase);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(Math.round(edge + Math.sin(phase) * 0.5), Math.round(r.y - 6), 1, 11);
-        ctx.globalAlpha = 1;
+    // «полно»: дыхание кромок и диод; «средне»: только флажки вех (статичная польза)
+    if (this.fx === 'full') {
+      let i = 0;
+      for (const a of ANIM_ATTRS) {
+        const r = this.barRect[a];
+        if (r) {
+          const pct = Math.max(0, Math.min(1, this.barVal[a] / Math.max(1, this.top[a])));
+          const edge = r.x0 + (r.x1 - r.x0) * pct;
+          const phase = now * (Math.PI * 2 / 5.5) + i * 1.7;
+          ctx.globalAlpha = 0.1 + 0.05 * Math.sin(phase);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(Math.round(edge + Math.sin(phase) * 0.5), Math.round(r.y - 6), 1, 11);
+          ctx.globalAlpha = 1;
+        }
+        i++;
       }
-      i++;
     }
     if (this.progressRect) {
       const pr = this.progressRect;
@@ -584,12 +627,14 @@ export class DevAnim {
         ctx.fillRect(x + 1, Math.round(pr.y - 9), 4, 3);
       }
     }
-    // диод автосейва: короткий тик раз в 2 с
-    ctx.globalAlpha = now % 2 < 0.9 ? 0.45 : 0;
-    ctx.fillStyle = '#000080';
-    ctx.fillRect(this.w - 6, this.h - 6, 1, 1);
-    ctx.globalAlpha = 1;
-    this.drawSceneField(now);
+    if (this.fx === 'full') {
+      // диод автосейва: короткий тик раз в 2 с
+      ctx.globalAlpha = now % 2 < 0.9 ? 0.45 : 0;
+      ctx.fillStyle = '#000080';
+      ctx.fillRect(this.w - 6, this.h - 6, 1, 1);
+      ctx.globalAlpha = 1;
+      this.drawSceneField(now);
+    }
   }
 
   /** M3: микро-сценка простоя — не чаще 1 раза в ~2.5 мин, только в тихом режиме. */
@@ -749,7 +794,7 @@ export class DevAnim {
     const speed = Math.hypot(xa - xb, ya - yb) / 0.04;
 
     // след: дискретные призраки (на 4×+ короче — 2 вместо 3)
-    const tails = this.speed >= 4 ? 2 : TAIL;
+    const tails = this.fx === 'full' ? (this.speed >= 4 ? 2 : TAIL) : 1;
     for (let i = tails; i >= 1; i--) {
       const [tx, ty] = this.bez(c, Math.max(0, te - i * 0.05));
       const rr = Math.max(0.6, (2.0 + c.heavy * 2.4) * (1 - i * 0.14));
@@ -877,6 +922,7 @@ export class DevAnim {
   private onPhase(p: string): void {
     if (p === 'debug') {
       this.dark = true;
+      if (this.fx === 'min') return; // «минимум»: тон темнеет, но без метки-вспышки
       const x = this.progressRect ? (this.progressRect.x0 + this.progressRect.x1) / 2 : this.w / 2;
       const y = this.progressRect ? this.progressRect.y : 40;
       this.enqueue(4, () => {
@@ -893,6 +939,7 @@ export class DevAnim {
     const m = this.milestoneDone;
     const add = (fr: number) => {
       this.flagFracs.push(fr);
+      if (this.fx === 'min') return; // «минимум»: флажок копится, но без вспышек и пульса
       const x = this.progressRect ? this.progressRect.x0 + (this.progressRect.x1 - this.progressRect.x0) * fr : this.w / 2;
       const y = this.progressRect ? this.progressRect.y - 10 : 40;
       this.enqueue(3, () => {
@@ -913,11 +960,13 @@ export class DevAnim {
 
   /** M3, T2: «все четыре рекорда» — золотой дождь, штамп и лёгкая тряска контента. */
   private playSuper(now: number): void {
-    this.rainUntil = now + this.celebLife(1.6);
-    this.rainNext = now;
-    this.shakeStart = now;
-    this.shakeUntil = now + 0.3;
-    this.shaking = true;
+    if (this.fx === 'full') {
+      this.rainUntil = now + this.celebLife(1.6);
+      this.rainNext = now;
+      this.shakeStart = now;
+      this.shakeUntil = now + 0.3;
+      this.shaking = true;
+    }
     const x0 = Math.min(...ANIM_ATTRS.map((a) => this.barRect[a]?.x0 ?? this.w));
     const x1 = Math.max(...ANIM_ATTRS.map((a) => this.barRect[a]?.x1 ?? 0));
     const y = this.barRect.fun ? this.barRect.fun.y : 80;

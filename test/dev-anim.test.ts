@@ -8,6 +8,7 @@ import {
   barScaleTop,
   planWave,
   recordThreshold,
+  resolveFx,
 } from '../src/shared/dev-anim';
 import type { DevContrib, Stats } from '../src/core/types';
 
@@ -125,5 +126,26 @@ describe('анимация разработки: динамическая шка
   });
   it('все направления присутствуют в фиксированном порядке', () => {
     expect(ANIM_ATTRS).toEqual(['fun', 'creativity', 'graphics', 'sound']);
+  });
+});
+
+describe('M3.8: уровень эффектов (resolveFx)', () => {
+  it('явный выбор игрока важнее системной настройки', () => {
+    expect(resolveFx('full', true)).toBe('full');
+    expect(resolveFx('mid', true)).toBe('mid');
+    expect(resolveFx('min', false)).toBe('min');
+  });
+  it('без выбора — «полно»', () => {
+    expect(resolveFx(undefined, false)).toBe('full');
+    expect(resolveFx(null, false)).toBe('full');
+  });
+  it('без выбора при prefers-reduced-motion — «минимум»', () => {
+    expect(resolveFx(undefined, true)).toBe('min');
+    expect(resolveFx(null, true)).toBe('min');
+  });
+  it('мусор в сейве не ломает: трактуем как «не выбран»', () => {
+    expect(resolveFx('cinema', false)).toBe('full');
+    expect(resolveFx(42, false)).toBe('full');
+    expect(resolveFx({}, true)).toBe('min');
   });
 });

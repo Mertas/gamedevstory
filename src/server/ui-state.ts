@@ -33,6 +33,11 @@ export function sanitizeUi(raw: unknown, prev: UiState | undefined): UiState {
   if ('wallpaper' in r) {
     out.wallpaper = typeof r.wallpaper === 'string' && r.wallpaper.length <= MAX_WALLPAPER ? r.wallpaper : null;
   }
+  if ('fx' in r) {
+    // M3.8: уровень эффектов; мусор — убираем поле (авто), не ломаем сейв
+    if (r.fx === 'min' || r.fx === 'mid' || r.fx === 'full') out.fx = r.fx;
+    else delete out.fx;
+  }
   if (Array.isArray(r.windows)) {
     out.windows = r.windows
       .slice(0, MAX_WINDOWS)

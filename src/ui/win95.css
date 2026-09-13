@@ -149,6 +149,16 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .dev-bar > div { transition: none; animation: dev-stripe 7s linear infinite; }
 /* M3: штриховка «течёт» — жизнь простоя; бесшовно: шаг 8px / cos45° = 11.31px */
 @keyframes dev-stripe { to { background-position: 11.31px 0; } }
+/* M3.8: вне «полно» штриховка замирает (тумблер «Эффекты экрана…») */
+.dev-fx-mid .dev-bar > div,
+.dev-fx-min .dev-bar > div { animation: none; }
+
+/* M3.8: список уровней эффектов в модалке */
+.w95-fx-list { display: flex; flex-direction: column; gap: 2px; min-width: 340px; }
+.w95-fx-row { display: flex; gap: 6px; align-items: flex-start; padding: 4px 6px; cursor: pointer; }
+.w95-fx-row:hover { background: #000080; color: #fff; }
+.w95-fx-row:hover .w95-hint { color: #d8d8d8; }
+.w95-fx-check { width: 12px; flex: none; }
 .dev-notch { position: absolute; top: -1px; bottom: -1px; width: 2px; background: #c00000; opacity: .8; }
 .dev-notch.beat { background: #ffd700; opacity: 1; }
 
