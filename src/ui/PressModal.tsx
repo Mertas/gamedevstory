@@ -34,18 +34,18 @@ export function PressModal() {
   const lastRec = game.history[game.history.length - 1] ?? null;
   const lastKey =
     lastRec && (lastRec.judgeScores?.length ?? 0) > 0 ? `${lastRec.name}#${lastRec.releaseWeek}` : null;
-  const fresh = lastRec !== null && lastRec.releaseWeek != null && game.week - lastRec.releaseWeek <= 50;
   // запись показа (по ключу) — LLM-тексты подхватываются на лету; length — для таймеров
   const rec = openKey ? game.history.find((h) => `${h.name}#${h.releaseWeek}` === openKey) ?? null : null;
   const total = rec?.judgeScores?.length ?? 0;
 
-  // Триггер: свежий релиз, который ещё не показывали
+  // Показываем прессу последнего релиза, если её ещё не показывали. Окна «свежести» нет:
+  // при быстром темпе игровые дни летят так, что окно превращалось в секунды.
   useEffect(() => {
-    if (!openKey && lastKey && fresh && !seen.has(lastKey)) {
+    if (!openKey && lastKey && !seen.has(lastKey)) {
       setOpenKey(lastKey);
       setStep(-1);
     }
-  }, [lastKey, fresh, openKey, seen]);
+  }, [lastKey, openKey, seen]);
 
 
   // Пауза на время показа; после — вернуть прежнюю скорость
