@@ -17,6 +17,7 @@ import { apiMe, type Features, type MeInfo } from './api';
 import { setOwner } from './owner';
 import { UpdateNotice } from './UpdateNotice';
 import { SalesWidget } from './SalesWidget';
+import { PressModal } from './PressModal';
 
 // следим за событиями, требующими решения игрока
 function EventWatcher() {
@@ -254,6 +255,7 @@ export function App() {
       <Desktop onExit={exitToLauncher} />
       <MessageBox />
       <SalesWidget />
+      <PressModal />
       <UpdateNotice />
       <div className="w95-toasts">
         <ActionToast />

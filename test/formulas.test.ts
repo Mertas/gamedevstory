@@ -5,7 +5,9 @@ import {
   reviewTotal, salesPlan, totalBugs, weeklyPoints, hypeMult, weekFactor, baseWeekShares,
 } from '../src/core/formulas';
 import { comboGrade } from '../src/core/systems/dev';
-import { CONFIG } from '../src/core/config';
+import { CRITICS } from '../src/core/data/critics'; // PLAN-30: 10 журналов
+
+const CRITIC_WEIGHTS = CRITICS.map((c) => c.weights);
 
 describe('комбо (данные из research)', () => {
   it('RPG×Fantasy = S (Amazing)', () => {
@@ -55,35 +57,35 @@ describe('стоимость проекта', () => {
 });
 
 describe('рецензии', () => {
-  it('атрибуты ~100 → 22–31 (не Зал Славы)', () => {
+  it('атрибуты ~100 → низ шкалы (не Зал Славы)', () => {
     const attrs = { fun: 100, creativity: 100, graphics: 100, sound: 100 };
     for (let noise = -1; noise <= 1; noise++) {
-      const { scores } = judgeScore(attrs, CONFIG.JUDGE_WEIGHTS, 0, noise);
-      const total = reviewTotal(scores);
-      expect(total).toBeGreaterThanOrEqual(22);
-      expect(total).toBeLessThanOrEqual(31);
+      const total = reviewTotal(judgeScore(attrs, CRITIC_WEIGHTS, 0, noise).scores);
+      expect(total).toBeGreaterThanOrEqual(30);
+      expect(total).toBeLessThan(50);
     }
   });
-  it('атрибуты ~160 → Зал Славы (≥32) — якорь «160 во всём»', () => {
-    const attrs = { fun: 160, creativity: 160, graphics: 160, sound: 160 };
-    const { scores } = judgeScore(attrs, CONFIG.JUDGE_WEIGHTS, 0, 0);
-    expect(reviewTotal(scores)).toBeGreaterThanOrEqual(32);
+  it('PLAN-30: по 2000 в каждом направлении, шум 0 → все десять ставят 10 = 100/100', () => {
+    const attrs = { fun: 2000, creativity: 2000, graphics: 2000, sound: 2000 };
+    const { scores } = judgeScore(attrs, CRITIC_WEIGHTS, 0, 0);
+    expect(scores).toHaveLength(10);
+    expect(scores.every((x) => x === 10)).toBe(true);
+    expect(reviewTotal(scores)).toBe(100);
   });
-  it('атрибуты ~240+ → 36+ (шанс Гран-при)', () => {
-    const attrs = { fun: 240, creativity: 240, graphics: 240, sound: 240 };
-    const { scores } = judgeScore(attrs, CONFIG.JUDGE_WEIGHTS, 0, 0);
-    expect(reviewTotal(scores)).toBeGreaterThanOrEqual(36);
+  it('Зал Славы (≥80) — примерно с 1550 во всём', () => {
+    const attrs = { fun: 1550, creativity: 1550, graphics: 1550, sound: 1550 };
+    expect(reviewTotal(judgeScore(attrs, CRITIC_WEIGHTS, 0, 0).scores)).toBeGreaterThanOrEqual(80);
   });
   it('баги на релизе снижают оценку', () => {
-    const attrs = { fun: 160, creativity: 160, graphics: 160, sound: 160 };
-    const clean = reviewTotal(judgeScore(attrs, CONFIG.JUDGE_WEIGHTS, 0, 0).scores);
-    const buggy = reviewTotal(judgeScore(attrs, CONFIG.JUDGE_WEIGHTS, 40, 0).scores);
+    const attrs = { fun: 1600, creativity: 1600, graphics: 1600, sound: 1600 };
+    const clean = reviewTotal(judgeScore(attrs, CRITIC_WEIGHTS, 0, 0).scores);
+    const buggy = reviewTotal(judgeScore(attrs, CRITIC_WEIGHTS, 40, 0).scores);
     expect(buggy).toBeLessThan(clean);
   });
-  it('разные судьи дают разные оценки (веса аудиторий)', () => {
-    const attrs = { fun: 200, creativity: 40, graphics: 40, sound: 40 };
-    const { scores } = judgeScore(attrs, CONFIG.JUDGE_WEIGHTS, 0, 0);
-    expect(scores[2]!).toBeGreaterThan(scores[3]!); // J3 любит Fun, J4 — графику/звук
+  it('разные журналы дают разные оценки (веса)', () => {
+    const attrs = { fun: 2000, creativity: 40, graphics: 40, sound: 40 };
+    const { scores } = judgeScore(attrs, CRITIC_WEIGHTS, 0, 0);
+    expect(scores[3]!).toBeGreaterThan(scores[7]!); // «ПыСы Игры» (fun 1.2) против «Краешка» (fun 0.6)
   });
 });
 

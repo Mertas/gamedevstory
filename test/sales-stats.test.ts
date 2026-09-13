@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { newGame } from '../src/core/engine';
 import { dailySales } from '../src/core/systems/market';
 import { fmtCopies, fmtUnits, isUnitsRecord, pickSalesView, pickSalesViews, smoothView, unitsRank } from '../src/shared/sales-stats';
+import { pressVerdict } from '../src/shared/rules';
 import type { ActiveGame, GameRecord } from '../src/core/types';
 
 const rec = (name: string, units: number, releaseWeek = 1): GameRecord =>
@@ -151,5 +152,17 @@ describe('PLAN-31: до двух панелей + сглаживание игр�
     expect(half.revenue).toBe(125); // 100 + 50×0.5
     expect(smoothView(v, 0).units).toBe(20);
     expect(smoothView(v, 1)).toBe(v);
+  });
+});
+
+describe('PLAN-30: вердикт прессы', () => {
+  it('пороги соответствуют залу славы (80) и Гран-при (90)', () => {
+    expect(pressVerdict(95)).toContain('Гран-при');
+    expect(pressVerdict(90)).toContain('Гран-при');
+    expect(pressVerdict(85)).toContain('Зал славы');
+    expect(pressVerdict(80)).toContain('Зал славы');
+    expect(pressVerdict(65)).toContain('Крепкая');
+    expect(pressVerdict(50)).toContain('Смешанные');
+    expect(pressVerdict(30)).toContain('разгромила');
   });
 });

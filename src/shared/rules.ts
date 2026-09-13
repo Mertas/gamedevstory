@@ -46,7 +46,8 @@ export function consoleAvailable(game: GameState, consoleId: string): boolean {
  * просил пользователь: «зал славы считался не от 40/40, а 100/100», порог = 80/100.
  */
 export function score100(score: number): number {
-  return Math.round((score / 40) * 100);
+  // PLAN-30: шкала уже /100 (10 критиков по 3–10); старые сейвы приводит миграция v6
+  return Math.round(score);
 }
 
 /**
@@ -56,4 +57,13 @@ export function score100(score: number): number {
  */
 export function staffMatchesPool(staffUnlock: string, pool: string[]): boolean {
   return pool.some((p) => staffUnlock.includes(p) || (p === 'Word of Mouth' && staffUnlock === 'Initially available'));
+}
+
+/** PLAN-30: вердикт прессы по итоговой оценке (шкала /100, десять критиков). */
+export function pressVerdict(score: number): string {
+  if (score >= 90) return 'Уровень Гран-при! Такую игру запомнят надолго.';
+  if (score >= 80) return 'Зал славы! Пресса в восторге.';
+  if (score >= 60) return 'Крепкая игра: критики довольны, но без фанфар.';
+  if (score >= 45) return 'Смешанные отзывы — есть над чем поработать.';
+  return 'Пресса разгромила игру. Бывает и так.';
 }

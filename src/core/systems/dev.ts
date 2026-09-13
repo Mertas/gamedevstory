@@ -1,5 +1,6 @@
 // Система разработки: старт проекта, недельный прогресс, баги, отладка, релиз, сиквелы.
 import { CONFIG } from '../config';
+import { CRITICS } from '../data/critics'; // PLAN-30: пресса — 10 журналов
 import { COMBO_GRADES, CONSOLES, GENRES, GENRE_ORDER, MESSAGES, TYPES } from '../data/db';
 import { log } from '../log';
 import {
@@ -327,7 +328,8 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   if (!game || game.phase !== 'debug') return { ok: false, error: 'Игра не готова к релизу' };
 
   const noise = rng.int(-CONFIG.REVIEW_NOISE, CONFIG.REVIEW_NOISE);
-  const { scores } = judgeScore(game.points, CONFIG.JUDGE_WEIGHTS, game.bugs, noise);
+  // PLAN-30: 10 критиков из 10 журналов — итог сразу /100
+  const { scores } = judgeScore(game.points, CRITICS.map((c) => c.weights), game.bugs, noise);
   const total = reviewTotal(scores);
   const genre = genreById(game.genreId);
   const type = typeById(game.typeId);
@@ -356,7 +358,8 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   const consoleData = consoleById(game.consoleId);
   const plan = salesPlan({
     installBase: cs.base,
-    score: total,
+    // PLAN-30: продажи считаются от старой шкалы рецензий (12–40) — приводим /100 обратно
+    score: total / 2.5,
     combo: game.comboGrade,
     pop: genre.popularity,
     fans: state.fans,

@@ -82,16 +82,10 @@ export const CONFIG = {
 
   // рецензии
   REVIEW_BASE: 3,
-  REVIEW_DIV: 88,
+  REVIEW_DIV: 892, // PLAN-30: подобрано под «по 2000 в каждом направлении = сотка» (10 критиков)
   REVIEW_NOISE: 1,
-  HALL_OF_FAME: 32,
-  GRAND_PRIZE_SCORE: 36,
-  JUDGE_WEIGHTS: [
-    { fun: 1.0, creativity: 0.6, graphics: 0.7, sound: 0.5 },
-    { fun: 0.8, creativity: 1.0, graphics: 0.8, sound: 0.6 },
-    { fun: 1.2, creativity: 0.5, graphics: 0.9, sound: 0.9 },
-    { fun: 0.6, creativity: 0.6, graphics: 1.2, sound: 1.2 },
-  ] as const,
+  HALL_OF_FAME: 80, // PLAN-30: шкала теперь сразу /100 (10 критиков), зал славы — 80
+  GRAND_PRIZE_SCORE: 90, // PLAN-30: /100; Гран-при — с 90
 
   // продажи (в ДЕНЬ; были в неделю, ÷7)
   SALES_BASE_RATE: 0.04, // доля базы консоли за жизнь игры (было 0.02; поднято под DEV_COST_SCALE)

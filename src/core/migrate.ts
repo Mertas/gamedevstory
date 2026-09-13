@@ -3,7 +3,7 @@
 // нормализации — тоже здесь (их зовут SaveManager.read/importPayload), не в game.ts.
 import type { GameState, Staff } from './types';
 
-export const SAVE_VERSION = 5; // 5: название студии (studioName); 4: Gamedex; 3: письма (mail); 2: реклама; 1 = всё до 04.09.2026
+export const SAVE_VERSION = 6; // 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -22,6 +22,15 @@ export function migrateSave(state: GameState): GameState {
   }
   if (v < 5) {
     state.studioName = state.studioName || 'Game Dev Studio';
+  }
+  if (v < 6) {
+    // PLAN-30: старая шкала оценок — сумма 12–40 (4 рецензента); на экране была ×2.5.
+    // Переводим архив в новую шкалу 30–100 (10 критиков), чтобы числа не «съехали».
+    for (const h of state.history) h.score = Math.round(h.score * 2.5);
+    if (state.activeGame?.score != null) state.activeGame.score = Math.round(state.activeGame.score * 2.5);
+    for (const letter of state.mail ?? []) {
+      if (letter?.score != null && letter.score <= 40) letter.score = Math.round(letter.score * 2.5);
+    }
   }
 
   // repair-нормализации, не зависящие от версии (висящие инварианты легаси-сейвов):

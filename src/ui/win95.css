@@ -413,3 +413,27 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .sales-line1 { font-size: 14px; font-weight: 700; }
 .sales-sub { margin-top: 2px; }
 .sales-record { margin-top: 5px; font-weight: 700; color: #7a2b00; text-shadow: 0 0 6px #ffd700, 0 0 12px #ffb400; }
+
+/* PLAN-30: модалка прессы — десять карточек по очереди */
+.press-overlay { position: fixed; inset: 0; z-index: 21000; background: rgba(0, 0, 0, .45); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.press-card { width: 440px; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; box-shadow: 2px 2px 0 #000, 4px 4px 18px rgba(0, 0, 0, .5); padding-bottom: 12px; animation: pressIn .28s ease-out; }
+.press-mag { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 8px; background: linear-gradient(90deg, #000080, #1084d0); color: #fff; font-weight: 700; }
+.press-step { font-weight: 400; opacity: .85; font-size: 10px; }
+.press-intro .press-wait { padding: 26px 12px; text-align: center; }
+.press-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px 0; }
+.press-face { font-size: 28px; line-height: 1; }
+.press-who { display: flex; align-items: center; gap: 8px; }
+.press-badge { padding: 1px 7px; border: 1px solid; border-color: #fff #404040 #404040 #fff; font-weight: 700; background: #ffe9a8; }
+.press-badge[data-score='3'], .press-badge[data-score='4'] { background: #ffb4a8; }
+.press-badge[data-score='5'], .press-badge[data-score='6'] { background: #ffd9a8; }
+.press-badge[data-score='7'], .press-badge[data-score='8'] { background: #c8e8a0; }
+.press-badge[data-score='9'], .press-badge[data-score='10'] { background: #9fe08f; }
+.press-text { padding: 8px 12px 0; min-height: 44px; }
+.press-hint { padding: 6px 12px 0; font-size: 9px; opacity: .55; text-align: right; }
+.press-final { text-align: center; padding-top: 4px; }
+.press-total { padding: 12px 12px 0; font-size: 16px; font-weight: 700; }
+.press-verdict { padding: 6px 12px 0; }
+.press-record { padding: 8px 12px 0; font-weight: 700; color: #7a2b00; text-shadow: 0 0 6px #ffd700, 0 0 12px #ffb400; }
+.press-ok { margin-top: 12px; min-width: 90px; }
+.press-skip { pointer-events: auto; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; padding: 3px 10px; cursor: pointer; }
+@keyframes pressIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }

@@ -271,14 +271,14 @@ describe('Ф5: сиквелы (AP-05)', () => {
   }
 
   it('AP-05: sequelOpportunity видит только игры зала славы', () => {
-    const g = withHit(31); // ниже порога (32)
+    const g = withHit(79); // ниже порога зала славы (80, PLAN-30)
     expect(sequelOpportunity(g)).toBeNull();
-    g.history[0]!.score = 33;
-    expect(sequelOpportunity(g)).toEqual({ genreId: g.history[0]!.genreId, typeId: g.history[0]!.typeId, score: 33 });
+    g.history[0]!.score = 83;
+    expect(sequelOpportunity(g)).toEqual({ genreId: g.history[0]!.genreId, typeId: g.history[0]!.typeId, score: 83 });
   });
 
   it('AP-05: фолбэк предпочитает сиквел удачного комбо обычной «лучшей градации»', () => {
-    const g = withHit(35);
+    const g = withHit(85); // PLAN-30: шкала /100, зал славы с 80
     const seq = sequelOpportunity(g)!;
     const plan = autopilotProjectInput(g)!;
     expect(plan.genreId).toBe(seq.genreId);
@@ -287,7 +287,7 @@ describe('Ф5: сиквелы (AP-05)', () => {
   });
 
   it('AP-05: сиквел не берём, если комбо снова не по деньгам — обычный выбор', () => {
-    const g = withHit(35);
+    const g = withHit(85); // PLAN-30: шкала /100
     const seq = sequelOpportunity(g)!;
     // обнуляем деньги так, чтобы только дёшевое комбо проходило
     g.money = 1;
@@ -463,7 +463,7 @@ describe('AP-03: итоги автосессии', () => {
     const ap = new AutopilotController(h.host);
     const moneyBefore = h.host.game.money;
     ap.startAutopilot();
-    h.host.game.history.push(rec('Гонки', 28), rec('Рогалик', 36)); // команда успела выпустить две игры
+    h.host.game.history.push(rec('Гонки', 70), rec('Рогалик', 90)); // команда успела выпустить две игры (шкала /100)
     h.host.game.money = moneyBefore + 1500;
     ap.stopAutopilot(false);
     const ev = h.host.game.pendingEvent;

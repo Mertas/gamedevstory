@@ -1,6 +1,7 @@
 // Игровая сессия на сервере: состояние + тикер + действия + чат-фазы (GigaChat) + автосейв.
 import { type HireMethodId } from '../core/config';
-import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, genreById, typeById } from '../core/data/db';
+import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
+import { CRITICS } from '../core/data/critics'; // PLAN-30: 10 журналов
 import type { CareerId } from '../core/data/schema';
 import { newGame } from '../core/engine';
 import { consoleEvents } from '../core/systems/market';
@@ -298,6 +299,66 @@ export class GameServer {
 
   generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void> {
     return this.chatflow.generatePhase(phase, extra, openingFor);
+  }
+
+  /**
+   * PLAN-30: тексты десяти критиков после релиза — один батч-запрос к LLM.
+   * В reviewMessages уже лежат фолбэки (по оценке), поэтому провал LLM ничего не ломает.
+   */
+  async generatePress(): Promise<void> {
+    const g = this.game.activeGame;
+    if (!g || g.phase !== 'released' || g.score === null || g.judgeScores.length !== CRITICS.length) return;
+    try {
+      const genre = genreById(g.genreId);
+      const type = typeById(g.typeId);
+      const cons = consoleById(g.consoleId);
+      const contrib = Object.entries(g.contribTotal ?? {})
+        .map(([sid, v]) => [this.game.staff.find((s) => s.id === sid)?.name ?? sid, Math.round(v)] as const)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([n, v]) => `${n} (${v})`)
+        .join(', ');
+      const facts = [
+        `Игра: «${g.name}»`,
+        `Описание: ${g.plot || 'без описания'}`,
+        `Формула: ${genre?.ru ?? g.genreId} × ${type?.nameRu ?? type?.name ?? g.typeId}`,
+        `Консоль: ${cons?.name ?? g.consoleId}`,
+        `Режим: ${g.mode}`,
+        `Багов на релизе: ${Math.round(g.bugs)}`,
+        `Оценка прессы: ${g.score}/100`,
+        contrib ? `Вклад команды (топ-3): ${contrib}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      const critics = CRITICS.map(
+        (c, i) => `${i + 1}. ${c.name}, журнал «${c.magazine}», ${c.persona}. Его оценка: ${g.judgeScores[i]}/10`,
+      ).join('\n');
+      const out = await this.llm(
+        [
+          {
+            role: 'system',
+            content:
+              'Ты пишешь короткие рецензии для игровой прессы. Отвечай ТОЛЬКО JSON-массивом из 10 строк, без пояснений.',
+          },
+          {
+            role: 'user',
+            content: `Ниже игра и десять критиков со своими оценками. Напиши для каждого ОДИН короткий отзыв (1–2 предложения) В ЕГО МАНЕРЕ, на русском. Тон согласуй с оценкой: 3–4 разгром, 5–6 прохлада, 7–8 похвала с оговорками, 9–10 восторг. Без имён, только реплика.\n\nИгра:\n${facts}\n\nКритики:\n${critics}\n\nФормат ответа: ["текст 1", "текст 2", ..., "текст 10"]`,
+          },
+        ],
+        900,
+      );
+      const m = out.text.match(/\[[\s\S]*\]/);
+      if (!m) return;
+      const parsed = JSON.parse(m[0]) as unknown;
+      if (!Array.isArray(parsed) || parsed.length !== CRITICS.length) return;
+      const texts = parsed.map((t) => String(t ?? '').trim().slice(0, 300));
+      if (texts.some((t) => t.length < 5)) return;
+      g.reviewMessages = texts;
+      this.emit();
+      this.saveNow();
+    } catch (e) {
+      console.error('[gds] пресса не сгенерировалась:', String(e).slice(0, 200));
+    }
   }
 
   /** SRV-22: реплика игрока — в очередь FIFO, если команда ещё отвечает (вызывает диспетчер). */

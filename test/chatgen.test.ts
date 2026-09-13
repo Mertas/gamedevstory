@@ -89,7 +89,7 @@ const chatCtx = {
     { id: 'donny', name: 'Donny', career: 'звукорежиссёр', stats: { program: 10, scenario: 10, graphics: 10, sound: 60 }, persona: 'восторженный иностранец' },
   ],
   project: null,
-  facts: { score: 40 },
+  facts: { score: 100 },
 };
 
 function msgText(opts: Parameters<typeof buildMessages>[2]): string {
@@ -129,7 +129,7 @@ describe('buildMessages: память диалога и ротация гово�
 // Письма фанатов: 4 тона, разные зачины и длина, конкретика (10.09.2026).
 // Раньше письма сходились к «Дорогие разработчики! Я просто…» — теперь стиль задаёт движок.
 describe('buildLetterPrompt: 4 тона писем', () => {
-  const base = { fanName: 'Игорь', gender: 'M' as const, gameName: 'Гонки', score: 30, year: 1993 };
+  const base = { fanName: 'Игорь', gender: 'M' as const, gameName: 'Гонки', score: 75, year: 1993 }; // PLAN-30: шкала /100
 
   it('стиль задаёт тон, длину и зачин; запрещены шаблонные зачины', () => {
     const rant = buildLetterPrompt({ ...base, sentiment: 'hate', style: 'rant' });
@@ -186,12 +186,12 @@ describe('parseSingleMessage и итоги релиза (LLM-06 в,г)', () => {
   });
 
   it('итоги релиза — человеческой строкой; units (тыс.) → «241K», не сырой JSON', () => {
-    const text = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 241 } }, {})
+    const text = buildMessages('release', { ...chatCtx, facts: { score: 83, units: 241 } }, {})
       .map((m) => m.content)
       .join('\n');
     expect(text).toContain('Итоги релиза: рецензии 83/100, продажи 241K копий.');
     expect(text).not.toContain('"units"');
-    const big = buildMessages('release', { ...chatCtx, facts: { score: 33, units: 2500 } }, {})
+    const big = buildMessages('release', { ...chatCtx, facts: { score: 83, units: 2500 } }, {})
       .map((m) => m.content)
       .join('\n');
     expect(big).toContain('продажи 2.50M копий');
@@ -200,7 +200,7 @@ describe('parseSingleMessage и итоги релиза (LLM-06 в,г)', () => {
   it('итоги релиза: имя игры и жанр × тип в подписи (реакция знает, что выпустили)', () => {
     const text = buildMessages('release', {
       ...chatCtx,
-      facts: { score: 40, units: 241, name: 'Furry Explorers', genre: 'Приключение', type: 'Животные', console: 'PC Game' },
+      facts: { score: 100, units: 241, name: 'Furry Explorers', genre: 'Приключение', type: 'Животные', console: 'PC Game' },
     }, {})
       .map((m) => m.content)
       .join('\n');
