@@ -203,6 +203,7 @@ export class DevAnim {
       this.pending = [];
     }
     this.measure();
+    if (!this.raf && !this.dead) this.raf = requestAnimationFrame(this.frame);
 
     const gaps = zeros();
     for (const a of ANIM_ATTRS) {
@@ -554,6 +555,7 @@ export class DevAnim {
     } else {
       this.last = performance.now() / 1000;
       this.measure();
+      if (!this.raf && !this.dead) this.raf = requestAnimationFrame(this.frame);
     }
   };
 
