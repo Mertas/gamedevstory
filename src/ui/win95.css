@@ -146,7 +146,9 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .dev-anim-canvas { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 60; }
 .dev-num { font-variant-numeric: tabular-nums; }
 .dev-bar { position: relative; }
-.dev-bar > div { transition: none; }
+.dev-bar > div { transition: none; animation: dev-stripe 7s linear infinite; }
+/* M3: штриховка «течёт» — жизнь простоя; бесшовно: шаг 8px / cos45° = 11.31px */
+@keyframes dev-stripe { to { background-position: 11.31px 0; } }
 .dev-notch { position: absolute; top: -1px; bottom: -1px; width: 2px; background: #c00000; opacity: .8; }
 .dev-notch.beat { background: #ffd700; opacity: 1; }
 

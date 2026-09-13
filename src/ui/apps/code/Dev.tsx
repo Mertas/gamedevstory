@@ -92,6 +92,8 @@ export function DevStatus() {
       game.devContrib ?? [],
       recs,
       speed,
+      g.progress,
+      g.phase,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.week, game.devContrib, gKey]);
@@ -134,7 +136,7 @@ export function DevStatus() {
           <span>Прогресс: {Math.round(g.progress * 100)}%</span>
           <span data-bugs>Баги: <b style={{ color: g.bugs > 20 ? '#c00000' : '#000' }}>{Math.round(g.bugs)}</b></span>
         </div>
-        <div className="w95-progress"><div style={{ width: `${Math.min(100, g.progress * 100)}%` }} /></div>
+        <div className="w95-progress" data-dev-progress><div style={{ width: `${Math.min(100, g.progress * 100)}%` }} /></div>
       </div>
       <div className="w95-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 4 }}>
         {attrs.map((a) => (
