@@ -75,14 +75,26 @@ export function AutopilotCursor() {
       return new Promise((resolve) => {
         const t0 = performance.now();
         const dur = quick ? FLY_QUICK_MS : FLY_MS;
+        // v1.17.3: в скрытом/свёрнутом окне rAF не тикает — полёт обязан завершиться по таймеру,
+        // иначе промис висит вечно и очередь автопилота встаёт (кейс: пресса не закрывалась).
+        let done = false;
+        const finish = (): void => {
+          if (done) return;
+          done = true;
+          posRef.current = to;
+          setPos(to);
+          resolve();
+        };
+        window.setTimeout(finish, dur + 400);
         const frame = (now: number): void => {
+          if (done) return;
           const t = Math.min(1, (now - t0) / dur);
           const ease = 1 - Math.pow(1 - t, 3);
           const p = { x: from.x + (to.x - from.x) * ease, y: from.y + (to.y - from.y) * ease };
           posRef.current = p;
           setPos(p);
           if (t < 1) requestAnimationFrame(frame);
-          else resolve();
+          else finish();
         };
         requestAnimationFrame(frame);
       });
@@ -360,8 +372,17 @@ export function AutopilotCursor() {
       }
     };
 
+    let busySince = 0;
     const iv = window.setInterval(() => {
-      if (busyRef.current) return;
+      if (busyRef.current) {
+        // v1.17.3: сторож шага — любой await (полёт, попап) не должен останавливать очередь навсегда
+        if (busySince && performance.now() - busySince > 90_000) {
+          busyRef.current = false;
+          busySince = 0;
+          setLabel('⚠️ Шаг автопилота завис — иду дальше');
+        }
+        return;
+      }
       if (!autoRef.current) return; // SRV-16: после «Взять управление» очередь не доигрываем
       const step = takeAutopilotStep();
       if (!step) {
@@ -377,8 +398,10 @@ export function AutopilotCursor() {
       }
       playedRef.current += 1;
       busyRef.current = true;
+      busySince = performance.now();
       void playStep(step).finally(() => {
         busyRef.current = false;
+        busySince = 0;
       });
     }, 180);
     return () => window.clearInterval(iv);
