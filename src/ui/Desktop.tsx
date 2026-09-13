@@ -192,16 +192,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   useEffect(() => { try { localStorage.setItem('gds-desk-snap', snapOn ? '1' : '0'); } catch { /* */ } }, [snapOn]);
   useEffect(() => { try { localStorage.setItem('gds-desk-sort', deskSort); } catch { /* */ } }, [deskSort]);
 
-  // M4: звук — делегированные клики (кнопки, иконки, пункты меню) + первый жест будит AudioContext
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (e.button !== 0 || !(e.target instanceof Element)) return;
-      if (e.target.closest('.w95-mi')) sfx.menuTick();
-      else if (e.target.closest('button, .w95-btn, .w95-d-icon, .w95-pick-ic, .w95-bg-item, .w95-fx-row')) sfx.click();
-    };
-    window.addEventListener('pointerdown', onDown, true);
-    return () => window.removeEventListener('pointerdown', onDown, true);
-  }, []);
+  // M4: делегированные клики — в App.tsx (покрывает и стартовый экран)
   // одноразовый перенос: до PLAN-24 фон жил в браузере, у прежних сейвов поля ui ещё нет
   const bgMigrated = useRef(false);
   useEffect(() => {

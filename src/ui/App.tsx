@@ -16,6 +16,7 @@ import { StartScreen } from './StartScreen';
 import { apiMe, type Features, type MeInfo } from './api';
 import { setOwner } from './owner';
 import { UpdateNotice } from './UpdateNotice';
+import { sfx } from './sfx';
 import { SalesWidget } from './SalesWidget';
 import { PressModal } from './PressModal';
 import { fmtK } from '../shared/nums';
@@ -210,6 +211,18 @@ export function App() {
     if (me && screen === 'game') startSession();
     else stopSession();
   }, [me, screen]);
+
+  // M4: звук — делегированные клики на ВСЕХ экранах (стартовый, стол, окна);
+  // первый настоящий жест пользователя будит AudioContext (политика автоплея).
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0 || !(e.target instanceof Element)) return;
+      if (e.target.closest('.w95-mi')) sfx.menuTick();
+      else if (e.target.closest('button, .w95-btn, .w95-d-icon, .w95-pick-ic, .w95-bg-item, .w95-fx-row')) sfx.click();
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, []);
 
   // сервер отказал (партия не загружена — например, сервер перезапущен): назад в начальное меню
   useEffect(() => {
