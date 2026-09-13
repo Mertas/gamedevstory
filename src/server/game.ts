@@ -307,7 +307,10 @@ export class GameServer {
    */
   async generatePress(): Promise<void> {
     const g = this.game.activeGame;
-    if (!g || g.phase !== 'released' || g.score === null || g.judgeScores.length !== CRITICS.length) return;
+    if (!g || g.phase !== 'released' || g.score === null || g.judgeScores.length !== CRITICS.length) {
+      console.warn('[gds] пресса: пропуск —', g ? `фаза ${g.phase}, оценок ${g.judgeScores.length}` : 'нет активной игры');
+      return;
+    }
     try {
       const genre = genreById(g.genreId);
       const type = typeById(g.typeId);
@@ -333,26 +336,51 @@ export class GameServer {
       const critics = CRITICS.map(
         (c, i) => `${i + 1}. ${c.name}, журнал «${c.magazine}», ${c.persona}. Его оценка: ${g.judgeScores[i]}/10`,
       ).join('\n');
-      const out = await this.llm(
-        [
-          {
-            role: 'system',
-            content:
-              'Ты пишешь короткие рецензии для игровой прессы. Отвечай ТОЛЬКО JSON-массивом из 10 строк, без пояснений.',
-          },
-          {
-            role: 'user',
-            content: `Ниже игра и десять критиков со своими оценками. Напиши для каждого ОДИН короткий отзыв (1–2 предложения) В ЕГО МАНЕРЕ, на русском. Тон согласуй с оценкой: 3–4 разгром, 5–6 прохлада, 7–8 похвала с оговорками, 9–10 восторг. Без имён, только реплика.\n\nИгра:\n${facts}\n\nКритики:\n${critics}\n\nФормат ответа: ["текст 1", "текст 2", ..., "текст 10"]`,
-          },
-        ],
-        900,
-      );
-      const m = out.text.match(/\[[\s\S]*\]/);
-      if (!m) return;
-      const parsed = JSON.parse(m[0]) as unknown;
-      if (!Array.isArray(parsed) || parsed.length !== CRITICS.length) return;
-      const texts = parsed.map((t) => String(t ?? '').trim().slice(0, 300));
-      if (texts.some((t) => t.length < 5)) return;
+      let texts: string[] | null = null;
+      for (let attempt = 1; attempt <= 2 && texts === null; attempt++) {
+        const out = await this.llm(
+          [
+            {
+              role: 'system',
+              content:
+                'Ты пишешь короткие рецензии для игровой прессы. Отвечай ТОЛЬКО JSON-массивом из 10 строк, без пояснений.',
+            },
+            {
+              role: 'user',
+              content: `Ниже игра и десять критиков со своими оценками. Напиши для каждого ОДИН короткий отзыв (1–2 предложения) В ЕГО МАНЕРЕ, на русском. Тон согласуй с оценкой: 3–4 разгром, 5–6 прохлада, 7–8 похвала с оговорками, 9–10 восторг. Без имён, только реплика.\n\nИгра:\n${facts}\n\nКритики:\n${critics}\n\nФормат ответа: ["текст 1", "текст 2", ..., "текст 10"]`,
+            },
+          ],
+          1400, // PLAN-30: 10 отзывов с запасом (замер: ~640 символов ответа)
+        );
+        const m = out.text.match(/\[[\s\S]*\]/);
+        if (!m) {
+          console.warn(`[gds] пресса: попытка ${attempt} — в ответе нет массива:`, out.text.slice(0, 160));
+          continue;
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(m[0]);
+        } catch (e) {
+          console.warn(`[gds] пресса: попытка ${attempt} — битый JSON:`, String(e).slice(0, 100));
+          continue;
+        }
+        if (!Array.isArray(parsed) || parsed.length !== CRITICS.length) {
+          console.warn(`[gds] пресса: попытка ${attempt} — не 10 строк:`, JSON.stringify(parsed).slice(0, 140));
+          continue;
+        }
+        const clean = parsed.map((t) => String(t ?? '').trim().slice(0, 300));
+        if (clean.some((t) => t.length < 5)) {
+          console.warn(`[gds] пресса: попытка ${attempt} — пустые строки`);
+          continue;
+        }
+        texts = clean;
+      }
+      if (texts === null) {
+        console.warn('[gds] пресса: за две попытки валидных 10 отзывов нет — остаются фолбэки');
+        return;
+      }
+      g.reviewMessages = texts;
+      console.log('[gds] пресса: 10 отзывов готовы');
       g.reviewMessages = texts;
       const rec = this.game.history[this.game.history.length - 1];
       if (rec && rec.releaseWeek === g.releaseWeek && rec.name === g.name) rec.reviewMessages = [...texts];

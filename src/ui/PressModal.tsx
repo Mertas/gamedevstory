@@ -33,7 +33,7 @@ export function PressModal() {
   const lastRec = game.history[game.history.length - 1] ?? null;
   const lastKey =
     lastRec && (lastRec.judgeScores?.length ?? 0) > 0 ? `${lastRec.name}#${lastRec.releaseWeek}` : null;
-  const fresh = lastRec !== null && lastRec.releaseWeek != null && game.week - lastRec.releaseWeek <= 7;
+  const fresh = lastRec !== null && lastRec.releaseWeek != null && game.week - lastRec.releaseWeek <= 20;
   // запись показа (по ключу) — LLM-тексты подхватываются на лету; length — для таймеров
   const rec = openKey ? game.history.find((h) => `${h.name}#${h.releaseWeek}` === openKey) ?? null : null;
   const total = rec?.judgeScores?.length ?? 0;

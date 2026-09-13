@@ -1,6 +1,6 @@
 // Система разработки: старт проекта, недельный прогресс, баги, отладка, релиз, сиквелы.
 import { CONFIG } from '../config';
-import { CRITICS } from '../data/critics'; // PLAN-30: пресса — 10 журналов
+import { CRITICS, PRESS_FALLBACK_RU } from '../data/critics'; // PLAN-30: пресса — 10 журналов
 import { COMBO_GRADES, CONSOLES, GENRES, GENRE_ORDER, MESSAGES, TYPES } from '../data/db';
 import { log } from '../log';
 import {
@@ -503,6 +503,9 @@ function generateName(genreName: string, typeName: string, rng: Rng): string {
 }
 
 function pickMessage(score: number, rng: Rng): string {
+  // PLAN-30: сначала русские тексты (в контенте — английские легаси-строки)
+  const ru = PRESS_FALLBACK_RU[score];
+  if (ru && ru.length > 0) return ru[rng.int(0, ru.length - 1)]!;
   const pool = MESSAGES.filter((m) => m.points === score);
   if (pool.length === 0) return '';
   return pool[rng.int(0, pool.length - 1)]!.message;
