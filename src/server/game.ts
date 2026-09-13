@@ -354,6 +354,8 @@ export class GameServer {
       const texts = parsed.map((t) => String(t ?? '').trim().slice(0, 300));
       if (texts.some((t) => t.length < 5)) return;
       g.reviewMessages = texts;
+      const rec = this.game.history[this.game.history.length - 1];
+      if (rec && rec.releaseWeek === g.releaseWeek && rec.name === g.name) rec.reviewMessages = [...texts];
       this.emit();
       this.saveNow();
     } catch (e) {

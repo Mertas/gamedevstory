@@ -29,18 +29,23 @@ export function PressModal() {
   const [step, setStep] = useState(-1); // -1 вступление, 0..9 карточки, 10 итог
   const speedBefore = useRef(1);
 
-  const g = game.activeGame;
-  const released = g && g.phase === 'released' && g.score !== null ? g : null;
-  const key = released ? `${released.name}#${released.releaseWeek}` : null;
-  const fresh = released !== null && released.releaseWeek !== null && game.week - released.releaseWeek <= 3;
+  // Источник — последняя запись архива: оценки/отзывы живут в ней, даже когда проект сменился
+  const lastRec = game.history[game.history.length - 1] ?? null;
+  const lastKey =
+    lastRec && (lastRec.judgeScores?.length ?? 0) > 0 ? `${lastRec.name}#${lastRec.releaseWeek}` : null;
+  const fresh = lastRec !== null && lastRec.releaseWeek != null && game.week - lastRec.releaseWeek <= 7;
+  // запись показа (по ключу) — LLM-тексты подхватываются на лету; length — для таймеров
+  const rec = openKey ? game.history.find((h) => `${h.name}#${h.releaseWeek}` === openKey) ?? null : null;
+  const total = rec?.judgeScores?.length ?? 0;
 
   // Триггер: свежий релиз, который ещё не показывали
   useEffect(() => {
-    if (!openKey && key && fresh && !seen.has(key)) {
-      setOpenKey(key);
+    if (!openKey && lastKey && fresh && !seen.has(lastKey)) {
+      setOpenKey(lastKey);
       setStep(-1);
     }
-  }, [key, fresh, openKey, seen]);
+  }, [lastKey, fresh, openKey, seen]);
+
 
   // Пауза на время показа; после — вернуть прежнюю скорость
   useEffect(() => {
@@ -53,7 +58,7 @@ export function PressModal() {
 
   // Автосмена: вступление и карточки; итог ждёт клика
   useEffect(() => {
-    if (openKey === null || step >= CRITICS.length) return;
+    if (openKey === null || total === 0 || step >= total) return;
     const t = setTimeout(() => setStep((s) => s + 1), step < 0 ? INTRO_MS : CARD_MS);
     return () => clearTimeout(t);
   }, [openKey, step]);
@@ -86,21 +91,23 @@ export function PressModal() {
     if (!openKey) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') finish();
-      else if (e.key === 'Enter' || e.key === ' ') setStep((s) => Math.min(CRITICS.length, s + 1));
+      else if (e.key === 'Enter' || e.key === ' ') setStep((s) => Math.min(total, s + 1));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openKey]);
 
-  if (!openKey || !released || step > CRITICS.length) return null;
-  const next = () => setStep((s) => Math.min(CRITICS.length, s + 1));
-  const total = released.judgeScores.length;
+  if (!openKey || !rec || step > (rec.judgeScores?.length ?? 0)) return null;
+  const scores = rec.judgeScores ?? [];
+  const texts = rec.reviewMessages ?? [];
+  const score = rec.score ?? 0;
+  const next = () => setStep((s) => Math.min(total, s + 1));
   return (
     <div className="press-overlay" onClick={next} role="dialog" aria-label="Пресса об игре">
       {step < 0 && (
         <div className="press-card press-intro" key="intro" onClick={(e) => e.stopPropagation()}>
-          <div className="press-mag">📰 Пресса о «{released.name}»</div>
+          <div className="press-mag">📰 Пресса о «{rec.name}»</div>
           <div className="press-wait">Критики расходятся по редакциям…</div>
         </div>
       )}
@@ -116,32 +123,32 @@ export function PressModal() {
             <div className="press-face">🗞️</div>
             <div className="press-who">
               <b>{CRITICS[step]?.name ?? 'Критик'}</b>
-              <span className="press-badge" data-score={released.judgeScores[step] ?? 0}>
-                {released.judgeScores[step] ?? 0}/10
+              <span className="press-badge" data-score={scores[step] ?? 0}>
+                {scores[step] ?? 0}/10
               </span>
             </div>
           </div>
-          <div className="press-text">{released.reviewMessages[step] ?? '…'}</div>
+          <div className="press-text">{texts[step] ?? '…'}</div>
           <div className="press-hint">клик — дальше</div>
         </div>
       )}
       {step >= total && (
         <div className="press-card press-final" key="final" onClick={(e) => e.stopPropagation()}>
           <div className="press-mag">📰 Итог прессы</div>
-          <div className="press-total">«{released.name}» — {released.score}/100</div>
-          <div className="press-verdict">{pressVerdict(released.score ?? 0)}</div>
-          {(released.score ?? 0) >= 80 && <div className="press-record">🏆 {pressVerdict(released.score ?? 0).split('!')[0]}!</div>}
+          <div className="press-total">«{rec.name}» — {score}/100</div>
+          <div className="press-verdict">{pressVerdict(score)}</div>
+          
           <button className="w95-btn press-ok" onClick={finish}>
             Ок
           </button>
         </div>
       )}
-      {step < CRITICS.length && (
+      {total > 0 && step < total && (
         <button
           className="press-skip"
           onClick={(e) => {
             e.stopPropagation();
-            setStep(CRITICS.length);
+            setStep(total);
           }}
         >
           Пропустить всё ›

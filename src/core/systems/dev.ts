@@ -393,6 +393,9 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
         .sort((a, b) => (b[1] as number) - (a[1] as number))
     ),
     score: total,
+    // PLAN-30: пресса сохраняется в записи — модалка читает её даже после смены проекта
+    judgeScores: [...scores],
+    reviewMessages: [...game.reviewMessages],
     units: plan.totalUnits,
     revenue: plan.totalRevenue,
     releaseWeek: state.week,

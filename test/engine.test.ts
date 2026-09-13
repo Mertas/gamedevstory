@@ -89,6 +89,15 @@ describe('релиз: хайп/известность влияют на прод
     return g.history[0]!;
   }
 
+  it('PLAN-30: пресса сохраняется в записи релиза (10 оценок и 10 отзывов)', () => {
+    const rec = releaseWithHype(10);
+    expect(rec.judgeScores).toHaveLength(10);
+    expect(rec.reviewMessages).toHaveLength(10);
+    expect(rec.score).toBeGreaterThanOrEqual(30);
+    expect(rec.score).toBeLessThanOrEqual(100);
+    expect(rec.judgeScores!.every((s) => s >= 3 && s <= 10)).toBe(true);
+  });
+
   it('больше накопленного хайпа (реклама/бустеры) → больше продаж', () => {
     const low = releaseWithHype(10); // без рекламы/бустеров
     const high = releaseWithHype(60); // ~10 кампаний рекламы за разработку

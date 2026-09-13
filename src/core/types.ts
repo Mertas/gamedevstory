@@ -113,6 +113,9 @@ export interface GameRecord {
   units: number;
   revenue: number;
   releaseWeek: number;
+  /** PLAN-30: оценки десяти критиков (3–10) и их отзывы — для модалки прессы */
+  judgeScores?: number[];
+  reviewMessages?: string[];
   year: number;
   attrs: Stats;
   bugs: number;
