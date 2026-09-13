@@ -163,8 +163,8 @@ function EventWatcher() {
     }
     if (ev.type === 'release_result') {
       // PLAN-30: попап «Оценки критиков» больше не нужен — оценки, вклады и рекорды в модалке прессы.
-      // Событие закрываем сами (иначе пауза-ожидание заблокирует игру).
-      actionResolveEvent();
+      // SER-23: закрываем как действие автопилота — иначе сервер решит, что вернулся босс.
+      actionResolveEvent(true);
       return;
     }
   }, [ev, snap.game, boostAmount, mb]);

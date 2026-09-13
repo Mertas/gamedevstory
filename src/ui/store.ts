@@ -223,12 +223,13 @@ window.setInterval(() => {
   if (wss?.readyState === WebSocket.OPEN) outbox.prune();
 }, 5000);
 
-function send(msg: unknown): void {
+function send(msg: unknown, forceAuto = false): void {
   // SRV-06: исходящее нумеруется (seq) и ждёт в очереди до ack сервера — закрытый сокет
   // больше не означает потерю клика: при переподключении недоставленное уйдёт повторно
   const seq = ++seqN;
-  // действия виртуальной мыши автопилота помечаются autopilot:true (не выключают автопилот)
-  const auto = (globalThis as { __gdsAutopilot?: boolean }).__gdsAutopilot === true;
+  // действия виртуальной мыши автопилота помечаются autopilot:true (не выключают автопилот);
+  // forceAuto — для серверных авто-действий самого UI (например автозакрытие окна прессы, SER-23)
+  const auto = forceAuto || (globalThis as { __gdsAutopilot?: boolean }).__gdsAutopilot === true;
   const data = JSON.stringify({
     ...(msg as Record<string, unknown>), sid: SID, seq, ...(auto ? { autopilot: true } : {}),
   });
@@ -353,8 +354,10 @@ export function actionDismissSalesman() {
 export function actionResolveGamedex(option: string) {
   send({ type: 'resolve_gamedex', option });
 }
-export function actionResolveEvent() {
-  send({ type: 'resolve_event' });
+export function actionResolveEvent(auto = false) {
+  // SER-23: авто-закрытие окна прессы после релиза не должно выглядеть действием босса
+  // (иначе сервер выключает автопилот и отдаёт управление игроку)
+  send({ type: 'resolve_event' }, auto);
 }
 // SRV-05: сквозной номер запроса сюжета — ответ принимаем только на свой (вкладки не путаются)
 let storyReqSeq = 0;

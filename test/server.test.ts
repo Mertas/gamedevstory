@@ -391,6 +391,21 @@ describe('AP-08: idle-фаза в живой сессии', () => {
   });
 });
 
+describe('SER-23: авто-закрытие окна прессы не отдаёт управление боссу', () => {
+  it('resolve_event с пометкой автопилота оставляет авторежим, действие босса — выключает', () => {
+    srv = makeServer();
+    srv.handle({ type: 'set_autopilot', on: true });
+    expect(srv.snapshot().autopilot).toBe(true);
+    srv.snapshot().game.pendingEvent = { type: 'release_result', text: 'пресса' };
+    srv.handle({ type: 'resolve_event', autopilot: true }); // авто-закрытие модалки прессы
+    expect(srv.snapshot().game.pendingEvent).toBeNull();
+    expect(srv.snapshot().autopilot).toBe(true); // управление осталось у команды — идём дальше
+    srv.snapshot().game.pendingEvent = { type: 'release_result', text: 'пресса' };
+    srv.handle({ type: 'resolve_event' }); // а вот это — уже рука босса
+    expect(srv.snapshot().autopilot).toBe(false);
+  });
+});
+
 describe('PLAN-24: вид рабочего стола в сейве (фон + раскладка окон)', () => {
   it('принимает фон и окна, зажимает мусор от клиента и не считается «действием босса»', () => {
     srv = makeServer();
