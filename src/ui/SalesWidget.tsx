@@ -188,7 +188,7 @@ export function SalesWidget() {
                   </div>
                 )}
                 {sv.record && <div className="sales-record">🏆 РЕКОРД СТУДИИ!</div>}
-                {world && world.rank === 1 && <div className="sales-record">🏆 РЕКОРД МИРА — лучшая игра всех!</div>}
+                {world && world.rank === 1 && <div className="sales-record">🏆 РЕКОРД МИРА!</div>}
                 {world && world.rank > 1 && world.rank <= 10 && <div className="sales-record">🏆 ТОП-10 среди всех игроков!</div>}
               </div>
             )}
