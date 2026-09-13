@@ -153,6 +153,15 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .dev-fx-mid .dev-bar > div,
 .dev-fx-min .dev-bar > div { animation: none; }
 
+/* M4: звук в трее — кнопка и всплывашка */
+.w95-snd { position: relative; display: inline-flex; align-items: center; margin-right: 6px; }
+.w95-snd-btn {
+  background: none; border: none; cursor: pointer; font-size: 12px; line-height: 1;
+  padding: 1px 3px; color: inherit; font-family: inherit;
+}
+.w95-snd-btn:hover { background: rgba(0, 0, 128, 0.25); }
+.w95-snd-pop { position: absolute; bottom: 22px; right: 0; z-index: 60; min-width: 112px; }
+
 /* M3.8: список уровней эффектов в модалке */
 .w95-fx-list { display: flex; flex-direction: column; gap: 2px; min-width: 340px; }
 .w95-fx-row { display: flex; gap: 6px; align-items: flex-start; padding: 4px 6px; cursor: pointer; }

@@ -141,6 +141,8 @@ export class DevAnim {
   private mode: 'active' | 'quiet' | 'asleep' = 'active';
   /** M3.8: уровень эффектов (мини/средне/полно) — тумблер «Эффекты экрана…» */
   private fx: FxLevel = 'full';
+  /** M4: колбэк впитывания (звук капель вешает Dev.tsx); в «минимуме» не вызывается — частиц нет */
+  onLand?: (attr: AnimAttr) => void;
   private lastWorkAt = 0;
   private last = 0;
   private dpr = 1;
@@ -512,6 +514,7 @@ export class DevAnim {
       return;
     }
     this.shown[c.attr] += c.weight;
+    this.onLand?.(c.attr);
     const [x, y] = this.bez(c, 1);
     if (this.ripples.length < RIPPLE_CAP) {
       // M2: двойная рябь — быстрая яркая + медленная мягкая («средне» — только быстрая)

@@ -16,6 +16,8 @@ import { useOwner } from './owner';
 import { VersionStamp } from './VersionStamp';
 import { WALLPAPERS, readWallpaper, wallpaperById } from './wallpapers';
 import { resolveFx } from '../shared/dev-anim';
+import { sfx } from './sfx';
+import { SOUND_LEVELS, soundLabel, type SoundLevel } from '../shared/sound';
 
 /** M3.8 (plan/31 §9.8): уровни эффектов экрана разработки — «Эффекты экрана…» в ПКМ по столу. */
 const FX_ROWS: Array<{ id: 'full' | 'mid' | 'min'; title: string; hint: string }> = [
@@ -189,6 +191,17 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
   useEffect(() => { try { localStorage.setItem('gds-desk-snap', snapOn ? '1' : '0'); } catch { /* */ } }, [snapOn]);
   useEffect(() => { try { localStorage.setItem('gds-desk-sort', deskSort); } catch { /* */ } }, [deskSort]);
+
+  // M4: звук — делегированные клики (кнопки, иконки, пункты меню) + первый жест будит AudioContext
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0 || !(e.target instanceof Element)) return;
+      if (e.target.closest('.w95-mi')) sfx.menuTick();
+      else if (e.target.closest('button, .w95-btn, .w95-d-icon, .w95-pick-ic, .w95-bg-item, .w95-fx-row')) sfx.click();
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, []);
   // одноразовый перенос: до PLAN-24 фон жил в браузере, у прежних сейвов поля ui ещё нет
   const bgMigrated = useRef(false);
   useEffect(() => {
@@ -690,6 +703,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
               </button>
             ))}
           </div>
+          <SoundTray />
           <div className="w95-tray-clock">
             {game.bankrupt ? 'БАНКРОТ' : `${dateLabel(game.week)}, день ${dayInYear(game.week)}`}
           </div>
@@ -768,4 +782,46 @@ export function Desktop({ onExit }: { onExit: () => void }) {
     // SRV-19: сервер недоступен — сообщаем, иначе кнопка «молчит»
     }).catch(() => showClientError('Сохранить не удалось: сервер недоступен'));
   }
+}
+
+/** M4: звук в трее — «Выкл/Тихо/Средне/Громко» рядом с часами (дефолт «тихо», выбор в localStorage). */
+function SoundTray() {
+  const [level, setLevel] = useState<SoundLevel>(sfx.soundLevel);
+  const [open, setOpen] = useState(false);
+  // клик мимо — закрыть, как в Win95
+  useEffect(() => {
+    if (!open) return;
+    const off = (e: PointerEvent) => {
+      if (e.target instanceof Element && e.target.closest('.w95-snd')) return;
+      setOpen(false);
+    };
+    window.addEventListener('pointerdown', off, true);
+    return () => window.removeEventListener('pointerdown', off, true);
+  }, [open]);
+  const icon = level === 'off' ? '🔇' : level === 'low' ? '🔈' : level === 'mid' ? '🔉' : '🔊';
+  return (
+    <span className="w95-snd">
+      <button className="w95-snd-btn" title={`Звук: ${soundLabel(level)}`} onClick={() => setOpen((v) => !v)}>
+        {icon}
+      </button>
+      {open && (
+        <div className="w95-menu w95-snd-pop">
+          {SOUND_LEVELS.map((l) => (
+            <div
+              key={l}
+              className="w95-mi"
+              onClick={() => {
+                sfx.setLevel(l);
+                setLevel(l);
+                setOpen(false);
+              }}
+            >
+              <span style={{ width: 16 }}>{level === l ? '✓' : ''}</span>
+              {soundLabel(l)}
+            </div>
+          ))}
+        </div>
+      )}
+    </span>
+  );
 }

@@ -7,6 +7,7 @@ import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
 import { studioRecords } from '../../../shared/records';
 import { resolveFx } from '../../../shared/dev-anim';
+import { sfx } from '../../sfx';
 import { DevAnim } from './dev-anim';
 import { ReleasePanel } from './Release';
 import { MODES, ROLE_LABELS } from './shared';
@@ -64,6 +65,16 @@ export function DevStatus() {
   useEffect(() => {
     engineRef.current?.setEffects(fx);
   }, [fx, hasGame]);
+
+  // M4: звук капель на впитывании; в «минимуме» частиц нет — звука нет по определению
+  useEffect(() => {
+    const eng = engineRef.current;
+    if (!eng) return;
+    eng.onLand = () => sfx.drop();
+    return () => {
+      if (engineRef.current) engineRef.current.onLand = undefined;
+    };
+  }, [hasGame]);
 
   // смена проекта: показания мгновенно выравниваются (без анимации «из нуля»)
   useEffect(() => {

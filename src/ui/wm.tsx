@@ -7,6 +7,7 @@ import {
 } from 'react';
 
 import { actionSetUi, useGameSelector } from './store';
+import { sfx } from './sfx';
 
 export interface WinState {
   id: string;
@@ -92,6 +93,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
   // UI-02: пустые зависимости — объект методов стабилен, move/resize его не пересоздают
   const api = useMemo<WmApi>(() => ({
     open(id) {
+      sfx.openWindow(); // M4: звук открытия окна (дух Win95)
       setActiveId(id);
       setWins((ws) => {
         if (ws.some((w) => w.id === id)) {
@@ -121,6 +123,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       });
     },
     close(id) {
+      sfx.closeWindow(); // M4: звук закрытия окна
       // UI-07: закрытие НЕ размонтирует окно — ставим closed (hidden), открытие вернёт состояние
       setActiveId((cur: string | null) => (cur === id ? null : cur));
       setWins((ws) => {
