@@ -67,6 +67,7 @@ export function ChatApp() {
   const [dm, setDm] = useState<DmMsg[] | null>(null);
   const [dmDraft, setDmDraft] = useState('');
   const dmRef = useRef<HTMLDivElement>(null);
+  const dmLoadRef = useRef<() => void>(() => {}); // SER-28: мгновенное обновление после отправки
   const typeSentRef = useRef(0);
   useEffect(() => {
     let alive = true;
@@ -106,6 +107,7 @@ export function ChatApp() {
         })
         .catch(() => {});
     };
+    dmLoadRef.current = load;
     setDm(null);
     load();
     const id = setInterval(load, 4000);
@@ -126,7 +128,9 @@ export function ChatApp() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: t }),
-    }).catch(() => {});
+    })
+      .then(() => dmLoadRef.current())
+      .catch(() => {});
   };
   // SER-24: в ленте — последние 100 сообщений; если есть более старые, вверху ленты (внутри
   // прокрутки) появляется кнопка подгрузки ещё сотни.

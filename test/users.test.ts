@@ -35,6 +35,26 @@ describe('PLAN-18: пользователи (SQLite)', () => {
     u.close();
   });
 
+  it('SER-28: личные сообщения — история пары, непрочитанные и отметка прочтения', () => {
+    const u = new UserService(tmpDb());
+    u.register('Anna', '12345678');
+    u.register('Boris', '12345678');
+    const aT = u.login('Anna', '12345678');
+    const bT = u.login('Boris', '12345678');
+    const a = u.userByToken(aT.ok ? aT.token : '')!.id;
+    const b = u.userByToken(bT.ok ? bT.token : '')!.id;
+    u.dmSend(a, b, 'Привет, сосед!');
+    u.dmSend(b, a, 'Привет! Как дела?');
+    expect(u.dmHistory(a, b).map((m) => m.text)).toEqual(['Привет, сосед!', 'Привет! Как дела?']);
+    expect(u.dmUnread(a)).toEqual({ [b]: 1 }); // ответ Бориса не прочитан
+    expect(u.dmUnread(b)).toEqual({ [a]: 1 });
+    u.dmMarkRead(a, b); // Анна открыла переписку
+    expect(u.dmUnread(a)).toEqual({});
+    expect(u.dmUnread(b)).toEqual({ [a]: 1 }); // у Бориса по-прежнему непрочитанное
+    expect(u.dmHistory(a, b).every((m) => m.to !== a || m.read)).toBe(true);
+    u.close();
+  });
+
   it('правила логина и пароля', () => {
     const u = new UserService(tmpDb());
     expect(u.register('ab', '12345678').ok).toBe(false); // короткий логин
