@@ -142,19 +142,13 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   font-size: 11px;
 }
 
-/* ─── летящие символы вклада разработки ─── */
-.w95-flier {
-  position: absolute;
-  z-index: 60;
-  pointer-events: none;
-  animation: w95-fly 1.05s cubic-bezier(0.34, 0.1, 0.4, 1) forwards;
-}
-@keyframes w95-fly {
-  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
-  12% { opacity: 1; }
-  55% { transform: translate(calc(var(--dx) * 0.55), calc(var(--dy) * 0.55 - 30px)) rotate(200deg) scale(0.92); opacity: 1; }
-  100% { transform: translate(var(--dx), var(--dy)) rotate(380deg) scale(0.35); opacity: 0.55; }
-}
+/* ─── M1 (plan/31): canvas-анимация вклада разработки ─── */
+.dev-anim-canvas { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 60; }
+.dev-num { font-variant-numeric: tabular-nums; }
+.dev-bar { position: relative; }
+.dev-bar > div { transition: none; }
+.dev-notch { position: absolute; top: -1px; bottom: -1px; width: 2px; background: #c00000; opacity: .8; }
+.dev-notch.beat { background: #ffd700; opacity: 1; }
 
 /* вспышка бара атрибута при вливании очков */
 .w95-attr-flash {
