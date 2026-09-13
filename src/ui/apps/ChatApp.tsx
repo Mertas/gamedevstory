@@ -210,11 +210,13 @@ export function ChatApp() {
                 {dm?.length === 0 && <div className="w95-hint" style={{ padding: 10 }}>Пока пусто — напиши первым.</div>}
                 {(dm ?? []).map((m) => (
                   <div key={m.id} className={`dm-msg ${m.from === meId ? 'self' : ''}`}>
-                    <div className="dm-bubble">{m.text}</div>
-                    <div className="dm-when">
-                      {m.from === meId ? 'Вы' : pick.login} ·{' '}
-                      {new Date(m.created).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    <div>
+                      <span className="dm-name">{m.from === meId ? 'Вы' : pick.login}</span>
+                      <span className="dm-when">
+                        {new Date(m.created).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
+                    <div className="dm-text">{m.text}</div>
                   </div>
                 ))}
               </div>
