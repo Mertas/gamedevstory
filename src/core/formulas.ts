@@ -1,6 +1,7 @@
 // Чистые формулы (09_Формулы_и_данные.md). Никакого состояния — только функции.
 import { CONFIG, type Mode } from './config';
 import type { ComboGrade, Stats } from './types';
+import type { Rng } from './rng';
 
 export function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
@@ -103,6 +104,15 @@ export function judgeScore(
 
 export function reviewTotal(scores: number[]): number {
   return scores.reduce((a, b) => a + b, 0);
+}
+
+/**
+ * v1.18.0: разброс оценок критиков — каждый независимо ставит «база ±2» (решение босса).
+ * Разброс важнее точной суммы: итог крутой игры — обычно меньше 100, а 100/100 выпадает
+ * только при удачном совпадении (все десять критиков попали в потолок 10).
+ */
+export function spreadScores(scores: readonly number[], rng: Rng): number[] {
+  return scores.map((s) => clamp(s + rng.int(-2, 2), 3, 10));
 }
 
 // ---------- продажи (09 §5) ----------

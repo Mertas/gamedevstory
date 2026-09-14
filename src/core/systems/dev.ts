@@ -4,7 +4,7 @@ import { CRITICS, PRESS_FALLBACK_RU } from '../data/critics'; // PLAN-30: пре
 import { COMBO_GRADES, CONSOLES, GENRES, GENRE_ORDER, MESSAGES, TYPES } from '../data/db';
 import { log } from '../log';
 import {
-  debugRate, distributePoints, judgeScore, projectCost, reviewTotal,
+  debugRate, distributePoints, judgeScore, projectCost, reviewTotal, spreadScores,
   salesPlan, totalBugs, weeklyPoints,
 } from '../formulas';
 import type { Rng } from '../rng';
@@ -331,7 +331,9 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
 
   const noise = rng.int(-CONFIG.REVIEW_NOISE, CONFIG.REVIEW_NOISE);
   // PLAN-30: 10 критиков из 10 журналов — итог сразу /100
-  const { scores } = judgeScore(game.points, CRITICS.map((c) => c.weights), game.bugs, noise);
+  const { scores: baseScores } = judgeScore(game.points, CRITICS.map((c) => c.weights), game.bugs, noise);
+  // v1.18.0: критики ставят по-разному — «база ±2»; сумма слегка гуляет, 100/100 — редкая удача
+  const scores = spreadScores(baseScores, rng);
   const total = reviewTotal(scores);
   const genre = genreById(game.genreId);
   const type = typeById(game.typeId);

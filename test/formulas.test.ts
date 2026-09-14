@@ -2,8 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   comboMult, debugRate, distributePoints, fanMult, judgeScore, pricePerCopy, projectCost,
-  reviewTotal, salesPlan, totalBugs, weeklyPoints, hypeMult, weekFactor, baseWeekShares,
+  reviewTotal, salesPlan, spreadScores, totalBugs, weeklyPoints, hypeMult, weekFactor, baseWeekShares,
 } from '../src/core/formulas';
+import { createRng, type Rng } from '../src/core/rng';
 import { comboGrade } from '../src/core/systems/dev';
 import { CRITICS } from '../src/core/data/critics'; // PLAN-30: 10 журналов
 
@@ -229,5 +230,63 @@ describe('PLAN-32: распределение продаж (обратный eas
     const total = plan.weeks.reduce((a, w) => a + (w.unitsF ?? w.units), 0);
     expect(total).toBeGreaterThan(plan.totalUnits * 0.95);
     expect(total).toBeLessThan(plan.totalUnits * 1.3);
+  });
+});
+
+describe('v1.18.0: разброс оценок критиков (±2, итог гуляет, 100 — удача)', () => {
+  const stub = (v: number): Rng => ({ next: () => 0.5, int: () => v, chance: () => false, state: 0 });
+  const TEN = Array(10).fill(10);
+  const THREE = Array(10).fill(3);
+
+  it('каждая оценка — в пределах ±2 от базы (с учётом клампов 3…10)', () => {
+    const base = [3, 4, 6, 10, 10, 7, 5, 8, 9, 10];
+    const r = spreadScores(base, stub(2));
+    expect(r).toEqual([5, 6, 8, 10, 10, 9, 7, 10, 10, 10]);
+    const r2 = spreadScores(base, stub(-2));
+    expect(r2).toEqual([3, 3, 4, 8, 8, 5, 3, 6, 7, 8]);
+  });
+
+  it('потолок: +2 не пробивает 10; сотня достижима (все «не ниже потолка»)', () => {
+    expect(reviewTotal(spreadScores(TEN, stub(2)))).toBe(100);
+    expect(reviewTotal(spreadScores(TEN, stub(0)))).toBe(100);
+    const down = spreadScores(TEN, stub(-2));
+    expect(down.every((v) => v === 8)).toBe(true);
+    expect(reviewTotal(down)).toBe(80);
+  });
+
+  it('пол: −2 держит 3, ниже 30 сумма не падает', () => {
+    expect(reviewTotal(spreadScores(THREE, stub(-2)))).toBe(30);
+    expect(reviewTotal(spreadScores(THREE, stub(0)))).toBe(30);
+    expect(reviewTotal(spreadScores(THREE, stub(2)))).toBe(50);
+  });
+
+  it('середина: разброс есть почти всегда, средняя сумма держится у базы', () => {
+    const base = Array(10).fill(6);
+    const rng = createRng(42);
+    let sum = 0;
+    let varied = 0;
+    for (let k = 0; k < 200; k++) {
+      const r = spreadScores(base, rng);
+      sum += reviewTotal(r);
+      if (new Set(r).size > 1) varied++;
+    }
+    expect(varied).toBeGreaterThan(190);
+    expect(Math.abs(sum / 200 - 60)).toBeLessThan(2);
+  });
+
+  it('крутая игра: типичный итог меньше 100, сотня — редкость (сотни прогонов)', () => {
+    const rng = createRng(7);
+    let sum = 0;
+    let n100 = 0;
+    for (let k = 0; k < 500; k++) {
+      const t = reviewTotal(spreadScores(TEN, rng));
+      sum += t;
+      if (t === 100) n100++;
+    }
+    const avg = sum / 500;
+    expect(avg).toBeGreaterThan(85);
+    expect(avg).toBeLessThan(99);
+    expect(n100).toBeGreaterThanOrEqual(0);
+    expect(n100).toBeLessThanOrEqual(25); // ожидаемо ~0.6% (≈3 из 500)
   });
 });
