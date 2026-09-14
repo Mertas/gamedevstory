@@ -24,6 +24,9 @@ export function DevStatus() {
   // мины: 1 мина = 1 баг; аккумулятор дробного прироста багов между тиками
   const lastBugsRef = useRef(0);
   const bugsAccRef = useRef(0);
+  // M5.1: до первой «настоящей» недели (вклад сотрудников) музыка молчит —
+  // стартовые очки сценариста («предложение») не играют нот
+  const wtcWaveRef = useRef<{ key: string; started: boolean }>({ key: '', started: false });
   // M3.8: уровень эффектов — выбор игрока («Эффекты экрана…») важнее системной настройки
   const fx = useMemo(
     () => resolveFx(game.ui?.fx, safeReducedMotion()),
@@ -111,8 +114,13 @@ export function DevStatus() {
 
   // волна вклада дня: разрыв (цель − показано − в воздухе) → план частиц с размазом по такту.
   // В точном режиме (≤12 очков на атрибут за такт) — честно «1 символ = 1 очко».
+  // M5.1: волны до первой недели с настоящим вкладом — «бесшумные» (стартовые очки не играют).
   useEffect(() => {
     if (!g) return;
+    if (wtcWaveRef.current.key !== gKey) wtcWaveRef.current = { key: gKey, started: false };
+    const hasContrib = (game.devContrib?.length ?? 0) > 0;
+    const silent = !wtcWaveRef.current.started && !hasContrib;
+    if (hasContrib) wtcWaveRef.current.started = true;
     engineRef.current?.setWave(
       { fun: g.points.fun, creativity: g.points.creativity, graphics: g.points.graphics, sound: g.points.sound },
       game.devContrib ?? [],
@@ -120,6 +128,7 @@ export function DevStatus() {
       speed,
       g.progress,
       g.phase,
+      silent,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.week, game.devContrib, gKey]);

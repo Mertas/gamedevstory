@@ -68,6 +68,8 @@ interface Chip {
   cy2: number;
   t0: number;
   life: number;
+  /** M5.1: частица не зовёт onLand (музыка не двигается — стартовые очки/предложение) */
+  silent?: boolean;
 }
 
 interface Pending {
@@ -77,6 +79,7 @@ interface Pending {
   heavy: number;
   launchAt: number;
   life: number;
+  silent?: boolean;
 }
 
 interface Ripple {
@@ -316,6 +319,7 @@ export class DevAnim {
     speed: number,
     progress = 0,
     phase = '',
+    silent = false,
   ): void {
     this.speed = Math.max(0.5, speed || 1);
     this.tickSec = 1 / this.speed;
@@ -354,6 +358,7 @@ export class DevAnim {
         heavy: heavyOf(p.weight),
         launchAt: now + p.delay,
         life: this.flightLife(),
+        silent,
       });
     }
   }
@@ -497,6 +502,7 @@ export class DevAnim {
     chip.cx2 = to.x - 44 - Math.random() * 26;
     chip.cy2 = to.y - 24 - Math.random() * 12;
     chip.t0 = now + Math.random() * 0.02;
+    chip.silent = p.silent;
     this.chips.push(chip);
     // M2: всплеск у источника — «капля отрывается» (не чаще 0.18 с на сотрудника)
     const lastPuff = this.puffAt.get(p.staffId) ?? 0;
@@ -514,7 +520,7 @@ export class DevAnim {
       return;
     }
     this.shown[c.attr] += c.weight;
-    this.onLand?.(c.attr);
+    if (!c.silent) this.onLand?.(c.attr); // M5.1: стартовые очки не играют нот
     const [x, y] = this.bez(c, 1);
     if (this.ripples.length < RIPPLE_CAP) {
       // M2: двойная рябь — быстрая яркая + медленная мягкая («средне» — только быстрая)
