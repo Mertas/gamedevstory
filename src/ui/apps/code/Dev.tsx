@@ -7,7 +7,7 @@ import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
 import { studioRecords } from '../../../shared/records';
 import { resolveFx } from '../../../shared/dev-anim';
-import { sfx } from '../../sfx';
+import { wtc } from '../../wtc';
 import { DevAnim } from './dev-anim';
 import { ReleasePanel } from './Release';
 import { MODES, ROLE_LABELS } from './shared';
@@ -64,15 +64,19 @@ export function DevStatus() {
   // M3.8: уровень эффектов — применяем на лету (и при (пере)создании движка)
   useEffect(() => {
     engineRef.current?.setEffects(fx);
+    wtc.setEnabled(fx !== 'min'); // M5: «Эффекты: минимум» глушит Баха
   }, [fx, hasGame]);
 
-  // M4: звук капель на впитывании; в «минимуме» частиц нет — звука нет по определению
+  // M5 (v1.19.0): на впитывании играет Бах по нотам (ХТК, ротация) вместо капель.
+  // Ноты и сэмплы Knight подгружаются при открытии окна «Код».
   useEffect(() => {
     const eng = engineRef.current;
     if (!eng) return;
-    eng.onLand = () => sfx.drop();
+    wtc.prepare();
+    eng.onLand = () => wtc.onAbsorb();
     return () => {
       if (engineRef.current) engineRef.current.onLand = undefined;
+      wtc.release();
     };
   }, [hasGame]);
 

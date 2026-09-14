@@ -1,0 +1,56 @@
+{
+ "samples": [
+  {
+   "midi": 35,
+   "file": "36.ogg"
+  },
+  {
+   "midi": 39,
+   "file": "40.ogg"
+  },
+  {
+   "midi": 45,
+   "file": "44.ogg"
+  },
+  {
+   "midi": 47,
+   "file": "48.ogg"
+  },
+  {
+   "midi": 51,
+   "file": "52.ogg"
+  },
+  {
+   "midi": 57,
+   "file": "56.ogg"
+  },
+  {
+   "midi": 59,
+   "file": "60.ogg"
+  },
+  {
+   "midi": 63,
+   "file": "64.ogg"
+  },
+  {
+   "midi": 69,
+   "file": "68.ogg"
+  },
+  {
+   "midi": 71,
+   "file": "72.ogg"
+  },
+  {
+   "midi": 75,
+   "file": "76.ogg"
+  },
+  {
+   "midi": 81,
+   "file": "80.ogg"
+  },
+  {
+   "midi": 83,
+   "file": "84.ogg"
+  }
+ ]
+}

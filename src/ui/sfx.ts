@@ -8,6 +8,7 @@ const KEY = 'gds-sound';
 class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private musicGain: GainNode | null = null;
   private level: SoundLevel;
   private lastDropAt = 0;
   /** счётчики для живых проверок (не влияют на звук) */
@@ -44,6 +45,24 @@ class Sfx {
       ctx: this.ctx ? this.ctx.state : 'нет',
       gain: this.master ? this.master.gain.value : -1,
     };
+  }
+
+  /** AudioContext игры (ленивый, по первому жесту) — для проигрывателя ХТК */
+  audioCtx(): AudioContext | null {
+    return this.ensure();
+  }
+
+  /** музыкальная шина: идёт через общий мастер — «выкл» и уровень действуют на обоих */
+  musicBus(): GainNode | null {
+    if (!this.on) return null;
+    const ctx = this.ensure();
+    if (!ctx || !this.master) return null;
+    if (!this.musicGain) {
+      this.musicGain = ctx.createGain();
+      this.musicGain.gain.value = 1;
+      this.musicGain.connect(this.master);
+    }
+    return this.musicGain;
   }
 
   private ensure(): AudioContext | null {
