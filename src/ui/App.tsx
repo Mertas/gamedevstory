@@ -88,6 +88,7 @@ function EventWatcher() {
       popup({
         title: 'Продавец Тыквенных Продуктов',
         autopilotTarget: 'mb-ok',
+        clickToClose: true, // v1.18.1: просто уведомление
         text: '🛒 Продавец пришёл в офис! Бустеры, Dead Bull и Руководство по смене профессии — во вкладке «Продавец» окна «Найм».',
         buttons: [
           { label: 'Заглянуть', onClick: () => actionDismissSalesman() },
@@ -127,6 +128,7 @@ function EventWatcher() {
       popup({
         title: 'Происшествие в студии!',
         autopilotTarget: 'mb-ok',
+        clickToClose: true, // v1.18.1: сводка — клик закрывает
         text: ev.text,
         buttons: [
           { label: 'Ок', onClick: () => actionResolveEvent() },
@@ -137,6 +139,7 @@ function EventWatcher() {
       popup({
         title: 'Результат улучшения',
         autopilotTarget: 'mb-ok',
+        clickToClose: true, // v1.18.1: сводка — клик закрывает
         text: ev.text,
         buttons: [
           { label: 'Ок', onClick: () => actionResolveEvent() },
@@ -147,6 +150,7 @@ function EventWatcher() {
       popup({
         title: ev.title,
         autopilotTarget: 'mb-ok',
+        clickToClose: true, // v1.18.1: обучение/уровни и прочие сводки — клик закрывает
         text: ev.text,
         buttons: [
           { label: 'Ок', onClick: () => actionResolveEvent() },

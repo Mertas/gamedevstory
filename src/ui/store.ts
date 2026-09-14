@@ -552,6 +552,9 @@ export interface MessageBoxData {
   buttons: { label: string; onClick: () => void }[];
   evKey?: string; // ключ события, чей попап показан (пульс сервера не пересоздаёт открытый)
   autopilotTarget?: string; // цель виртуальной мыши автопилота на первой кнопке (plan/14)
+  /** v1.18.1: информационный попап — закрывается кликом по окну (в стиле карточек прессы).
+   *  Выборные попапы (улучшение, Gamedex) и «Выпустить игру» — НЕ ставить: клик не должен решать. */
+  clickToClose?: boolean;
 }
 
 let messageBox: MessageBoxData | null = null;
