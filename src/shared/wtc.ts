@@ -114,7 +114,9 @@ export type BurstStage = 'idle' | 'chunk' | 'done';
 
 /**
  * М5.3: решение по волне очков. Пачка (стартовые очки «предложения», первая рабочая неделя,
- * успешное улучшение) играется каденцией вместо мелодии.
+ * успешное улучшение) не играет мелодию — частицы летят молча.
+ * chord — играть ли каденцию: один раз на стартовую пачку и на каждое улучшение;
+ * первая рабочая неделя молчит вместе со стартовой (одной каденции на старт достаточно).
  * dc — число записей вклада за такт, jump — скачок суммы очков, nearStart — первые недели проекта.
  */
 export function burstOnWave(
@@ -123,8 +125,8 @@ export function burstOnWave(
   jump: number,
   nearStart: boolean,
   min = 3,
-): { burst: boolean; stage: BurstStage } {
-  if (dc > 0) return { burst: stage === 'chunk' && jump >= min, stage: 'done' };
-  if (jump < min) return { burst: false, stage };
-  return { burst: true, stage: nearStart ? 'chunk' : stage };
+): { burst: boolean; chord: boolean; stage: BurstStage } {
+  if (dc > 0) return { burst: stage === 'chunk' && jump >= min, chord: false, stage: 'done' };
+  if (jump < min) return { burst: false, chord: false, stage };
+  return { burst: true, chord: true, stage: nearStart ? 'chunk' : stage };
 }

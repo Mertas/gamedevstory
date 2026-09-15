@@ -128,7 +128,7 @@ export function DevStatus() {
     const nearStart = game.week - g.weekStarted <= 3;
     const dec = burstOnWave(stageRef.current, game.devContrib?.length ?? 0, jump, nearStart);
     stageRef.current = dec.stage;
-    if (dec.burst) wtc.chordBurst();
+    if (dec.chord) wtc.chordBurst();
     engineRef.current?.setWave(
       { fun: g.points.fun, creativity: g.points.creativity, graphics: g.points.graphics, sound: g.points.sound },
       game.devContrib ?? [],
