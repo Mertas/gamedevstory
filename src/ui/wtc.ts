@@ -106,11 +106,11 @@ class WtcPlayer {
       return;
     }
     this.setPiece(randomPieceIndex(this.current, PIECES.length)); // M5.4: старт — со случайной пьесы
-    this.playLong(ctx, ctx.currentTime + 0.04);
+    this.playLong(ctx.currentTime + 0.04);
   }
 
   /** длинный аккорд текущей пьесы (due — когда играть); вернёт время конца звона */
-  private playLong(ctx: AudioContext, due: number): number {
+  private playLong(due: number): number {
     const notes = WTC_LONG_CHORD[PIECES[this.current]?.key ?? 'Cm'];
     if (!notes) return due;
     const doc = this.pieces.get(PIECES[this.current]?.file ?? '');
@@ -125,7 +125,7 @@ class WtcPlayer {
   private interlude(): void {
     const ctx = sfx.audioCtx();
     if (!ctx || !this.buffers.size || ctx.state !== 'running') return;
-    const end = this.playLong(ctx, ctx.currentTime + INTERLUDE_PAUSE);
+    const end = this.playLong(ctx.currentTime + INTERLUDE_PAUSE);
     this.resumeAt = end + 0.25; // мелодия новой пьесы ждёт и паузу, и аккорд
   }
 
