@@ -141,6 +141,8 @@ export class DevAnim {
   private timerId = 0;
   private timerKind: 'none' | 'raf' | 'to' = 'none';
   private dead = false;
+  /** временная диагностика стартового залпа (убрать после починки) */
+  readonly dbg = { planSilent: 0, planLoud: 0, land: 0, silentLand: 0, instant: 0 };
   private mode: 'active' | 'quiet' | 'asleep' = 'active';
   /** M3.8: уровень эффектов (мини/средне/полно) — тумблер «Эффекты экрана…» */
   private fx: FxLevel = 'full';
@@ -351,6 +353,8 @@ export class DevAnim {
     const now = performance.now() / 1000;
     for (const p of wave) {
       this.reserved[p.attr] += p.weight;
+      if (silent) this.dbg.planSilent++;
+      else this.dbg.planLoud++;
       this.pending.push({
         attr: p.attr,
         staffId: p.staffId,
@@ -478,6 +482,7 @@ export class DevAnim {
     const to = this.barEdge[p.attr];
     if (!from || !this.w || this.chips.length >= MAX_ALIVE || this.fx === 'min') {
       // источника нет / перегруз / режим «минимум»: зачисляем мгновенно — счётчик честный
+      this.dbg.instant++;
       this.reserved[p.attr] -= p.weight;
       this.shown[p.attr] += p.weight;
       // «минимум»: частиц нет, но рекорд всё равно отмечаем засечкой (статичная метка)
@@ -520,6 +525,8 @@ export class DevAnim {
       return;
     }
     this.shown[c.attr] += c.weight;
+    this.dbg.land++;
+    if (c.silent) this.dbg.silentLand++;
     if (!c.silent) this.onLand?.(c.attr); // M5.1: стартовые очки не играют нот
     const [x, y] = this.bez(c, 1);
     if (this.ripples.length < RIPPLE_CAP) {

@@ -58,6 +58,7 @@ export function DevStatus() {
     if (!canvas || !root) return;
     const engine = new DevAnim(canvas, root);
     engineRef.current = engine;
+    (window as unknown as { __gdsEngine?: unknown }).__gdsEngine = engine; // временная диагностика
     return () => {
       engine.destroy();
       engineRef.current = null;
@@ -121,6 +122,10 @@ export function DevStatus() {
     const hasContrib = (game.devContrib?.length ?? 0) > 0;
     const silent = !wtcWaveRef.current.started && !hasContrib;
     if (hasContrib) wtcWaveRef.current.started = true;
+    // временная диагностика стартового залпа (убрать после починки)
+    const dbg = ((window as unknown as { __wtcT?: unknown[] }).__wtcT ??= []);
+    dbg.push({ wk: game.week, ph: g.phase, dc: hasContrib ? 1 : 0, st: wtcWaveRef.current.started ? 1 : 0, s: silent ? 1 : 0 });
+    if (dbg.length > 600) dbg.splice(0, 300);
     engineRef.current?.setWave(
       { fun: g.points.fun, creativity: g.points.creativity, graphics: g.points.graphics, sound: g.points.sound },
       game.devContrib ?? [],
