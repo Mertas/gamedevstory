@@ -7,6 +7,7 @@ import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
 import { studioRecords } from '../../../shared/records';
 import { resolveFx } from '../../../shared/dev-anim';
+import { burstOnWave, type BurstStage } from '../../../shared/wtc';
 import { wtc } from '../../wtc';
 import { DevAnim } from './dev-anim';
 import { ReleasePanel } from './Release';
@@ -24,9 +25,10 @@ export function DevStatus() {
   // мины: 1 мина = 1 баг; аккумулятор дробного прироста багов между тиками
   const lastBugsRef = useRef(0);
   const bugsAccRef = useRef(0);
-  // M5.2: пачка очков без вклада дня (стартовые очки «предложения», успешное улучшение) —
-  // это «премия», а не ход игры: частицы молчат нот, вместо мелодии звучит каденция.
+  // M5.3: пачки очков («предложение», первая рабочая неделя, улучшение) — каденция вместо мелодии;
+  // стадия помнит, какую пачку уже сыграли (см. burstOnWave)
   const prevSumRef = useRef(0);
+  const stageRef = useRef<BurstStage>('idle');
   // M3.8: уровень эффектов — выбор игрока («Эффекты экрана…») важнее системной настройки
   const fx = useMemo(
     () => resolveFx(game.ui?.fx, safeReducedMotion()),
@@ -35,8 +37,6 @@ export function DevStatus() {
   const g = game.activeGame;
   const gKey = g ? `${g.genreId}:${g.typeId}:${g.totalCost}` : '';
   const hasGame = !!g;
-  /** с этого скачка очков (без вклада дня) пачка считается «премией» — аккорды вместо мелодии */
-  const BURST_MIN = 3;
   // null-безопасные депсы для эффекта мин (аудит 05.09: правила exhaustive-deps)
   const bugsDep = g ? g.bugs : 0;
   const weekStartedDep = g ? g.weekStarted : 0;
@@ -98,6 +98,7 @@ export function DevStatus() {
       recs,
     );
     prevSumRef.current = Math.round(g.points.fun + g.points.creativity + g.points.graphics + g.points.sound);
+    stageRef.current = 'idle';
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gKey]);
 
@@ -117,15 +118,17 @@ export function DevStatus() {
 
   // волна вклада дня: разрыв (цель − показано − в воздухе) → план частиц с размазом по такту.
   // В точном режиме (≤12 очков на атрибут за такт) — честно «1 символ = 1 очко».
-  // M5.2: пачка без вклада (стартовые очки, успешное улучшение) — не мелодия:
+  // M5.3: пачки (стартовые очки, первая рабочая неделя, улучшение) — не мелодия:
   // частицы летят молча, вместо нот играет каденция в текущей тональности.
   useEffect(() => {
     if (!g) return;
     const sum = Math.round(g.points.fun + g.points.creativity + g.points.graphics + g.points.sound);
-    const hasContrib = (game.devContrib?.length ?? 0) > 0;
-    const burst = !hasContrib && sum - prevSumRef.current >= BURST_MIN;
+    const jump = sum - prevSumRef.current;
     prevSumRef.current = sum;
-    if (burst) wtc.chordBurst();
+    const nearStart = g.week - g.weekStarted <= 3;
+    const dec = burstOnWave(stageRef.current, game.devContrib?.length ?? 0, jump, nearStart);
+    stageRef.current = dec.stage;
+    if (dec.burst) wtc.chordBurst();
     engineRef.current?.setWave(
       { fun: g.points.fun, creativity: g.points.creativity, graphics: g.points.graphics, sound: g.points.sound },
       game.devContrib ?? [],
@@ -133,7 +136,7 @@ export function DevStatus() {
       speed,
       g.progress,
       g.phase,
-      burst,
+      dec.burst,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.week, game.devContrib, gKey]);

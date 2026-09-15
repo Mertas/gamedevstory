@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bgNotes,
+  burstOnWave,
   groupEvents,
   isOverflow,
   nextPieceIndex,
@@ -11,6 +12,7 @@ import {
   WTC_AHEAD_MAX,
   WTC_BURST_CHORDS,
   WTC_GAP_MIN,
+  type BurstStage,
   type WtcKey,
   type WtcNote,
 } from '../src/shared/wtc';
@@ -108,5 +110,36 @@ describe('M5.2: пачки очков — фон и каденции вмест�
     expect(WTC_BURST_CHORDS.Cm[2]).toEqual([60, 63, 67]); // c-moll
     expect(WTC_BURST_CHORDS.C[2]).toEqual([60, 64, 67]); // C-dur
     expect(WTC_BURST_CHORDS.D[2]).toEqual([62, 66, 69]); // D-dur
+  });
+});
+
+describe('M5.3: пачки — стартовая, первая рабочая неделя, улучшение', () => {
+  it('стартовая пачка играет каденцию и взводит ожидание первой недели', () => {
+    expect(burstOnWave('idle', 0, 20, true)).toEqual({ burst: true, stage: 'chunk' });
+  });
+  it('первая рабочая неделя тоже пачка — каденция; дальше обычный режим', () => {
+    expect(burstOnWave('chunk', 8, 12, true)).toEqual({ burst: true, stage: 'done' });
+    expect(burstOnWave('done', 8, 12, true)).toEqual({ burst: false, stage: 'done' });
+  });
+  it('крошечные волны — не пачки (молчим)', () => {
+    expect(burstOnWave('idle', 0, 2, true)).toEqual({ burst: false, stage: 'idle' });
+    expect(burstOnWave('chunk', 8, 2, true)).toEqual({ burst: false, stage: 'done' });
+  });
+  it('улучшение в середине проекта — пачка, но ожидание недели не взводит', () => {
+    expect(burstOnWave('done', 0, 30, false)).toEqual({ burst: true, stage: 'done' });
+  });
+  it('окно открыли в середине разработки — мелодия, а не каденция', () => {
+    expect(burstOnWave('idle', 8, 5, false)).toEqual({ burst: false, stage: 'done' });
+  });
+  it('повторный проект: старт снова взводит ожидание первой недели', () => {
+    let s: BurstStage = 'done';
+    let r = burstOnWave(s, 8, 6, false); // середина старого проекта — мелодия
+    expect(r).toEqual({ burst: false, stage: 'done' });
+    s = r.stage;
+    r = burstOnWave(s, 0, 22, true); // стартовая пачка нового — каденция
+    expect(r).toEqual({ burst: true, stage: 'chunk' });
+    s = r.stage;
+    r = burstOnWave(s, 8, 10, true); // первая рабочая неделя — каденция
+    expect(r).toEqual({ burst: true, stage: 'done' });
   });
 });

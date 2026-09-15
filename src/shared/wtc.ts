@@ -107,3 +107,24 @@ export function nextPieceIndex(index: number, total: number): number {
 export function bgNotes(elapsedMs: number, rate = 2, max = 4): number {
   return Math.max(1, Math.min(max, Math.round((Math.max(0, elapsedMs) / 1000) * rate)));
 }
+
+/** M5.3: стадия «пачек» в проекте — idle: ещё не видели пачек; chunk: стартовая пачка получена,
+ *  ждём первую рабочую неделю; done: обычный режим (мелодия). */
+export type BurstStage = 'idle' | 'chunk' | 'done';
+
+/**
+ * М5.3: решение по волне очков. Пачка (стартовые очки «предложения», первая рабочая неделя,
+ * успешное улучшение) играется каденцией вместо мелодии.
+ * dc — число записей вклада за такт, jump — скачок суммы очков, nearStart — первые недели проекта.
+ */
+export function burstOnWave(
+  stage: BurstStage,
+  dc: number,
+  jump: number,
+  nearStart: boolean,
+  min = 3,
+): { burst: boolean; stage: BurstStage } {
+  if (dc > 0) return { burst: stage === 'chunk' && jump >= min, stage: 'done' };
+  if (jump < min) return { burst: false, stage };
+  return { burst: true, stage: nearStart ? 'chunk' : stage };
+}
