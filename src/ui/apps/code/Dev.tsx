@@ -125,7 +125,7 @@ export function DevStatus() {
     const sum = Math.round(g.points.fun + g.points.creativity + g.points.graphics + g.points.sound);
     const jump = sum - prevSumRef.current;
     prevSumRef.current = sum;
-    const nearStart = g.week - g.weekStarted <= 3;
+    const nearStart = game.week - g.weekStarted <= 3;
     const dec = burstOnWave(stageRef.current, game.devContrib?.length ?? 0, jump, nearStart);
     stageRef.current = dec.stage;
     if (dec.burst) wtc.chordBurst();

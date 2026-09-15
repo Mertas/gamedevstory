@@ -1,7 +1,7 @@
 {
   "name": "gamedev-story-clone",
   "private": true,
-  "version": "1.20.4",
+  "version": "1.20.5",
   "type": "module",
   "engines": {
     "node": ">=22.13"
