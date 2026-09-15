@@ -50,6 +50,8 @@ class WtcPlayer {
   /** фоновый ход «не выключать»: таймер и отметка времени */
   private bgTimer = 0;
   private lastBgAt = 0;
+  /** каденция пришла раньше сэмплов — сыграем, как только они догрузятся */
+  private pendingBurst = false;
 
   /** начать подгрузку нот и сэмплов (зовётся при открытии экрана «Код») */
   prepare(): void {
@@ -85,11 +87,14 @@ class WtcPlayer {
 
   /** каденция вместо мелодии для пачек очков (стартовые очки, успешное улучшение) */
   chordBurst(): void {
-    if (!this.enabled) return;
+    if (!this.enabled || !this.sessionActive) return;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
     this.prepare();
     const ctx = sfx.audioCtx();
-    if (!ctx || !this.buffers.size) return; // сэмплов ещё нет — молча ждём
+    if (!ctx || !this.buffers.size) {
+      this.pendingBurst = true; // сэмплы ещё грузятся — сыграем сразу после загрузки
+      return;
+    }
     const chords = WTC_BURST_CHORDS[PIECES[this.current]?.key ?? 'Cm'];
     if (!chords) return;
     const start = ctx.currentTime + 0.03;
@@ -157,6 +162,7 @@ class WtcPlayer {
   /** остановить всё запланированное (закрытие окна разработки) */
   release(): void {
     this.sessionActive = false;
+    this.pendingBurst = false;
     this.stopBg();
     this.silence();
     this.evIdx = 0;
@@ -198,6 +204,11 @@ class WtcPlayer {
       await this.decodeAll();
     } catch {
       this.stats.errors++;
+    }
+    // каденция, пришедшая во время загрузки сэмплов, — играем сразу, как догрузились
+    if (this.pendingBurst) {
+      this.pendingBurst = false;
+      this.chordBurst();
     }
   }
 
