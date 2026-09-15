@@ -6,6 +6,32 @@
 /** нота партитуры: [тик, midi, длительность в тиках, голос?] (тик = 1/16) */
 export type WtcNote = [number, number, number] | [number, number, number, number];
 
+/** тональность пьесы */
+export type WtcKey = 'Cm' | 'C' | 'D';
+
+/**
+ * Каденции «по баховским канонам» для пачек очков (стартовые очки, улучшения):
+ * три аккорда в текущей тональности — iv–V–i (минор) / IV–V–I (мажор),
+ * тесное расположение около первой октавы, с вводным тоном в доминанте.
+ */
+export const WTC_BURST_CHORDS: Record<WtcKey, ReadonlyArray<ReadonlyArray<number>>> = {
+  Cm: [
+    [53, 56, 60], // f-moll (iv)
+    [55, 59, 62], // G-dur (V, вводный си)
+    [60, 63, 67], // c-moll (i)
+  ],
+  C: [
+    [53, 57, 60], // F (IV)
+    [55, 59, 62], // G (V)
+    [60, 64, 67], // C (I)
+  ],
+  D: [
+    [55, 59, 62], // G (IV)
+    [57, 61, 64], // A (V)
+    [62, 66, 69], // D (I)
+  ],
+};
+
 export interface WtcPiece {
   title: string;
   bwv: string;
@@ -75,4 +101,9 @@ export function isOverflow(due: number, now: number, aheadMax: number = WTC_AHEA
 /** следующее произведение ротации (по кругу) */
 export function nextPieceIndex(index: number, total: number): number {
   return total > 0 ? (index + 1) % total : 0;
+}
+
+/** сколько нот догнать за elapsedMs фонового хода («не выключать» в скрытой вкладке) */
+export function bgNotes(elapsedMs: number, rate = 2, max = 4): number {
+  return Math.max(1, Math.min(max, Math.round((Math.max(0, elapsedMs) / 1000) * rate)));
 }

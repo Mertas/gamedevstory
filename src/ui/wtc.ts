@@ -3,14 +3,17 @@
 // Инструмент — вертикальное пиано Knight (сэмплы VCSL, CC0, лежат в public/wtc).
 // Громкость и «выкл» — общие с sfx (тумблер в трее); «Эффекты: минимум» глушит Баха.
 import {
+  bgNotes,
   groupEvents,
   isOverflow,
   nextPieceIndex,
   pickSample,
   planDue,
   ringSeconds,
+  WTC_BURST_CHORDS,
   WTC_GAP_MIN,
   type WtcEvent,
+  type WtcNote,
   type WtcPiece,
   type WtcSample,
 } from '../shared/wtc';
@@ -18,11 +21,11 @@ import { readMusicHidden } from '../shared/music';
 import { sfx } from './sfx';
 
 /** ротация: сначала c-moll (прелюдия → фуга), затем C-dur и D-dur, по кругу */
-const PIECES: ReadonlyArray<{ file: string }> = [
-  { file: '847-prelude.json' },
-  { file: '847-fugue.json' },
-  { file: '846.json' },
-  { file: '850.json' },
+const PIECES: ReadonlyArray<{ file: string; key: 'Cm' | 'C' | 'D' }> = [
+  { file: '847-prelude.json', key: 'Cm' },
+  { file: '847-fugue.json', key: 'Cm' },
+  { file: '846.json', key: 'C' },
+  { file: '850.json', key: 'D' },
 ];
 
 const BASE = '/wtc/';
@@ -41,10 +44,16 @@ class WtcPlayer {
   private out: GainNode | null = null;
   private reverbIn: GainNode | null = null;
   /** счётчики для живых проверок */
-  readonly stats = { events: 0, notes: 0, dropped: 0, finished: 0, errors: 0 };
+  readonly stats = { events: 0, notes: 0, dropped: 0, finished: 0, errors: 0, chords: 0 };
+  /** жив ли экран разработки (после закрытия Баха не «играем в пустоту») */
+  private sessionActive = false;
+  /** фоновый ход «не выключать»: таймер и отметка времени */
+  private bgTimer = 0;
+  private lastBgAt = 0;
 
   /** начать подгрузку нот и сэмплов (зовётся при открытии экрана «Код») */
   prepare(): void {
+    this.sessionActive = true;
     if (!this.loading) this.loading = this.load();
   }
 
@@ -53,6 +62,11 @@ class WtcPlayer {
     if (!this.enabled) return;
     // «выключать музыку в неактивной вкладке» (настройка): в фоне ноты не двигаем
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
+    this.advance();
+  }
+
+  /** одно музыкальное событие вперёд (общее для впитываний и фонового хода) */
+  private advance(): void {
     this.prepare();
     const ctx = sfx.audioCtx();
     if (!ctx || !this.buffers.size) return; // контекста/сэмплов ещё нет — молча ждём
@@ -69,6 +83,66 @@ class WtcPlayer {
     this.stats.notes += ev.notes.length;
   }
 
+  /** каденция вместо мелодии для пачек очков (стартовые очки, успешное улучшение) */
+  chordBurst(): void {
+    if (!this.enabled) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
+    this.prepare();
+    const ctx = sfx.audioCtx();
+    if (!ctx || !this.buffers.size) return; // сэмплов ещё нет — молча ждём
+    const chords = WTC_BURST_CHORDS[PIECES[this.current]?.key ?? 'Cm'];
+    if (!chords) return;
+    const start = ctx.currentTime + 0.03;
+    chords.forEach((chord, k) => {
+      const notes = chord.map((m): WtcNote => [0, m, 3]); // ~полтакта каждая (по темпу пьесы)
+      this.play({ t: 0, notes }, start + k * 0.45);
+    });
+    this.stats.chords++;
+  }
+
+  /** смена видимости вкладки: «выключать» — тишина; «не выключать» — музыка идёт и в фоне */
+  visibilityChanged(): void {
+    if (typeof document === 'undefined') return;
+    if (document.visibilityState !== 'visible') {
+      if (readMusicHidden() === 'on' || !this.enabled) {
+        this.silence();
+        this.stopBg();
+      } else if (this.sessionActive) {
+        this.startBg();
+      }
+    } else {
+      this.stopBg();
+    }
+  }
+
+  private startBg(): void {
+    if (this.bgTimer) return;
+    this.lastBgAt = performance.now();
+    this.bgTimer = window.setInterval(() => this.bgTick(), 900);
+  }
+
+  private stopBg(): void {
+    if (this.bgTimer) {
+      window.clearInterval(this.bgTimer);
+      this.bgTimer = 0;
+    }
+  }
+
+  private bgTick(): void {
+    if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+      this.stopBg();
+      return;
+    }
+    if (readMusicHidden() === 'on' || !this.enabled || !this.sessionActive) {
+      this.stopBg();
+      return;
+    }
+    const now = performance.now();
+    const n = bgNotes(now - this.lastBgAt);
+    this.lastBgAt = now;
+    for (let i = 0; i < n; i++) this.advance();
+  }
+
   /** глушение (fx = «минимум») и обратно */
   setEnabled(on: boolean): void {
     this.enabled = on;
@@ -82,12 +156,14 @@ class WtcPlayer {
 
   /** остановить всё запланированное (закрытие окна разработки) */
   release(): void {
+    this.sessionActive = false;
+    this.stopBg();
     this.silence();
     this.evIdx = 0;
     this.lastAt = 0;
   }
 
-  debugState(): { loaded: number; samples: number; piece: number; evIdx: number; events: number; enabled: boolean } {
+  debugState(): { loaded: number; samples: number; piece: number; evIdx: number; events: number; enabled: boolean; chords: number } {
     return {
       loaded: this.pieces.size,
       samples: this.buffers.size,
@@ -95,6 +171,7 @@ class WtcPlayer {
       evIdx: this.evIdx,
       events: this.events.length,
       enabled: this.enabled,
+      chords: this.stats.chords,
     };
   }
 
@@ -236,11 +313,10 @@ class WtcPlayer {
 
 export const wtc = new WtcPlayer();
 
-// настройка «выключать музыку в неактивной вкладке»: уходя в фон — глушим уже запланированные ноты
+// настройка «выключать музыку в неактивной вкладке»: уходя в фон — глушим всё («выключать»)
+// или продолжаем спокойным ходом («не выключать»)
 if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible' && readMusicHidden() === 'on') wtc.suspend();
-  });
+  document.addEventListener('visibilitychange', () => wtc.visibilityChanged());
 }
 
 // удобный доступ для живых проверок в браузере

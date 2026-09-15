@@ -1,6 +1,7 @@
 // M5: ХТК на экране «Код» — чистое ядро проигрывателя (события, сэмплы, планирование).
 import { describe, expect, it } from 'vitest';
 import {
+  bgNotes,
   groupEvents,
   isOverflow,
   nextPieceIndex,
@@ -8,7 +9,9 @@ import {
   planDue,
   ringSeconds,
   WTC_AHEAD_MAX,
+  WTC_BURST_CHORDS,
   WTC_GAP_MIN,
+  type WtcKey,
   type WtcNote,
 } from '../src/shared/wtc';
 
@@ -75,5 +78,35 @@ describe('M5: ХТК — длительности и планирование', 
     expect(nextPieceIndex(0, 4)).toBe(1);
     expect(nextPieceIndex(3, 4)).toBe(0);
     expect(nextPieceIndex(0, 0)).toBe(0);
+  });
+});
+
+describe('M5.2: пачки очков — фон и каденции вместо мелодии', () => {
+  it('фоновая скорость: ~2 ноты/с, но не реже 1 и не больше потолка', () => {
+    expect(bgNotes(0)).toBe(1);
+    expect(bgNotes(1000)).toBe(2);
+    expect(bgNotes(2000)).toBe(4);
+    expect(bgNotes(60000)).toBe(4); // после долгого фона — не залп
+  });
+  it('каденции: три аккорда по три ноты, тесное расположение в первой октаве', () => {
+    for (const key of ['Cm', 'C', 'D'] as WtcKey[]) {
+      const chords = WTC_BURST_CHORDS[key];
+      expect(chords).toHaveLength(3);
+      for (const c of chords) {
+        expect(c).toHaveLength(3);
+        expect(c[0]!).toBeLessThan(c[1]!);
+        expect(c[1]!).toBeLessThan(c[2]!);
+        for (const m of c) {
+          expect(m).toBeGreaterThanOrEqual(48);
+          expect(m).toBeLessThanOrEqual(72);
+        }
+      }
+    }
+  });
+  it('каденция заканчивается тоникой, доминанта — с вводным тоном', () => {
+    expect(WTC_BURST_CHORDS.Cm[1]).toEqual([55, 59, 62]); // G-dur: си-натуральная
+    expect(WTC_BURST_CHORDS.Cm[2]).toEqual([60, 63, 67]); // c-moll
+    expect(WTC_BURST_CHORDS.C[2]).toEqual([60, 64, 67]); // C-dur
+    expect(WTC_BURST_CHORDS.D[2]).toEqual([62, 66, 69]); // D-dur
   });
 });
