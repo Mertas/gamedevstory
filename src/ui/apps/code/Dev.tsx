@@ -128,7 +128,8 @@ export function DevStatus() {
     const nearStart = game.week - g.weekStarted <= 3;
     const dec = burstOnWave(stageRef.current, game.devContrib?.length ?? 0, jump, nearStart);
     stageRef.current = dec.stage;
-    if (dec.chord) wtc.chordBurst();
+    if (dec.kind === 'long') wtc.longChord(); // старт проекта: один длинный аккорд в гармонии
+    else if (dec.kind === 'cadence') wtc.chordBurst(); // улучшение: короткая каденция
     engineRef.current?.setWave(
       { fun: g.points.fun, creativity: g.points.creativity, graphics: g.points.graphics, sound: g.points.sound },
       game.devContrib ?? [],

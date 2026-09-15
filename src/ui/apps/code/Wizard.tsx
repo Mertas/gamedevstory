@@ -89,13 +89,20 @@ export function ProjectWizard() {
   const genres = useMemo(
     () => meta.genres.filter((gg) =>
       isUnlocked(game, gg.unlockJob, gg.unlockLevel) || openedGenres.has(gg.id)),
-    [game, meta],
+    [game, meta, openedGenres],
   );
+  // M5.4: жанр, открытый только комбо-парами (уровни карьер ещё не доросли), — тип обязан быть
+  // из уже открытой пары: иначе «Запустить игру» откажет («Жанр не открыт»), как на сервере
+  const genreRuleOk = useMemo(() => {
+    const gg = genreId ? genreById(meta, genreId) : null;
+    return !!gg && isUnlocked(game, gg.unlockJob, gg.unlockLevel);
+  }, [game, meta, genreId]);
   const types = useMemo(
-    () => meta.types.filter((t) =>
-      isUnlocked(game, t.unlockJob, t.unlockLevel, t.unlockTraining)
-      || (genreId ? opened.has(`${genreId}|${t.id}`) : openedTypes.has(t.id))),
-    [game, meta],
+    () => meta.types.filter((t) => {
+      const pairOpen = genreId ? opened.has(`${genreId}|${t.id}`) : openedTypes.has(t.id);
+      return pairOpen || (genreRuleOk && isUnlocked(game, t.unlockJob, t.unlockLevel, t.unlockTraining));
+    }),
+    [game, meta, genreId, opened, openedTypes, genreRuleOk],
   );
 
   const spent = Object.values(direction).reduce((a, b) => a + b, 0);
@@ -278,6 +285,9 @@ export function ProjectWizard() {
                 Открытые типы ({types.length}/{meta.types.length}); остальные — за уровни и тренинги.
                 Качество комбо узнаете, когда начнёте разработку.
               </div>
+              {genreId && !genreRuleOk && (
+                <div className="w95-hint">Жанр держат только открытые комбо — ниже лишь уже открытые пары.</div>
+              )}
               <div className="w95-field" style={{ maxHeight: 260, overflowY: 'auto' }}>
                 {types.map((t) => {
                   return (

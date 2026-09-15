@@ -12,6 +12,7 @@ import {
   ringSeconds,
   WTC_BURST_CHORDS,
   WTC_GAP_MIN,
+  WTC_LONG_CHORD,
   type WtcEvent,
   type WtcNote,
   type WtcPiece,
@@ -50,8 +51,8 @@ class WtcPlayer {
   /** фоновый ход «не выключать»: таймер и отметка времени */
   private bgTimer = 0;
   private lastBgAt = 0;
-  /** каденция пришла раньше сэмплов — сыграем, как только они догрузятся */
-  private pendingBurst = false;
+  /** пачка пришла раньше сэмплов — сыграем, как только они догрузятся */
+  private pendingBurst: 'long' | 'cadence' | null = null;
 
   /** начать подгрузку нот и сэмплов (зовётся при открытии экрана «Код») */
   prepare(): void {
@@ -85,14 +86,31 @@ class WtcPlayer {
     this.stats.notes += ev.notes.length;
   }
 
-  /** каденция вместо мелодии для пачек очков (стартовые очки, успешное улучшение) */
+  /** длинный аккорд-«заставка» на старте проекта: 8–10 нот в гармонии пьесы, что зазвучит следом */
+  longChord(): void {
+    if (!this.enabled || !this.sessionActive) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
+    this.prepare();
+    const ctx = sfx.audioCtx();
+    if (!ctx || !this.buffers.size) {
+      this.pendingBurst = 'long'; // сэмплы ещё грузятся — сыграем сразу после загрузки
+      return;
+    }
+    const notes = WTC_LONG_CHORD[PIECES[this.current]?.key ?? 'Cm'];
+    if (!notes) return;
+    const chord = notes.map((m): WtcNote => [0, m, 24]); // ~3.5–4.5 с — «длииинный»
+    this.play({ t: 0, notes: chord }, ctx.currentTime + 0.04, 0.42);
+    this.stats.chords++;
+  }
+
+  /** каденция вместо мелодии для пачек-улучшений (успешный буст) */
   chordBurst(): void {
     if (!this.enabled || !this.sessionActive) return;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
     this.prepare();
     const ctx = sfx.audioCtx();
     if (!ctx || !this.buffers.size) {
-      this.pendingBurst = true; // сэмплы ещё грузятся — сыграем сразу после загрузки
+      this.pendingBurst = 'cadence'; // сэмплы ещё грузятся — сыграем сразу после загрузки
       return;
     }
     const chords = WTC_BURST_CHORDS[PIECES[this.current]?.key ?? 'Cm'];
@@ -162,7 +180,7 @@ class WtcPlayer {
   /** остановить всё запланированное (закрытие окна разработки) */
   release(): void {
     this.sessionActive = false;
-    this.pendingBurst = false;
+    this.pendingBurst = null;
     this.stopBg();
     this.silence();
     this.evIdx = 0;
@@ -205,11 +223,11 @@ class WtcPlayer {
     } catch {
       this.stats.errors++;
     }
-    // каденция, пришедшая во время загрузки сэмплов, — играем сразу, как догрузились
-    if (this.pendingBurst) {
-      this.pendingBurst = false;
-      this.chordBurst();
-    }
+    // пачка, пришедшая во время загрузки сэмплов, — играем сразу, как догрузились
+    const pending = this.pendingBurst;
+    this.pendingBurst = null;
+    if (pending === 'long') this.longChord();
+    else if (pending === 'cadence') this.chordBurst();
   }
 
   private async decodeAll(): Promise<void> {
@@ -278,7 +296,7 @@ class WtcPlayer {
     return out;
   }
 
-  private play(ev: WtcEvent, due: number): void {
+  private play(ev: WtcEvent, due: number, gainScale = 1): void {
     const ctx = sfx.audioCtx();
     if (!ctx) return;
     const out = this.ensureOut(ctx);
@@ -297,8 +315,9 @@ class WtcPlayer {
       const g = ctx.createGain();
       const ring = ringSeconds(n[2], mm, tpq);
       const end = due + Math.max(0.22, ring);
-      g.gain.setValueAtTime(0.55, due);
-      g.gain.setValueAtTime(0.55, Math.max(due, end - 0.16));
+      const peak = 0.55 * gainScale;
+      g.gain.setValueAtTime(peak, due);
+      g.gain.setValueAtTime(peak, Math.max(due, end - 0.16));
       g.gain.linearRampToValueAtTime(0.0001, end + 0.03);
       node.connect(g);
       g.connect(out);

@@ -12,6 +12,7 @@ import {
   WTC_AHEAD_MAX,
   WTC_BURST_CHORDS,
   WTC_GAP_MIN,
+  WTC_LONG_CHORD,
   type BurstStage,
   type WtcKey,
   type WtcNote,
@@ -114,32 +115,44 @@ describe('M5.2: пачки очков — фон и каденции вмест�
 });
 
 describe('M5.3: пачки — стартовая, первая рабочая неделя, улучшение', () => {
-  it('стартовая пачка: молчит и играет каденцию, ждём первую неделю', () => {
-    expect(burstOnWave('idle', 0, 20, true)).toEqual({ burst: true, chord: true, stage: 'chunk' });
+  it('стартовая пачка: молчит и играет длинный аккорд, ждём первую неделю', () => {
+    expect(burstOnWave('idle', 0, 20, true)).toEqual({ burst: true, kind: 'long', stage: 'chunk' });
   });
-  it('первая рабочая неделя: молчит вместе со стартовой, второй каденции нет', () => {
-    expect(burstOnWave('chunk', 8, 12, true)).toEqual({ burst: true, chord: false, stage: 'done' });
-    expect(burstOnWave('done', 8, 12, true)).toEqual({ burst: false, chord: false, stage: 'done' });
+  it('первая рабочая неделя: молчит, без второй пачки-аккорда', () => {
+    expect(burstOnWave('chunk', 8, 12, true)).toEqual({ burst: true, kind: 'none', stage: 'done' });
+    expect(burstOnWave('done', 8, 12, true)).toEqual({ burst: false, kind: 'none', stage: 'done' });
   });
   it('крошечные волны — не пачки (молчим)', () => {
-    expect(burstOnWave('idle', 0, 2, true)).toEqual({ burst: false, chord: false, stage: 'idle' });
-    expect(burstOnWave('chunk', 8, 2, true)).toEqual({ burst: false, chord: false, stage: 'done' });
+    expect(burstOnWave('idle', 0, 2, true)).toEqual({ burst: false, kind: 'none', stage: 'idle' });
+    expect(burstOnWave('chunk', 8, 2, true)).toEqual({ burst: false, kind: 'none', stage: 'done' });
   });
-  it('улучшение в середине проекта — пачка с каденцией, ожидание недели не взводит', () => {
-    expect(burstOnWave('done', 0, 30, false)).toEqual({ burst: true, chord: true, stage: 'done' });
+  it('улучшение в середине проекта — короткая каденция, ожидание недели не взводит', () => {
+    expect(burstOnWave('done', 0, 30, false)).toEqual({ burst: true, kind: 'cadence', stage: 'done' });
   });
-  it('окно открыли в середине разработки — мелодия, а не каденция', () => {
-    expect(burstOnWave('idle', 8, 5, false)).toEqual({ burst: false, chord: false, stage: 'done' });
+  it('окно открыли в середине разработки — мелодия, а не аккорд', () => {
+    expect(burstOnWave('idle', 8, 5, false)).toEqual({ burst: false, kind: 'none', stage: 'done' });
   });
-  it('повторный проект: старт снова взводит ожидание первой недели', () => {
+  it('повторный проект: старт снова даёт длинный аккорд', () => {
     let s: BurstStage = 'done';
     let r = burstOnWave(s, 8, 6, false); // середина старого проекта — мелодия
-    expect(r).toEqual({ burst: false, chord: false, stage: 'done' });
+    expect(r).toEqual({ burst: false, kind: 'none', stage: 'done' });
     s = r.stage;
-    r = burstOnWave(s, 0, 22, true); // стартовая пачка нового — каденция
-    expect(r).toEqual({ burst: true, chord: true, stage: 'chunk' });
+    r = burstOnWave(s, 0, 22, true); // стартовая пачка нового — длинный аккорд
+    expect(r).toEqual({ burst: true, kind: 'long', stage: 'chunk' });
     s = r.stage;
-    r = burstOnWave(s, 8, 10, true); // первая рабочая неделя — молчит, без второй каденции
-    expect(r).toEqual({ burst: true, chord: false, stage: 'done' });
+    r = burstOnWave(s, 8, 10, true); // первая рабочая неделя — молчит
+    expect(r).toEqual({ burst: true, kind: 'none', stage: 'done' });
+  });
+  it('длинный аккорд старта: 8–10 нот, тоника в трёх октавах, по возрастанию', () => {
+    for (const key of ['Cm', 'C', 'D'] as WtcKey[]) {
+      const ch = WTC_LONG_CHORD[key];
+      expect(ch.length).toBeGreaterThanOrEqual(8);
+      expect(ch.length).toBeLessThanOrEqual(10);
+      for (let i = 1; i < ch.length; i++) expect(ch[i]!).toBeGreaterThan(ch[i - 1]!);
+      expect(ch[0]!).toBeGreaterThanOrEqual(36);
+      expect(ch[ch.length - 1]!).toBeLessThanOrEqual(76);
+    }
+    expect(WTC_LONG_CHORD.Cm[0]).toBe(36); // C2
+    expect(WTC_LONG_CHORD.D[0]).toBe(38); // D2
   });
 });

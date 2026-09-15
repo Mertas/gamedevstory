@@ -112,11 +112,19 @@ export function bgNotes(elapsedMs: number, rate = 2, max = 4): number {
  *  ждём первую рабочую неделю; done: обычный режим (мелодия). */
 export type BurstStage = 'idle' | 'chunk' | 'done';
 
+/** Длинный аккорд-«заставка» на старте проекта: 8–10 нот из гармонии пьесы, что зазвучит следом
+ *  (широкое расположение — от C2/D2 вверх, тоника в трёх октавах). */
+export const WTC_LONG_CHORD: Record<WtcKey, ReadonlyArray<number>> = {
+  Cm: [36, 43, 48, 51, 55, 60, 63, 67, 72], // C2 G2 C3 Es3 G3 C4 Es4 G4 C5
+  C: [36, 43, 48, 52, 55, 60, 64, 67, 72], // C2 G2 C3 E3 G3 C4 E4 G4 C5
+  D: [38, 45, 50, 54, 57, 62, 66, 69, 74], // D2 A2 D3 Fis3 A3 D4 Fis4 A4 D5
+};
+
 /**
- * М5.3: решение по волне очков. Пачка (стартовые очки «предложения», первая рабочая неделя,
+ * М5.3/М5.4: решение по волне очков. Пачка (стартовые очки «предложения», первая рабочая неделя,
  * успешное улучшение) не играет мелодию — частицы летят молча.
- * chord — играть ли каденцию: один раз на стартовую пачку и на каждое улучшение;
- * первая рабочая неделя молчит вместе со стартовой (одной каденции на старт достаточно).
+ * kind: 'long' — старт проекта (один длинный аккорд в гармонии пьесы), 'cadence' — улучшение
+ * (три аккорда-каденции), 'none' — молчим. Первая рабочая неделя молчит вместе со стартовой.
  * dc — число записей вклада за такт, jump — скачок суммы очков, nearStart — первые недели проекта.
  */
 export function burstOnWave(
@@ -125,8 +133,8 @@ export function burstOnWave(
   jump: number,
   nearStart: boolean,
   min = 3,
-): { burst: boolean; chord: boolean; stage: BurstStage } {
-  if (dc > 0) return { burst: stage === 'chunk' && jump >= min, chord: false, stage: 'done' };
-  if (jump < min) return { burst: false, chord: false, stage };
-  return { burst: true, chord: true, stage: nearStart ? 'chunk' : stage };
+): { burst: boolean; kind: 'none' | 'long' | 'cadence'; stage: BurstStage } {
+  if (dc > 0) return { burst: stage === 'chunk' && jump >= min, kind: 'none', stage: 'done' };
+  if (jump < min) return { burst: false, kind: 'none', stage };
+  return { burst: true, kind: nearStart ? 'long' : 'cadence', stage: nearStart ? 'chunk' : stage };
 }
