@@ -2,6 +2,7 @@
 // Пищалки Win95 (клики, окна) + капли экрана разработки. Ленивый AudioContext:
 // создаётся и возобновляется по первому жесту пользователя (политика автоплея браузеров).
 import { parseSoundLevel, volumeOf, type SoundLevel } from '../shared/sound';
+import { initHeartbeat } from './heartbeat';
 
 const KEY = 'gds-sound';
 
@@ -81,6 +82,7 @@ class Sfx {
       const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!Ctor) return null;
       this.ctx = new Ctor();
+      initHeartbeat(this.ctx); // M5.5: «пульс» фоновой вкладки
       this.master = this.ctx.createGain();
       this.master.connect(this.ctx.destination);
       this.applyGain();

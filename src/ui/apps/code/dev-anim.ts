@@ -19,6 +19,7 @@ import {
   type AnimAttr,  type FxLevel,
 } from '../../../shared/dev-anim';
 import { fmtInt } from '../../../shared/nums';
+import { heartbeatAlive, onHeartbeat } from '../../heartbeat';
 
 const COLORS: Record<AnimAttr, string> = {
   fun: '#000080',
@@ -140,6 +141,8 @@ export class DevAnim {
 
   private timerId = 0;
   private timerKind: 'none' | 'raf' | 'to' = 'none';
+  /** M5.5: отписка от «пульса» аудио, когда он ведёт кадры в скрытой вкладке */
+  private hbOff: (() => void) | null = null;
   private dead = false;
   private mode: 'active' | 'quiet' | 'asleep' = 'active';
   /** M3.8: уровень эффектов (мини/средне/полно) — тумблер «Эффекты экрана…» */
@@ -238,10 +241,15 @@ export class DevAnim {
       this.rootDisposers.push(() => root.removeEventListener(ev, h));
     }
     this.scheduleNext();
+    this.syncClock(); // движок мог родиться уже в скрытой вкладке
   }
 
   destroy(): void {
     this.dead = true;
+    if (this.hbOff) {
+      this.hbOff();
+      this.hbOff = null;
+    }
     this.cancelTimer();
     document.removeEventListener('visibilitychange', this.onVisibility);
     for (const d of this.rootDisposers) d();
@@ -1014,7 +1022,8 @@ export class DevAnim {
    */
   private onVisibility = (): void => {
     if (this.dead) return;
-    if (document.hidden) {
+    this.syncClock();
+    if (document.hidden && !this.hbOff) {
       this.dropWork();
       this.last = performance.now() / 1000;
     } else {
@@ -1023,6 +1032,25 @@ export class DevAnim {
       this.wake();
     }
   };
+
+  /**
+   * M5.5: в скрытой вкладке rAF молчит — кадры водит «пульс» аудио-потока (не троттлится).
+   * Пока пульс жив, движок живёт в фоне как в активной вкладке: волны, впитывания, ноты.
+   * Нет пульса (звук не разбужен) — прежний покой и мгновенный догон при возврате.
+   */
+  private syncClock(): void {
+    const hidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+    if (hidden && heartbeatAlive()) {
+      if (!this.hbOff) {
+        this.cancelTimer();
+        this.hbOff = onHeartbeat(() => this.frame(performance.now()));
+      }
+    } else if (this.hbOff) {
+      this.hbOff();
+      this.hbOff = null;
+      this.wake();
+    }
+  }
 
   /** Кадр: сторож (plan/32 §1) — исключение внутри не убивает анимацию, цикл продолжается. */
   private frame = (ms: number): void => {
@@ -1051,9 +1079,11 @@ export class DevAnim {
     if (dt > 0.05) dt = 0.05;
     this.last = now;
 
-    const hidden =
-      document.hidden || this.root.offsetParent === null || this.root.clientWidth === 0 || this.w === 0;
-    if (hidden) {
+    const tabHidden = document.hidden;
+    const winHidden = this.root.offsetParent === null || this.root.clientWidth === 0 || this.w === 0;
+    // M5.5: в фоне с живым «пульсом» движок продолжает работу (волны, впитывания, ноты),
+    // как в активной вкладке; без пульса или с закрытым окном — прежний покой с догоном
+    if ((tabHidden || winHidden) && !(tabHidden && this.hbOff)) {
       // окно скрыто/свёрнуто/вкладка в фоне: не рисуем и не копим; показания быстро догоняют
       // цель, волна сбрасывается — никаких «выстрелов» пачками при возврате
       this.dropWork();

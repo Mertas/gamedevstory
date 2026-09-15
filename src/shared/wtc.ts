@@ -98,9 +98,11 @@ export function isOverflow(due: number, now: number, aheadMax: number = WTC_AHEA
   return due - now > aheadMax;
 }
 
-/** следующее произведение ротации (по кругу) */
-export function nextPieceIndex(index: number, total: number): number {
-  return total > 0 ? (index + 1) % total : 0;
+/** M5.4: следующее произведение — случайное (без повтора текущего): «случайный порядок» */
+export function randomPieceIndex(current: number, total: number, rng: () => number = Math.random): number {
+  if (total <= 1) return 0;
+  const i = Math.floor(rng() * (total - 1));
+  return i >= current ? i + 1 : i;
 }
 
 /** сколько нот догнать за elapsedMs фонового хода («не выключать» в скрытой вкладке) */

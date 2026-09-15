@@ -5,9 +5,9 @@ import {
   burstOnWave,
   groupEvents,
   isOverflow,
-  nextPieceIndex,
   pickSample,
   planDue,
+  randomPieceIndex,
   ringSeconds,
   WTC_AHEAD_MAX,
   WTC_BURST_CHORDS,
@@ -77,10 +77,20 @@ describe('M5: ХТК — длительности и планирование', 
     expect(isOverflow(1.0, 0)).toBe(false);
     expect(isOverflow(WTC_AHEAD_MAX + 0.5, 0)).toBe(true);
   });
-  it('ротация произведений идёт по кругу', () => {
-    expect(nextPieceIndex(0, 4)).toBe(1);
-    expect(nextPieceIndex(3, 4)).toBe(0);
-    expect(nextPieceIndex(0, 0)).toBe(0);
+  it('M5.4: следующее произведение — случайное, без повтора текущего', () => {
+    expect(randomPieceIndex(0, 4, () => 0)).toBe(1); // i=0 → сдвиг на 1
+    expect(randomPieceIndex(0, 4, () => 0.999)).toBe(3); // i=2 → 3
+    expect(randomPieceIndex(2, 4, () => 0.67)).toBe(3); // i=2 ≥ 2 → 3
+    expect(randomPieceIndex(2, 4, () => 0.1)).toBe(0); // i=0 < 2 → 0
+    for (let cur = 0; cur < 4; cur++) {
+      for (let k = 0; k < 30; k++) {
+        const got = randomPieceIndex(cur, 4, () => (k + 0.5) / 30);
+        expect(got).toBeGreaterThanOrEqual(0);
+        expect(got).toBeLessThanOrEqual(3);
+        expect(got).not.toBe(cur);
+      }
+    }
+    expect(randomPieceIndex(0, 1)).toBe(0);
   });
 });
 

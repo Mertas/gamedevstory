@@ -6,9 +6,9 @@ import {
   bgNotes,
   groupEvents,
   isOverflow,
-  nextPieceIndex,
   pickSample,
   planDue,
+  randomPieceIndex,
   ringSeconds,
   WTC_BURST_CHORDS,
   WTC_GAP_MIN,
@@ -19,6 +19,7 @@ import {
   type WtcSample,
 } from '../shared/wtc';
 import { readMusicHidden } from '../shared/music';
+import { heartbeatAlive } from './heartbeat';
 import { sfx } from './sfx';
 
 /** ротация: сначала c-moll (прелюдия → фуга), затем C-dur и D-dur, по кругу */
@@ -72,7 +73,7 @@ class WtcPlayer {
   private advance(): void {
     this.prepare();
     const ctx = sfx.audioCtx();
-    if (!ctx || !this.buffers.size) return; // контекста/сэмплов ещё нет — молча ждём
+    if (!ctx || !this.buffers.size || ctx.state !== 'running') return; // нет звука/сэмплов — молча ждём
     const due = planDue(this.lastAt, ctx.currentTime, WTC_GAP_MIN);
     if (isOverflow(due, ctx.currentTime)) {
       this.stats.dropped++; // очередь переполнена — нота пропускается
@@ -92,14 +93,15 @@ class WtcPlayer {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
     this.prepare();
     const ctx = sfx.audioCtx();
-    if (!ctx || !this.buffers.size) {
-      this.pendingBurst = 'long'; // сэмплы ещё грузятся — сыграем сразу после загрузки
+    if (!ctx || !this.buffers.size || ctx.state !== 'running') {
+      this.pendingBurst = 'long'; // сэмплы/звук ещё не готовы — сыграем сразу после
       return;
     }
+    this.setPiece(randomPieceIndex(this.current, PIECES.length)); // M5.4: старт — со случайной пьесы
     const notes = WTC_LONG_CHORD[PIECES[this.current]?.key ?? 'Cm'];
     if (!notes) return;
     const chord = notes.map((m): WtcNote => [0, m, 24]); // ~3.5–4.5 с — «длииинный»
-    this.play({ t: 0, notes: chord }, ctx.currentTime + 0.04, 0.42);
+    this.play({ t: 0, notes: chord }, ctx.currentTime + 0.04, 0.8); // громче мелодии — «заставка»
     this.stats.chords++;
   }
 
@@ -109,8 +111,8 @@ class WtcPlayer {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
     this.prepare();
     const ctx = sfx.audioCtx();
-    if (!ctx || !this.buffers.size) {
-      this.pendingBurst = 'cadence'; // сэмплы ещё грузятся — сыграем сразу после загрузки
+    if (!ctx || !this.buffers.size || ctx.state !== 'running') {
+      this.pendingBurst = 'cadence'; // сэмплы/звук ещё не готовы — сыграем сразу после
       return;
     }
     const chords = WTC_BURST_CHORDS[PIECES[this.current]?.key ?? 'Cm'];
@@ -160,6 +162,7 @@ class WtcPlayer {
       this.stopBg();
       return;
     }
+    if (heartbeatAlive()) return; // M5.5: жив «пульс» — ноты идут из движка, фон не дублирует
     const now = performance.now();
     const n = bgNotes(now - this.lastBgAt);
     this.lastBgAt = now;
@@ -218,7 +221,7 @@ class WtcPlayer {
       ]);
       for (const [file, doc] of pieceDocs) this.pieces.set(file, doc);
       this.samples = manifest.samples;
-      this.setPiece(0);
+      this.setPiece(Math.floor(Math.random() * PIECES.length)); // M5.4: случайная пьеса на входе
       await this.decodeAll();
     } catch {
       this.stats.errors++;
@@ -257,7 +260,7 @@ class WtcPlayer {
     if (!this.events.length) return null;
     if (this.evIdx >= this.events.length) {
       this.stats.finished++;
-      this.setPiece(nextPieceIndex(this.current, PIECES.length));
+      this.setPiece(randomPieceIndex(this.current, PIECES.length)); // M5.4: дальше — в случайном порядке
     }
     return this.events[this.evIdx++] ?? null;
   }
