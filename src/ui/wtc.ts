@@ -32,6 +32,9 @@ const PIECES: ReadonlyArray<{ file: string; key: 'Cm' | 'C' | 'D' }> = [
 
 const BASE = '/wtc/';
 
+/** M5.6: пауза между пьесами (секунда тишины перед аккордом новой) */
+const INTERLUDE_PAUSE = 1.0;
+
 class WtcPlayer {
   private pieces = new Map<string, WtcPiece>();
   private samples: WtcSample[] = [];
@@ -54,6 +57,8 @@ class WtcPlayer {
   private lastBgAt = 0;
   /** пачка пришла раньше сэмплов — сыграем, как только они догрузятся */
   private pendingBurst: 'long' | 'cadence' | null = null;
+  /** M5.6: мелодия ждёт до этого времени (пауза между пьесами + аккорд новой) */
+  private resumeAt = 0;
 
   /** начать подгрузку нот и сэмплов (зовётся при открытии экрана «Код») */
   prepare(): void {
@@ -74,12 +79,15 @@ class WtcPlayer {
     this.prepare();
     const ctx = sfx.audioCtx();
     if (!ctx || !this.buffers.size || ctx.state !== 'running') return; // нет звука/сэмплов — молча ждём
+    // M5.6: пауза и аккорд между пьесами — мелодия ждёт своего часа (впитывания молчат)
+    if (this.resumeAt && ctx.currentTime < this.resumeAt) return;
+    this.resumeAt = 0;
     const due = planDue(this.lastAt, ctx.currentTime, WTC_GAP_MIN);
     if (isOverflow(due, ctx.currentTime)) {
       this.stats.dropped++; // очередь переполнена — нота пропускается
       return;
     }
-    const ev = this.nextEvent();
+    const ev = this.nextEvent(); // на финале пьесы — смена и интерлюдия (вернёт null: этот вдох тишина)
     if (!ev) return;
     this.play(ev, due);
     this.lastAt = due;
@@ -98,11 +106,27 @@ class WtcPlayer {
       return;
     }
     this.setPiece(randomPieceIndex(this.current, PIECES.length)); // M5.4: старт — со случайной пьесы
+    this.playLong(ctx, ctx.currentTime + 0.04);
+  }
+
+  /** длинный аккорд текущей пьесы (due — когда играть); вернёт время конца звона */
+  private playLong(ctx: AudioContext, due: number): number {
     const notes = WTC_LONG_CHORD[PIECES[this.current]?.key ?? 'Cm'];
-    if (!notes) return;
+    if (!notes) return due;
+    const doc = this.pieces.get(PIECES[this.current]?.file ?? '');
+    const ring = Math.max(0.22, ringSeconds(24, doc?.mm ?? 110, doc?.ticksPerQuarter ?? 4));
     const chord = notes.map((m): WtcNote => [0, m, 24]); // ~3.5–4.5 с — «длииинный»
-    this.play({ t: 0, notes: chord }, ctx.currentTime + 0.04, 0.8); // громче мелодии — «заставка»
+    this.play({ t: 0, notes: chord }, due, 0.8); // громче мелодии — «заставка»
     this.stats.chords++;
+    return due + ring;
+  }
+
+  /** M5.6: конец пьесы — секунда тишины, затем длинный аккорд новой, дальше мелодия как обычно */
+  private interlude(): void {
+    const ctx = sfx.audioCtx();
+    if (!ctx || !this.buffers.size || ctx.state !== 'running') return;
+    const end = this.playLong(ctx, ctx.currentTime + INTERLUDE_PAUSE);
+    this.resumeAt = end + 0.25; // мелодия новой пьесы ждёт и паузу, и аккорд
   }
 
   /** каденция вместо мелодии для пачек-улучшений (успешный буст) */
@@ -184,6 +208,7 @@ class WtcPlayer {
   release(): void {
     this.sessionActive = false;
     this.pendingBurst = null;
+    this.resumeAt = 0;
     this.stopBg();
     this.silence();
     this.evIdx = 0;
@@ -261,6 +286,8 @@ class WtcPlayer {
     if (this.evIdx >= this.events.length) {
       this.stats.finished++;
       this.setPiece(randomPieceIndex(this.current, PIECES.length)); // M5.4: дальше — в случайном порядке
+      this.interlude(); // M5.6: пауза и аккорд новой пьесы
+      return null; // этот вдох — тишина; мелодия начнётся после аккорда
     }
     return this.events[this.evIdx++] ?? null;
   }
