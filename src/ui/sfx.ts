@@ -11,6 +11,7 @@ class Sfx {
   private musicGain: GainNode | null = null;
   private level: SoundLevel;
   private lastDropAt = 0;
+  private listeners = new Set<() => void>();
   /** счётчики для живых проверок (не влияют на звук) */
   readonly stats = { clicks: 0, opens: 0, closes: 0, drops: 0 };
 
@@ -36,6 +37,15 @@ class Sfx {
       /* noop */
     }
     this.applyGain();
+    for (const f of this.listeners) f(); // трей и «Настройки» живут синхронно
+  }
+
+  /** подписка на смену уровня звука (для useSyncExternalStore) */
+  subscribe(fn: () => void): () => void {
+    this.listeners.add(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
   }
 
   /** диагностика для живых проверок */
@@ -177,6 +187,11 @@ class Sfx {
 }
 
 export const sfx = new Sfx();
+
+/** стабильная подписка для useSyncExternalStore (трей звука, «Настройки») */
+export function subscribeSound(fn: () => void): () => void {
+  return sfx.subscribe(fn);
+}
 
 // удобный доступ для живых проверок в браузере
 if (typeof window !== 'undefined') {

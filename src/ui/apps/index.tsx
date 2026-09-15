@@ -14,6 +14,7 @@ import { MagazinesApp } from './archive/Magazines';
 import { MailApp } from './mail/Mail';
 import { MarketingApp } from './market/Marketing';
 import { ResearchApp } from './research/Research';
+import { SettingsApp } from './settings/SettingsApp';
 
 export interface AppDef {
   id: string;
@@ -36,5 +37,6 @@ export const APP_DEFS: AppDef[] = [
   { id: 'contracts', title: 'Контракты', icon: '📝', component: memo(ContractsApp) },
   { id: 'mail', title: 'Почта', icon: '✉️', component: memo(MailApp) },
   { id: 'help', title: 'Справка', icon: '❓', component: memo(HelpApp) },
+  { id: 'settings', title: 'Настройки системы', icon: '⚙️', component: memo(SettingsApp) },
   { id: 'invites', title: 'Инвайты', icon: '🎟️', adminOnly: true, component: memo(InvitesApp) },
 ];

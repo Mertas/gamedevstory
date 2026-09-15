@@ -5,6 +5,7 @@
 // zTop — слой поверх окон игры / в фоне; visible — свёрнут в трей.
 import { useEffect, useRef } from 'react';
 import Webamp from 'webamp-internal';
+import { readMusicHidden } from '../shared/music';
 
 interface Props {
   open: boolean; // Winamp запущен (× — закрыт)
@@ -77,8 +78,27 @@ export function WebampLayer({ open, visible, zTop, onHidden, onExit }: Props) {
         onHiddenRef.current();
       }
     });
+    // настройка «выключать музыку в неактивной вкладке»: в фоне — пауза, при возврате — продолжаем
+    let waWasPlaying = false;
+    const onVis = () => {
+      const w = waRef.current;
+      if (!w || disposed) return;
+      try {
+        if (document.visibilityState !== 'visible') {
+          waWasPlaying = w.getMediaStatus() === 'PLAYING';
+          if (waWasPlaying && readMusicHidden() === 'on') w.pause();
+        } else if (waWasPlaying) {
+          waWasPlaying = false;
+          w.play();
+        }
+      } catch {
+        /* API недоступен — играем как раньше */
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       disposed = true;
+      document.removeEventListener('visibilitychange', onVis);
       unsubClose();
       unsubMin();
       try {

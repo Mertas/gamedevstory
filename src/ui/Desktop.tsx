@@ -1,5 +1,5 @@
 // Рабочий стол + панель задач + меню «Пуск».
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Window95 } from './Window95';
 import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
@@ -16,24 +16,10 @@ import { useOwner } from './owner';
 import { VersionStamp } from './VersionStamp';
 import { WALLPAPERS, readWallpaper, wallpaperById } from './wallpapers';
 import { resolveFx } from '../shared/dev-anim';
-import { sfx } from './sfx';
-import { SOUND_LEVELS, soundLabel, type SoundLevel } from '../shared/sound';
-
-/** M3.8 (plan/31 §9.8): уровни эффектов экрана разработки — «Эффекты экрана…» в ПКМ по столу. */
-const FX_ROWS: Array<{ id: 'full' | 'mid' | 'min'; title: string; hint: string }> = [
-  { id: 'full', title: 'Полно — вся вода', hint: 'капли, рябь, праздники, жизнь простоя (по умолчанию)' },
-  { id: 'mid', title: 'Средне — без амбиента', hint: 'рабочая вода: капли и рябь; без сценок простоя, дождя и тряски' },
-  { id: 'min', title: 'Минимум — сухо', hint: 'ничего не летит: числа и полоски сразу (для слабых машин)' },
-];
-
-/** M3.8: prefers-reduced-motion без падения там, где matchMedia нет (тесты/старые среды). */
-function safeReducedMotion(): boolean {
-  try {
-    return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
-}
+import { sfx, subscribeSound } from './sfx';
+import { SOUND_LEVELS, soundLabel } from '../shared/sound';
+import { FX_ROWS, safeReducedMotion } from './fxPrefs';
+import { setDeskSnap, setDeskSort, useDeskPrefs } from './deskPrefs';
 import { fmtK } from '../shared/nums';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
@@ -137,8 +123,8 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
   // ─── иконки рабочего стола: «выровнять по сетке» (галка), сортировка, позиции, drag ───
   const iconsRef = useRef<HTMLDivElement>(null);
-  const [snapOn, setSnapOn] = useState<boolean>(() => { try { return localStorage.getItem('gds-desk-snap') === '1'; } catch { return false; } });
-  const [deskSort, setDeskSort] = useState<'default' | 'name' | 'kind'>(() => { try { return (localStorage.getItem('gds-desk-sort') as 'default' | 'name' | 'kind') || 'default'; } catch { return 'default'; } });
+  // настройки стола живут в общем модуле (ПКМ-меню и «Настройки системы» меняют их синхронно)
+  const { snap: snapOn, sort: deskSort } = useDeskPrefs();
   // PLAN-24: фон — часть сейва (game.ui.wallpaper), а не браузера: он должен ждать игрока везде
   const wallpaper = useGameSelector((g) => g.ui?.wallpaper ?? null);
   const gameUi = useGameSelector((g) => g.ui);
@@ -188,9 +174,6 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   };
   const snapOnRef = useRef(snapOn);
   snapOnRef.current = snapOn;
-
-  useEffect(() => { try { localStorage.setItem('gds-desk-snap', snapOn ? '1' : '0'); } catch { /* */ } }, [snapOn]);
-  useEffect(() => { try { localStorage.setItem('gds-desk-sort', deskSort); } catch { /* */ } }, [deskSort]);
 
   // M4: делегированные клики — в App.tsx (покрывает и стартовый экран)
   // одноразовый перенос: до PLAN-24 фон жил в браузере, у прежних сейвов поля ui ещё нет
@@ -501,7 +484,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           <div className="w95-mi" onClick={() => { realign(); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{''}</span>Упорядочить иконки
           </div>
-          <div className="w95-mi" onClick={() => { setSnapOn(!snapOn); setCtxMenu(null); }}>
+          <div className="w95-mi" onClick={() => { setDeskSnap(!snapOn); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{snapOn ? '✓' : ''}</span>Выровнять по сетке
           </div>
           <div className="w95-mi sep" />
@@ -520,6 +503,10 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           </div>
           <div className="w95-mi" onClick={() => { setFxPick(true); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{''}</span>Эффекты экрана…
+          </div>
+          <div className="w95-mi sep" />
+          <div className="w95-mi" onClick={() => { wm.open('settings'); setCtxMenu(null); }}>
+            <span style={{ width: 16 }}>{''}</span>Настройки системы…
           </div>
         </div>
       ))}
@@ -777,7 +764,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
 /** M4: звук в трее — «Выкл/Тихо/Средне/Громко» рядом с часами (дефолт «тихо», выбор в localStorage). */
 function SoundTray() {
-  const [level, setLevel] = useState<SoundLevel>(sfx.soundLevel);
+  const level = useSyncExternalStore(subscribeSound, () => sfx.soundLevel);
   const [open, setOpen] = useState(false);
   // клик мимо — закрыть, как в Win95
   useEffect(() => {
@@ -803,7 +790,6 @@ function SoundTray() {
               className="w95-mi"
               onClick={() => {
                 sfx.setLevel(l);
-                setLevel(l);
                 setOpen(false);
               }}
             >

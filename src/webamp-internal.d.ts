@@ -29,5 +29,10 @@ declare module 'webamp-internal' {
     reopen(): void;
     dispose(): void;
     isThereASkinInFlight(): boolean;
+    /** воспроизведение (нужно настройке «выключать музыку в неактивной вкладке») */
+    play(): void;
+    pause(): void;
+    stop(): void;
+    getMediaStatus(): 'PLAYING' | 'STOPPED' | 'PAUSED';
   }
 }

@@ -14,6 +14,7 @@ import {
   type WtcPiece,
   type WtcSample,
 } from '../shared/wtc';
+import { readMusicHidden } from '../shared/music';
 import { sfx } from './sfx';
 
 /** ротация: сначала c-moll (прелюдия → фуга), затем C-dur и D-dur, по кругу */
@@ -50,7 +51,8 @@ class WtcPlayer {
   /** впитывание частицы → следующее событие партитуры */
   onAbsorb(): void {
     if (!this.enabled) return;
-    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    // «выключать музыку в неактивной вкладке» (настройка): в фоне ноты не двигаем
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && readMusicHidden() === 'on') return;
     this.prepare();
     const ctx = sfx.audioCtx();
     if (!ctx || !this.buffers.size) return; // контекста/сэмплов ещё нет — молча ждём
@@ -71,6 +73,11 @@ class WtcPlayer {
   setEnabled(on: boolean): void {
     this.enabled = on;
     if (!on) this.silence();
+  }
+
+  /** вкладка ушла в фон — глушим запланированное (настройка «выключать музыку в неактивной вкладке») */
+  suspend(): void {
+    this.silence();
   }
 
   /** остановить всё запланированное (закрытие окна разработки) */
@@ -228,6 +235,13 @@ class WtcPlayer {
 }
 
 export const wtc = new WtcPlayer();
+
+// настройка «выключать музыку в неактивной вкладке»: уходя в фон — глушим уже запланированные ноты
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' && readMusicHidden() === 'on') wtc.suspend();
+  });
+}
 
 // удобный доступ для живых проверок в браузере
 if (typeof window !== 'undefined') {
