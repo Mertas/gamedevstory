@@ -333,8 +333,12 @@ export function actionRelease() {
   return { ok: true };
 }
 
-export function actionHire(method: HireMethodId, staffId?: string) {
-  send({ type: 'hire', method, ...(staffId ? { staffId } : {}) });
+export function actionSearch(method: HireMethodId) {
+  send({ type: 'search', method });
+}
+
+export function actionHire(staffId: string) {
+  send({ type: 'hire', staffId });
 }
 
 export function actionFire(staffId: string) {

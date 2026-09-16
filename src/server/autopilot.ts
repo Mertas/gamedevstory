@@ -2,8 +2,10 @@
 // политика авто-резолва событий, и AutopilotController (SRV-22) — оркестрация сессии:
 // «театр» событий, обсуждение→решение, таймаут плана.
 import { CONFIG } from '../core/config';
+import type { HireMethodId } from '../core/config';
 import { GENRES, TYPES, CONSOLES, TRAININGS, ADS, STAFF, consoleById, genreById, typeById } from '../core/data/db';
 import { startProjectAction } from '../core/engine';
+import { HIRE_METHOD_LABELS } from '../shared/hire';
 import { consoleAvailable } from '../core/systems/dev';
 import { autopilotProjectInput, comboCostK, sequelOpportunity, type PolicyAction, resolvePendingEvent } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
@@ -187,6 +189,7 @@ export function policySteps(journal: PolicyAction[], state: GameState): Autopilo
   const steps: AutopilotStep[] = [];
   let app = '';
   let tab = '';
+  let lastHireMethod: HireMethodId | null = null; // M7: радио «тип поиска» жмём один раз на метод
   const openApp = (a: string): void => {
     if (app !== a) {
       steps.push({ kind: 'open', app: a });
@@ -222,15 +225,22 @@ export function policySteps(journal: PolicyAction[], state: GameState): Autopilo
       openApp('hire');
       goTab('team');
       steps.push({ kind: 'click', target: 'office-move', label: 'Переезжаю в новый офис', quick: true });
-    } else if (a.type === 'hire' && a.staffId) {
+    } else if (a.type === 'search' || a.type === 'hire') {
       openApp('hire');
       goTab('team');
-      const name = STAFF.find((s) => s.id === a.staffId)?.name ?? a.staffId; // кандидат ещё не в штате — имя из справочника
-      // PLAN-25: кандидаты зависят от метода найма — без клика по методу кнопки «Нанять» в списке нет
-      if (a.method && a.method !== 'word-of-mouth') {
-        steps.push({ kind: 'click', target: `hire-method-${a.method}`, label: 'Метод найма (подороже — пул сильнее)', quick: true });
+      // M7: сначала платный поиск (без него списка кандидатов нет), клик «Искать» — витринный:
+      // действие уже применено сервером, повторный настоящий клик списал бы деньги ещё раз
+      if (a.method && a.method !== lastHireMethod) {
+        steps.push({ kind: 'click', target: `hire-method-${a.method}`, label: `Тип поиска: ${HIRE_METHOD_LABELS[a.method]}`, quick: true });
+        lastHireMethod = a.method;
       }
-      steps.push({ kind: 'click', target: `hire-${a.staffId}`, label: `Принимаю в команду: ${name}`, quick: true });
+      if (a.type === 'search') {
+        steps.push({ kind: 'click', target: 'hire-search', label: 'Ищу кандидатов', quick: true, cosmetic: true });
+      }
+      if (a.type === 'hire' && a.staffId) {
+        const name = STAFF.find((s) => s.id === a.staffId)?.name ?? a.staffId; // кандидат ещё не в штате — имя из справочника
+        steps.push({ kind: 'click', target: `hire-${a.staffId}`, label: `Принимаю в команду: ${name}`, quick: true });
+      }
     } else if (a.type === 'fire') {
       // AP-09: увольнение видно — имя из журнала (сотрудника в штате уже нет)
       openApp('hire');

@@ -1,6 +1,5 @@
 // Автопилот (plan/14): валидация решения LLM + обёртка политики (не стартует проекты сама).
 import { describe, expect, it, vi } from 'vitest';
-import { CONFIG } from '../src/core/config';
 import { newGame, startProjectAction, tick } from '../src/core/engine';
 import { AutopilotController, buildDecisionContext, createAutopilotPolicy, fitDirection, policySteps, validateDecision } from '../src/server/autopilot';
 import type { AutopilotHost } from '../src/server/autopilot';
@@ -8,7 +7,7 @@ import { ChatOrchestrator } from '../src/server/chatflow';
 import type { ChatThread } from '../src/server/game';
 import { autopilotProjectInput, sequelOpportunity, weakKey, type PolicyAction } from '../src/core/sim/policy';
 import { STAFF } from '../src/core/data/db';
-import { candidatePool, makeStaffFromData } from '../src/core/systems/staff';
+import { makeStaffFromData } from '../src/core/systems/staff';
 import { resetChat } from '../src/shared/chat';
 import { planDirClicks } from '../src/shared/autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../src/shared/autopilot';
@@ -741,9 +740,6 @@ describe('AP-09: найм и увольнения', () => {
     g.officeLevel = 1; // методы по деньгам: online 550K — самый дорогой доступный
     g.money = 5000;
     const weak = weakKey(g); // слабая специализация ДО найма — та же, что видит политика
-    // PLAN-25: UI показывает только первых HIRE_CANDIDATES — политика выбирает из того же списка
-    const pool = candidatePool(g, 'online').slice(0, CONFIG.HIRE_CANDIDATES);
-    expect(pool.length).toBeGreaterThan(1);
     busy(g);
     const pol = createAutopilotPolicy();
     const journal: PolicyAction[] = [];
@@ -751,11 +747,14 @@ describe('AP-09: найм и увольнения', () => {
     const hire = journal.find((a) => a.type === 'hire');
     expect(hire).toBeTruthy();
     const hiredId = hire && hire.type === 'hire' ? hire.staffId : undefined;
-    expect(pool).toContain(hiredId); // нанят из пула выбранного метода
+    const hired = STAFF.find((d) => d.id === hiredId)!;
+    // M7: список кандидатов — из оплаченного поиска; нанят лучший по оценке ВНУТРИ списка
+    expect(journal.some((a) => a.type === 'search' && a.method === 'online')).toBe(true);
+    const listAtHire = [hiredId!, ...(g.activeSearch?.ids ?? [])]; // нанятого движок убирает из списка
+    expect(listAtHire.length).toBeGreaterThan(1);
     const scoreOf = (st: { program: number; scenario: number; graphics: number; sound: number }): number =>
       st.program + st.scenario + st.graphics + st.sound + 1.5 * st[weak];
-    const hired = STAFF.find((d) => d.id === hiredId)!;
-    for (const id of pool.filter((x) => x !== hiredId)) {
+    for (const id of listAtHire.filter((x) => x !== hiredId)) {
       const other = STAFF.find((d) => d.id === id)!;
       expect(scoreOf(hired.stats) >= scoreOf(other.stats)).toBe(true);
     }

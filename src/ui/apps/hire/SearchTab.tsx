@@ -1,34 +1,30 @@
-// ─── Найм: «Поиск сотрудников» — методы, кандидаты, трудоустройство (UI-08) ───
+// ─── Найм: «Поиск сотрудников» — тип поиска (платно) → список кандидатов → найм (UI-08, M7) ───
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import type { HireMethodId } from '../../../core/config';
-import { candidatePool } from '../../../shared/meta';
+import { HIRE_METHOD_LABELS, MYSTERY_IDS } from '../../../shared/hire';
 import { CAREER_LABELS } from '../../careers';
-import { actionHire, useGame, useMeta } from '../../store';
+import { actionHire, actionSearch, useGame, useMeta } from '../../store';
 import { fmtK } from '../../../shared/nums';
-
-const METHOD_LABELS: Record<HireMethodId, string> = {
-  'word-of-mouth': 'По знакомству ($50K)',
-  magazine: 'Объявление в журнале ($120K)',
-  online: 'Объявление в интернете ($550K)',
-  vocational: 'Профучилище ($800K)',
-  'open-house': 'День открытых дверей ($1,800K)',
-  hollywood: 'Голливуд ($3,500K)',
-};
 
 export function SearchTab() {
   const game = useGame();
   const meta = useMeta();
   const [method, setMethod] = useState<HireMethodId>('word-of-mouth');
   const cfg = CONFIG.HIRE_METHODS[method];
-  const pool = candidatePool(game, meta, cfg.pool);
   const officeCap = CONFIG.OFFICE_CAPACITY[game.officeLevel] ?? 4;
   const officeFull = game.staff.length >= officeCap;
-  const candidates = pool.slice(0, CONFIG.HIRE_CANDIDATES).map((id) => meta.staff.find((d) => d.id === id)).filter(Boolean);
+  const search = game.activeSearch;
+  const activeCfg = search ? CONFIG.HIRE_METHODS[search.method] : null;
+  const rows = (search?.ids ?? []).map((id) => meta.staff.find((d) => d.id === id)).filter(Boolean);
 
   return (
     <>
       <b>Поиск сотрудников</b>
+      <div className="w95-hint">
+        Выберите тип поиска — деньги спишутся сразу, и появится список кандидатов.
+        Чем дороже поиск, тем сильнее кандидаты.
+      </div>
       <div className="w95-field">
         {(Object.keys(CONFIG.HIRE_METHODS) as HireMethodId[]).map((m) => (
           <div key={m} className="w95-li" style={{ padding: '1px 4px' }} onClick={() => setMethod(m)} data-autopilot={`hire-method-${m}`}>
@@ -37,45 +33,65 @@ export function SearchTab() {
                 type="radio" checked={method === m} onChange={() => setMethod(m)}
                 disabled={game.officeLevel < CONFIG.HIRE_METHODS[m].office}
               />
-              {METHOD_LABELS[m]}
+              {HIRE_METHOD_LABELS[m]} (${CONFIG.HIRE_METHODS[m].cost}K)
               {game.officeLevel < CONFIG.HIRE_METHODS[m].office && <span className="w95-hint">(нужен офис {CONFIG.HIRE_METHODS[m].office})</span>}
             </label>
           </div>
         ))}
       </div>
-      {candidates.length > 0 && (
+      <div className="w95-row" style={{ gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          className="w95-btn"
+          data-autopilot="hire-search"
+          disabled={game.money < cfg.cost}
+          title={game.money < cfg.cost ? `Нужно ${cfg.cost}K` : undefined}
+          onClick={() => actionSearch(method)}
+        >
+          🔍 Искать кандидатов ({cfg.cost}K)
+        </button>
+        {officeFull && <span className="w95-hint" style={{ color: '#c00000' }}>офис полон — нанимать некуда, сначала переезд</span>}
+      </div>
+
+      {search && activeCfg && (
         <>
-          <div className="w95-hint">Кандидаты ({cfg.pool.join(', ')}) — нажмите «Нанять» под нужным:</div>
-          <table className="w95-table">
-            <tbody>
-              {candidates.map((c) => c && (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td>{CAREER_LABELS[c.activeCareer] ?? c.activeCareer}</td>
-                  <td>П{c.stats.program} С{c.stats.scenario} Г{c.stats.graphics} З{c.stats.sound}</td>
-                  <td>взнос {fmtK(c.hireFee)}</td>
-                  <td>{Math.round(c.salary)}K/год</td>
-                  <td>
-                    <button
-                      className="w95-btn"
-                      data-autopilot={`hire-${c.id}`}
-                      disabled={officeFull || game.money < cfg.cost + c.hireFee}
-                      onClick={() => actionHire(method, c.id)}
-                      title={officeFull ? 'Офис заполнен — купите офис больше' : game.money < cfg.cost + c.hireFee ? `Нужно ${cfg.cost + Math.round(c.hireFee)}K` : `Нанять за ${cfg.cost + Math.round(c.hireFee)}K`}
-                    >
-                      Нанять
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
           <div className="w95-hint">
-            Поиск {cfg.cost}K; при найме спишется взнос. Кандидаты после найма/увольнения больше не появляются.
+            Список от: <b>{HIRE_METHOD_LABELS[search.method]}</b> (поиск оплачен) — найм только по взносу кандидата:
+          </div>
+          {rows.length > 0 ? (
+            <table className="w95-table">
+              <tbody>
+                {rows.map((c) => c && (
+                  <tr key={c.id}>
+                    <td>{MYSTERY_IDS.has(c.id) ? '🌟 ' : ''}{c.name}</td>
+                    <td>{CAREER_LABELS[c.activeCareer as keyof typeof CAREER_LABELS] ?? c.activeCareer}</td>
+                    <td>П{c.stats.program} С{c.stats.scenario} Г{c.stats.graphics} З{c.stats.sound}</td>
+                    <td>взнос {fmtK(c.hireFee)}</td>
+                    <td>{Math.round(c.salary)}K/год</td>
+                    <td>
+                      <button
+                        className="w95-btn"
+                        data-autopilot={`hire-${c.id}`}
+                        disabled={officeFull || game.money < c.hireFee}
+                        onClick={() => actionHire(c.id)}
+                        title={officeFull ? 'Офис заполнен — купите офис больше' : game.money < c.hireFee ? `Нужно ${Math.round(c.hireFee)}K` : `Нанять за ${Math.round(c.hireFee)}K`}
+                      >
+                        Нанять
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="w95-hint">Из этого списка всех разобрали — ищите заново.</div>
+          )}
+          <div className="w95-hint">
+            Список живёт до следующего поиска: нанять можно сколько угодно, за каждого — только взнос.
+            Захочешь других кандидатов — платишь за новый поиск.
           </div>
         </>
       )}
-      {candidates.length === 0 && <div className="w95-hint">Кандидатов по этому методу больше нет.</div>}
+      {!search && <div className="w95-hint">Поиска ещё не было.</div>}
     </>
   );
 }

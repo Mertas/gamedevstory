@@ -51,13 +51,9 @@ export function score100(score: number): number {
 }
 
 /**
- * PLAN-25: подходит ли сотрудник под пул метода найма. Правило ОДНО для движка и интерфейса —
- * раньше оно было скопировано в двух местах, и копии разошлись: движок добавлял «сразу доступных»
- * в методы с пулом «Word of Mouth», а интерфейс нет (автопилот пытался нанять того, кого в списке нет).
+ * M7: правила пулов переехали в `shared/hire.ts` — метод найма = свой слой кандидатов
+ * (staffMatchesPool больше не нужен: слой задаётся списком id, а не строкой unlock).
  */
-export function staffMatchesPool(staffUnlock: string, pool: string[]): boolean {
-  return pool.some((p) => staffUnlock.includes(p) || (p === 'Word of Mouth' && staffUnlock === 'Initially available'));
-}
 
 /** PLAN-30: вердикт прессы по итоговой оценке (шкала /100, десять критиков). */
 export function pressVerdict(score: number): string {

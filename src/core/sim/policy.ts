@@ -7,11 +7,13 @@ import type { GameState, Staff, StartProjectInput } from '../types';
 import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/dev';
 import { BOOSTER_KEY_JOB, boosterPrice } from '../systems/progression';
 import { salaryWithLevels } from '../formulas';
-import { candidatePool } from '../systems/staff';
+import { candidateBand } from '../systems/staff';
+import { unlockedMystery } from '../../shared/hire';
 import { DIRECTION_ORDER } from '../types';
 import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
 import {
-  applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, hireByIdAction, levelUpAction,
+  applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, searchAction,
+  hireFromSearchAction, levelUpAction,
   moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction,
   startProjectAction, trainAction,
 } from '../engine';
@@ -33,6 +35,7 @@ export type PolicyAction =
   | { type: 'train'; staffId: string; trainingId: number }
   | { type: 'ad'; adId: number }
   | { type: 'office' }
+  | { type: 'search'; method: HireMethodId }
   | { type: 'hire'; staffId?: string; method?: HireMethodId }
   | { type: 'fire'; staffId: string; name?: string }
   | { type: 'license'; consoleId: string }
@@ -222,29 +225,30 @@ function hireReserve(state: GameState): number {
   return Math.max(500, Math.round(payroll(state)));
 }
 
-/** Самый дорогой метод, который тянем (пул сильнее) — иначе null. */
+/** Самый дорогой метод, который тянем (слой сильнее) — иначе null. */
 function pickHireMethod(state: GameState): HireMethodId | null {
   const reserve = hireReserve(state);
   const methods = (Object.keys(CONFIG.HIRE_METHODS) as HireMethodId[])
     .filter((m) => state.officeLevel >= CONFIG.HIRE_METHODS[m].office)
     .filter((m) => state.money - CONFIG.HIRE_METHODS[m].cost >= reserve)
-    .filter((m) => candidatePool(state, m).length > 0)
+    .filter((m) => candidateBand(state, m).length > 0
+      || (m === 'hollywood' && unlockedMystery(state) !== null))
     .sort((a, b) => CONFIG.HIRE_METHODS[b].cost - CONFIG.HIRE_METHODS[a].cost);
   return methods[0] ?? null;
 }
 
-/** Лучший кандидат метода по оценке статов (уволенных автопилотом не берём). */
+/** Лучший кандидат из ТЕКУЩЕГО (оплаченного) списка поиска (уволенных автопилотом не берём). */
 function pickBestCandidate(state: GameState, method: HireMethodId, turnedDown: Set<string>, reserve: number): string | null {
+  const search = state.activeSearch;
+  if (!search || search.method !== method) return null;
   let bestId: string | null = null;
   let bestScore = -Infinity;
-  // PLAN-25: UI показывает первых HIRE_CANDIDATES кандидатов — нанять можно только их,
-  // поэтому и выбираем из того же списка (иначе кнопки «Нанять» для выбранного просто нет)
-  for (const id of candidatePool(state, method).slice(0, CONFIG.HIRE_CANDIDATES)) {
+  for (const id of search.ids) {
     if (turnedDown.has(id)) continue;
     const d = STAFF.find((x) => x.id === id);
     if (!d) continue;
-    // хватает на найм, на жизнь (резерв) и на зарплату новичка (годовой фонд растёт)
-    if (state.money - (CONFIG.HIRE_METHODS[method].cost + d.hireFee) < reserve + d.salary) continue;
+    // хватает на взнос, на жизнь (резерв) и на зарплату новичка (годовой фонд растёт)
+    if (state.money - d.hireFee < reserve + d.salary) continue;
     const score = staffScore(state, d.stats);
     if (score > bestScore) {
       bestScore = score;
@@ -273,6 +277,20 @@ function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction
   const capacity = CONFIG.OFFICE_CAPACITY[state.officeLevel] ?? 4;
   const method = pickHireMethod(state);
   const reserve = hireReserve(state);
+
+  // M7: сначала платный поиск (если списка этого метода ещё нет). Пустой поиск не оплачиваем:
+  // смотрим, есть ли в слое кто-то по средствам (или открытый спец-сотрудник в Голливуде).
+  if (method && (!state.activeSearch || state.activeSearch.method !== method || state.activeSearch.ids.length === 0)) {
+    const affordable = candidateBand(state, method).some((id) => {
+      const d = STAFF.find((x) => x.id === id);
+      return !!d && state.money - (CONFIG.HIRE_METHODS[method].cost + d.hireFee) >= reserve + d.salary;
+    });
+    if (!affordable && !(method === 'hollywood' && unlockedMystery(state) !== null)) return;
+    const sres = searchAction(state, method);
+    if (!sres.ok) return;
+    journal?.push({ type: 'search', method });
+  }
+
   const bestId = method ? pickBestCandidate(state, method, turnedDown, reserve) : null;
   const cand = bestId ? STAFF.find((x) => x.id === bestId) : undefined;
 
@@ -289,7 +307,7 @@ function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction
     }
   }
   if (method && bestId && state.staff.length < CONFIG.OFFICE_CAPACITY[state.officeLevel]) {
-    const res = hireByIdAction(state, method, bestId);
+    const res = hireFromSearchAction(state, bestId);
     if (res.ok) {
       stats.hires++;
       journal?.push({ type: 'hire', staffId: bestId, method }); // PLAN-25: метод нужен шагам — от него зависит список кандидатов

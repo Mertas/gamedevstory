@@ -5,7 +5,7 @@ import { salaryWithLevels } from '../formulas';
 import { log } from '../log';
 import type { Rng } from '../rng';
 import type { ActionResult, GameState, Staff } from '../types';
-import { staffMatchesPool } from '../../shared/rules';
+import { HIRE_BANDS, HIRE_METHOD_LABELS, unlockedMystery } from '../../shared/hire';
 
 export function makeStaffFromData(id: string): Staff | null {
   const d = STAFF.find((s) => s.id === id);
@@ -35,58 +35,67 @@ export function pickAvatar(rng: Rng): string {
   return `avatars/avatar-${String(rng.int(1, AVATAR_COUNT)).padStart(2, '0')}.png`;
 }
 
-// пул кандидатов для метода найма: не нанятые сотрудники, чей unlock подходит
-export function candidatePool(state: GameState, method: HireMethodId): string[] {
-  const cfg = CONFIG.HIRE_METHODS[method];
-  return STAFF.filter((d) => !state.hiredIds.includes(d.id) && staffMatchesPool(d.unlock, cfg.pool)).map((d) => d.id);
+// пул кандидатов метода: слой таланта (M7) — не нанятые сотрудники слоя
+export function candidateBand(state: GameState, method: HireMethodId): string[] {
+  const band = HIRE_BANDS[method] ?? [];
+  return band.filter((id) => !state.hiredIds.includes(id));
 }
 
-export function hireStaff(
+// список кандидатов поиска: до HIRE_CANDIDATES случайных из слоя; в Голливуде
+// открытый спец-сотрудник — гарантированно в списке (M7: «заплатил — увидел героя»)
+export function rollCandidates(state: GameState, method: HireMethodId, rng: Rng): string[] {
+  const picks: string[] = [];
+  if (method === 'hollywood') {
+    const m = unlockedMystery(state);
+    if (m) picks.push(m);
+  }
+  const copy = candidateBand(state, method).filter((id) => !picks.includes(id));
+  while (picks.length < CONFIG.HIRE_CANDIDATES && copy.length > 0) {
+    picks.push(copy.splice(rng.int(0, copy.length - 1), 1)[0]!);
+  }
+  return picks;
+}
+
+/** M7: поиск сотрудников — платный; результат (список) хранится в сейве и живёт
+ *  до следующего поиска; найм из списка — отдельно, по взносу кандидата. */
+export function startSearch(
   state: GameState, method: HireMethodId, rng: Rng,
-  opts?: { maxFee?: number },
-): ActionResult & { staffId?: string } {
+): ActionResult & { candidates?: string[] } {
   const cfg = CONFIG.HIRE_METHODS[method];
   if (state.officeLevel < cfg.office) return { ok: false, error: `Нужен офис ${cfg.office}` };
+  if (state.money < cfg.cost) return { ok: false, error: 'Не хватает денег на поиск' };
+  const band = candidateBand(state, method);
+  const mystery = method === 'hollywood' ? unlockedMystery(state) : null;
+  if (band.length === 0 && !mystery) return { ok: false, error: 'Кандидатов нет' };
+
+  state.money -= cfg.cost;
+  const candidates = rollCandidates(state, method, rng);
+  state.activeSearch = { method, ids: candidates, week: state.week };
+  log(state, `Поиск (${HIRE_METHOD_LABELS[method]}): −${cfg.cost}K, кандидатов: ${candidates.length}`);
+  return { ok: true, candidates };
+}
+
+// нанять кандидата из текущего списка поиска (выбор игрока в окне «Найм»)
+export function hireFromSearch(
+  state: GameState, staffId: string, rng: Rng,
+): ActionResult & { staffId?: string } {
+  const search = state.activeSearch;
+  if (!search || !search.ids.includes(staffId)) return { ok: false, error: 'Кандидата нет в текущем списке поиска' };
+  if (state.hiredIds.includes(staffId)) return { ok: false, error: 'Этот кандидат уже не доступен' };
+  const d = STAFF.find((x) => x.id === staffId);
+  if (!d) return { ok: false, error: 'Нет такого кандидата' };
   if (state.staff.length >= CONFIG.OFFICE_CAPACITY[state.officeLevel]) {
     return { ok: false, error: 'Нет мест в офисе' };
   }
-  if (state.money < cfg.cost) return { ok: false, error: 'Не хватает денег на поиск' };
-  const pool = candidatePool(state, method);
-  if (pool.length === 0) return { ok: false, error: 'Кандидатов нет' };
-
-  // показываем 3 кандидатов, игрок выбирает; для политики — случайный выбор
-  const picks: string[] = [];
-  const poolCopy = [...pool];
-  for (let i = 0; i < Math.min(CONFIG.HIRE_CANDIDATES, poolCopy.length); i++) {
-    const idx = rng.int(0, poolCopy.length - 1);
-    picks.push(poolCopy.splice(idx, 1)[0]!);
-  }
-  // бюджетный фильтр: дешёвые кандидаты, если задан потолок взноса
-  const affordable = opts?.maxFee ? picks.filter((id) => (STAFF.find((d) => d.id === id)?.hireFee ?? 0) <= opts.maxFee!) : picks;
-  const chosenPool = affordable.length > 0 ? affordable : picks;
-  const chosen = chosenPool[rng.int(0, chosenPool.length - 1)]!;
-  return hireStaffById(state, chosen, method, rng, opts);
-}
-
-// нанять КОНКРЕТНОГО кандидата (выбранного игроком в окне «Найм»)
-export function hireStaffById(
-  state: GameState, staffId: string, method: HireMethodId, rng: Rng, opts?: { maxFee?: number },
-): ActionResult & { staffId?: string } {
-  const cfg = CONFIG.HIRE_METHODS[method];
-  const d = STAFF.find((x) => x.id === staffId);
-  if (!d) return { ok: false, error: 'Нет такого кандидата' };
-  if (state.hiredIds.includes(staffId)) return { ok: false, error: 'Этот кандидат уже не доступен' };
-  const pool = candidatePool(state, method);
-  if (!pool.includes(staffId)) return { ok: false, error: 'Кандидат не из этого пула' };
-  if (opts?.maxFee && d.hireFee > opts.maxFee) return { ok: false, error: 'Слишком дорогой кандидат' };
-  if (state.money < cfg.cost + d.hireFee) return { ok: false, error: 'Не хватает денег' };
+  if (state.money < d.hireFee) return { ok: false, error: 'Не хватает денег на взнос' };
 
   const staff = makeStaffFromData(staffId);
   if (!staff) return { ok: false, error: 'Ошибка данных' };
   staff.avatar = pickAvatar(rng);
-  state.money -= cfg.cost + d.hireFee;
+  state.money -= d.hireFee;
   state.staff.push(staff);
   state.hiredIds.push(staff.id);
+  search.ids = search.ids.filter((id) => id !== staffId);
   log(state, `Нанят: ${staff.name} (${staff.activeCareer} Lv${staff.careers[staff.activeCareer]}, взнос ${staff.hireFee}K, зарплата ${staff.salary}K/год)`);
   return { ok: true, staffId: staff.id };
 }

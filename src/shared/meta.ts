@@ -1,7 +1,6 @@
 // Метаданные игры для клиента (сервер шлёт один раз при подключении) + чистые хелперы.
 import type { CareerId } from '../core/data/schema';
-import type { GameState } from '../core/types';
-import { comboGradeFrom, staffMatchesPool } from './rules';
+import { comboGradeFrom } from './rules';
 
 export interface MetaData {
   genres: { id: string; name: string; ru: string; popularity: string; costWan: number; unlockJob: string | null; unlockLevel: number | null }[];
@@ -74,8 +73,5 @@ export function dateLabel(week: number): string {
   return `31 марта ${1985 + gameYear + 1}`;
 }
 
-// кандидаты для метода найма (логика как в движке, но на клиентских данных)
-
-export function candidatePool(game: GameState, meta: MetaData, unlock: string[]): string[] {
-  return meta.staff.filter((d) => !game.hiredIds.includes(d.id) && staffMatchesPool(d.unlock, unlock)).map((d) => d.id);
-}
+// M7: пул кандидатов метода больше не считается на клиенте — список приходит с сервера
+// (платный поиск, `game.activeSearch`); см. `shared/hire.ts` и `core/systems/staff.ts`.

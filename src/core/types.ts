@@ -1,5 +1,5 @@
 import type { CareerId } from './data/schema';
-import type { Mode } from './config';
+import type { HireMethodId, Mode } from './config';
 import type { DifficultyId } from './difficulty';
 
 export type { Mode };
@@ -255,6 +255,8 @@ export interface GameState {
   openedCombos?: string[];
   /** M6: уровень сложности партии (сохраняется в сейве; старые сейвы без поля — «нормальный») */
   difficulty?: DifficultyId;
+  /** M7: текущий список поиска сотрудников (живёт до следующего поиска; хранится в сейве) */
+  activeSearch?: { method: HireMethodId; ids: string[]; week: number };
   genreLevels: Record<string, number>;
   typeLevels: Record<string, number>;
   consoles: Record<string, ConsoleState>;

@@ -58,6 +58,8 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(search).toContain('data-autopilot={`hire-${c.id}`}');
     // PLAN-25: методы найма кликабельны и с якорем — от метода зависит список кандидатов
     expect(search).toContain('data-autopilot={`hire-method-${m}`}');
+    // M7: поиск — отдельная платная кнопка (список кандидатов без него не появится)
+    expect(search).toContain('data-autopilot="hire-search"');
     expect(office).toContain('data-autopilot="office-move"');
     expect(salesman).toContain('data-autopilot={`booster-${b.id}`}');
     expect(marketing).toContain('data-autopilot={`ad-${a.id}`}');

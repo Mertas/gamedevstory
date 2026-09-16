@@ -5,7 +5,7 @@ import { CONFIG } from '../core/config';
 import { consoleById, genreById, typeById } from '../core/data/db';
 import {
   buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
-  changeCareerAction, dismissSalesmanAction, fireAction, hireAction, hireByIdAction, levelUpAction, moveOfficeAction, newGame,
+  changeCareerAction, dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction,
 } from '../core/engine';
@@ -164,11 +164,16 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.emit();
       return;
     }
+    case 'search': {
+      // M7: платный поиск — деньги списываются сразу, список живёт в сейве
+      const res = searchAction(s.game, msg.method);
+      s.run(res);
+      if (res.ok) s.saveNow();
+      s.emit();
+      return;
+    }
     case 'hire': {
-      const opts = msg.maxFee !== undefined ? { maxFee: msg.maxFee } : undefined;
-      const res = msg.staffId
-        ? hireByIdAction(s.game, msg.method, msg.staffId, opts)
-        : hireAction(s.game, msg.method, opts);
+      const res = hireFromSearchAction(s.game, msg.staffId);
       s.run(res);
       if (res.ok) s.saveNow(); // SRV-08: найм оплачен — сохраняем сразу
       // новичок представляется в чате

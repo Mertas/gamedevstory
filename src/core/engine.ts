@@ -7,7 +7,7 @@ import { log } from './log';
 import { SAVE_VERSION } from './migrate';
 import type { DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
 import {
-  fireStaff, hireStaff, hireStaffById, makeStaffFromData, paySalaries, pickAvatar, dailyPower,
+  fireStaff, startSearch, hireFromSearch, makeStaffFromData, paySalaries, pickAvatar, dailyPower,
 } from './systems/staff';
 import {
   debugTick, devTick, releaseGame, resolveBoost, startProject,
@@ -148,17 +148,18 @@ export function startProjectAction(state: GameState, input: StartProjectInput) {
   return res;
 }
 
-export function hireAction(state: GameState, method: HireMethodId, opts?: { maxFee?: number }) {
+// M7: поиск сотрудников — платный; список кандидатов хранится в сейве (до следующего поиска)
+export function searchAction(state: GameState, method: HireMethodId) {
   const rng = rngFromState(state.rngState, state.seed);
-  const res = hireStaff(state, method, rng, opts);
+  const res = startSearch(state, method, rng);
   state.rngState = rng.state;
   return res;
 }
 
-// нанять конкретного кандидата (выбор в окне «Найм»)
-export function hireByIdAction(state: GameState, method: HireMethodId, staffId: string, opts?: { maxFee?: number }) {
+// нанять кандидата из текущего списка поиска (выбор в окне «Найм»)
+export function hireFromSearchAction(state: GameState, staffId: string) {
   const rng = rngFromState(state.rngState, state.seed);
-  const res = hireStaffById(state, staffId, method, rng, opts);
+  const res = hireFromSearch(state, staffId, rng);
   state.rngState = rng.state;
   return res;
 }

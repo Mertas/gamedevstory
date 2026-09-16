@@ -28,7 +28,8 @@ export interface SessionSnapshot {
 export type ClientAction = { autopilot?: boolean } & (
   | { type: 'start_project'; input: StartProjectInput }
   | { type: 'release' }
-  | { type: 'hire'; method: HireMethodId; staffId?: string; maxFee?: number }
+  | { type: 'search'; method: HireMethodId }
+  | { type: 'hire'; staffId: string }
   | { type: 'fire'; staffId: string }
   | { type: 'buy_license'; consoleId: string }
   | { type: 'resolve_boost'; accept: boolean; amount?: number }
