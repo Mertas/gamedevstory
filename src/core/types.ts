@@ -87,6 +87,8 @@ export interface ActiveGame {
   /** PLAN-30: всего багов за разработку (с учётом исправленных) */
   bugsTotal?: number;
   debugCarry?: number; // AP-13: остаток скорости отладки между днями (доли бага)
+  /** M9: медиа-событие отложено — попап-пауза висела, покажем в следующий свободный день */
+  pendingMedia?: boolean;
   weekStarted: number;
   phase: 'proposal' | 'dev' | 'debug' | 'released';
   proposalStaffId: string | null;
@@ -162,6 +164,8 @@ export interface ContractState {
   deadline: number; // неделя, к которой нужно успеть
   progress: { program: number; scenario: number; graphics: number; sound: number };
   done: boolean;
+  /** M9: неделя завершения (успех или провал) — для кулдауна повтора */
+  finishedWeek?: number;
 }
 
 // ─── M4: своя консоль ───

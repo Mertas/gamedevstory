@@ -1,11 +1,11 @@
 {
-  "schema": "gds-difficulty-presets/1",
-  "generatedAt": "2026-09-16T04:29:44",
-  "generator": "E:/My/gds-autoresearch/scripts/export-presets.py",
+  "schema": "gds-difficulty-presets/2",
+  "generatedAt": "2026-09-17T00:20:41",
+  "generator": "E:/My/gds-autoresearch/scripts/export-constants.py",
   "source": {
     "lab": "E:\\My\\gds-autoresearch",
-    "metric": "дисбаланс — сумма по уровням (5 политик игрока × 8 сидов × длина партии) + штраф за немонотонность лестницы",
-    "protocolVersion": 5,
+    "metric": "дисбаланс — сумма по уровням (6 политик игрока × 8 сидов × длина партии) + штраф за немонотонность лестницы; у уровней свои ожидания (на лёгком планки выше, на сложном ниже), деньги лестницы сравниваются ОТНОСИТЕЛЬНО планки уровня; «сложный» — про выживание (разорения там не штрафуются); у сильных политик включена проверка «растяжка экономики» (малый вес)",
+    "protocolVersion": 8,
     "protocolDays": 7300,
     "seeds": [
       1,
@@ -17,18 +17,149 @@
       7,
       8
     ],
-    "sampleEveryDays": 60,
-    "championExperimentId": 97,
-    "championLoss": 41.11,
-    "baselineLoss": 714.092,
-    "experiments": 106,
-    "readme": "difficulty/README-agent.md рядом с этим файлом"
+    "policies": [
+      "reasonable",
+      "greedy",
+      "random",
+      "idler",
+      "bugfill",
+      "contractor"
+    ],
+    "championExperimentId": 63,
+    "championLoss": 311.005,
+    "baselineLoss": 498.702,
+    "experiments": 72,
+    "measuredOnGame": "1.28.1 (682900d2)",
+    "stretch": {
+      "enabled": true,
+      "refDays": 730,
+      "limit": 1500,
+      "weight": 1.5
+    },
+    "readme": "difficulty/ПИСЬМО-ОТ-ЛАБОРАТОРИИ.md рядом с этим файлом"
   },
   "gameContract": {
     "configFile": "src/core/config.ts",
     "configObject": "CONFIG",
-    "note": "CONFIG — единственный источник чисел; пресеты уровня = CONFIG, перекрытый overrides уровня"
+    "note": "CONFIG — единственный источник чисел; пресет уровня = CONFIG, перекрытый overrides уровня",
+    "labNeverWrites": "лаборатория не меняет config.ts; значения переносит человек или агент игры"
   },
+  "configPatch": {
+    "BLACKOUT_CHANCE": 0.00539,
+    "BOOST_CHANCE": 0.651,
+    "BREAKDOWN_CHANCE": 0.00106,
+    "BUGS_PER_COST": 0.02197,
+    "CONSOLE_BASE_GROWTH": 93.0,
+    "CONTRACT_MAX_STAFF": 3.0,
+    "CONTRACT_WEEKLY_RATE": 0.007143,
+    "DEBUG_RATE": 0.0317,
+    "DEV_COST_SCALE": 2.44,
+    "DEV_DAYS": 96.0,
+    "DEV_STAT_FACTOR": 0.5,
+    "EMERGENCY_FUND": 165.0,
+    "FAN_DECAY": 0.9993,
+    "FAN_MULT_DIV": 2225.0,
+    "FAN_PER_UNIT": 5.63,
+    "MEDIA_CHANCE": 0.022612,
+    "PAYDAY_DAY": 352.0,
+    "PRICE_BASE": 23.46,
+    "RESEARCH_DEV_RATE": 0.0447,
+    "REVIEW_DIV": 892.0,
+    "SALES_BASE_RATE": 0.04539,
+    "SALES_DAYS": 168.0,
+    "START_MONEY": 404.0,
+    "TYPE_COST_DEFAULT": 30.0
+  },
+  "changes": [
+    {
+      "key": "BLACKOUT_CHANCE",
+      "label": "Частота катастроф (отключение света)",
+      "from": 0.00398,
+      "to": 0.00539,
+      "range": [
+        0.0005,
+        0.01
+      ],
+      "why": ""
+    },
+    {
+      "key": "BREAKDOWN_CHANCE",
+      "label": "Частота поломок железа",
+      "from": 0.00139,
+      "to": 0.00106,
+      "range": [
+        0.0005,
+        0.01
+      ],
+      "why": ""
+    },
+    {
+      "key": "DEBUG_RATE",
+      "label": "Скорость вычитки багов",
+      "from": 0.0282,
+      "to": 0.0317,
+      "range": [
+        0.005,
+        0.12
+      ],
+      "why": ""
+    },
+    {
+      "key": "EMERGENCY_FUND",
+      "label": "Экстренный фонд",
+      "from": 150.0,
+      "to": 165.0,
+      "range": [
+        0,
+        600
+      ],
+      "why": ""
+    },
+    {
+      "key": "FAN_PER_UNIT",
+      "label": "Фанаты за проданные копии",
+      "from": 5.0,
+      "to": 5.63,
+      "range": [
+        1,
+        20
+      ],
+      "why": ""
+    },
+    {
+      "key": "MEDIA_CHANCE",
+      "label": "Частота медиа-событий после релиза",
+      "from": 0.017143,
+      "to": 0.022612,
+      "range": [
+        0.005,
+        0.05
+      ],
+      "why": ""
+    },
+    {
+      "key": "PAYDAY_DAY",
+      "label": "День выплаты зарплат (1 = 1 апреля)",
+      "from": 372.0,
+      "to": 352.0,
+      "range": [
+        180,
+        400
+      ],
+      "why": ""
+    },
+    {
+      "key": "START_MONEY",
+      "label": "Стартовый капитал",
+      "from": 500.0,
+      "to": 404.0,
+      "range": [
+        200,
+        2000
+      ],
+      "why": ""
+    }
+  ],
   "levels": [
     {
       "id": "easy",
@@ -36,6 +167,7 @@
       "note": "пройти должен даже неряшливый игрок: подушка больше, разработка дешевле, мир добрее",
       "weight": 1,
       "mayFail": [],
+      "mayFailLabels": [],
       "overrides": {
         "START_MONEY": 800.0,
         "EMERGENCY_FUND": 400.0,
@@ -51,22 +183,25 @@
         "BREAKDOWN_CHANCE": 0.001,
         "BUGS_PER_COST": 0.02197,
         "CONSOLE_BASE_GROWTH": 93.0,
+        "CONTRACT_MAX_STAFF": 3.0,
         "CONTRACT_WEEKLY_RATE": 0.01,
-        "DEBUG_RATE": 0.0282,
+        "DEBUG_RATE": 0.0317,
         "DEV_COST_SCALE": 1.9,
         "DEV_DAYS": 96.0,
         "DEV_STAT_FACTOR": 0.5,
         "EMERGENCY_FUND": 400.0,
+        "FAN_DECAY": 0.9993,
         "FAN_MULT_DIV": 2225.0,
-        "FAN_PER_UNIT": 5.0,
+        "FAN_PER_UNIT": 5.63,
         "MEDIA_CHANCE": 0.024,
-        "PAYDAY_DAY": 372.0,
+        "PAYDAY_DAY": 352.0,
         "PRICE_BASE": 23.46,
         "RESEARCH_DEV_RATE": 0.0447,
         "REVIEW_DIV": 892.0,
         "SALES_BASE_RATE": 0.04539,
         "SALES_DAYS": 168.0,
-        "START_MONEY": 800.0
+        "START_MONEY": 800.0,
+        "TYPE_COST_DEFAULT": 30.0
       }
     },
     {
@@ -75,39 +210,53 @@
       "note": "эталон: поиск тюнит именно его, а лёгкий и сложный — надстройка через свои ручки",
       "weight": 1,
       "mayFail": [],
+      "mayFailLabels": [],
       "overrides": {},
       "fullConfig": {
-        "BLACKOUT_CHANCE": 0.00398,
+        "BLACKOUT_CHANCE": 0.00539,
         "BOOST_CHANCE": 0.651,
-        "BREAKDOWN_CHANCE": 0.00139,
+        "BREAKDOWN_CHANCE": 0.00106,
         "BUGS_PER_COST": 0.02197,
         "CONSOLE_BASE_GROWTH": 93.0,
+        "CONTRACT_MAX_STAFF": 3.0,
         "CONTRACT_WEEKLY_RATE": 0.007143,
-        "DEBUG_RATE": 0.0282,
+        "DEBUG_RATE": 0.0317,
         "DEV_COST_SCALE": 2.44,
         "DEV_DAYS": 96.0,
         "DEV_STAT_FACTOR": 0.5,
-        "EMERGENCY_FUND": 150.0,
+        "EMERGENCY_FUND": 165.0,
+        "FAN_DECAY": 0.9993,
         "FAN_MULT_DIV": 2225.0,
-        "FAN_PER_UNIT": 5.0,
-        "MEDIA_CHANCE": 0.017143,
-        "PAYDAY_DAY": 372.0,
+        "FAN_PER_UNIT": 5.63,
+        "MEDIA_CHANCE": 0.022612,
+        "PAYDAY_DAY": 352.0,
         "PRICE_BASE": 23.46,
         "RESEARCH_DEV_RATE": 0.0447,
         "REVIEW_DIV": 892.0,
         "SALES_BASE_RATE": 0.04539,
         "SALES_DAYS": 168.0,
-        "START_MONEY": 500.0
+        "START_MONEY": 404.0,
+        "TYPE_COST_DEFAULT": 30.0
       }
     },
     {
       "id": "hard",
       "label": "Сложный",
-      "note": "выживает «жадный» с дисциплиной; «разумный» — на грани; «случайный» и «багофил» могут падать",
+      "note": "уровень про выживание: падать позволено всем, вопрос — как долго продержался",
       "weight": 1,
       "mayFail": [
+        "reasonable",
+        "greedy",
         "random",
-        "bugfill"
+        "bugfill",
+        "contractor"
+      ],
+      "mayFailLabels": [
+        "Разумный",
+        "Жадный",
+        "Случайный",
+        "Багофил",
+        "Контрактник"
       ],
       "overrides": {
         "START_MONEY": 400.0,
@@ -124,22 +273,25 @@
         "BREAKDOWN_CHANCE": 0.005,
         "BUGS_PER_COST": 0.02197,
         "CONSOLE_BASE_GROWTH": 93.0,
+        "CONTRACT_MAX_STAFF": 3.0,
         "CONTRACT_WEEKLY_RATE": 0.005,
-        "DEBUG_RATE": 0.0282,
+        "DEBUG_RATE": 0.0317,
         "DEV_COST_SCALE": 3.2,
         "DEV_DAYS": 96.0,
         "DEV_STAT_FACTOR": 0.5,
         "EMERGENCY_FUND": 80.0,
+        "FAN_DECAY": 0.9993,
         "FAN_MULT_DIV": 2225.0,
-        "FAN_PER_UNIT": 5.0,
+        "FAN_PER_UNIT": 5.63,
         "MEDIA_CHANCE": 0.012,
-        "PAYDAY_DAY": 372.0,
+        "PAYDAY_DAY": 352.0,
         "PRICE_BASE": 23.46,
         "RESEARCH_DEV_RATE": 0.0447,
         "REVIEW_DIV": 892.0,
         "SALES_BASE_RATE": 0.04539,
         "SALES_DAYS": 168.0,
-        "START_MONEY": 400.0
+        "START_MONEY": 400.0,
+        "TYPE_COST_DEFAULT": 30.0
       }
     }
   ]

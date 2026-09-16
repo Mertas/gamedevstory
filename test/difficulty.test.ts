@@ -20,6 +20,8 @@ interface PresetDoc {
 
 const presets = JSON.parse(readFileSync(new URL('../difficulty/difficulty-presets.json', import.meta.url), 'utf8')) as PresetDoc;
 const num = (k: string): number => (CONFIG as unknown as Record<string, number>)[k] ?? NaN;
+// ожидаемое значение уровня — прямо из JSON (единственный источник чисел, обновляет лаборатория)
+const presetVal = (id: string, k: string): number => presets.levels.find((l) => l.id === id)!.fullConfig[k]!;
 
 describe('M6: уровни сложности — база + перекрытия', () => {
   afterAll(() => {
@@ -40,15 +42,15 @@ describe('M6: уровни сложности — база + перекрыти�
       applyDifficulty(id);
       return num(k);
     };
-    expect([pick('easy', 'START_MONEY'), pick('normal', 'START_MONEY'), pick('hard', 'START_MONEY')]).toEqual([800, 500, 400]);
-    expect([pick('easy', 'DEV_COST_SCALE'), pick('normal', 'DEV_COST_SCALE'), pick('hard', 'DEV_COST_SCALE')]).toEqual([1.9, 2.44, 3.2]);
-    expect([pick('easy', 'PAYDAY_DAY'), pick('normal', 'PAYDAY_DAY'), pick('hard', 'PAYDAY_DAY')]).toEqual([372, 372, 372]);
-    expect(pick('easy', 'CONTRACT_WEEKLY_RATE')).toBeCloseTo(0.01, 5);
-    expect(pick('normal', 'CONTRACT_WEEKLY_RATE')).toBeCloseTo(0.007143, 5);
-    expect(pick('hard', 'CONTRACT_WEEKLY_RATE')).toBeCloseTo(0.005, 5);
-    expect(pick('easy', 'BLACKOUT_CHANCE')).toBeCloseTo(0.0015, 5);
-    expect(pick('normal', 'BLACKOUT_CHANCE')).toBeCloseTo(0.00398, 5);
-    expect(pick('hard', 'BLACKOUT_CHANCE')).toBeCloseTo(0.006, 5);
+    for (const k of ['START_MONEY', 'DEV_COST_SCALE', 'PAYDAY_DAY']) {
+      expect([pick('easy', k), pick('normal', k), pick('hard', k)], k)
+        .toEqual([presetVal('easy', k), presetVal('normal', k), presetVal('hard', k)]);
+    }
+    for (const k of ['CONTRACT_WEEKLY_RATE', 'BLACKOUT_CHANCE']) {
+      expect(pick('easy', k), `easy.${k}`).toBeCloseTo(presetVal('easy', k), 5);
+      expect(pick('normal', k), `normal.${k}`).toBeCloseTo(presetVal('normal', k), 5);
+      expect(pick('hard', k), `hard.${k}`).toBeCloseTo(presetVal('hard', k), 5);
+    }
   });
 
   it('сброс к базе: после сложного «нормальный» возвращает базовые числа, объект тот же', () => {
@@ -66,9 +68,10 @@ describe('M6: уровни сложности — база + перекрыти�
 
   it('чистый difficultyConfig не трогает живой CONFIG', () => {
     applyDifficulty('normal');
+    const before = num('START_MONEY');
     const cfg = difficultyConfig('hard');
-    expect((cfg as unknown as Record<string, number>).START_MONEY).toBe(400);
-    expect(num('START_MONEY')).toBe(500);
+    expect((cfg as unknown as Record<string, number>).START_MONEY).toBe(presetVal('hard', 'START_MONEY'));
+    expect(num('START_MONEY')).toBe(before); // живой объект не тронут
   });
 
   it('isDifficultyId отсекает мусор (старые сейвы → normal)', () => {
@@ -101,12 +104,14 @@ describe('M6: уровни сложности — база + перекрыти�
     applyDifficulty('normal');
   });
 
-  it('PAYDAY_DAY 372 шире года — приходит по модулю (7 апреля): со 2-го года зарплаты уходят', () => {
+  it('PAYDAY_DAY приходит по модулю года: со 2-го года зарплаты уходят', () => {
     applyDifficulty('normal');
     expect(CONFIG.FIRST_YEAR_FREE).toBe(true); // в первый год зарплат нет — доходим до второй даты
     const g = newGame(7);
     expect(g.money).toBe(CONFIG.START_MONEY);
-    for (let i = 0; i < 373; i++) tick(g); // день года 372 → второй раз «7 апреля» (год 2)
+    const doy = ((CONFIG.PAYDAY_DAY - 1) % CONFIG.YEAR_LENGTH) + 1; // фактический день года выплат
+    for (let i = 0; i < CONFIG.YEAR_LENGTH + doy + 1; i++) tick(g); // год 1 бесплатный + день выплат года 2
+    expect(g.log.some((l) => l.text.includes('Выплачены зарплаты'))).toBe(true);
     expect(g.money).toBeLessThan(CONFIG.START_MONEY);
   });
 });

@@ -299,6 +299,30 @@ describe('M5: медиа-события после релиза (plan/09 §2.4)'
     }
   });
 
+  it('M9: висящий попап не съедает событие — медиа откладывается до свободного дня', () => {
+    const g = newGame(1);
+    const ag = mediaGame(g, false, 10);
+    g.released = [ag];
+    for (let seed = 1; seed <= 500; seed++) {
+      g.pendingEvent = { type: 'disaster', text: 'занято' }; // какой-то попап висит
+      ag.mediaMult = undefined;
+      ag.pendingMedia = false;
+      tickMediaEvents(g, createRng(seed * 13 + 5));
+      if (!ag.pendingMedia) continue; // на этом сиде шанс не сработал
+      // сработало при висящем попапе: эффекта ещё нет, событие отложено
+      expect(ag.mediaMult).toBeUndefined();
+      expect(g.pendingEvent.text).toBe('занято');
+      // попап убрали — событие приходит в тот же тик, без нового броска шанса
+      g.pendingEvent = null;
+      tickMediaEvents(g, createRng(999));
+      expect(ag.mediaMult).toBeDefined();
+      expect((g.pendingEvent as { type: string } | null)?.type).toBe('info');
+      expect(ag.pendingMedia).toBe(false);
+      return;
+    }
+    throw new Error('ни один сид не отложил медиа-событие (шанс 1.7%/день)');
+  });
+
   it('dailySales применяет множитель к деньгам и фанатам', () => {
     const g = newGame(1);
     const ag = mediaGame(g, false, 5);

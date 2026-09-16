@@ -40,9 +40,11 @@ export function dailySales(state: GameState): void {
 export function tickMediaEvents(state: GameState, rng: Rng): void {
   for (const game of state.released) {
     if (game.ended || game.releaseWeek === null) continue;
-    if (state.week - game.releaseWeek >= CONFIG.MEDIA_WINDOW_DAYS) continue;
-    if (!rng.chance(CONFIG.MEDIA_CHANCE)) continue;
-    if (state.pendingEvent) continue; // попап-пауза уже висит — не накладываем
+    if (state.week - game.releaseWeek >= CONFIG.MEDIA_WINDOW_DAYS) { game.pendingMedia = false; continue; }
+    if (!game.pendingMedia && !rng.chance(CONFIG.MEDIA_CHANCE)) continue;
+    // M9: попап-пауза уже висит — событие не теряем, отложим до свободного дня
+    if (state.pendingEvent) { game.pendingMedia = true; continue; }
+    game.pendingMedia = false;
     const buggy = game.bugs > 0;
     // баги > 0: три типа поровну; без багов: статья/TV
     const roll = buggy ? rng.int(0, 2) : rng.int(0, 1);

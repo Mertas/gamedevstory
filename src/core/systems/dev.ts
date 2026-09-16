@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import { DIRECTION_WEIGHTS, EMPTY_STATS } from '../types';
 import { comboGradeFrom, consoleReleased as consoleAvailable, isUnlocked, score100 } from '../../shared/rules';
+import { busyStaffIds } from './staff';
 
 export function genreById(id: string) {
   return GENRES.find((g) => g.id === id)!;
@@ -137,11 +138,11 @@ const ROLE_STAT = {
   proposal: 'scenario', program: 'program', graphics: 'graphics', sound: 'sound', debug: 'program',
 } as const;
 
-function roleContributors(state: GameState, game: ActiveGame, role: Role): { stat: number; power: number }[] {
+function roleContributors(state: GameState, game: ActiveGame, role: Role, busy: Set<string>): { stat: number; power: number }[] {
   const ids = game.assignments[role] ?? [];
   return ids
     .map((id) => state.staff.find((s) => s.id === id))
-    .filter((s): s is Staff => !!s && s.homeWeeks === 0)
+    .filter((s): s is Staff => !!s && s.homeWeeks === 0 && !busy.has(s.id))
     .map((s) => ({ stat: s.stats[ROLE_STAT[role]], power: s.power }));
 }
 
@@ -161,12 +162,13 @@ export function devTick(state: GameState, rng: Rng): void {
   // dev: работают ВСЕ сотрудники (не в отпуске). Роли дают профильный стат,
   // сотрудники без роли в проекте — средний по навыкам (универсалы).
   const genreLevel = state.genreLevels[game.genreId] ?? 0;
-  const byRole = (role: Role) => roleContributors(state, game, role);
+  const busy = busyStaffIds(state); // M9: занятые на контрактах над проектом не работают
+  const byRole = (role: Role) => roleContributors(state, game, role, busy);
   const contributors = [
     ...byRole('proposal'), ...byRole('program'), ...byRole('graphics'), ...byRole('sound'),
     // универсалы (без роли в проекте)
     ...state.staff
-      .filter((s) => s.homeWeeks === 0 && !Object.values(game.assignments).some((ids) => ids.includes(s.id)))
+      .filter((s) => s.homeWeeks === 0 && !busy.has(s.id) && !Object.values(game.assignments).some((ids) => ids.includes(s.id)))
       .map((s) => {
         const st = s.stats;
         return { stat: (st.program + st.scenario + st.graphics + st.sound) / 4, power: s.power };
@@ -183,6 +185,7 @@ export function devTick(state: GameState, rng: Rng): void {
   const totalStat = contributors.reduce((a, c) => a + c.stat, 0) || 1;
   for (const s of state.staff) {
     if (s.homeWeeks > 0) continue; // ушёл домой — вклада нет
+    if (busy.has(s.id)) continue; // M9: на контракте — вклада в проект нет
     let stat = 0;
     for (const r of ['proposal', 'program', 'graphics', 'sound'] as const) {
       if ((game.assignments[r] ?? []).includes(s.id)) { stat += s.stats[ROLE_STAT[r]]; }
@@ -267,8 +270,9 @@ export function debugTick(state: GameState, rng: Rng): void {
   const game = state.activeGame;
   if (!game || game.phase !== 'debug') return;
   const assigned = new Set(game.assignments.debug ?? []);
+  const busy = busyStaffIds(state); // M9: занятые на контрактах не отлаживают
   const debuggers = state.staff
-    .filter((s) => s.homeWeeks === 0)
+    .filter((s) => s.homeWeeks === 0 && !busy.has(s.id))
     .map((s) => ({ program: s.stats.program, weight: assigned.has(s.id) ? 1 : 0.7 }));
   const rate = debugRate(debuggers);
   // AP-13: копим дробную часть скорости между днями. Без этого команда со слабым Program

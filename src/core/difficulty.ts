@@ -1,5 +1,5 @@
 // АВТОГЕНЕРАЦИЯ: tools/gen-difficulty.ts из difficulty/difficulty-presets.json — руками не править.
-// Числа найдены лабораторией баланса (E:/My/gds-autoresearch, эксперимент 97);
+// Числа найдены лабораторией баланса (E:/My/gds-autoresearch, эксперимент 63);
 // контекст, контракт и приёмка — difficulty/README-agent.md. Обновление чисел: pnpm difficulty:gen.
 import { CONFIG } from './config';
 
@@ -33,7 +33,7 @@ export const DIFFICULTY: Record<DifficultyId, DifficultyInfo> = {
   },
   hard: {
     label: 'Сложный',
-    note: 'выживает «жадный» с дисциплиной; «разумный» — на грани; «случайный» и «багофил» могут падать',
+    note: 'уровень про выживание: падать позволено всем, вопрос — как долго продержался',
     overrides: {
       BLACKOUT_CHANCE: 0.006,
       BREAKDOWN_CHANCE: 0.005,

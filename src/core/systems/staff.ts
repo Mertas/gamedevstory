@@ -154,3 +154,14 @@ export function dailyPower(state: GameState, worked: boolean, rng: Rng): void {
     }
   }
 }
+
+/** M9: кто занят на несданном контракте — эти люди не работают над проектом
+ *  и не могут быть назначены на второй контракт. */
+export function busyStaffIds(state: GameState): Set<string> {
+  const busy = new Set<string>();
+  for (const c of state.contracts) {
+    if (c.done) continue;
+    for (const id of c.staffIds) busy.add(id);
+  }
+  return busy;
+}

@@ -7,17 +7,17 @@ export type HireMethodId = 'word-of-mouth' | 'magazine' | 'online' | 'vocational
 
 export const CONFIG = {
   // старт
-  START_MONEY: 500, // K
+  START_MONEY: 404, // K (чемпион лаборатории v8)
   START_RESEARCH: 10,
   START_FANS: 0,
   START_DIRECTION_POINTS: 10,
   FIRST_YEAR_FREE: true,
-  EMERGENCY_FUND: 150, // K, одноразовый
+  EMERGENCY_FUND: 165, // K, одноразовый (чемпион лаборатории v8)
   OFFICE_CAPACITY: { 1: 4, 2: 6, 3: 8 },
 
   // время (ДНИ; год = 365; игра начинается 1 апреля 1985)
   // 1 игровой день = 1 реальная секунда на скорости 1× (TICK_MS)
-  PAYDAY_DAY: 372, // 7 апреля — зарплаты (чемпион лаборатории, M6)
+  PAYDAY_DAY: 352, // зарплаты (чемпион лаборатории v8; день считается по модулю года)
   // PLAN-32: праздники РФ (день года, 1 = 1 апреля). Неделя, задевшая праздник, продаёт ×1.5–2.
   // 1 мая = 30, 9 мая = 38, 12 июня = 72, 4 ноября = 217, 23 февраля = 328, 8 марта = 341
   HOLIDAY_DOY: [30, 38, 72, 217, 328, 341] as number[],
@@ -61,7 +61,7 @@ export const CONFIG = {
 
   // баги
   BUGS_PER_COST: 0.02197, // ≈1/45.5 — чемпион лаборатории (M6): баги = стоимость(K) × это / множитель режима
-  DEBUG_RATE: 0.0282, // багов/день = Σ Program × это (чемпион лаборатории, M6)
+  DEBUG_RATE: 0.0317, // багов/день = Σ Program × это (чемпион лаборатории v8)
   DEBUG_PR_MIN: 1,
   DEBUG_PR_MAX: 3,
   BUGS_F_COMBO: 10,
@@ -75,9 +75,9 @@ export const CONFIG = {
   BOOST_SUCCESS_CAP: 0.8,
   BOOST_GAIN: [25, 50] as const,
   BOOST_HYPE_GAIN: 10, // хайп за успешный буст — влияет на продажи при релизе (hypeMult)
-  BLACKOUT_CHANCE: 0.00398, // чемпион лаборатории (M6)
+  BLACKOUT_CHANCE: 0.00539, // чемпион лаборатории (v8)
   BLACKOUT_LOSS: 0.3, // −30% всех очков
-  BREAKDOWN_CHANCE: 0.00139, // чемпион лаборатории (M6)
+  BREAKDOWN_CHANCE: 0.00106, // чемпион лаборатории (v8)
   BREAKDOWN_LOSS: [10, 20] as const,
 
   // рецензии
@@ -100,7 +100,7 @@ export const CONFIG = {
   HYPE_MULT_BASE: 0.8,
   HYPE_MULT_CAP: 1.8,
   SEQUEL_MULT: 1.2,
-  FAN_PER_UNIT: 5, // фанатов за 1K проданных копий (0.5% от копий)
+  FAN_PER_UNIT: 5.63, // фанатов за 1K проданных копий (чемпион лаборатории v8)
   FAN_DECAY: 0.9993, // ежедневно (было 0.995 в неделю)
   CONSOLE_BASE_GROWTH: 93, // тыс. за релиз под консоль
 
@@ -185,13 +185,15 @@ export const CONFIG = {
   // ─── M4: контракты (research/03 §8) ───
   CONTRACT_WEEKLY_RATE: 0.05 / 7, // прогресс/день = Σ стат × это (было 0.05 в неделю)
   CONTRACT_MAX_STAFF: 3,
+  /** M9: повтор контракта — не раньше, чем через столько недель после сдачи/провала */
+  CONTRACT_COOLDOWN_WEEKS: 12,
 
   // ─── M4: своя консоль (research/01 §8) ───
   OWN_CONSOLE_WEEKS_BASE: 12,
   OWN_CONSOLE_WEEKS_PER_INDEX: 3,
 
   // ─── M5: медиа-события после релиза (plan/09 §2.4) ───
-  MEDIA_CHANCE: 0.12 / 7, // шанс в ДЕНЬ (12%/нед ÷7) на игру в окне
+  MEDIA_CHANCE: 0.022612, // шанс в ДЕНЬ на игру в окне (чемпион лаборатории v8; было 0.12/7)
   MEDIA_WINDOW_DAYS: 56, // первые 8 недель продаж
   MEDIA_ARTICLE_MULT: 1.08, // «Статья в журнале»: +8% продаж
   MEDIA_TV_MULT: 1.15, // «TV-сюжет»: +15%

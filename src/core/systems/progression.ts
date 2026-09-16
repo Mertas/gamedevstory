@@ -7,6 +7,7 @@ import {
 import { log } from '../log';
 import type { CareerId } from '../data/schema';
 import { CAREER_LABELS } from '../../shared/careers';
+import { busyStaffIds } from './staff';
 import { OWN_CONSOLE_TYPES, OWN_CONSOLE_CPUS, OWN_CONSOLE_MEDIA, ownConsoleDays } from '../../shared/consoles';
 import type { Rng } from '../rng';
 import type {
@@ -268,6 +269,17 @@ export function takeContract(state: GameState, contractId: number, staffIds: str
   if (!c) return { ok: false, error: 'Нет такого контракта' };
   if (state.officeLevel < (c.office ?? 1)) return { ok: false, error: `Нужен офис ${c.office}` };
   if (state.contracts.some((x) => x.id === contractId && !x.done)) return { ok: false, error: 'Контракт уже взят' };
+  // M9: занятость — человек на контракте не может взяться за второй и не работает над проектом
+  const busy = busyStaffIds(state);
+  if (staffIds.some((id) => busy.has(id))) return { ok: false, error: 'Есть сотрудник, занятый на другом контракте' };
+  // M9: повтор — только после кулдауна (сдал/провалил → ждём CONTRACT_COOLDOWN_WEEKS)
+  const lastDone = state.contracts
+    .filter((x) => x.id === contractId && x.done)
+    .reduce((m, x) => Math.max(m, x.finishedWeek ?? -99999), -99999);
+  const cdDays = CONFIG.CONTRACT_COOLDOWN_WEEKS * 7;
+  if (state.week - lastDone < cdDays) {
+    return { ok: false, error: `Повторно этот заказ — через ${Math.ceil((cdDays - (state.week - lastDone)) / 7)} нед.` };
+  }
   if (staffIds.length === 0 || staffIds.length > CONFIG.CONTRACT_MAX_STAFF) {
     return { ok: false, error: `Назначьте 1–${CONFIG.CONTRACT_MAX_STAFF} сотрудников` };
   }
@@ -302,6 +314,7 @@ export function tickContracts(state: GameState, rng: Rng): void {
       && met(data.reqGraphics, c.progress.graphics)
       && met(data.reqSound, c.progress.sound)) {
       c.done = true;
+      c.finishedWeek = state.week; // M9: для кулдауна повтора
       const reward = (rng.int(data.rewardMin ?? 0, data.rewardMax ?? 0) * 0.1) as number;
       const pr = rng.int(data.prMin ?? 0, data.prMax ?? 0);
       state.money += reward;
@@ -309,6 +322,7 @@ export function tickContracts(state: GameState, rng: Rng): void {
       log(state, `✅ Контракт «${c.name}» выполнен: +${Math.round(reward)}K, +${pr} PR`);
     } else if (state.week >= c.deadline) {
       c.done = true;
+      c.finishedWeek = state.week; // M9: для кулдауна повтора
       log(state, `⏰ Контракт «${c.name}» провален (срок вышел)`);
     }
   }

@@ -5,7 +5,7 @@ import {
   buyAd, buyBooster, changeCareer, levelUpStaff, startOwnConsole, takeContract,
   trainStaff, applyBooster,
 } from '../src/core/systems/progression';
-import { isUnlocked } from '../src/core/systems/dev';
+import { isUnlocked, devTick } from '../src/core/systems/dev';
 import { createRng } from '../src/core/rng';
 import { newGame } from '../src/core/engine';
 
@@ -186,6 +186,46 @@ describe('M4: контракты', () => {
       }
     }
     expect(cs.done).toBe(true);
+  });
+});
+
+describe('M9: контракты — занятость и кулдаун', () => {
+  it('повтор контракта — только через кулдаун после сдачи/провала', () => {
+    const g = gameWithStaff();
+    expect(takeContract(g, 1, [g.staff[0]!.id], rng()).ok).toBe(true);
+    const cs = g.contracts[0]!;
+    cs.done = true;
+    cs.finishedWeek = g.week;
+    const again = takeContract(g, 1, [g.staff[1]!.id], rng());
+    expect(again.ok).toBe(false);
+    if (!again.ok) expect(again.error).toContain('нед.');
+    g.week += CONFIG.CONTRACT_COOLDOWN_WEEKS * 7;
+    expect(takeContract(g, 1, [g.staff[1]!.id], rng()).ok).toBe(true);
+  });
+
+  it('занятого на контракте нельзя назначить на второй', () => {
+    const g = gameWithStaff();
+    expect(takeContract(g, 1, [g.staff[0]!.id], rng()).ok).toBe(true);
+    const second = takeContract(g, 2, [g.staff[0]!.id], rng());
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.error).toContain('занят');
+    // а свободного — можно
+    expect(takeContract(g, 2, [g.staff[1]!.id], rng()).ok).toBe(true);
+  });
+
+  it('назначенный на контракт не работает над проектом (devTick)', () => {
+    const a = withActiveGame(gameWithStaff());
+    const b = withActiveGame(gameWithStaff());
+    expect(takeContract(b, 1, [b.staff[0]!.id], rng()).ok).toBe(true);
+    devTick(a, rng());
+    devTick(b, rng());
+    const sum = (g: ReturnType<typeof newGame>) => {
+      const p = g.activeGame!.points;
+      return p.fun + p.creativity + p.graphics + p.sound;
+    };
+    expect(a.devContrib.some((c) => c.staffId === a.staff[0]!.id)).toBe(true);
+    expect(b.devContrib.some((c) => c.staffId === b.staff[0]!.id)).toBe(false);
+    expect(sum(b)).toBeLessThan(sum(a));
   });
 });
 
