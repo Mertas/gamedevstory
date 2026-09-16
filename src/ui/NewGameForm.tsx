@@ -135,7 +135,6 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
             <button
               key={l.id}
               className={`w95-btn${difficulty === l.id ? ' active' : ''}`}
-              title={l.note}
               onClick={() => setDifficulty(l.id)}
               data-autopilot={`newgame-difficulty-${l.id}`}
             >
@@ -143,9 +142,6 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
             </button>
           ))}
         </div>
-      </div>
-      <div className="w95-hint" style={{ marginBottom: 4 }}>
-        {levels.find((l) => l.id === difficulty)?.note ?? 'Уровень влияет на экономику партии и сохраняется в ней.'}
       </div>
 
       <div className="w95-caption">
