@@ -1,6 +1,6 @@
 // M8: архив — фильтры/сортировка/восстановленная кривая продаж (shared/archive.ts).
 import { describe, expect, it } from 'vitest';
-import { ARCHIVE_PAGE, EMPTY_FILTER, filterHistory, rebuildSalesCurve, sortHistory } from '../src/shared/archive';
+import { ARCHIVE_PAGE, DEFAULT_SORT, EMPTY_FILTER, filterHistory, nextSort, rebuildSalesCurve, sortHistory } from '../src/shared/archive';
 import type { GameRecord } from '../src/core/types';
 import { CONFIG } from '../src/core/config';
 
@@ -29,12 +29,22 @@ describe('M8: архив — фильтры и сортировка', () => {
     expect(filterHistory(rows, { ...EMPTY_FILTER, awardsOnly: true }).map((h) => h.name)).toEqual(['Альфа']);
   });
 
-  it('сортировки: дата/оценка/копии/название', () => {
-    expect(sortHistory(rows, 'date-desc').map((h) => h.name)).toEqual(['Альфа', 'Гамма', 'Бета']);
-    expect(sortHistory(rows, 'date-asc').map((h) => h.name)).toEqual(['Бета', 'Гамма', 'Альфа']);
-    expect(sortHistory(rows, 'score')[0]!.name).toBe('Бета');
-    expect(sortHistory(rows, 'units')[0]!.name).toBe('Бета');
-    expect(sortHistory(rows, 'title')[0]!.name).toBe('Альфа');
+  it('сортировки: дата/оценка/копии/название (в обе стороны)', () => {
+    expect(sortHistory(rows, { key: 'date', dir: 'desc' }).map((h) => h.name)).toEqual(['Альфа', 'Гамма', 'Бета']);
+    expect(sortHistory(rows, { key: 'date', dir: 'asc' }).map((h) => h.name)).toEqual(['Бета', 'Гамма', 'Альфа']);
+    expect(sortHistory(rows, { key: 'score', dir: 'desc' })[0]!.name).toBe('Бета');
+    expect(sortHistory(rows, { key: 'score', dir: 'asc' })[0]!.name).toBe('Альфа'); // 70 — худшая
+    expect(sortHistory(rows, { key: 'units', dir: 'desc' })[0]!.name).toBe('Бета');
+    expect(sortHistory(rows, { key: 'title', dir: 'asc' })[0]!.name).toBe('Альфа');
+  });
+
+  it('клик по заголовку: новая колонка — дефолт, та же — переворот порядка', () => {
+    expect(nextSort(DEFAULT_SORT, 'score')).toEqual({ key: 'score', dir: 'desc' });
+    expect(nextSort({ key: 'score', dir: 'desc' }, 'score')).toEqual({ key: 'score', dir: 'asc' });
+    expect(nextSort({ key: 'score', dir: 'asc' }, 'score')).toEqual({ key: 'score', dir: 'desc' });
+    expect(nextSort(DEFAULT_SORT, 'title')).toEqual({ key: 'title', dir: 'asc' }); // названия — от А
+    expect(nextSort({ key: 'score', dir: 'desc' }, 'date')).toEqual({ key: 'date', dir: 'desc' }); // даты — от новых
+    expect(nextSort({ key: 'date', dir: 'desc' }, 'date')).toEqual({ key: 'date', dir: 'asc' }); // повторный клик — переворот
   });
 });
 

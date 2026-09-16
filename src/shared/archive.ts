@@ -5,7 +5,20 @@ import { dayWeights, pricePerCopy } from '../core/formulas';
 import type { GameRecord } from '../core/types';
 import type { SalesDay } from './sales-stats';
 
-export type ArchiveSort = 'date-desc' | 'date-asc' | 'score' | 'units' | 'revenue' | 'title';
+export type ArchiveSortKey = 'date' | 'title' | 'score' | 'units' | 'revenue';
+
+export interface ArchiveSortState {
+  key: ArchiveSortKey;
+  dir: 'asc' | 'desc';
+}
+
+export const DEFAULT_SORT: ArchiveSortState = { key: 'date', dir: 'desc' };
+
+/** Клик по заголовку: та же колонка — переворачиваем порядок, новая — с дефолтного направления. */
+export function nextSort(cur: ArchiveSortState, key: ArchiveSortKey): ArchiveSortState {
+  if (cur.key === key) return { key, dir: cur.dir === 'desc' ? 'asc' : 'desc' };
+  return { key, dir: key === 'title' ? 'asc' : 'desc' };
+}
 
 export interface ArchiveFilter {
   q: string; // поиск по названию
@@ -32,26 +45,26 @@ export function filterHistory(history: GameRecord[], f: ArchiveFilter): GameReco
   });
 }
 
-export function sortHistory(rows: GameRecord[], sort: ArchiveSort): GameRecord[] {
+export function sortHistory(rows: GameRecord[], sort: ArchiveSortState): GameRecord[] {
+  // для чисел удобно (b − a)·s; localeCompare уже «по возрастанию» — знак обратный
+  const s = sort.dir === 'desc' ? 1 : -1;
+  const sStr = -s;
   const copy = [...rows];
-  switch (sort) {
-    case 'date-asc':
-      copy.sort((a, b) => a.releaseWeek - b.releaseWeek);
+  switch (sort.key) {
+    case 'title':
+      copy.sort((a, b) => a.name.localeCompare(b.name, 'ru') * sStr);
       break;
     case 'score':
-      copy.sort((a, b) => b.score - a.score || b.releaseWeek - a.releaseWeek);
+      copy.sort((a, b) => (b.score - a.score) * s || (b.releaseWeek - a.releaseWeek));
       break;
     case 'units':
-      copy.sort((a, b) => (b.paidUnits ?? b.units) - (a.paidUnits ?? a.units) || b.releaseWeek - a.releaseWeek);
+      copy.sort((a, b) => ((b.paidUnits ?? b.units) - (a.paidUnits ?? a.units)) * s || (b.releaseWeek - a.releaseWeek));
       break;
     case 'revenue':
-      copy.sort((a, b) => (b.paidRevenue ?? b.revenue) - (a.paidRevenue ?? a.revenue) || b.releaseWeek - a.releaseWeek);
-      break;
-    case 'title':
-      copy.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+      copy.sort((a, b) => ((b.paidRevenue ?? b.revenue) - (a.paidRevenue ?? a.revenue)) * s || (b.releaseWeek - a.releaseWeek));
       break;
     default:
-      copy.sort((a, b) => b.releaseWeek - a.releaseWeek);
+      copy.sort((a, b) => (b.releaseWeek - a.releaseWeek) * s);
   }
   return copy;
 }

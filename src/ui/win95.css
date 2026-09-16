@@ -513,3 +513,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* M8: график в карточке архива — во всю ширину карточки (SVG тянется по viewBox) */
 .arc-chart { width: 100%; }
 .arc-chart .sales-chart { width: 100%; height: auto; margin: 6px 0 2px; }
+/* M8: сортировка кликом по заголовку архива */
+.arc-th-sort { cursor: pointer; user-select: none; }
+.arc-th-sort:hover { background: #d7e3ff; }
+.arc-chev { margin-left: 4px; font-size: 9px; }

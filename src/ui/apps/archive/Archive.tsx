@@ -8,25 +8,16 @@ import { score100 } from '../../../shared/rules';
 import { fmtK } from '../../../shared/nums';
 import { cardWinId } from './GameCardWindow';
 import {
-  ARCHIVE_PAGE, EMPTY_FILTER, filterHistory, sortHistory,
-  type ArchiveFilter, type ArchiveSort,
+  ARCHIVE_PAGE, DEFAULT_SORT, EMPTY_FILTER, filterHistory, nextSort, sortHistory,
+  type ArchiveFilter, type ArchiveSortKey, type ArchiveSortState,
 } from '../../../shared/archive';
-
-const SORT_LABELS: Record<ArchiveSort, string> = {
-  'date-desc': 'Дата выпуска: новые',
-  'date-asc': 'Дата выпуска: старые',
-  score: 'Оценка (больше — выше)',
-  units: 'Копии (больше — выше)',
-  revenue: 'Доход (больше — выше)',
-  title: 'Название (А–Я)',
-};
 
 export function ArchiveApp() {
   const game = useGame();
   const meta = useMeta();
   const wm = useWindows();
   const [f, setF] = useState<ArchiveFilter>(EMPTY_FILTER);
-  const [sort, setSort] = useState<ArchiveSort>('date-desc');
+  const [sort, setSort] = useState<ArchiveSortState>(DEFAULT_SORT);
   const [limit, setLimit] = useState(ARCHIVE_PAGE);
 
   const totalUnits = game.history.reduce((a, h) => a + h.units, 0);
@@ -42,6 +33,18 @@ export function ArchiveApp() {
   const genreName = (id: string) => meta.genres.find((g) => g.id === id)?.ru ?? id;
   const typeName = (id: string) => meta.types.find((t) => t.id === id)?.nameRu ?? id;
   const consoleName = (id: string) => meta.consoles.find((c) => c.id === id)?.name ?? id;
+
+  // клик по заголовку — сортировка; шеврон ▼/▲ у активной колонки
+  const th = (label: string, key: ArchiveSortKey) => (
+    <th
+      className="arc-th-sort"
+      onClick={() => setSort((s) => nextSort(s, key))}
+      title={`Сортировать: ${label}`}
+    >
+      {label}
+      {sort.key === key && <span className="arc-chev">{sort.dir === 'desc' ? '▼' : '▲'}</span>}
+    </th>
+  );
 
   return (
     <div className="w95-panel" style={{ overflowY: 'auto', height: '100%' }}>
@@ -77,14 +80,19 @@ export function ArchiveApp() {
           <input type="checkbox" checked={f.awardsOnly} onChange={(e) => setF({ ...f, awardsOnly: e.target.checked })} />
           только с наградами
         </label>
-        <select className="w95-input" value={sort} onChange={(e) => setSort(e.target.value as ArchiveSort)}>
-          {(Object.keys(SORT_LABELS) as ArchiveSort[]).map((s) => <option key={s} value={s}>{SORT_LABELS[s]}</option>)}
-        </select>
       </div>
 
       <table className="w95-table">
         <thead>
-          <tr><th>Дата</th><th>Игра</th><th>Жанр × тип</th><th>Платформа</th><th>Оценка</th><th>Продажи</th><th>Доход</th></tr>
+          <tr>
+            {th('Дата', 'date')}
+            {th('Игра', 'title')}
+            <th>Жанр × тип</th>
+            <th>Платформа</th>
+            {th('Оценка', 'score')}
+            {th('Продажи', 'units')}
+            {th('Доход', 'revenue')}
+          </tr>
         </thead>
         <tbody>
           {shown.map((h) => (
