@@ -119,14 +119,20 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     const { login, password } = (req.body ?? {}) as { login?: string; password?: string };
     const name = String(login ?? '').trim();
     const key = `login:${ipOf(req)}:${name.toLowerCase()}`;
-    if (!loginLimit.allow(key)) {
+    // 16.09: окно лимита считает НЕУДАЧНЫЕ попытки; верный пароль проходит всегда (и сбрасывает
+    // окно) — иначе после смены пароля владелец упирался бы в чужой «таймер» и ждал 10 минут
+    const allowed = loginLimit.allow(key);
+    const r = users.login(name, String(password ?? ''));
+    if (r.ok) {
+      loginLimit.reset(key);
+      setSession(res, r.token, isSecure(req));
+      res.json({ ok: true, user: r.user });
+      return;
+    }
+    if (!allowed) {
       return void res.json({ ok: false, error: 'Слишком много попыток входа — подождите 10 минут' });
     }
-    const r = users.login(name, String(password ?? ''));
-    if (!r.ok) return void res.json(r);
-    loginLimit.reset(key);
-    setSession(res, r.token, isSecure(req));
-    res.json({ ok: true, user: r.user });
+    res.json(r);
   });
 
   app.post('/api/auth/logout', (req, res) => {
