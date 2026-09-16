@@ -1,8 +1,9 @@
 // Рабочий стол + панель задач + меню «Пуск».
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { Window95 } from './Window95';
 import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
+import { CARD_WIN_PREFIX, GameCardWindow, cardWinId, cardWinTitle } from './apps/archive/GameCardWindow';
 import { WebampLayer } from './WebampLayer';
 import {
   actionSetAutopilot, actionSetUi, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
@@ -21,6 +22,7 @@ import { SOUND_LEVELS, soundLabel } from '../shared/sound';
 import { FX_ROWS, safeReducedMotion } from './fxPrefs';
 import { setDeskSnap, setDeskSort, useDeskPrefs } from './deskPrefs';
 import { fmtK } from '../shared/nums';
+import type { GameRecord, GameState } from '../core/types';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
@@ -32,6 +34,26 @@ const DEFAULT_ICONS: Record<string, string> = {
   winamp: 'winamp.png',
 };
 const ICONS_KEY = 'gds-desk-icons';
+
+/** M8: окна карточек игр из архива. Компонент стабилен на каждый id (memo) — ререндер
+ *  рабочего стола от тика не тянет содержимое карточек. */
+const cardCompCache = new Map<string, ComponentType>();
+function cardComponentFor(id: string): ComponentType {
+  let c = cardCompCache.get(id);
+  if (!c) {
+    c = memo(function GameCardWin() {
+      return <GameCardWindow winId={id} />;
+    });
+    cardCompCache.set(id, c);
+  }
+  return c;
+}
+
+/** Запись игры по id окна карточки ('card:<имя>#<неделя>'); иначе null. */
+function findCardRecord(game: GameState, id: string): GameRecord | null {
+  if (!id.startsWith(CARD_WIN_PREFIX)) return null;
+  return game.history.find((h) => cardWinId(h) === id) ?? null;
+}
 
 export function Desktop({ onExit }: { onExit: () => void }) {
   const wm = useWindows();
@@ -450,18 +472,19 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
       {wins.map((w) => {
         const def = apps.find((a) => a.id === w.id);
-        if (!def) return null;
+        const card = findCardRecord(game, w.id); // M8: окно карточки игры из архива
+        if (!def && !card) return null;
         // UI-01/02: контент — стабильная ссылка на компонент + memo(Window95):
         // ререндер Desktop (тик/снапшот/драг) не тянет за собой все окна
         return (
           <Window95
             key={w.id}
             win={w}
-            title={def.title}
-            icon={def.icon}
+            title={def ? def.title : cardWinTitle(card!.name)}
+            icon={def ? def.icon : '🎮'}
             iconUrl={iconUrlFor(w.id) ?? undefined}
             focused={!winampActive && activeId === w.id}
-            component={def.component}
+            component={def ? def.component : cardComponentFor(w.id)}
           />
         );
       })}
@@ -618,6 +641,8 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           // UI-07: закрытые окна в таскбаре не показываем (состояние живёт скрыто)
           if (w.closed) return null;
           const def = apps.find((a) => a.id === w.id);
+          const card = def ? null : findCardRecord(game, w.id); // M8: карточка игры
+          if (!def && !card) return null;
           const isActive = !winampActive && !w.minimized && activeId === w.id;
           return (
             <button
@@ -633,9 +658,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
               {iconUrlFor(w.id) ? (
                 <img className="w95-task-ic" src={iconUrlFor(w.id) ?? ''} alt="" draggable={false} />
               ) : (
-                <span className="w95-task-emo">{def?.icon}</span>
+                <span className="w95-task-emo">{def?.icon ?? '🎮'}</span>
               )}
-              {def?.title}
+              {def?.title ?? (card ? cardWinTitle(card.name) : w.id)}
             </button>
           );
         })}
