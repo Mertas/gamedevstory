@@ -64,6 +64,11 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(salesman).toContain('data-autopilot={`booster-${b.id}`}');
     expect(marketing).toContain('data-autopilot={`ad-${a.id}`}');
     expect(hardware).toContain('data-autopilot={`lic-${c.id}`}');
+    // M8: форма своей консоли — с якорями (смета/срок живут в shared/consoles)
+    const ownConsole = read('../src/ui/apps/market/OwnConsole.tsx');
+    expect(ownConsole).toContain('data-autopilot="own-console-start"');
+    expect(ownConsole).toContain('data-autopilot="own-console-cpu"');
+    expect(ownConsole).toContain('data-autopilot="own-console-media"');
     expect(dev).toContain('data-autopilot="booster-staff"');
     expect(dev).toContain('data-autopilot={`booster-use-${t}`}');
     // курсор: «витринное» нажатие без повторного клика, выбор в select, скоуп по вкладкам окна

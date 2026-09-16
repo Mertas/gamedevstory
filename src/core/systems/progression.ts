@@ -7,6 +7,7 @@ import {
 import { log } from '../log';
 import type { CareerId } from '../data/schema';
 import { CAREER_LABELS } from '../../shared/careers';
+import { OWN_CONSOLE_TYPES, OWN_CONSOLE_CPUS, OWN_CONSOLE_MEDIA, ownConsoleDays } from '../../shared/consoles';
 import type { Rng } from '../rng';
 import type {
   ActionResult, GameState, OwnConsoleState, PopupInfo, Staff,
@@ -314,23 +315,7 @@ export function tickContracts(state: GameState, rng: Rng): void {
 }
 
 // ─── M4: своя консоль ───
-const OWN_CONSOLE_TYPES = [
-  { id: 'console', label: 'Стационарная', cost: 6000 },
-  { id: 'portable', label: 'Портативная', cost: 4000 },
-] as const;
-const OWN_CONSOLE_CPUS = [
-  { id: '16-bit', label: '16-бит чип', cost: 1000, hw: 1 },
-  { id: '32-bit', label: '32-бит чип', cost: 10000, hw: 1 },
-  { id: '64-bit', label: '64-бит чип', cost: 50000, hw: 1 },
-  { id: 'potato-chip', label: 'Чип «Картошка»', cost: 90000, hw: 4 },
-] as const;
-const OWN_CONSOLE_MEDIA = [
-  { id: 'cartridge', label: 'Картридж', cost: 3000, hw: 1 },
-  { id: 'cd', label: 'CD-ROM', cost: 5000, hw: 1 },
-  { id: 'dvd', label: 'DVD-ROM', cost: 15000, hw: 1 },
-  { id: 'bd', label: 'BD-ROM', cost: 35000, hw: 1 },
-  { id: 'punch-cards', label: 'Перфокарты', cost: 93999.9, hw: 6 },
-] as const;
+// Компоненты (цены, требования, срок) — в shared/consoles.ts: один источник для движка и формы.
 
 function hwEngineerCount(state: GameState): number {
   return state.staff.filter((s) => s.activeCareer === 'hw').length;
@@ -360,7 +345,7 @@ export function startOwnConsole(
     cpu,
     media,
     cost,
-    weeksTotal: (CONFIG.OWN_CONSOLE_WEEKS_BASE + (cpuIdx + mediaIdx) * CONFIG.OWN_CONSOLE_WEEKS_PER_INDEX) * 7, // в днях
+    weeksTotal: ownConsoleDays(cpuIdx, mediaIdx), // в днях
     progress: 0,
   };
   state.ownConsole = oc;

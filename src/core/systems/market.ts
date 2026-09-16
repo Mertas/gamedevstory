@@ -4,6 +4,7 @@ import { CONSOLES } from '../data/db';
 import { log } from '../log';
 import type { Rng } from '../rng';
 import type { ActionResult, GamedexOption, GameState } from '../types';
+import { dateToDay, EVENT_CONSOLE_REQ } from '../../shared/consoles';
 
 // дневные продажи выпущенных игр
 export function dailySales(state: GameState): void {
@@ -70,18 +71,18 @@ export function tickMediaEvents(state: GameState, rng: Rng): void {
   }
 }
 
-// Событийные консоли по числу Гран-при (unlock_text в БД, [О]):
-// Jupiter 512 — после 2-го Гран-при; GameJohn — 5 Гран-при + 20M копий одной игры.
+// Событийные консоли по наградам (пороги — shared/consoles, один источник для движка и UI):
+// Юпитер 512 — после 2-го Гран-при; GameJohn — 5 Гран-при + 20M копий одной игры.
 export function tryUnlockEventConsoles(state: GameState): void {
-  unlockEventConsole(state, 'jupiter-512', CONFIG.GRAND_CONSOLE_JUPITER, false);
-  unlockEventConsole(state, 'gamejohn', CONFIG.GRAND_CONSOLE_GAMEJOHN, true);
+  for (const [id, req] of Object.entries(EVENT_CONSOLE_REQ)) unlockEventConsole(state, id, req);
 }
 
-function unlockEventConsole(state: GameState, id: string, needGrand: number, need20m: boolean): void {
+function unlockEventConsole(state: GameState, id: string, req: { grand: number; units?: number }): void {
   const cs = state.consoles[id];
   if (!cs || cs.availableAtWeek !== null) return; // нет такой/уже доступна
-  if (state.awards.grand < needGrand) return;
-  if (need20m && !state.history.some((h) => h.units >= CONFIG.GAMEJOHN_UNITS_K)) return;
+  if (state.awards.grand < req.grand) return;
+  const needUnits = req.units;
+  if (needUnits && !state.history.some((h) => h.units >= needUnits)) return;
   const c = CONSOLES.find((x) => x.id === id);
   cs.availableAtWeek = state.week;
   log(state, `🔓 Консоль «${c?.name ?? id}» доступна для лицензирования${c ? ` (${Math.round(c.licenseCost)}K)` : ''}!`);
@@ -122,13 +123,9 @@ export function consoleEvents(state: GameState): void {
 }
 
 // реальный календарь: 1 апреля 1985 = день 1; год = 365 дней
-// месяцы (апрель..март): 30,31,30,31,31,30,31,30,31,31,28,31
-const MONTH_OFFSETS = [0, 30, 61, 91, 122, 153, 183, 214, 244, 275, 306, 334]; // первое число месяца (день года, 1-based)
+// (MONTH_OFFSETS и dateToDay — в shared/consoles.ts: те же для движка и UI)
 
-export function dateToDay(date: [number, number, number]): number {
-  // date = [год, месяц (1=апрель), день]; год 1 = 1985
-  return (date[0] - 1) * CONFIG.YEAR_LENGTH + (MONTH_OFFSETS[date[1] - 1] ?? 0) + date[2];
-}
+export { dateToDay } from '../../shared/consoles';
 
 // фанаты: медленный спад
 export function fanDecay(state: GameState): void {
