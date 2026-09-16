@@ -231,8 +231,7 @@ function pickHireMethod(state: GameState): HireMethodId | null {
   const methods = (Object.keys(CONFIG.HIRE_METHODS) as HireMethodId[])
     .filter((m) => state.officeLevel >= CONFIG.HIRE_METHODS[m].office)
     .filter((m) => state.money - CONFIG.HIRE_METHODS[m].cost >= reserve)
-    .filter((m) => candidateBand(state, m).length > 0
-      || (m === 'hollywood' && unlockedMystery(state) !== null))
+    .filter((m) => candidateBand(state, m).length > 0 || unlockedMystery(state, m) !== null)
     .sort((a, b) => CONFIG.HIRE_METHODS[b].cost - CONFIG.HIRE_METHODS[a].cost);
   return methods[0] ?? null;
 }
@@ -285,7 +284,11 @@ function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction
       const d = STAFF.find((x) => x.id === id);
       return !!d && state.money - (CONFIG.HIRE_METHODS[method].cost + d.hireFee) >= reserve + d.salary;
     });
-    if (!affordable && !(method === 'hollywood' && unlockedMystery(state) !== null)) return;
+    const mysteryId = unlockedMystery(state, method);
+    const mysteryD = mysteryId ? STAFF.find((x) => x.id === mysteryId) : undefined;
+    const mysteryOk = !!mysteryD
+      && state.money - (CONFIG.HIRE_METHODS[method].cost + mysteryD.hireFee) >= reserve + mysteryD.salary;
+    if (!affordable && !mysteryOk) return;
     const sres = searchAction(state, method);
     if (!sres.ok) return;
     journal?.push({ type: 'search', method });

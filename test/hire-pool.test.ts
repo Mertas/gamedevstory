@@ -7,7 +7,6 @@ import { newGame, tick, searchAction, hireFromSearchAction } from '../src/core/e
 import { candidateBand } from '../src/core/systems/staff';
 import { HIRE_BANDS, MYSTERY_IDS, MYSTERY_ORDER, unlockedMystery } from '../src/shared/hire';
 import { STAFF } from '../src/core/data/db';
-import { createRng } from '../src/core/rng';
 
 const METHODS = Object.keys(CONFIG.HIRE_METHODS) as HireMethodId[];
 
@@ -123,70 +122,70 @@ describe('M7: слои таланта у методов поиска', () => {
   });
 });
 
-describe('M7: спец-сотрудники (Голливуд, по одному)', () => {
-  it('пока награды нет — в списках не появляются', () => {
+describe('M7: спец-сотрудники: награды, по одному, в своём методе', () => {
+  it('пока награды нет — не появляются нигде (9 млн — ещё не 10)', () => {
     const g = started();
-    for (const id of MYSTERY_ORDER) {
-      expect(candidateBand(g, 'hollywood')).not.toContain(id);
-      expect(unlockedMystery(g)).toBeNull();
-    }
-    const rng = createRng(5);
-    for (let i = 0; i < 20; i++) {
-      const picks = [...g.activeSearch?.ids ?? []];
-      void picks;
-      const roll = searchAction(g, 'hollywood');
-      if (roll.ok) for (const id of g.activeSearch!.ids) expect(MYSTERY_IDS.has(id)).toBe(false);
-      void rng;
-    }
+    g.money = 9_000;
+    for (const m of METHODS) expect(unlockedMystery(g, m)).toBeNull();
+    for (const id of MYSTERY_ORDER) expect(candidateBand(g, 'hollywood')).not.toContain(id);
   });
 
-  it('2-й офис открывает Мистера X: он гарантированно в списке Голливуда', () => {
+  it('Мистер X: 10 млн на балансе — появляется в Профучилище и только там', () => {
     const g = started();
-    g.officeLevel = 3; // метод «Голливуд» требует офис 3 (Мистер X открывается уже во 2-м — награда придёт раньше канала найма)
-    g.money = 20000;
-    expect(unlockedMystery(g)).toBe('mister-x');
-    const res = searchAction(g, 'hollywood');
+    g.officeLevel = 2; // профучилище доступно со 2-го офиса
+    g.money = 10_000;
+    expect(unlockedMystery(g, 'vocational')).toBe('mister-x');
+    expect(unlockedMystery(g, 'hollywood')).toBeNull();
+    expect(unlockedMystery(g, 'open-house')).toBeNull();
+    const res = searchAction(g, 'vocational');
     expect(res.ok).toBe(true);
     expect(g.activeSearch!.ids).toContain('mister-x');
   });
 
-  it('нанял Мистера X — следующим открытым идёт Кинг Акбар (2-й офис + игра-миллионник)', () => {
+  it('Кинг Акбар: 2-й офис + игра-миллионник — появляется в «Дне открытых дверей»', () => {
     const g = started();
-    g.officeLevel = 3;
-    g.money = 20000;
-    searchAction(g, 'hollywood');
-    expect(hireFromSearchAction(g, 'mister-x').ok).toBe(true);
-    expect(g.hiredIds).toContain('mister-x');
-    expect(unlockedMystery(g)).toBeNull(); // Акбару нужен ещё миллионник
-    g.history.push({ units: 1_000_000 } as (typeof g.history)[number]);
-    expect(unlockedMystery(g)).toBe('king-ackbar');
+    g.officeLevel = 2;
+    g.money = 20_000;
+    expect(unlockedMystery(g, 'open-house')).toBeNull(); // миллионника ещё нет
+    g.history.push({ units: 1_000_000, score: 50 } as (typeof g.history)[number]);
+    expect(unlockedMystery(g, 'open-house')).toBe('king-ackbar');
+    expect(unlockedMystery(g, 'vocational')).toBe('mister-x'); // X открыт, но он в своём методе
+    const res = searchAction(g, 'open-house');
+    expect(res.ok).toBe(true);
+    expect(g.activeSearch!.ids).toContain('king-ackbar');
   });
 
-  it('Гран-при открывает Гризли/Чимпу/Кайробота по порядку, одновременно — один', () => {
+  it('Гризли: 100 млн на балансе; Чимпа: 99/100; Кайробот: 100/100 — Голливуд, по одному', () => {
     const g = started();
     g.officeLevel = 3;
-    g.money = 20000;
-    g.awards.grand = 5;
-    g.history.push({ units: 1_000_000 } as (typeof g.history)[number]); // Акбар тоже открыт
-    // порядок: сначала Мистер X (офис 2), затем Кинг Акбар, потом Гризли (1 Гран-при), Чимпа (3), Кайробот (5)
-    expect(unlockedMystery(g)).toBe('mister-x');
-    g.hiredIds.push('mister-x');
-    expect(unlockedMystery(g)).toBe('king-ackbar');
-    g.hiredIds.push('king-ackbar');
-    expect(unlockedMystery(g)).toBe('grizzly-bearington');
+    g.money = 100_000;
+    expect(unlockedMystery(g, 'hollywood')).toBe('grizzly-bearington');
+    g.hiredIds.push('grizzly-bearington');
+    expect(unlockedMystery(g, 'hollywood')).toBeNull(); // Чимпа/Кайробот оценкой ещё не открыты
+    g.history.push({ units: 5, score: 99 } as (typeof g.history)[number]);
+    expect(unlockedMystery(g, 'hollywood')).toBe('chimpan-z-force');
+    g.hiredIds.push('chimpan-z-force');
+    expect(unlockedMystery(g, 'hollywood')).toBeNull();
+    g.history.push({ units: 5, score: 100 } as (typeof g.history)[number]);
+    expect(unlockedMystery(g, 'hollywood')).toBe('kairobot');
     const res = searchAction(g, 'hollywood');
     expect(res.ok).toBe(true);
     const mysteries = g.activeSearch!.ids.filter((id) => MYSTERY_IDS.has(id));
-    expect(mysteries).toEqual(['grizzly-bearington']);
+    expect(mysteries).toEqual(['kairobot']);
   });
 
-  it('спецы не появляются в других методах, только в Голливуде', () => {
+  it('в чужих методах спецы не показываются (X — только профучилище и т.д.)', () => {
     const g = started();
     g.officeLevel = 3;
-    g.awards.grand = 5;
-    for (const m of METHODS.filter((x) => x !== 'hollywood')) {
+    g.money = 200_000; // с запасом: поиск тоже тратит баланс, а Гризли требует 100 млн НА БАЛАНСЕ
+    g.history.push({ units: 1_000_000, score: 100 } as (typeof g.history)[number]); // все награды взяты
+    const own: Record<string, string> = { vocational: 'mister-x', 'open-house': 'king-ackbar', hollywood: 'grizzly-bearington' };
+    for (const m of METHODS) {
       const res = searchAction(g, m);
-      if (res.ok) for (const id of g.activeSearch!.ids) expect(MYSTERY_IDS.has(id)).toBe(false);
+      const picks = res.ok ? g.activeSearch!.ids.filter((id) => MYSTERY_IDS.has(id)) : [];
+      const want = own[m];
+      if (want) expect(picks, `метод ${m}`).toEqual([want]);
+      else expect(picks, `метод ${m}`).toEqual([]);
     }
   });
 });

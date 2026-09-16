@@ -41,14 +41,13 @@ export function candidateBand(state: GameState, method: HireMethodId): string[] 
   return band.filter((id) => !state.hiredIds.includes(id));
 }
 
-// список кандидатов поиска: до HIRE_CANDIDATES случайных из слоя; в Голливуде
-// открытый спец-сотрудник — гарантированно в списке (M7: «заплатил — увидел героя»)
-export function rollCandidates(state: GameState, method: HireMethodId, rng: Rng): string[] {
+// список кандидатов поиска: до HIRE_CANDIDATES случайных из слоя; открытый спец-сотрудник
+// ЭТОГО метода — гарантированно в списке (M7: «заплатил — увидел героя», максимум один).
+// mysteryId передаётся из startSearch (посчитан ДО списания за поиск — «10 млн на балансе»)
+export function rollCandidates(state: GameState, method: HireMethodId, rng: Rng, mysteryId?: string | null): string[] {
   const picks: string[] = [];
-  if (method === 'hollywood') {
-    const m = unlockedMystery(state);
-    if (m) picks.push(m);
-  }
+  const m = mysteryId !== undefined ? mysteryId : unlockedMystery(state, method);
+  if (m) picks.push(m);
   const copy = candidateBand(state, method).filter((id) => !picks.includes(id));
   while (picks.length < CONFIG.HIRE_CANDIDATES && copy.length > 0) {
     picks.push(copy.splice(rng.int(0, copy.length - 1), 1)[0]!);
@@ -65,11 +64,11 @@ export function startSearch(
   if (state.officeLevel < cfg.office) return { ok: false, error: `Нужен офис ${cfg.office}` };
   if (state.money < cfg.cost) return { ok: false, error: 'Не хватает денег на поиск' };
   const band = candidateBand(state, method);
-  const mystery = method === 'hollywood' ? unlockedMystery(state) : null;
+  const mystery = unlockedMystery(state, method); // до списания: «10 млн на балансе» — на момент поиска
   if (band.length === 0 && !mystery) return { ok: false, error: 'Кандидатов нет' };
 
   state.money -= cfg.cost;
-  const candidates = rollCandidates(state, method, rng);
+  const candidates = rollCandidates(state, method, rng, mystery);
   state.activeSearch = { method, ids: candidates, week: state.week };
   log(state, `Поиск (${HIRE_METHOD_LABELS[method]}): −${cfg.cost}K, кандидатов: ${candidates.length}`);
   return { ok: true, candidates };
