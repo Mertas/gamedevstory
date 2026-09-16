@@ -20,7 +20,7 @@ export function cardWinId(h: { name: string; releaseWeek: number }): string {
 }
 
 export function cardWinTitle(name: string): string {
-  return `🎮 ${name}`;
+  return name; // эмодзи 🎮 рисует иконка окна/таскбара — в заголовке только имя
 }
 
 export function GameCardWindow({ winId }: { winId: string }) {
