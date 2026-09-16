@@ -7,7 +7,7 @@ import { dateLabel } from '../../../shared/meta';
 import { useGame, useMeta } from '../../store';
 import { pressVerdict } from '../../../shared/rules';
 import { fmtK } from '../../../shared/nums';
-import { fmtCopies, recordUnits } from '../../../shared/sales-stats';
+import { fmtCopies, liveView, recordUnits } from '../../../shared/sales-stats';
 import { CRITICS } from '../../../core/data/critics';
 import { SalesChart } from '../../SalesWidget';
 import { rebuildSalesCurve } from '../../../shared/archive';
@@ -31,6 +31,12 @@ export function GameCardWindow({ winId }: { winId: string }) {
 
   const consoleMult = meta.consoles.find((c) => c.id === h?.consoleId)?.costMult ?? 1;
   const curve = useMemo(() => (h ? rebuildSalesCurve(h, consoleMult) : []), [h, consoleMult]);
+  // M8: пока игра ЕЩЁ ПРОДАЁТСЯ — карточка живая, как окно продаж справа (динамические числа и график)
+  const view = useMemo(() => {
+    if (!h) return null;
+    const live = game.released.find((g) => g.name === h.name && g.releaseWeek === h.releaseWeek);
+    return live ? liveView(live, game.history, game.week) : null;
+  }, [h, game.released, game.history, game.week]);
 
   if (!h) return <div className="w95-hint" style={{ padding: 10 }}>Игра не найдена — архив мог измениться.</div>;
 
@@ -65,14 +71,29 @@ export function GameCardWindow({ winId }: { winId: string }) {
 
       <div className="arc-sec">
         <b>📈 Продажи</b>
-        <div className="arc-chart">
-          <SalesChart sales={curve} scale={scaleW1} planRevenue={planRevenue} money={factRev} />
-        </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <span>Копии: <b>{fmtCopies(factUnits)}</b>{h.paidUnits !== undefined && <> <span className="w95-hint">(план {fmtK(h.units)})</span></>}</span>
-          <span>Доход: <b>{fmtK(factRev)}</b></span>
-          <span>Место в студии: <b>#{rank}</b> из {game.history.length}</span>
-        </div>
+        {view ? (
+          <>
+            <div className="arc-chart">
+              <SalesChart sales={view.sales} scale={view.scaleWeek1} planRevenue={view.planRevenue} money={Math.round(view.revenue)} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <span>Копии: <b>{fmtCopies(view.units)}</b> <span className="w95-hint">— продажи идут, день {view.day} из {view.days}</span></span>
+              <span>Доход: <b>{fmtK(view.revenue)}</b></span>
+              <span>Место в студии: <b>#{view.rank}</b> из {view.total}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="arc-chart">
+              <SalesChart sales={curve} scale={scaleW1} planRevenue={planRevenue} money={factRev} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <span>Копии: <b>{fmtCopies(factUnits)}</b>{h.paidUnits !== undefined && <> <span className="w95-hint">(план {fmtK(h.units)})</span></>}</span>
+              <span>Доход: <b>{fmtK(factRev)}</b></span>
+              <span>Место в студии: <b>#{rank}</b> из {game.history.length}</span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="arc-sec">

@@ -75,7 +75,7 @@ function othersOf(history: GameRecord[], name: string, releaseWeek: number): num
 }
 
 /** Что показывать в окошке: живой релиз — приоритет, иначе итог последней игры студии. */
-function liveView(live: ActiveGame, history: GameRecord[], week: number): SalesView {
+export function liveView(live: ActiveGame, history: GameRecord[], week: number): SalesView {
   if (live.releaseWeek !== null) {
     const sums = sumsUpTo(live.sales, week);
     // копии: факт (paidUnits) → сумма по графику → доля плана (старые сейвы, где копии дня округлены)
