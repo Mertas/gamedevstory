@@ -7,6 +7,7 @@ import { generateStudioNames } from './giga';
 import type { Mailer } from './mailer';
 import { RateLimit } from './ratelimit';
 import { nextRank, rankFor } from '../shared/rank';
+import { DIFFICULTY, DIFFICULTY_IDS, isDifficultyId } from '../core/difficulty';
 import type { InviteRow, SaveMeta, UserService, UserRow } from './users';
 
 export const SESSION_COOKIE = 'gds_session';
@@ -37,7 +38,7 @@ export function initialPool(): PoolStaffDto[] {
 /** Жизненный цикл партий пользователя (реализация — SessionRegistry). */
 export interface SessionHooks {
   /** Создать новую партию (студия + стартовая пара), сохранить и сделать текущей. */
-  create(userId: number, opts: { studioName: string; staffIds: string[] }): number;
+  create(userId: number, opts: { studioName: string; staffIds: string[]; difficulty?: string }): number;
   /** Сделать сохранение текущим: создать/поднять GameServer пользователя на этом сейве. */
   load(userId: number, saveId: number): void;
   /** Удалить сохранение и (если оно активно) остановить его сессию. */
@@ -297,6 +298,15 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     });
   });
 
+  app.get('/api/difficulties', (req, res) => {
+    withUser(req, res, () => {
+      res.json({
+        ok: true,
+        difficulties: DIFFICULTY_IDS.map((id) => ({ id, label: DIFFICULTY[id].label, note: DIFFICULTY[id].note })),
+      });
+    });
+  });
+
   app.get('/api/saves', (req, res) => {
     withUser(req, res, (u) => {
       const list: Array<SaveMeta & { active: boolean }> = users.listSaves(u.id)
@@ -307,12 +317,12 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
 
   app.post('/api/saves', (req, res) => {
     withUser(req, res, (u) => {
-      const { studioName, staffIds } = (req.body ?? {}) as { studioName?: string; staffIds?: unknown };
+      const { studioName, staffIds, difficulty } = (req.body ?? {}) as { studioName?: string; staffIds?: unknown; difficulty?: unknown };
       const name = String(studioName ?? '').trim();
       const ids = Array.isArray(staffIds) ? staffIds.filter((x): x is string => typeof x === 'string') : [];
       if (name.length < 1 || name.length > 40) return void res.json({ ok: false, error: 'Название студии: 1–40 символов' });
       if (ids.length !== 2) return void res.json({ ok: false, error: 'Выберите двух сотрудников' });
-      const id = sessions.create(u.id, { studioName: name, staffIds: ids });
+      const id = sessions.create(u.id, { studioName: name, staffIds: ids, difficulty: isDifficultyId(difficulty) ? difficulty : 'normal' });
       res.json({ ok: true, id });
     });
   });

@@ -5,6 +5,7 @@ import {
   reviewTotal, salesPlan, spreadScores, totalBugs, weeklyPoints, hypeMult, weekFactor, baseWeekShares,
 } from '../src/core/formulas';
 import { createRng, type Rng } from '../src/core/rng';
+import { CONFIG } from '../src/core/config';
 import { comboGrade } from '../src/core/systems/dev';
 import { CRITICS } from '../src/core/data/critics'; // PLAN-30: 10 журналов
 
@@ -91,8 +92,8 @@ describe('рецензии', () => {
 });
 
 describe('баги', () => {
-  it('60 багов на игру 3000K (норм) — порог антипремии 50–60', () => {
-    expect(totalBugs(3000, 'normal', 'C')).toBe(60);
+  it('≈66 багов на игру 3000K (чемпион лаборатории M6) — порог антипремии ~60', () => {
+    expect(totalBugs(3000, 'normal', 'C')).toBe(Math.round(3000 * CONFIG.BUGS_PER_COST));
   });
   it('speed даёт больше багов, quality меньше', () => {
     expect(totalBugs(1000, 'speed', 'C')).toBeGreaterThan(totalBugs(1000, 'normal', 'C'));
@@ -101,8 +102,8 @@ describe('баги', () => {
   it('комбо F добавляет баги', () => {
     expect(totalBugs(1000, 'normal', 'F')).toBe(totalBugs(1000, 'normal', 'C') + 10);
   });
-  it('скорость отладки = Σ Program × 0.03 (в день)', () => {
-    expect(debugRate([{ program: 40 }, { program: 60 }])).toBeCloseTo(3);
+  it('скорость отладки = Σ Program × DEBUG_RATE (в день)', () => {
+    expect(debugRate([{ program: 40 }, { program: 60 }])).toBeCloseTo(100 * CONFIG.DEBUG_RATE);
   });
 });
 
@@ -137,8 +138,8 @@ describe('продажи', () => {
     expect(plan.totalUnits).toBeLessThan(5000);
   });
   it('цена копии растёт с множителем консоли мягко', () => {
-    expect(pricePerCopy(1)).toBeCloseTo(20);
-    expect(pricePerCopy(30)).toBeCloseTo(20 * (1 + 29 * 0.15));
+    expect(pricePerCopy(1)).toBeCloseTo(CONFIG.PRICE_BASE);
+    expect(pricePerCopy(30)).toBeCloseTo(CONFIG.PRICE_BASE * (1 + 29 * 0.15));
   });
   it('фанаты и хайп усиливают продажи', () => {
     const base = salesPlan({ installBase: 500, score: 20, combo: 'C', pop: 'B', fans: 0, fame: 10, hype: 10, sequel: false, consoleMult: 1, releaseWeek: 1 });

@@ -149,13 +149,13 @@ function mix01(a: number, b: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-const WEEKS = Math.ceil(CONFIG.SALES_DAYS / 7);
-
 /** База: недельные доли (сумма = 1) от обратного easeOutCubic — без разброса и праздников. */
 export function baseWeekShares(): number[] {
+  // M6: недели считаем на момент вызова — CONFIG меняют уровни сложности, кэш на импорте недопустим
+  const weekCount = Math.ceil(CONFIG.SALES_DAYS / 7);
   const picks = Array.from({ length: CONFIG.SALES_DAYS }, (_, i) => 1 - easeOutCubic((i + 0.5) / CONFIG.SALES_DAYS));
   const sum = picks.reduce((a, b) => a + b, 0);
-  const weeks = Array.from({ length: WEEKS }, () => 0);
+  const weeks = Array.from({ length: weekCount }, () => 0);
   picks.forEach((v, i) => {
     const w = Math.floor(i / 7);
     weeks[w] = (weeks[w] ?? 0) + v / sum;
@@ -181,13 +181,15 @@ export function weekFactor(releaseWeek: number, w: number): { high: boolean; fac
 /** Веса дней релиза: база × недельные множители. Разброс нормирован (база в сумме = 1),
  *  праздничные недели дают надбавку СВЕРХ нормы. */
 function dayWeights(releaseWeek: number): number[] {
+  // M6: недели считаем на момент вызова (CONFIG меняется уровнями сложности; кэш на импорте недопустим)
+  const weekCount = Math.ceil(CONFIG.SALES_DAYS / 7);
   const base = Array.from({ length: CONFIG.SALES_DAYS }, (_, i) => 1 - easeOutCubic((i + 0.5) / CONFIG.SALES_DAYS));
-  const wkRaw = Array.from({ length: WEEKS }, () => 0);
+  const wkRaw = Array.from({ length: weekCount }, () => 0);
   base.forEach((v, i) => {
     const w = Math.floor(i / 7);
     wkRaw[w] = (wkRaw[w] ?? 0) + v;
   });
-  const factors = Array.from({ length: WEEKS }, (_, w) => weekFactor(releaseWeek, w));
+  const factors = Array.from({ length: weekCount }, (_, w) => weekFactor(releaseWeek, w));
   let norm = 0;
   factors.forEach((f, w) => {
     norm += (wkRaw[w] ?? 0) * (f.high ? 1 : f.factor);

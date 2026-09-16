@@ -1,6 +1,6 @@
 // PLAN-18: новая игра — название студии и двое сотрудников из начального пула.
 import { Fragment, useEffect, useState , useRef } from 'react';
-import { apiCreateSave, apiPool, type PoolStaff } from './api';
+import { apiCreateSave, apiDifficulties, apiPool, type DifficultyOption, type PoolStaff } from './api';
 import { CAREER_LABELS } from '../shared/careers';
 import { fmtK } from '../shared/nums';
 
@@ -34,9 +34,13 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const [warn, setWarn] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // M6: уровень сложности — выбирается тут и сохраняется в партии
+  const [levels, setLevels] = useState<DifficultyOption[]>([]);
+  const [difficulty, setDifficulty] = useState('normal');
 
   useEffect(() => {
     void apiPool().then(setPool).catch(() => setError('Не удалось получить начальный пул сотрудников'));
+    void apiDifficulties().then(setLevels).catch(() => setLevels([]));
   }, []);
 
   const toggle = (id: string): void => {
@@ -60,7 +64,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const r = await apiCreateSave(name.trim(), picked);
+      const r = await apiCreateSave(name.trim(), picked, difficulty);
       if (!r.ok) {
         setError(r.error ?? 'Не удалось создать партию');
         return;
@@ -122,6 +126,26 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
         >
           {nameBusy ? '🎲 …' : '🎲 Случайно'}
         </button>
+      </div>
+
+      <div className="w95-form-row">
+        <label>Сложность</label>
+        <div className="w95-row" style={{ gap: 4, flexWrap: 'wrap', flex: 1 }} data-autopilot="newgame-difficulty">
+          {levels.map((l) => (
+            <button
+              key={l.id}
+              className={`w95-btn${difficulty === l.id ? ' active' : ''}`}
+              title={l.note}
+              onClick={() => setDifficulty(l.id)}
+              data-autopilot={`newgame-difficulty-${l.id}`}
+            >
+              {difficulty === l.id ? '● ' : '○ '}{l.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="w95-hint" style={{ marginBottom: 4 }}>
+        {levels.find((l) => l.id === difficulty)?.note ?? 'Уровень влияет на экономику партии и сохраняется в ней.'}
       </div>
 
       <div className="w95-caption">

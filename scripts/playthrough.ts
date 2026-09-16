@@ -1,9 +1,14 @@
-// CLI-прогон: pnpm play [seed] [days]
+// CLI-прогон: pnpm play [seed] [days] [easy|normal|hard] (или GDS_DIFFICULTY=hard pnpm play)
 import { newGame, tick } from '../src/core/engine';
+import { applyDifficulty, isDifficultyId, type DifficultyId } from '../src/core/difficulty';
 import { createPlayer, type PolicyStats } from '../src/core/sim/policy';
 
 const seed = Number(process.argv[2] ?? 1);
 const days = Number(process.argv[3] ?? 730);
+// M6: уровень сложности — третьим аргументом или переменной окружения (по умолчанию «нормальный»)
+const levelArg: unknown = process.argv[4] ?? process.env.GDS_DIFFICULTY ?? 'normal';
+const level: DifficultyId = isDifficultyId(levelArg) ? levelArg : 'normal';
+applyDifficulty(level);
 
 const state = newGame(seed);
 const player = createPlayer();
@@ -15,7 +20,7 @@ for (let i = 0; i < days; i++) {
   tick(state);
 }
 
-console.log('=== ИТОГ ===');
+console.log(`=== ИТОГ (уровень: ${level}) ===`);
 console.log(`Сид ${seed}, дней: ${state.week - 1} (год ${state.year})`);
 console.log(`Деньги: ${Math.round(state.money)}K | PR: ${Math.round(state.research)} | Фанаты: ${Math.round(state.fans)}`);
 console.log(`Сотрудники: ${state.staff.length} | Наймов: ${stats.hires} | Релизов: ${stats.releases} | Бустов: ${stats.boostAccepts} | Лицензий: ${stats.licenses}`);

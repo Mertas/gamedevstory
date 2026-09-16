@@ -1,5 +1,6 @@
 // PLAN-18: по игровой сессии на пользователя + сохранения в SQLite (data/users.db).
 import { newGame } from '../core/engine';
+import { applyDifficulty, isDifficultyId } from '../core/difficulty';
 import type { GameState } from '../core/types';
 import { resetChat, type ChatState } from '../shared/chat';
 import { GameServer } from './game';
@@ -59,15 +60,18 @@ export class SessionRegistry implements SessionHooks {
   constructor(private readonly users: UserService) {}
 
   /** Создать новую партию (студия + стартовая пара), сохранить в БД и сделать текущей. */
-  create(userId: number, opts: { studioName: string; staffIds: string[] }): number {
+  create(userId: number, opts: { studioName: string; staffIds: string[]; difficulty?: string }): number {
+    const difficulty = isDifficultyId(opts.difficulty) ? opts.difficulty : 'normal';
+    applyDifficulty(difficulty); // M6: уровень — до newGame, иначе стартовые числа будут базовыми
     const game = newGame(Math.floor(Math.random() * 99991) + 1, {
       studioName: opts.studioName,
       staffIds: opts.staffIds,
     });
+    game.difficulty = difficulty;
     const chat = resetChat();
     const saveId = this.users.createSave(
       userId, game.studioName, JSON.stringify({ game, chat }),
-      game.week, game.year, Math.round(game.money),
+      game.week, game.year, Math.round(game.money), difficulty,
     );
     this.load(userId, saveId);
     return saveId;
@@ -78,6 +82,10 @@ export class SessionRegistry implements SessionHooks {
     const cur = this.live.get(userId);
     if (cur?.saveId === saveId) return;
     if (cur) this.dispose(userId);
+    // M6: уровень партии из сейва — до старта тикера (CONFIG — общий объект на процесс)
+    const row = this.users.getSave(userId, saveId);
+    const saved = row ? parseSavePayload(row.payload)?.game.difficulty : undefined;
+    applyDifficulty(isDifficultyId(saved) ? saved : 'normal');
     const server = new GameServer({
       persist: new DbSaveStore(this.users, userId, saveId),
       openedCombos: this.users.listCombos(userId), // PLAN-22: открытия аккаунта

@@ -596,15 +596,16 @@ describe('AP-13: отладка копит дробный прогресс (сл
     ag.bugs = 10;
     ag.assignments.debug = []; // никто не назначен → вес 0.7 у всех
     const sum = g.staff.reduce((a, st) => a + st.stats.program * 0.7, 0);
-    const rate = sum * CONFIG.DEBUG_RATE; // 2 × 5 × 0.7 × 0.03 = 0.21 бага в день
+    const rate = sum * CONFIG.DEBUG_RATE; // копилка: без неё округление в день давало 0 (AP-13)
     expect(rate).toBeLessThan(0.5); // округление в день давало 0 — это и был баг на проде
     for (let d = 0; d < 7; d++) { tick(g); g.pendingEvent = null; }
     expect(ag.bugs).toBeLessThan(10); // копилка сработала
-    expect(ag.debugCarry).toBeGreaterThan(0); // остаток переносится на следующий день
+    // копилка — «ящик» округления round(): остаток всегда в пределах ±полубага (M6: было >0)
+    expect(Math.abs(ag.debugCarry ?? 0)).toBeLessThanOrEqual(0.5 + 1e-9);
     // убирается ровно столько, сколько накопилось (допуск на округления по дням)
     const removed = 10 - ag.bugs;
-    expect(removed).toBeGreaterThanOrEqual(Math.floor(rate * 7));
-    expect(removed).toBeLessThanOrEqual(Math.ceil(rate * 7) + 1);
+    expect(removed).toBeGreaterThanOrEqual(Math.round(rate * 7) - 1);
+    expect(removed).toBeLessThanOrEqual(Math.round(rate * 7) + 1);
   });
 });
 

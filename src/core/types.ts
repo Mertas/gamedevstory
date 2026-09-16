@@ -1,5 +1,6 @@
 import type { CareerId } from './data/schema';
 import type { Mode } from './config';
+import type { DifficultyId } from './difficulty';
 
 export type { Mode };
 export type ComboGrade = 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
@@ -252,6 +253,8 @@ export interface GameState {
   history: GameRecord[];
   /** PLAN-22: комбо «жанр|тип», открытые игроком (набор аккаунта, подмешивается на старте сессии) */
   openedCombos?: string[];
+  /** M6: уровень сложности партии (сохраняется в сейве; старые сейвы без поля — «нормальный») */
+  difficulty?: DifficultyId;
   genreLevels: Record<string, number>;
   typeLevels: Record<string, number>;
   consoles: Record<string, ConsoleState>;

@@ -1,0 +1,146 @@
+{
+  "schema": "gds-difficulty-presets/1",
+  "generatedAt": "2026-09-16T04:29:44",
+  "generator": "E:/My/gds-autoresearch/scripts/export-presets.py",
+  "source": {
+    "lab": "E:\\My\\gds-autoresearch",
+    "metric": "дисбаланс — сумма по уровням (5 политик игрока × 8 сидов × длина партии) + штраф за немонотонность лестницы",
+    "protocolVersion": 5,
+    "protocolDays": 7300,
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "sampleEveryDays": 60,
+    "championExperimentId": 97,
+    "championLoss": 41.11,
+    "baselineLoss": 714.092,
+    "experiments": 106,
+    "readme": "difficulty/README-agent.md рядом с этим файлом"
+  },
+  "gameContract": {
+    "configFile": "src/core/config.ts",
+    "configObject": "CONFIG",
+    "note": "CONFIG — единственный источник чисел; пресеты уровня = CONFIG, перекрытый overrides уровня"
+  },
+  "levels": [
+    {
+      "id": "easy",
+      "label": "Лёгкий",
+      "note": "пройти должен даже неряшливый игрок: подушка больше, разработка дешевле, мир добрее",
+      "weight": 1,
+      "mayFail": [],
+      "overrides": {
+        "START_MONEY": 800.0,
+        "EMERGENCY_FUND": 400.0,
+        "DEV_COST_SCALE": 1.9,
+        "CONTRACT_WEEKLY_RATE": 0.01,
+        "MEDIA_CHANCE": 0.024,
+        "BLACKOUT_CHANCE": 0.0015,
+        "BREAKDOWN_CHANCE": 0.001
+      },
+      "fullConfig": {
+        "BLACKOUT_CHANCE": 0.0015,
+        "BOOST_CHANCE": 0.651,
+        "BREAKDOWN_CHANCE": 0.001,
+        "BUGS_PER_COST": 0.02197,
+        "CONSOLE_BASE_GROWTH": 93.0,
+        "CONTRACT_WEEKLY_RATE": 0.01,
+        "DEBUG_RATE": 0.0282,
+        "DEV_COST_SCALE": 1.9,
+        "DEV_DAYS": 96.0,
+        "DEV_STAT_FACTOR": 0.5,
+        "EMERGENCY_FUND": 400.0,
+        "FAN_MULT_DIV": 2225.0,
+        "FAN_PER_UNIT": 5.0,
+        "MEDIA_CHANCE": 0.024,
+        "PAYDAY_DAY": 372.0,
+        "PRICE_BASE": 23.46,
+        "RESEARCH_DEV_RATE": 0.0447,
+        "REVIEW_DIV": 892.0,
+        "SALES_BASE_RATE": 0.04539,
+        "SALES_DAYS": 168.0,
+        "START_MONEY": 800.0
+      }
+    },
+    {
+      "id": "normal",
+      "label": "Нормальный",
+      "note": "эталон: поиск тюнит именно его, а лёгкий и сложный — надстройка через свои ручки",
+      "weight": 1,
+      "mayFail": [],
+      "overrides": {},
+      "fullConfig": {
+        "BLACKOUT_CHANCE": 0.00398,
+        "BOOST_CHANCE": 0.651,
+        "BREAKDOWN_CHANCE": 0.00139,
+        "BUGS_PER_COST": 0.02197,
+        "CONSOLE_BASE_GROWTH": 93.0,
+        "CONTRACT_WEEKLY_RATE": 0.007143,
+        "DEBUG_RATE": 0.0282,
+        "DEV_COST_SCALE": 2.44,
+        "DEV_DAYS": 96.0,
+        "DEV_STAT_FACTOR": 0.5,
+        "EMERGENCY_FUND": 150.0,
+        "FAN_MULT_DIV": 2225.0,
+        "FAN_PER_UNIT": 5.0,
+        "MEDIA_CHANCE": 0.017143,
+        "PAYDAY_DAY": 372.0,
+        "PRICE_BASE": 23.46,
+        "RESEARCH_DEV_RATE": 0.0447,
+        "REVIEW_DIV": 892.0,
+        "SALES_BASE_RATE": 0.04539,
+        "SALES_DAYS": 168.0,
+        "START_MONEY": 500.0
+      }
+    },
+    {
+      "id": "hard",
+      "label": "Сложный",
+      "note": "выживает «жадный» с дисциплиной; «разумный» — на грани; «случайный» и «багофил» могут падать",
+      "weight": 1,
+      "mayFail": [
+        "random",
+        "bugfill"
+      ],
+      "overrides": {
+        "START_MONEY": 400.0,
+        "EMERGENCY_FUND": 80.0,
+        "DEV_COST_SCALE": 3.2,
+        "CONTRACT_WEEKLY_RATE": 0.005,
+        "MEDIA_CHANCE": 0.012,
+        "BLACKOUT_CHANCE": 0.006,
+        "BREAKDOWN_CHANCE": 0.005
+      },
+      "fullConfig": {
+        "BLACKOUT_CHANCE": 0.006,
+        "BOOST_CHANCE": 0.651,
+        "BREAKDOWN_CHANCE": 0.005,
+        "BUGS_PER_COST": 0.02197,
+        "CONSOLE_BASE_GROWTH": 93.0,
+        "CONTRACT_WEEKLY_RATE": 0.005,
+        "DEBUG_RATE": 0.0282,
+        "DEV_COST_SCALE": 3.2,
+        "DEV_DAYS": 96.0,
+        "DEV_STAT_FACTOR": 0.5,
+        "EMERGENCY_FUND": 80.0,
+        "FAN_MULT_DIV": 2225.0,
+        "FAN_PER_UNIT": 5.0,
+        "MEDIA_CHANCE": 0.012,
+        "PAYDAY_DAY": 372.0,
+        "PRICE_BASE": 23.46,
+        "RESEARCH_DEV_RATE": 0.0447,
+        "REVIEW_DIV": 892.0,
+        "SALES_BASE_RATE": 0.04539,
+        "SALES_DAYS": 168.0,
+        "START_MONEY": 400.0
+      }
+    }
+  ]
+}

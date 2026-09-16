@@ -55,6 +55,8 @@ export interface SaveMeta {
   week: number;
   year: number;
   money: number;
+  /** M6: уровень сложности партии (старые сейвы — 'normal') */
+  difficulty: string;
 }
 
 type Res<T> = ({ ok: true } & T) | { ok: false; error: string };
@@ -165,6 +167,10 @@ export class UserService {
     const cols = (this.db.prepare('PRAGMA table_info(users)').all() as Array<Record<string, unknown>>)
       .map((c) => String(c.name));
     if (!cols.includes('admin')) this.db.exec('ALTER TABLE users ADD COLUMN admin INTEGER NOT NULL DEFAULT 0');
+    // M6: уровень сложности партии (старые сейвы без колонки — «нормальный»)
+    const saveCols = (this.db.prepare('PRAGMA table_info(saves)').all() as Array<Record<string, unknown>>)
+      .map((c) => String(c.name));
+    if (!saveCols.includes('difficulty')) this.db.exec("ALTER TABLE saves ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'normal'");
     this.db.exec('PRAGMA journal_mode = WAL');
   }
 
@@ -517,7 +523,7 @@ export class UserService {
 
   listSaves(userId: number): SaveMeta[] {
     const rows = this.db.prepare(
-      'SELECT id, studio_name AS studioName, created, updated, week, year, money FROM saves WHERE user_id = ? ORDER BY updated DESC',
+      'SELECT id, studio_name AS studioName, created, updated, week, year, money, difficulty FROM saves WHERE user_id = ? ORDER BY updated DESC',
     ).all(userId) as Array<Record<string, unknown>>;
     return rows.map((r) => ({
       id: Number(r.id),
@@ -527,20 +533,21 @@ export class UserService {
       week: Number(r.week),
       year: Number(r.year),
       money: Number(r.money),
+      difficulty: String(r.difficulty ?? 'normal'),
     }));
   }
 
-  createSave(userId: number, studioName: string, payload: string, week = 1, year = 1, money = 0): number {
+  createSave(userId: number, studioName: string, payload: string, week = 1, year = 1, money = 0, difficulty = 'normal'): number {
     const now = Date.now();
     const info = this.db.prepare(
-      'INSERT INTO saves (user_id, studio_name, created, updated, week, year, money, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(userId, studioName, now, now, week, year, money, payload);
+      'INSERT INTO saves (user_id, studio_name, created, updated, week, year, money, payload, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(userId, studioName, now, now, week, year, money, payload, difficulty);
     return Number(info.lastInsertRowid);
   }
 
   getSave(userId: number, saveId: number): (SaveMeta & { payload: string }) | null {
     const row = this.db.prepare(
-      `SELECT id, studio_name AS studioName, created, updated, week, year, money, payload
+      `SELECT id, studio_name AS studioName, created, updated, week, year, money, difficulty, payload
        FROM saves WHERE id = ? AND user_id = ?`,
     ).get(saveId, userId) as (SaveMeta & { payload: string }) | undefined;
     return row ?? null;

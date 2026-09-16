@@ -7,10 +7,11 @@ import { useProfile } from './profile';
 import { VersionStamp } from './VersionStamp';
 import { fmtK } from '../shared/nums';
 
-/** «12 июня 1987 · неделя 71 · изменено 11 сент., 22:01» */
+/** «12 июня 1987 · неделя 71 · касса 81K · сложность: сложная · изменено …» */
 function saveMeta(s: SaveInfo): string {
   const when = new Date(s.updated).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  return `${dateLabel(s.week)} · неделя ${s.week} · касса ${fmtK(s.money)} · изменено ${when}`;
+  const lvl = s.difficulty === 'easy' ? 'лёгкая' : s.difficulty === 'hard' ? 'сложная' : 'обычная';
+  return `${dateLabel(s.week)} · неделя ${s.week} · касса ${fmtK(s.money)} · ${lvl} · изменено ${when}`;
 }
 
 export function StartScreen({ me }: { me: MeInfo }) {

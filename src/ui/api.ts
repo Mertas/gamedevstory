@@ -28,6 +28,8 @@ export interface SaveInfo {
   year: number;
   money: number;
   active: boolean;
+  /** M6: уровень сложности партии (старые сейвы — 'normal') */
+  difficulty?: string;
 }
 
 export interface InviteInfo {
@@ -107,9 +109,21 @@ export async function apiSaves(): Promise<SaveInfo[]> {
   const d = await call<{ saves: SaveInfo[] }>('/api/saves');
   return d.saves ?? [];
 }
-export const apiCreateSave = (studioName: string, staffIds: string[]) => call<{ id?: number }>('/api/saves', { studioName, staffIds });
+export const apiCreateSave = (studioName: string, staffIds: string[], difficulty = 'normal') =>
+  call<{ id?: number }>('/api/saves', { studioName, staffIds, difficulty });
 export const apiLoadSave = (id: number) => call<{ id?: number }>(`/api/saves/${id}/load`, {});
 export const apiDeleteSave = (id: number) => call<Record<string, never>>(`/api/saves/${id}`, undefined, 'DELETE');
+
+/** M6: уровни сложности (метки — с сервера; числа живут в ядре, difficulty-presets.json). */
+export interface DifficultyOption {
+  id: string;
+  label: string;
+  note: string;
+}
+export async function apiDifficulties(): Promise<DifficultyOption[]> {
+  const d = await call<{ difficulties: DifficultyOption[] }>('/api/difficulties');
+  return d.difficulties ?? [];
+}
 
 /** Начальный пул сотрудников («Initially available») — из него стартовая пара. */
 export async function apiPool(): Promise<PoolStaff[]> {

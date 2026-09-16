@@ -308,7 +308,10 @@ export function tick(state: GameState): void {
 
   // 4. календарь (1 день = 1 тик; год = 365 дней, старт 1 апреля 1985)
   const dayInYear = ((state.week - 1) % CONFIG.YEAR_LENGTH) + 1;
-  if (dayInYear === CONFIG.PAYDAY_DAY) paySalaries(state);
+  // M6: PAYDAY_DAY чемпиона (372) шире года — приводим по модулю (372 → 7 апреля),
+  // иначе строгое равенство не срабатывало бы никогда и зарплаты исчезли бы из игры
+  const paydayDay = ((CONFIG.PAYDAY_DAY - 1) % CONFIG.YEAR_LENGTH) + 1;
+  if (dayInYear === paydayDay) paySalaries(state);
   if (dayInYear === CONFIG.AWARDS_DAY) awardsCeremony(state, rng);
 
   // 5. M3/M4/M5: продавец, Gamedex, контракты, своя консоль
