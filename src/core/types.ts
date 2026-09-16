@@ -5,6 +5,13 @@ import type { DifficultyId } from './difficulty';
 export type { Mode };
 export type ComboGrade = 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
 
+/** M8: сообщение отрывка чата в карточке игры архива. */
+export interface DecisionChatMsg {
+  author: string;
+  text: string;
+  week: number;
+}
+
 export interface Stats {
   fun: number;
   creativity: number;
@@ -86,6 +93,8 @@ export interface ActiveGame {
   assignments: Partial<Record<Role, string[]>>;
   contribTotal: Record<string, number>; // суммарный вклад по сотрудникам за проект (для отчёта)
   plot?: string; // краткий сюжет из мастера
+  /** M8: отрывок чата, где команда решила разрабатывать эту игру (снимок на старте проекта) */
+  decisionChat?: DecisionChatMsg[];
   // события
   boostOffered: boolean;
   boostUsed: boolean;
@@ -109,6 +118,8 @@ export interface ActiveGame {
 export interface GameRecord {
   name: string;
   plot?: string; // краткий сюжет из мастера
+  /** M8: отрывок чата, где команда решила разрабатывать эту игру (архивы до обновления — без него) */
+  decisionChat?: DecisionChatMsg[];
   genreId: string;
   typeId: string;
   consoleId: string;

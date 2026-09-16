@@ -131,6 +131,9 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.run(res);
       if (res.ok) {
         s.pendingPlan = null; // клик «Начать» (или таймаут) — план применён
+        // M8: снимок обсуждения — карточка игры в архиве покажет, как команда решила её делать
+        const recent = s.chat.msgs.slice(-10).map((m) => ({ author: m.author, text: m.text.slice(0, 300), week: m.week }));
+        if (s.game.activeGame && recent.length > 0) s.game.activeGame.decisionChat = recent;
         s.pushSystem('📦 Проект стартовал: разработка началась');
         void s.generatePhase('kickoff');
         s.saveNow(); // SRV-08: дорогое действие — сразу на диск

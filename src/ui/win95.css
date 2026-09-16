@@ -494,3 +494,19 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .dm-msg.self .dm-name { color: #006000; }
 .dm-when { font-size: 9px; color: #808080; margin-left: 4px; }
 .dm-text { white-space: pre-wrap; word-break: break-word; font-size: 11px; }
+
+/* M8: архив — карточка игры */
+.arc-row { cursor: pointer; }
+.arc-row:hover td { background: #d7e3ff; }
+.arc-overlay { position: fixed; inset: 0; z-index: 22000; background: rgba(0, 0, 0, .45); display: flex; flex-direction: column; align-items: center; padding: 12px 0; overflow-y: auto; }
+.arc-card { width: 560px; max-width: calc(100vw - 24px); margin: auto; flex: none; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; box-shadow: 2px 2px 0 #000, 4px 4px 18px rgba(0, 0, 0, .5); animation: pressIn .28s ease-out; }
+.arc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 8px; background: linear-gradient(90deg, #000080, #1084d0); color: #fff; font-weight: 700; }
+.arc-x { background: transparent; border: 0; color: #fff; font-weight: 700; cursor: pointer; }
+.arc-sec { padding: 6px 10px 0; }
+.arc-sec > b { display: block; margin-bottom: 2px; }
+.arc-score { font-size: 22px; font-weight: 700; }
+.arc-crit { display: grid; grid-template-columns: 120px 1fr; gap: 2px 8px; padding: 3px 0; border-top: 1px dotted #808080; }
+.arc-crit .mag { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arc-chat { display: grid; gap: 3px; }
+.arc-bubble { background: #e8e8e8; border: 1px solid #a0a0a0; padding: 2px 6px; font-size: 11px; }
+.arc-bubble .who { color: #000080; font-weight: 700; }

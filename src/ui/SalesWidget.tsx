@@ -18,8 +18,9 @@ function loadClosed(): Set<string> {
   }
 }
 
-/** График: столбики продаж по неделям + линия накопленного дохода + подписи вертикальной оси. */
-function SalesChart({ sales, scale, planRevenue, money }: { sales: SalesDay[]; scale: number; planRevenue: number; money: number }) {
+/** График: столбики продаж по неделям + линия накопленного дохода + подписи вертикальной оси.
+ *  Экспорт — карточка игры в архиве рисует тем же компонентом. */
+export function SalesChart({ sales, scale, planRevenue, money }: { sales: SalesDay[]; scale: number; planRevenue: number; money: number }) {
   const W = 240;
   const H = 80;
   const LEFT = 36;

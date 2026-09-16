@@ -387,6 +387,8 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   state.history.push({
     name: game.name,
     plot: game.plot,
+    // M8: отрывок чата о решении разрабатывать эту игру — в карточку архива
+    decisionChat: game.decisionChat ? game.decisionChat.map((m) => ({ ...m })) : undefined,
     genreId: game.genreId,
     typeId: game.typeId,
     consoleId: game.consoleId,

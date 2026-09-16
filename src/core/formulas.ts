@@ -179,8 +179,9 @@ export function weekFactor(releaseWeek: number, w: number): { high: boolean; fac
 }
 
 /** Веса дней релиза: база × недельные множители. Разброс нормирован (база в сумме = 1),
- *  праздничные недели дают надбавку СВЕРХ нормы. */
-function dayWeights(releaseWeek: number): number[] {
+ *  праздничные недели дают надбавку СВЕРХ нормы. Экспорт — для карточки игры в архиве
+ *  (восстановление кривой продаж по релизу). */
+export function dayWeights(releaseWeek: number): number[] {
   // M6: недели считаем на момент вызова (CONFIG меняется уровнями сложности; кэш на импорте недопустим)
   const weekCount = Math.ceil(CONFIG.SALES_DAYS / 7);
   const base = Array.from({ length: CONFIG.SALES_DAYS }, (_, i) => 1 - easeOutCubic((i + 0.5) / CONFIG.SALES_DAYS));
