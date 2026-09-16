@@ -2,8 +2,9 @@
 // ПРАВИЛО: новое поле GameState = поднять SAVE_VERSION + миграция здесь; ручные
 // нормализации — тоже здесь (их зовут SaveManager.read/importPayload), не в game.ts.
 import type { GameState, Staff } from './types';
+import { staffNameRu } from './data/staff-ru';
 
-export const SAVE_VERSION = 6; // 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 7; // 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -31,6 +32,10 @@ export function migrateSave(state: GameState): GameState {
     for (const letter of state.mail ?? []) {
       if (letter?.score != null && letter.score <= 40) letter.score = Math.round(letter.score * 2.5);
     }
+  }
+  if (v < 7) {
+    // 16.09: имена сотрудников в UI — на русские (по id; в данных имена остаются английскими)
+    for (const s of state.staff) s.name = staffNameRu(s.id, s.name);
   }
 
   // repair-нормализации, не зависящие от версии (висящие инварианты легаси-сейвов):

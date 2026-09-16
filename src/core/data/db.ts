@@ -3,6 +3,7 @@
 // Единственный модуль, который знает про SQLite; движок импортирует только отсюда.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { staffNameRu } from './staff-ru';
 import type {
   CareerId, ConsoleData, GenreData, ReviewMessage, StaffData, TypeData,
 } from './schema';
@@ -124,7 +125,7 @@ export const STAFF: StaffData[] = all<Row>(
   for (const k of CAREER_KEYS) careers[k] = r[`career_${k}`] as number;
   return {
     id: r.id as string,
-    name: r.name as string,
+    name: staffNameRu(r.id as string, r.name as string),
     gender: r.gender as string,
     salary: r.salary as number,
     hireFee: r.hireFee as number,
