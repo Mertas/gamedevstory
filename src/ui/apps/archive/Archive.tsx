@@ -177,7 +177,7 @@ function GameCard({ h, onClose, rank, total }: { h: GameRecord; onClose: () => v
 
         <div className="arc-sec">
           <b>📈 Продажи</b>
-          <div style={{ transform: 'scale(1.9)', transformOrigin: '0 0', width: 456, height: 152 }}>
+          <div className="arc-chart">
             <SalesChart sales={curve} scale={scaleW1} planRevenue={planRevenue} money={factRev} />
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

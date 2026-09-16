@@ -510,3 +510,6 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .arc-chat { display: grid; gap: 3px; }
 .arc-bubble { background: #e8e8e8; border: 1px solid #a0a0a0; padding: 2px 6px; font-size: 11px; }
 .arc-bubble .who { color: #000080; font-weight: 700; }
+/* M8: график в карточке архива — во всю ширину карточки (SVG тянется по viewBox) */
+.arc-chart { width: 100%; }
+.arc-chart .sales-chart { width: 100%; height: auto; margin: 6px 0 2px; }
