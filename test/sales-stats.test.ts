@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { newGame } from '../src/core/engine';
 import { dailySales } from '../src/core/systems/market';
-import { fmtCopies, fmtUnits, isUnitsRecord, pickSalesView, pickSalesViews, smoothView, unitsRank } from '../src/shared/sales-stats';
+import { fmtCopies, fmtUnits, isUnitsRecord, liveView, pickSalesView, pickSalesViews, smoothView, unitsRank } from '../src/shared/sales-stats';
 import { pressVerdict } from '../src/shared/rules';
 import type { ActiveGame, GameRecord } from '../src/core/types';
 
@@ -164,5 +164,26 @@ describe('PLAN-30: вердикт прессы', () => {
     expect(pressVerdict(65)).toContain('Крепкая');
     expect(pressVerdict(50)).toContain('Смешанные');
     expect(pressVerdict(30)).toContain('разгромила');
+  });
+});
+
+// M8: карточка игры в архиве — у идущих продаж тот же живой вид, что в окне продаж
+describe('M8: карточка игры — живые продажи', () => {
+  const mk = (week: number, days: number) =>
+    ({
+      name: 'Живая', genreId: 'g', typeId: 't', consoleId: 'pc-game', score: 30, releaseWeek: week,
+      sales: Array.from({ length: days }, (_, i) => ({ week: week + i, units: 10, unitsF: 10, revenue: 50 })),
+      totalUnits: days * 10, totalRevenue: days * 50, ended: false,
+      paidUnits: 18, paidRevenue: 90, // факт: продано меньше, чем дней плана
+    } as unknown as ActiveGame);
+
+  it('liveView: день, факт-числа, только прошедшие дни (будущее не показываем)', () => {
+    const v = liveView(mk(100, 5), [], 101);
+    expect(v.live).toBe(true);
+    expect(v.day).toBe(2); // прошло 2 дня
+    expect(v.days).toBe(5);
+    expect(v.sales).toHaveLength(2); // будущие дни не в графике
+    expect(v.units).toBe(18); // факт (paidUnits), а не план 50
+    expect(v.revenue).toBe(90);
   });
 });
