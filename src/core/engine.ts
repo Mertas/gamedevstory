@@ -6,7 +6,7 @@ import { createRng, rngFromState } from './rng';
 import { log } from './log';
 import { SAVE_VERSION } from './migrate';
 import type { ActionResult, DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
-import { minigameOutcome, minigameTitle } from '../shared/minigames';
+import { minigameClosedOutcome, minigameOutcome, minigameTitle } from '../shared/minigames';
 import {
   fireStaff, startSearch, hireFromSearch, makeStaffFromData, paySalaries, pickAvatar, dailyPower,
 } from './systems/staff';
@@ -214,15 +214,18 @@ export function resolveEventAction(state: GameState) {
 }
 
 // PLAN-39: результат мини-игры из врезки (0–100 %) — эффект PR + строка в журнал.
-export function resolveMinigameAction(state: GameState, pct: number): ActionResult {
+// closed=true — партию закрыли досрочно: максимальный штраф, результат не учитывается.
+export function resolveMinigameAction(state: GameState, pct: number, closed = false): ActionResult {
   const ev = state.pendingEvent;
   if (ev?.type !== 'minigame') return { ok: false, error: 'Сейчас нет мини-игры' };
   const p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
-  const { pr, note } = minigameOutcome(p);
+  const { pr, note } = closed ? minigameClosedOutcome() : minigameOutcome(p);
   state.pendingEvent = null;
   if (pr > 0) state.research += pr;
   else if (pr < 0) state.research = Math.max(0, state.research + pr);
-  log(state, `🎮 Мини-игра «${minigameTitle(ev.gameId)}» — ${p}%: ${note}`);
+  log(state, closed
+    ? `🎮 Мини-игра «${minigameTitle(ev.gameId)}» закрыта досрочно — ${note}`
+    : `🎮 Мини-игра «${minigameTitle(ev.gameId)}» — ${p}%: ${note}`);
   return { ok: true };
 }
 

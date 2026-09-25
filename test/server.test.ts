@@ -52,6 +52,18 @@ describe('GameServer: PLAN-40 — авторежим открывается по
   });
 });
 
+describe('GameServer: PLAN-39 — закрытие мини-игры через сервер', () => {
+  it('resolve_minigame {closed:true}: максимальный штраф, событие снято', () => {
+    srv = makeServer();
+    srv.snapshot().game.pendingEvent = { type: 'minigame', gameId: 'g001' };
+    srv.snapshot().game.research = 1;
+    srv.handle({ type: 'resolve_minigame', closed: true });
+    expect(srv.snapshot().game.pendingEvent).toBeNull();
+    expect(srv.snapshot().game.research).toBe(0); // −2, пол 0
+    expect(srv.snapshot().game.log.some((l) => l.text.includes('закрыта досрочно'))).toBe(true);
+  });
+});
+
 describe('GameServer: set_speed (SRV-01)', () => {
   it('отклоняет NaN/огромное/отрицательное, принимает 0..8', () => {
     srv = makeServer();

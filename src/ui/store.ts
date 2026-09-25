@@ -374,6 +374,11 @@ export function actionResolveBoost(accept: boolean, amount?: number) {
 export function actionResolveMinigame(pct: number) {
   send({ type: 'resolve_minigame', pct });
 }
+
+/** PLAN-39: партию закрыли досрочно — сервер применит максимальный штраф. */
+export function actionCloseMinigame() {
+  send({ type: 'resolve_minigame', closed: true });
+}
 export function actionDismissSalesman() {
   send({ type: 'resolve_salesman' });
 }

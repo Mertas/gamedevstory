@@ -41,7 +41,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'resolve_boost'; accept: boolean; amount?: number }
   | { type: 'resolve_salesman' }
   | { type: 'resolve_gamedex'; option: string }
-  | { type: 'resolve_minigame'; pct: number } // PLAN-39: результат врезки мини-игры
+  | { type: 'resolve_minigame'; pct?: number; closed?: boolean } // PLAN-39: результат врезки / досрочное закрытие (макс. штраф)
   | { type: 'resolve_event' }
   | { type: 'user_typing' } // SER-27: игрок печатает (для панели разговоров)
   | { type: 'generate_story'; genreId: string; typeId: string; reqId?: number }

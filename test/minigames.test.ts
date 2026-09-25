@@ -10,7 +10,7 @@ import { devTick } from '../src/core/systems/dev';
 import { createRng } from '../src/core/rng';
 import { autopilotProjectInput } from '../src/core/sim/policy';
 import {
-  accountTotalsFromGames, drawMinigame, minigameOutcome, minigameTitle,
+  accountTotalsFromGames, drawMinigame, MINIGAME_MAX_PENALTY, minigameClosedOutcome, minigameOutcome, minigameTitle,
 } from '../src/shared/minigames';
 import { isAppVisible, speedOptions } from '../src/shared/unlocks';
 import { UserService } from '../src/server/users';
@@ -44,6 +44,21 @@ describe('PLAN-39: эффекты мини-игры', () => {
     g.pendingEvent = { type: 'minigame', gameId: 'g104' };
     resolveMinigameAction(g, 10);
     expect(g.research).toBe(0); // штраф не уводит в минус
+  });
+
+  it('закрытие партии — максимальный штраф (−2), даже если в партии уже были очки', () => {
+    const g = newGame(7);
+    g.research = 1;
+    g.pendingEvent = { type: 'minigame', gameId: 'g102' };
+    expect(resolveMinigameAction(g, 100, true).ok).toBe(true); // проценты не спасают: закрытие = штраф
+    expect(g.research).toBe(0); // пол — 0
+    expect(g.pendingEvent).toBeNull();
+    expect(g.log.some((l) => l.text.includes('закрыта досрочно'))).toBe(true);
+  });
+
+  it('шкала: закрытие = максимум шкалы (то же число, что у провала)', () => {
+    expect(minigameClosedOutcome().pr).toBe(MINIGAME_MAX_PENALTY);
+    expect(minigameClosedOutcome().pr).toBe(minigameOutcome(0).pr);
   });
 
   it('без висящего события — отказ', () => {

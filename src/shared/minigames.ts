@@ -40,12 +40,20 @@ export function minigameTitle(id: string): string {
   return MINIGAME_DEFS[id]?.title ?? id;
 }
 
+/** Максимальный штраф шкалы — он же цена досрочного закрытия партии (босс, 25.09). */
+export const MINIGAME_MAX_PENALTY = -2;
+
 /** PLAN-39: эффект мини-игры. ≥70% → +3 PR; 40–69% → без изменений; <40% → −2 PR (пол — 0). */
 export function minigameOutcome(pct: number): { pr: number; note: string } {
   const p = Math.max(0, Math.min(100, Math.round(pct || 0)));
   if (p >= 70) return { pr: 3, note: '+3 PR — пресса заметила' };
   if (p >= 40) return { pr: 0, note: 'без изменений' };
-  return { pr: -2, note: '−2 PR — провал заметили' };
+  return { pr: MINIGAME_MAX_PENALTY, note: '−2 PR — провал заметили' };
+}
+
+/** PLAN-39: партию закрыли досрочно — максимальный штраф, без скидок за прогресс. */
+export function minigameClosedOutcome(): { pr: number; note: string } {
+  return { pr: MINIGAME_MAX_PENALTY, note: 'максимальный штраф: −2 PR' };
 }
 
 // ─── мешок без повторов (аккаунт, user_flags['mg_bag']) ───

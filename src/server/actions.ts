@@ -241,8 +241,8 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       return;
     }
     case 'resolve_minigame': {
-      // PLAN-39: результат врезки — эффект (PR) и строка в журнал; остальное решает движок
-      s.run(resolveMinigameAction(s.game, msg.pct));
+      // PLAN-39: результат врезки или досрочное закрытие (максимальный штраф) — считает движок
+      s.run(resolveMinigameAction(s.game, Number(msg.pct) || 0, msg.closed === true));
       s.emit();
       return;
     }
