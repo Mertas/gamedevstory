@@ -1,0 +1,6 @@
+{
+  "//": "winamp-eqf вне tsc-программы игры (его импортируют только исходники webamp из libs/webamp; для tsc есть ambient-декларация webamp). Файл для Vite/esbuild: отключает корневой verbatimModuleSyntax:true, иначе esbuild в dev сохраняет импорт типов как значений (import { EqfData } from './types.js') и браузер падает: does not provide an export named 'EqfData'. В прод-сборке скрыто (rollup выбрасывает неиспользуемые имена).",
+  "compilerOptions": {
+    "verbatimModuleSyntax": false
+  }
+}

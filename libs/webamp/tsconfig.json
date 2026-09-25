@@ -1,0 +1,6 @@
+{
+  "//": "webamp вне tsc-программы игры (см. src/webamp-internal.d.ts; типы даёт ambient-декларация). Файл для Vite/esbuild: отключает корневой verbatimModuleSyntax:true, иначе esbuild в dev сохраняет импорт типов как значений (import { Band } from './types') и браузер падает: does not provide an export named 'Band'. В прод-сборке скрыто (rollup выбрасывает неиспользуемые имена).",
+  "compilerOptions": {
+    "verbatimModuleSyntax": false
+  }
+}
