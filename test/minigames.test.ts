@@ -10,7 +10,8 @@ import { devTick } from '../src/core/systems/dev';
 import { createRng } from '../src/core/rng';
 import { autopilotProjectInput } from '../src/core/sim/policy';
 import {
-  accountTotalsFromGames, drawMinigame, MINIGAME_MAX_PENALTY, minigameClosedOutcome, minigameOutcome, minigameTitle,
+  accountTotalsFromGames, drawMinigame, MINIGAME_MAX_PENALTY, minigameClosedOutcome, minigameEmbedUrl,
+  minigameOutcome, minigameTitle,
 } from '../src/shared/minigames';
 import { isAppVisible, speedOptions } from '../src/shared/unlocks';
 import { UserService } from '../src/server/users';
@@ -173,5 +174,15 @@ describe('PLAN-39: мешок мини-игр в БД аккаунта', () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('PLAN-39: embed-ссылка врезки (монитор SONNY)', () => {
+  it('несёт embed, пресет, звук и цену закрытия pen', () => {
+    const url = minigameEmbedUrl('/lab/', 'g104', false);
+    expect(url.startsWith('/lab/?embed=1&g=g104&p=')).toBe(true);
+    expect(url).toContain('snd=0');
+    expect(url).toContain(`pen=${Math.abs(MINIGAME_MAX_PENALTY)}`);
+    expect(minigameEmbedUrl('/lab/', 'g001', true)).toContain('snd=1');
   });
 });

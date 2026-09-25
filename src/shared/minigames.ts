@@ -97,10 +97,11 @@ export function encodeMinigameParams(id: string): string {
 
 /**
  * Ссылка на песочницу в embed-режиме (см. plan/39 «Архитектура»):
- * `/lab/?embed=1&g=<id>&p=<base64url>&snd=0|1` — параметры пресета и глушение звука.
+ * `/lab/?embed=1&g=<id>&p=<base64url>&snd=0|1&pen=<штраф>` — пресет, глушение звука
+ * и цена досрочного закрытия (её показывают кнопки внутри врезки).
  */
 export function minigameEmbedUrl(base: string, id: string, snd: boolean): string {
-  return `${base}?embed=1&g=${encodeURIComponent(id)}&p=${encodeMinigameParams(id)}&snd=${snd ? 1 : 0}`;
+  return `${base}?embed=1&g=${encodeURIComponent(id)}&p=${encodeMinigameParams(id)}&snd=${snd ? 1 : 0}&pen=${Math.abs(MINIGAME_MAX_PENALTY)}`;
 }
 
 // ─── сводка аккаунта (PLAN-39/40) ───
