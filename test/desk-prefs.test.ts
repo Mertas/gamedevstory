@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { getDeskPrefs, setDeskSnap, setDeskSort, subscribeDeskPrefs } from '../src/ui/deskPrefs';
 
 describe('настройки рабочего стола', () => {
-  it('дефолты без localStorage: сетка выключена, сортировка по порядку', () => {
+  it('дефолты без localStorage: сетка включена по умолчанию, сортировка по порядку', () => {
     const p = getDeskPrefs();
-    expect(typeof p.snap).toBe('boolean');
+    expect(p.snap).toBe(true); // 25.09: «по тайлам» включено из коробки
     expect(['default', 'name', 'kind']).toContain(p.sort);
   });
   it('setDeskSnap меняет значение и зовёт подписчиков', () => {

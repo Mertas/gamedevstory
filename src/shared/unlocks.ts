@@ -29,7 +29,6 @@ export function speedOptions(accountReleases: number): number[] {
 export function isAppVisible(id: string, ctx: UnlockCtx): boolean {
   switch (id) {
     case 'archive':
-    case 'magazines':
     case 'mail':
       // хранить/писать/получать письма до первого релиза нечего
       return ctx.saveReleases >= 1;

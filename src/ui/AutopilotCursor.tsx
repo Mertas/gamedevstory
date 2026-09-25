@@ -20,7 +20,7 @@ const DIR_AXES = ['cute', 'realism', 'approach', 'niche', 'simple', 'innovation'
 /** человекочитаемые названия окон для ярлыка мыши */
 const APP_TITLES: Record<string, string> = {
   chat: 'Чат', code: 'Код', hire: 'Найм', marketing: 'Маркетинг', hardware: 'Железо',
-  research: 'Исследования', archive: 'Архив', magazines: 'Журналы', contracts: 'Контракты',
+  research: 'Исследования', archive: 'Архив', contracts: 'Контракты',
   mail: 'Почта', help: 'Справка',
 };
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));

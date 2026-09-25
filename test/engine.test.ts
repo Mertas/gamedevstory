@@ -15,7 +15,7 @@ import { dateToDay, dailySales, tickMediaEvents } from '../src/core/systems/mark
 import { tickFanLetters } from '../src/core/systems/mail';
 import { isValidGameState, migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { dateLabel as sharedDateLabel } from '../src/shared/meta';
-import type { ActiveGame, GameState } from '../src/core/types';
+import type { ActiveGame, GameRecord, GameState } from '../src/core/types';
 
 // исход буста после resolveBoost — читается отдельной функцией: сужение свойства
 // g.pendingEvent не сбрасывается вызовом, внутри функции тип честный
@@ -46,6 +46,26 @@ function debugGame(g: GameState, hype: number): ActiveGame {
   g.activeGame = ag;
   return ag;
 }
+
+describe('25.09: архив хранит все игры — история релизов не режется', () => {
+  it('новый релиз не вытесняет старые записи (старого предела 32 нет)', () => {
+    const g = newGame(1);
+    g.money = 5000;
+    for (let i = 0; i < 40; i++) {
+      const old: GameRecord = {
+        name: `Старая-${i + 1}`, genreId: 'rpg', typeId: 'fantasy', consoleId: 'pc-game',
+        score: 80, units: 100, revenue: 1000, releaseWeek: 10 + i, year: 1,
+        attrs: { fun: 1, creativity: 1, graphics: 1, sound: 1 }, bugs: 0, bugsTotal: 0, awards: [],
+      };
+      g.history.push(old);
+    }
+    debugGame(g, 10);
+    const res = releaseAction(g);
+    expect(res.ok).toBe(true);
+    expect(g.history).toHaveLength(41); // 40 старых + новый релиз
+    expect(g.history[0]!.name).toBe('Старая-1'); // самая первая запись на месте
+  });
+});
 
 describe('консоли: жизненный цикл (появление по дате выхода)', () => {
   it('недоступна до даты, появляется в день выхода с анонсами в логе', () => {

@@ -17,11 +17,12 @@ function load(): DeskPrefs {
   try {
     const sort = localStorage.getItem(SORT_KEY);
     return {
-      snap: localStorage.getItem(SNAP_KEY) === '1',
+      // «по тайлам» (выровнять по сетке) включено по умолчанию: выключается только явным '0'
+      snap: localStorage.getItem(SNAP_KEY) !== '0',
       sort: sort === 'name' || sort === 'kind' ? sort : 'default',
     };
   } catch {
-    return { snap: false, sort: 'default' };
+    return { snap: true, sort: 'default' };
   }
 }
 

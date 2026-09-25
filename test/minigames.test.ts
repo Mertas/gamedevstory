@@ -145,10 +145,9 @@ describe('PLAN-40: сводка аккаунта, скорости, видимо
     expect(speedOptions(500)).toEqual([0, 0.5, 1, 2, 4, 8]);
   });
 
-  it('Архив/Журналы/Почта — после 1-го релиза; Контракты — по офису; Маркетинг — сразу', () => {
+  it('Архив/Почта — после 1-го релиза; Контракты — по офису; Маркетинг — сразу', () => {
     const ctx = { saveReleases: 0, accountReleases: 0, victory: false, officeLevel: 1, contractOffices: [1, 2, 3] };
     expect(isAppVisible('archive', ctx)).toBe(false);
-    expect(isAppVisible('magazines', ctx)).toBe(false);
     expect(isAppVisible('mail', ctx)).toBe(false);
     expect(isAppVisible('marketing', ctx)).toBe(true);
     expect(isAppVisible('contracts', ctx)).toBe(true); // первый заказ доступен уже с офиса 1
