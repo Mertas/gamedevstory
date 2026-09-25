@@ -289,13 +289,17 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   // PLAN-40 (25.09): у иконки без своей позиции (открылась с прогрессом) — ПЕРВАЯ СВОБОДНАЯ
   // плитка по сетке, а не «ячейка по индексу»: та могла быть занята перетащенной иконкой.
   // Найденная позиция сразу уходит в состояние (и в сейв) — иконка стоит стабильно.
+  // Позиции исчезнувших приложений («Журналы») вычищаются — мёртвая плитка не блокируется.
   useEffect(() => {
     if (!iconsSeeded.current) return;
     setDeskPos((p) => {
+      const known = new Set([...APP_DEFS.map((d) => d.id), 'winamp']);
+      const stale = Object.keys(p).filter((id) => !known.has(id));
       const missing = sortedIcons.filter((it) => !p[it.id]);
-      if (missing.length === 0) return p;
-      const spots = firstFreeTiles(Object.values(p), missing.length, rowsCount());
-      const next = { ...p };
+      if (stale.length === 0 && missing.length === 0) return p;
+      const next: Record<string, { x: number; y: number }> = {};
+      for (const [id, pos] of Object.entries(p)) if (known.has(id)) next[id] = pos;
+      const spots = firstFreeTiles(Object.values(next), missing.length, rowsCount());
       missing.forEach((it, i) => { next[it.id] = spots[i]!; });
       return next;
     });
