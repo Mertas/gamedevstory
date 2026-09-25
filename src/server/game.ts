@@ -14,6 +14,8 @@ import { AutopilotController } from './autopilot';
 import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH, type PersistAdapter } from './save';
 import { writeAutopilotLog, dispatchClientAction, MAX_SPEED } from './actions';
+import { log } from '../core/log';
+import { MINIGAME_ROTATION } from '../shared/minigames';
 import { GameTicker } from './ticker';
 import { ChatOrchestrator } from './chatflow';
 import { MailService } from './mail';
@@ -23,6 +25,10 @@ export interface SessionSnapshot {
   chat: ChatState;
   speed: number;
   autopilot: boolean;
+  /** PLAN-40: победа аккаунта (100/100) — открыт авторежим */
+  victory: boolean;
+  /** PLAN-40: релизов за всю историю аккаунта — пороги скоростей */
+  accountReleases: number;
 }
 
 export type ClientAction = { autopilot?: boolean } & (
@@ -35,6 +41,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'resolve_boost'; accept: boolean; amount?: number }
   | { type: 'resolve_salesman' }
   | { type: 'resolve_gamedex'; option: string }
+  | { type: 'resolve_minigame'; pct: number } // PLAN-39: результат врезки мини-игры
   | { type: 'resolve_event' }
   | { type: 'user_typing' } // SER-27: игрок печатает (для панели разговоров)
   | { type: 'generate_story'; genreId: string; typeId: string; reqId?: number }
@@ -87,6 +94,12 @@ export interface GameServerDeps {
   openedCombos?: string[];
   /** PLAN-22: новые открытия уезжают в аккаунт на автосейве */
   onCombosChanged?: (combos: string[]) => void;
+  /** PLAN-39: следующая мини-игра из мешка аккаунта (без повторов) */
+  nextMinigameId?: () => string;
+  /** PLAN-40: победа аккаунта (100/100) — открыт авторежим */
+  victory?: boolean;
+  /** PLAN-40: релизов за всю историю аккаунта — пороги скоростей */
+  accountReleases?: number;
 }
 
 // ─── PLAN-30: пресса — общий промпт и разбор ответа (релиз и самолечение) ───
@@ -175,6 +188,11 @@ export class GameServer {
   /** PLAN-22: сколько пар уже отправлено в аккаунт (не гоняем запись на каждом автосейве) */
   private syncedCombos = 0;
   private onCombosChanged?: (combos: string[]) => void;
+  /** PLAN-39: мешок мини-игр аккаунта — поставщик id следующей игры */
+  private nextMinigameId?: () => string;
+  /** PLAN-40: победа аккаунта (100/100) — гейт авторежима; релизы аккаунта — гейты скоростей */
+  victory = false;
+  accountReleases = 0;
 
   constructor(deps: GameServerDeps = {}) {
     this.llm = deps.llm ?? generateWithFallback;
@@ -187,6 +205,10 @@ export class GameServer {
     if (loaded) consoleEvents(this.game);
     // PLAN-22: набор аккаунта — источник правды по доступности комбо (сейв мог отстать)
     this.onCombosChanged = deps.onCombosChanged;
+    // PLAN-39/40: прогресс аккаунта — победа и релизы (пороги авторежима и скоростей)
+    this.nextMinigameId = deps.nextMinigameId;
+    this.victory = deps.victory === true;
+    this.accountReleases = Math.max(0, Math.floor(deps.accountReleases ?? 0));
     this.game.openedCombos = [...new Set([...(this.game.openedCombos ?? []), ...(deps.openedCombos ?? [])])];
     this.syncedCombos = this.game.openedCombos.length;
     this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
@@ -201,7 +223,10 @@ export class GameServer {
   }
 
   snapshot(): SessionSnapshot {
-    return { game: this.game, chat: this.chat, speed: this.speed, autopilot: this.autopilotOn };
+    return {
+      game: this.game, chat: this.chat, speed: this.speed, autopilot: this.autopilotOn,
+      victory: this.victory, accountReleases: this.accountReleases,
+    };
   }
 
   // шаги хореографии автопилота (виртуальная мышь клиента)
@@ -449,6 +474,29 @@ export class GameServer {
   /** @internal для GameTicker: LLM-тексты и публикация писем (см. mail.ts). */
   maybeMailLetters(): void {
     this.mailer.maybeMailLetters();
+  }
+
+  // ─── PLAN-39/40: мини-игры и награды аккаунта ───
+  /** @internal для GameTicker: добрать gameId мини-игры из мешка аккаунта. */
+  maybeFillMinigame(): void {
+    const ev = this.game.pendingEvent;
+    if (ev?.type !== 'minigame' || ev.gameId) return;
+    ev.gameId = this.nextMinigameId?.() ?? MINIGAME_ROTATION[0];
+    this.emit();
+  }
+
+  /** PLAN-39/40: релиз — счётчики аккаунта; первая победа (100/100) открывает авторежим. */
+  noteRelease(score: number): void {
+    this.accountReleases += 1;
+    if (this.victory) return;
+    if (score >= 100) {
+      this.victory = true;
+      const title = '🏆 ПОБЕДА 100/100!';
+      const text = 'Все десять критиков поставили 10/10. Авторежим «Отдать управление» открыт навсегда — в любой партии.';
+      if (!this.game.pendingEvent) this.game.pendingEvent = { type: 'info', title, text };
+      else this.game.lastPopup = { title, text };
+      log(this.game, '🏆 Победа: 100/100 — авторежим открыт навсегда');
+    }
   }
 
   // ─── сейвы ───

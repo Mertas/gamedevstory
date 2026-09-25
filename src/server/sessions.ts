@@ -7,6 +7,7 @@ import { GameServer } from './game';
 import { parseSavePayload, type LoadedSave, type PersistAdapter } from './save';
 import type { UserService } from './users';
 import type { SessionHooks } from './api';
+import { accountTotalsFromGames } from '../shared/minigames';
 
 /** Полезная нагрузка сейва в БД: автосейв с тем же дебаунсом (10 игровых дней), что у файлового. */
 export class DbSaveStore implements PersistAdapter {
@@ -90,10 +91,28 @@ export class SessionRegistry implements SessionHooks {
       persist: new DbSaveStore(this.users, userId, saveId),
       openedCombos: this.users.listCombos(userId), // PLAN-22: открытия аккаунта
       onCombosChanged: (combos) => this.users.addCombos(userId, combos), // PLAN-22
+      // PLAN-39/40: прогресс аккаунта — релизы всех сейвов и победа (100/100)
+      ...this.accountCtx(userId),
     });
     this.live.set(userId, { saveId, server });
     // PLAN-30: починка служебных фолбэков прессы в последней записи (идемпотентно, молчит без нужды)
     void server.generatePress();
+  }
+
+  /** PLAN-39/40: сводка по сейвам игрока — релизы всего и победа (пороги скоростей, авторежим). */
+  private accountCtx(userId: number): { victory: boolean; accountReleases: number; nextMinigameId: () => string } {
+    const games: Array<{ history?: Array<{ score?: number | null }>; released?: Array<{ score?: number | null }> }> = [];
+    for (const meta of this.users.listSaves(userId)) {
+      const row = this.users.getSave(userId, meta.id);
+      const loaded = row ? parseSavePayload(row.payload) : null;
+      if (loaded) games.push(loaded.game);
+    }
+    const totals = accountTotalsFromGames(games);
+    return {
+      victory: totals.victory,
+      accountReleases: totals.releases,
+      nextMinigameId: () => this.users.nextMinigameId(userId),
+    };
   }
 
   /**

@@ -17,12 +17,17 @@ export interface Snapshot {
   connected: boolean;
   meta: MetaData | null;
   autopilot: boolean;
+  /** PLAN-40: победа аккаунта (100/100) — открыт авторежим */
+  victory: boolean;
+  /** PLAN-40: релизов за всю историю аккаунта — пороги скоростей */
+  accountReleases: number;
   /** PLAN-18: сервер отказал в партии (нужен вход / сохранение не загружено) — вернуться в меню */
   sessionLost: boolean;
 }
 
 let snap: Snapshot = {
   game: null, chat: { msgs: [], queue: [], phases: {} }, speed: 1, connected: false, meta: null, autopilot: false,
+  victory: false, accountReleases: 0,
   sessionLost: false,
 };
 let actionError: string | null = null;
@@ -157,6 +162,7 @@ function connect(): void {
       const d = JSON.parse(String(e.data)) as {
         type: string; game?: GameState; chat?: ChatState; speed?: number; data?: MetaData; error?: string;
         ok?: boolean; title?: string; plot?: string; autopilot?: boolean; step?: unknown; seq?: number; reqId?: number;
+        victory?: boolean; accountReleases?: number;
       };
       if (d.type === 'meta' && d.data) {
         snap = { ...snap, meta: d.data };
@@ -170,6 +176,7 @@ function connect(): void {
           game: d.game, chat: chatSig(nextChat) === chatSig(snap.chat) ? snap.chat : nextChat,
           speed: d.speed ?? snap.speed,
           connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot), sessionLost: false,
+          victory: Boolean(d.victory), accountReleases: Math.max(0, Math.floor(Number(d.accountReleases) || 0)),
         };
         // SRV-16: автопилот выключен — очередь шагов не доигрываем (мышь не жмёт за игрока)
         if (!snap.autopilot) autopilotQueue.length = 0;
@@ -295,6 +302,16 @@ export function useAutopilot(): boolean {
   return useSyncExternalStore(subscribe, () => snap).autopilot;
 }
 
+/** PLAN-40: победа аккаунта (100/100) — кнопка авторежима появляется только после неё */
+export function useVictory(): boolean {
+  return useSyncExternalStore(subscribe, () => snap).victory;
+}
+
+/** PLAN-40: релизов за всю историю аккаунта — пороги скоростей таскбара */
+export function useAccountReleases(): number {
+  return useSyncExternalStore(subscribe, () => snap).accountReleases;
+}
+
 const autopilotQueue: AutopilotStep[] = [];
 
 /** длина очереди шагов (реактивный сигнал для курсора) */
@@ -351,6 +368,11 @@ export function actionBuyLicense(consoleId: string) {
 
 export function actionResolveBoost(accept: boolean, amount?: number) {
   send({ type: 'resolve_boost', accept, ...(amount !== undefined ? { amount } : {}) });
+}
+
+/** PLAN-39: результат мини-игры из врезки (0–100 %) → серверу */
+export function actionResolveMinigame(pct: number) {
+  send({ type: 'resolve_minigame', pct });
 }
 export function actionDismissSalesman() {
   send({ type: 'resolve_salesman' });

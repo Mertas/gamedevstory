@@ -5,7 +5,8 @@ import { CONSOLES } from './data/db';
 import { createRng, rngFromState } from './rng';
 import { log } from './log';
 import { SAVE_VERSION } from './migrate';
-import type { DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
+import type { ActionResult, DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
+import { minigameOutcome, minigameTitle } from '../shared/minigames';
 import {
   fireStaff, startSearch, hireFromSearch, makeStaffFromData, paySalaries, pickAvatar, dailyPower,
 } from './systems/staff';
@@ -210,6 +211,27 @@ export function resolveEventAction(state: GameState) {
     state.lastPopup = null;
     state.pendingEvent = { type: 'info', title: p.title, text: p.text };
   }
+}
+
+// PLAN-39: результат мини-игры из врезки (0–100 %) — эффект PR + строка в журнал.
+export function resolveMinigameAction(state: GameState, pct: number): ActionResult {
+  const ev = state.pendingEvent;
+  if (ev?.type !== 'minigame') return { ok: false, error: 'Сейчас нет мини-игры' };
+  const p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+  const { pr, note } = minigameOutcome(p);
+  state.pendingEvent = null;
+  if (pr > 0) state.research += pr;
+  else if (pr < 0) state.research = Math.max(0, state.research + pr);
+  log(state, `🎮 Мини-игра «${minigameTitle(ev.gameId)}» — ${p}%: ${note}`);
+  return { ok: true };
+}
+
+/** PLAN-39: нейтрально закрыть мини-игру (автопилот её не играет). */
+export function skipMinigame(state: GameState, why: string): void {
+  const ev = state.pendingEvent;
+  if (ev?.type !== 'minigame') return;
+  state.pendingEvent = null;
+  log(state, `🎮 Мини-игра «${minigameTitle(ev.gameId)}» пропущена (${why})`);
 }
 
 // ---- M3: персонал ----

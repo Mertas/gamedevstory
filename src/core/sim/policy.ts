@@ -15,7 +15,7 @@ import {
   applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, searchAction,
   hireFromSearchAction, levelUpAction,
   moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction,
-  startProjectAction, trainAction,
+  skipMinigame, startProjectAction, trainAction,
 } from '../engine';
 
 export interface PolicyStats {
@@ -56,6 +56,8 @@ export interface PlayerOptions {
  * (прокачка, найм, лицензии) — на копии, чтобы клики мыши применяли действия ПОСЛЕ показа.
  */
 export function resolvePendingEvent(state: GameState, stats: PolicyStats, journal?: PolicyAction[]): void {
+      // PLAN-39: мини-игру автопилот не играет — закрывает нейтрально (0)
+      if (state.pendingEvent?.type === 'minigame') skipMinigame(state, 'автопилот');
       // буст — принимаем с разумной ставкой (до 30 PR), продавца — прогоняем
       if (state.pendingEvent?.type === 'boost') {
         // аудит 05.09: ставка должна быть ≤ research И ≥ 1, иначе resolveBoost

@@ -7,7 +7,7 @@ import { CARD_WIN_PREFIX, GameCardWindow, cardWinId, cardWinTitle } from './apps
 import { WebampLayer } from './WebampLayer';
 import {
   actionSetAutopilot, actionSetUi, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
-  useAutopilot, useChat, useGame, useGameSelector, useSnapshot, useSpeed,
+  useAccountReleases, useAutopilot, useChat, useGame, useGameSelector, useMeta, useSnapshot, useSpeed, useVictory,
 } from './store';
 import { NewGameForm } from './NewGameForm';
 import { typingName } from '../shared/chat';
@@ -22,6 +22,7 @@ import { SOUND_LEVELS, soundLabel } from '../shared/sound';
 import { FX_ROWS, safeReducedMotion } from './fxPrefs';
 import { setDeskSnap, setDeskSort, useDeskPrefs } from './deskPrefs';
 import { fmtK } from '../shared/nums';
+import { isAppVisible, speedOptions } from '../shared/unlocks';
 import type { GameRecord, GameState } from '../core/types';
 
 // все иконки win95-набора (public/icons/w95_1.png … w95_72.png) + логотип Winamp
@@ -59,7 +60,6 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const wm = useWindows();
   // план 19: «Инвайты» видит только владелец (в меню «Пуск» и на столе)
   const owner = useOwner();
-  const apps = useMemo(() => (owner ? APP_DEFS : APP_DEFS.filter((a) => !a.adminOnly)), [owner]);
   const { wins, activeId } = useWinState();
   const wmRef = useRef(wm);
   wmRef.current = wm;
@@ -67,6 +67,21 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const chat = useChat();
   const speed = useSpeed();
   const autopilot = useAutopilot();
+  const victory = useVictory();
+  const accountReleases = useAccountReleases();
+  const meta = useMeta();
+  // PLAN-40: недоступное не рисуется — ни на столе, ни в «Пуске», ни в списке окон
+  const unlockCtx = useMemo(() => ({
+    saveReleases: game.history.length,
+    accountReleases,
+    victory,
+    officeLevel: game.officeLevel,
+    contractOffices: meta ? meta.contracts.map((c) => c.office ?? 1) : [1],
+  }), [game.history.length, game.officeLevel, accountReleases, victory, meta]);
+  const apps = useMemo(
+    () => APP_DEFS.filter((a) => (!a.adminOnly || owner) && isAppVisible(a.id, unlockCtx)),
+    [owner, unlockCtx],
+  );
   const connected = useSnapshot().connected; // SRV-17: индикация обрыва связи (трей + баннер)
   const [startOpen, setStartOpen] = useState(false);
   const [newGameOpen, setNewGameOpen] = useState(false); // PLAN-18: новая игра — выбор студии и пары
@@ -686,6 +701,8 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           )}
           <span className="w95-hint" style={{ marginRight: 8 }} title="Ваша студия (название выбрано при новой игре)">🏢 {game.studioName}</span>
           {typing && <span className="w95-hint" style={{ color: '#000080', marginRight: 6 }}>{typing} печатает…</span>}
+          {/* PLAN-40: кнопка авторежима появляется только после победы (100/100) */}
+          {victory && (
           <button
             className="w95-btn"
             style={{ marginRight: 8, fontWeight: 'bold', ...(autopilot ? { color: '#c00000' } : {}) }}
@@ -696,11 +713,12 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           >
             {autopilot ? '👤 Взять управление' : '🤖 Отдать управление'}
           </button>
+          )}
           <span className="w95-hint" style={{ marginRight: 6 }}>❤ {Math.round(game.fans)}</span>
           <span className="w95-hint" style={{ marginRight: 6 }}>🔬 {Math.round(game.research)} PR</span>
           <span className="w95-tray-money" style={{ fontWeight: 'bold', marginRight: 6 }}>💰 {fmtK(game.money)}</span>
           <div className="w95-speed">
-            {[0, 0.5, 1, 2, 4, 8].map((v) => (
+            {speedOptions(accountReleases).map((v) => (
               <button key={v} className={`w95-btn ${speed === v ? 'on pressed' : ''}`} onClick={() => setSpeed(v)}>
                 {v === 0 ? '⏸' : v === 0.5 ? '½' : `${v}×`}
               </button>

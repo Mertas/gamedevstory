@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'node:module';
 import type { DatabaseSync as SqliteDatabase } from 'node:sqlite';
 import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
+import { drawMinigame, type MinigameBag } from '../shared/minigames';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const USERS_DB_PATH = path.join(ROOT, 'data', 'users.db');
@@ -157,6 +158,11 @@ export class UserService {
       CREATE TABLE IF NOT EXISTS user_combos (
         user_id INTEGER NOT NULL, combo TEXT NOT NULL, first_at INTEGER NOT NULL,
         source TEXT NOT NULL DEFAULT 'start', PRIMARY KEY (user_id, combo)
+      );
+      -- PLAN-39/40: флаги аккаунта (мешок мини-игр и будущие награды) — прогресс вне сейвов
+      CREATE TABLE IF NOT EXISTS user_flags (
+        user_id INTEGER NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, updated INTEGER NOT NULL,
+        PRIMARY KEY (user_id, key)
       );
     `);
     this.migrate();
@@ -392,6 +398,35 @@ export class UserService {
   combosCount(userId: number): number {
     const row = this.db.prepare('SELECT COUNT(*) AS n FROM user_combos WHERE user_id = ?').get(userId) as { n: number };
     return Number(row.n);
+  }
+
+  // ─── PLAN-39/40: флаги аккаунта (мешок мини-игр и будущие награды) ───
+
+  getFlag(userId: number, key: string): string | null {
+    const row = this.db.prepare('SELECT value FROM user_flags WHERE user_id = ? AND key = ?').get(userId, key) as { value: string } | undefined;
+    return row ? String(row.value) : null;
+  }
+
+  setFlag(userId: number, key: string, value: string): void {
+    this.db.prepare('INSERT OR REPLACE INTO user_flags (user_id, key, value, updated) VALUES (?, ?, ?, ?)')
+      .run(userId, key, value, Date.now());
+  }
+
+  /** PLAN-39: следующая мини-игра из мешка аккаунта — все четыре по разу, затем новый круг. */
+  nextMinigameId(userId: number): string {
+    let bag: MinigameBag = { q: [], last: null };
+    try {
+      const raw = this.getFlag(userId, 'mg_bag');
+      if (raw) {
+        const p = JSON.parse(raw) as Partial<MinigameBag>;
+        bag = { q: Array.isArray(p.q) ? p.q.map(String) : [], last: p.last ? String(p.last) : null };
+      }
+    } catch {
+      bag = { q: [], last: null };
+    }
+    const { id, bag: next } = drawMinigame(bag, Math.random);
+    this.setFlag(userId, 'mg_bag', JSON.stringify(next));
+    return id;
   }
 
   // ─── сохранения ───

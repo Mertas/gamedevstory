@@ -6,7 +6,7 @@ import { consoleById, genreById, typeById } from '../core/data/db';
 import {
   buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   changeCareerAction, dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
-  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, startOwnConsoleAction, startProjectAction,
+  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction,
 } from '../core/engine';
 import type { GamedexOption, GameState } from '../core/types';
@@ -40,6 +40,8 @@ export interface SessionHost {
   chat: ChatState;
   speed: number;
   autopilotOn: boolean;
+  /** PLAN-40: победа аккаунта (100/100) — авторежим открыт */
+  victory: boolean;
   /** SER-27: время последнего «печатает» (панель разговоров) */
   lastTypingAt: number;
   lastAction: { ok: boolean; error?: string } | null;
@@ -47,6 +49,8 @@ export interface SessionHost {
   decidedThisIdle: boolean;
   mailShownId: number;
   run(res: ActionOutcome): void;
+  /** PLAN-39/40: релиз — счётчики аккаунта и возможная победа (100/100) */
+  noteRelease(score: number): void;
   emit(): void;
   pushSystem(text: string): void;
   generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void>;
@@ -67,6 +71,12 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
   s.lastAction = null;
   // кнопка «Отдать управление»: ручное включение (таймаут простоя убран — сам не включается)
   if (msg.type === 'set_autopilot') {
+    // PLAN-40: авторежим — награда за победу; до неё кнопки нет (и сервер отказывает)
+    if (msg.on && !s.victory) {
+      s.lastAction = { ok: false, error: 'Авторежим открывается победой: выпустите игру на 100/100' };
+      s.emit();
+      return;
+    }
     if (msg.on) s.startAutopilot();
     else if (s.autopilotOn) s.stopAutopilot(false);
     s.emit();
@@ -147,6 +157,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       if (res.ok) {
         if (s.autopilotOn) s.decidedThisIdle = false; // следующую игру снова решает чат
         const g = s.game.history[s.game.history.length - 1];
+        s.noteRelease(g?.score ?? 0); // PLAN-39/40: счётчики аккаунта, победа 100/100
         s.pushSystem(`🚀 Релиз! ${g ? `Рецензии: ${score100(g.score)}/100${g.score >= CONFIG.HALL_OF_FAME ? ' — ЗАЛ СЛАВЫ!' : ''}` : ''}`);
         // 11.09: в факты реакции — человеческие подписи: имя игры и жанр × тип (units в чате
         // форматируются в «241K»); без них модель считала релиз 40/40 «куцым» (диагноз по игре)
@@ -227,6 +238,12 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       }
       s.run(resolveGamedexAction(s.game, msg.option as GamedexOption));
       s.emit(); // SRV-10: на паузе без emit() клиент не видел снятие события
+      return;
+    }
+    case 'resolve_minigame': {
+      // PLAN-39: результат врезки — эффект (PR) и строка в журнал; остальное решает движок
+      s.run(resolveMinigameAction(s.game, msg.pct));
+      s.emit();
       return;
     }
     case 'resolve_event':

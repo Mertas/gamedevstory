@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Desktop } from './Desktop';
 import { MessageBox } from './MessageBox';
+import { MinigameModal } from './MinigameModal';
 import { ActionToast } from './ActionToast';
 import { LevelToast } from './LevelToast';
 import {
@@ -268,6 +269,7 @@ export function App() {
       <EventWatcher />
       <Desktop onExit={exitToLauncher} />
       <MessageBox />
+      <MinigameModal />
       <SalesWidget />
       <PressModal />
       <UpdateNotice />

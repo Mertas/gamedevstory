@@ -15,6 +15,7 @@ export interface TickerHost {
   emit(): void;
   maybeAutopilot(): void;
   maybeTriggerPhases(): void;
+  maybeFillMinigame(): void;
   maybeMailLetters(): void;
   pumpChatThread(): void;
   autosave(force?: boolean): void;
@@ -55,6 +56,7 @@ export class GameTicker {
         }
         // аудит 06.09: театр автопилота обязан работать И при висящем событии —
         // иначе мышь не летит к «Выпустить игру», и событие никто не резолвит
+        this.host.maybeFillMinigame();
         this.host.maybeAutopilot();
         return; // время не идёт: тика дня нет, но попап и мышь живут
       }
@@ -62,6 +64,7 @@ export class GameTicker {
       tick(game);
       deliverChat(game, chat);
       this.host.maybeTriggerPhases();
+      this.host.maybeFillMinigame();
       this.host.pumpChatThread();
       this.host.maybeMailLetters();
       this.host.maybeAutopilot();

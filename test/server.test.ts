@@ -20,6 +20,7 @@ function makeServer(llm: LlmFn = async () => ({ text: '{}', model: 'fake' })): G
     llm,
     story: async () => ({ title: 'Тест', plot: 'Сюжет' }),
     savePath: path.join(dir, 'save.json'),
+    victory: true, // PLAN-40: авторежим открыт (сам гейт «победа 100/100» проверяется отдельным тестом)
   });
 }
 
@@ -31,6 +32,24 @@ afterEach(() => {
   vi.useRealTimers();
   if (dir) fs.rmSync(dir, { recursive: true, force: true });
   dir = null;
+});
+
+describe('GameServer: PLAN-40 — авторежим открывается победой', () => {
+  it('без победы set_autopilot отклоняется, после победы — включается', () => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gds-test-'));
+    srv = new GameServer({
+      llm: async () => ({ text: '{}', model: 'fake' }),
+      story: async () => ({ title: 'Тест', plot: 'Сюжет' }),
+      savePath: path.join(dir, 'gatesave.json'),
+    });
+    srv.handle({ type: 'set_autopilot', on: true });
+    expect(srv.snapshot().autopilot).toBe(false);
+    expect(srv.actionResult()).toEqual({ ok: false, error: expect.stringContaining('победой') });
+    srv.noteRelease(100); // 100/100 — победа
+    expect(srv.snapshot().victory).toBe(true);
+    srv.handle({ type: 'set_autopilot', on: true });
+    expect(srv.snapshot().autopilot).toBe(true);
+  });
 });
 
 describe('GameServer: set_speed (SRV-01)', () => {

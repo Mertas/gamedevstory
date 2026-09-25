@@ -89,6 +89,8 @@ export interface ActiveGame {
   debugCarry?: number; // AP-13: остаток скорости отладки между днями (доли бага)
   /** M9: медиа-событие отложено — попап-пауза висела, покажем в следующий свободный день */
   pendingMedia?: boolean;
+  /** PLAN-39: мини-игра на 50% разработки уже показана (один раз за проект) */
+  mg50?: boolean;
   weekStarted: number;
   phase: 'proposal' | 'dev' | 'debug' | 'released';
   proposalStaffId: string | null;
@@ -215,6 +217,8 @@ export type PendingEvent =
   | { type: 'ready_to_release'; text: string }
   | { type: 'release_result'; text: string }
   | { type: 'info'; title: string; text: string }
+  /** PLAN-39: мини-игра на 50% разработки; gameId добирает сервер из мешка аккаунта */
+  | { type: 'minigame'; gameId: string }
   | null;
 
 /** PLAN-24: сохраняемый вид рабочего стола (фон + раскладка окон). Игровая логика его не читает. */

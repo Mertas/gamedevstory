@@ -236,6 +236,13 @@ export function devTick(state: GameState, rng: Rng): void {
       }
     }
   }
+  // PLAN-39: мини-игра на половине разработки — один раз за проект, без пропуска.
+  // Если день занят другим событием — ждём свободного (флаг не выставляем, чтобы не потерять).
+  if (game.progress >= 0.5 && !game.mg50 && !state.pendingEvent) {
+    game.mg50 = true;
+    state.pendingEvent = { type: 'minigame', gameId: '' };
+    log(state, '🎮 Половина разработки — команда зовёт в мини-игру');
+  }
   if (rng.chance(CONFIG.BLACKOUT_CHANCE)) {
     for (const k of ['fun', 'creativity', 'graphics', 'sound'] as const) {
       game.points[k] *= 1 - CONFIG.BLACKOUT_LOSS;
