@@ -15,13 +15,13 @@ export interface UnlockCtx {
 }
 
 /**
- * Скорости таскбара: база [пауза, ½, 1×, 2×] + награды за релизы аккаунта —
- * ×4 после 100-го, ×8 после 500-го (plan/40, раздел А).
+ * Скорости таскбара: база [пауза, ½, 1×] + награды за релизы аккаунта —
+ * ×2 после 100-го, ×4 и ×8 после 500-го (решение босса 25.09.2026, plan/40).
  */
 export function speedOptions(accountReleases: number): number[] {
-  const out = [0, 0.5, 1, 2];
-  if (accountReleases >= 100) out.push(4);
-  if (accountReleases >= 500) out.push(8);
+  const out = [0, 0.5, 1];
+  if (accountReleases >= 100) out.push(2);
+  if (accountReleases >= 500) out.push(4, 8);
   return out;
 }
 

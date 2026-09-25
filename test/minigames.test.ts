@@ -122,10 +122,11 @@ describe('PLAN-40: сводка аккаунта, скорости, видимо
     expect(accountTotalsFromGames([{ history: [{ score: 99 }] }]).victory).toBe(false);
   });
 
-  it('скорости: ×4 после 100-го релиза, ×8 после 500-го; база ½/1×/2× всегда', () => {
-    expect(speedOptions(0)).toEqual([0, 0.5, 1, 2]);
-    expect(speedOptions(99)).toEqual([0, 0.5, 1, 2]);
-    expect(speedOptions(100)).toEqual([0, 0.5, 1, 2, 4]);
+  it('скорости: ×2 после 100-го релиза, ×4/×8 — после 500-го; база пауза/½/1×', () => {
+    expect(speedOptions(0)).toEqual([0, 0.5, 1]);
+    expect(speedOptions(99)).toEqual([0, 0.5, 1]);
+    expect(speedOptions(100)).toEqual([0, 0.5, 1, 2]);
+    expect(speedOptions(499)).toEqual([0, 0.5, 1, 2]);
     expect(speedOptions(500)).toEqual([0, 0.5, 1, 2, 4, 8]);
   });
 
