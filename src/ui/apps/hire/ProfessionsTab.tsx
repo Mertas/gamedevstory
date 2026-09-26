@@ -1,15 +1,14 @@
-// ─── Найм: вкладка «Профессии» — справка + полное управление профессиями ───
-// Свободная смена — только на высшие профессии (director/producer/hw/hacker) и по уровням
-// на том же сотруднике; руководство из запаса (продавец) снимает любые требования.
+// ─── Найм: вкладка «Профессии» — справка + смена по руководству ───
+// Смена профессии — ТОЛЬКО по руководству продавца (запас) и только когда выполнены требования
+// профессии. База (кодер/сценарист/дизайнер/звукорежиссёр) — без требований. Руководство
+// требования НЕ снимает. Полное превью порогов — в окне сотрудника.
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import type { CareerId } from '../../../core/data/schema';
 import { CAREER_LABELS } from '../../careers';
-import { actionApplyCareerManual, actionChangeCareer, useGame, useMeta } from '../../store';
+import { actionApplyCareerManual, useGame, useMeta } from '../../store';
 
 const ALL_CAREERS = ['coder', 'writer', 'designer', 'sound', 'director', 'producer', 'hw', 'hacker'] as const;
-const ADVANCED = ['director', 'producer', 'hw', 'hacker'];
-const isAdvanced = (c: string) => ADVANCED.includes(c);
 const lvIn = (careers: Record<CareerId, number>, c: string) => careers[c as CareerId] ?? 0;
 
 export function ProfessionsTab() {
@@ -27,9 +26,10 @@ export function ProfessionsTab() {
     <>
       <b>👔 Профессии</b>
       <div className="w95-hint">
-        Профессия задаёт, что сотрудник делает лучше, и открывает жанры и темы. Свободная смена — только на
-        высшие профессии (директор, продюсер, железо, хакер) и по уровням на том же сотруднике. Руководство
-        (продавец, май) снимает любые требования — для любой профессии.
+        Профессия задаёт, что сотрудник делает лучше, и открывает жанры и темы. Смена — только по
+        руководству (продавец, май) и только когда требования профессии выполнены; руководство
+        требования не снимает. База (кодер, сценарист, дизайнер, звукорежиссёр) — без требований.
+        Сменить можно и из окна сотрудника — там видно, как изменятся пороги.
       </div>
 
       <div className="w95-row">
@@ -51,12 +51,12 @@ export function ProfessionsTab() {
         </select>
         <select className="w95-input" value={target} onChange={(e) => setTarget(e.target.value)} data-autopilot="career-target">
           {ALL_CAREERS.map((c) => (
-            <option key={c} value={c}>{CAREER_LABELS[c] ?? c}{isAdvanced(c) ? '' : ' (только по руководству)'}</option>
+            <option key={c} value={c}>{CAREER_LABELS[c] ?? c}</option>
           ))}
         </select>
       </div>
 
-      {!st && <div className="w95-hint">Выберите сотрудника — покажу условия и кнопки смены.</div>}
+      {!st && <div className="w95-hint">Выберите сотрудника — покажу требования и кнопку смены.</div>}
 
       {st && sameCareer && (
         <div className="w95-hint">{st.name} уже {CAREER_LABELS[target] ?? target} — выберите другую профессию.</div>
@@ -64,51 +64,32 @@ export function ProfessionsTab() {
 
       {st && !sameCareer && (
         <div className="w95-panel" style={{ gap: 3 }}>
-          {isAdvanced(target) ? (
-            <>
-              <div className="w95-row">
-                {reqs.length === 0 ? (
-                  <span className="w95-hint">Требований нет — можно менять свободно.</span>
-                ) : (
-                  reqs.map(([job, lv]) => {
-                    const have = lvIn(st.careers, job);
-                    const ok = have >= lv;
-                    return (
-                      <span key={job} className="w95-hint" style={{ color: ok ? '#008000' : '#c00000' }}>
-                        {CAREER_LABELS[job] ?? job} Lv{lv} — у сотрудника Lv{have} {ok ? '✓' : '✗'}
-                      </span>
-                    );
-                  })
-                )}
-              </div>
-              <div className="w95-row">
-                <button
-                  className="w95-btn"
-                  data-autopilot="career-change"
-                  disabled={!reqsMet}
-                  onClick={() => actionChangeCareer(st.id, target)}
-                >
-                  Сменить: {CAREER_LABELS[st.activeCareer] ?? st.activeCareer} → {CAREER_LABELS[target] ?? target}
-                </button>
-                <span className="w95-hint">
-                  {reqsMet ? 'все условия выполнены' : 'не хватает уровней — можно применить руководство'}
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="w95-hint">На базовую профессию свободной смены нет — только по руководству.</div>
-          )}
+          <div className="w95-row">
+            {reqs.length === 0 ? (
+              <span className="w95-hint">Базовая профессия — требований нет, нужно только руководство.</span>
+            ) : (
+              reqs.map(([job, lv]) => {
+                const have = lvIn(st.careers, job);
+                const ok = have >= lv;
+                return (
+                  <span key={job} className="w95-hint" style={{ color: ok ? '#008000' : '#c00000' }}>
+                    {CAREER_LABELS[job] ?? job} Lv{lv} — у сотрудника Lv{have} {ok ? '✓' : '✗'}
+                  </span>
+                );
+              })
+            )}
+          </div>
           <div className="w95-row">
             <button
               className="w95-btn"
               data-autopilot="career-manual"
-              disabled={manuals <= 0}
+              disabled={manuals <= 0 || !reqsMet}
               onClick={() => actionApplyCareerManual(st.id, target)}
             >
               Применить руководство ({manuals})
             </button>
             <span className="w95-hint">
-              {manuals <= 0 ? 'запаса нет — купите у продавца' : 'сменит профессию без требований, запас −1'}
+              {manuals <= 0 ? 'запаса нет — купите у продавца' : !reqsMet ? 'сначала выполните требования профессии' : 'сменит профессию, запас −1'}
             </span>
           </div>
         </div>
@@ -117,7 +98,7 @@ export function ProfessionsTab() {
       <b>Справка по профессиям</b>
       <table className="w95-table">
         <thead>
-          <tr><th>Профессия</th><th>Вход</th><th>Открывает (жанры / темы)</th><th>Повышения: PR за уровень</th></tr>
+          <tr><th>Профессия</th><th>Требования для смены</th><th>Открывает (жанры / темы)</th><th>Повышения: PR за уровень</th></tr>
         </thead>
         <tbody>
           {ALL_CAREERS.map((c) => {
@@ -137,9 +118,7 @@ export function ProfessionsTab() {
                   )}
                 </td>
                 <td style={{ verticalAlign: 'top' }}>
-                  {isAdvanced(c)
-                    ? (req.length > 0 ? `${req.map(([j, lv]) => `${CAREER_LABELS[j] ?? j} Lv${lv}`).join(' + ')} (свободно) / по руководству` : 'свободно')
-                    : 'по руководству'}
+                  {req.length > 0 ? req.map(([j, lv]) => `${CAREER_LABELS[j] ?? j} Lv${lv}`).join(' + ') : '— (базовая)'}
                 </td>
                 <td style={{ verticalAlign: 'top' }}>{opens.length > 0 ? opens.join(', ') : '—'}</td>
                 <td style={{ verticalAlign: 'top' }}>{pr.join(' → ')}</td>
@@ -148,7 +127,7 @@ export function ProfessionsTab() {
           })}
         </tbody>
       </table>
-      <div className="w95-hint">«Открывает» — если профессия нужного уровня есть у любого сотрудника; повышения — цена Lv1→5 в PR (кнопка ⬆ во вкладке «Команда»).</div>
+      <div className="w95-hint">Смена — только по руководству и при выполненных требованиях. «Открывает» — если профессия нужного уровня есть у любого сотрудника; повышения — цена Lv1→5 в PR (кнопка ⬆ во вкладке «Команда»).</div>
     </>
   );
 }

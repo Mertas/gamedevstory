@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import {
-  applyCareerManual, buyAd, buyBooster, buyCareerManual, changeCareer, levelUpStaff, startOwnConsole, takeContract,
+  applyCareerManual, buyAd, buyBooster, buyCareerManual, levelUpStaff, startOwnConsole, takeContract,
   trainStaff, applyBooster,
 } from '../src/core/systems/progression';
 import { isUnlocked, devTick } from '../src/core/systems/dev';
@@ -86,14 +86,14 @@ describe('M3: обучение', () => {
 });
 
 describe('M3: карьеры', () => {
-  it('Director требует Writer5+Coder5 на том же сотруднике', () => {
+  it('смена только по руководству: без запаса нельзя, даже когда требования выполнены', () => {
     const g = gameWithStaff();
     const s = g.staff[0]!;
-    expect(changeCareer(g, s.id, 'director').ok).toBe(false);
     s.careers.writer = 5;
     s.careers.coder = 5;
-    expect(changeCareer(g, s.id, 'director').ok).toBe(true);
-    expect(s.activeCareer).toBe('director');
+    const res = applyCareerManual(g, s.id, 'director');
+    expect(res.ok).toBe(false);
+    expect(s.activeCareer).toBe('coder');
   });
 
   it('руководство покупается в запас и НЕ меняет профессию сразу', () => {
@@ -108,20 +108,57 @@ describe('M3: карьеры', () => {
     expect(s.activeCareer).toBe('coder'); // профессия не изменилась
   });
 
-  it('применение руководства снимает требования; запас тратится только при успехе', () => {
+  it('руководство НЕ снимает требования: из кодера в хакера нельзя', () => {
     const g = gameWithStaff();
     g.salesmanHere = true;
     buyCareerManual(g);
     const s = g.staff[0]!;
-    expect(applyCareerManual(g, s.id, 'hacker').ok).toBe(true); // без уровней
-    expect(s.activeCareer).toBe('hacker');
-    expect(g.careerManuals).toBe(0);
-    // запас пуст — отказ, профессия прежняя
-    expect(applyCareerManual(g, s.id, 'director').ok).toBe(false);
-    expect(s.activeCareer).toBe('hacker');
-    // неудача не тратит руководство (уже эта профессия)
+    const res = applyCareerManual(g, s.id, 'hacker');
+    expect(res.ok).toBe(false);
+    expect(!res.ok ? res.error : '').toContain('Не хватает');
+    expect(s.activeCareer).toBe('coder');
+    expect(g.careerManuals).toBe(1); // неудача не тратит руководство
+  });
+
+  it('цепочка пререквизитов: продюсер = Сц5+Дизайн5, железо = Реж5+Прод5, хакер = все по 5', () => {
+    const g = gameWithStaff();
+    g.salesmanHere = true;
+    const s = g.staff[0]!;
+    // продюсер: сценарист 5 + дизайнер 5
+    buyCareerManual(g);
+    s.careers.writer = 5;
+    expect(applyCareerManual(g, s.id, 'producer').ok).toBe(false); // дизайнера нет
+    s.careers.designer = 5;
+    expect(applyCareerManual(g, s.id, 'producer').ok).toBe(true);
+    expect(s.activeCareer).toBe('producer');
+    // инженер железа: режиссёр 5 + продюсер 5
+    buyCareerManual(g);
+    s.careers.director = 5;
+    expect(applyCareerManual(g, s.id, 'hw').ok).toBe(false); // продюсер ещё новичок (Lv1)
+    s.careers.producer = 5;
+    expect(applyCareerManual(g, s.id, 'hw').ok).toBe(true);
+    expect(s.activeCareer).toBe('hw');
+    // хакер: все семь профессий по 5
     buyCareerManual(g);
     expect(applyCareerManual(g, s.id, 'hacker').ok).toBe(false);
+    for (const c of ['coder', 'writer', 'designer', 'sound', 'director', 'producer', 'hw'] as const) s.careers[c] = 5;
+    expect(applyCareerManual(g, s.id, 'hacker').ok).toBe(true);
+    expect(s.activeCareer).toBe('hacker');
+  });
+
+  it('успешная смена тратит руководство; повтор на ту же профессию — отказ без траты', () => {
+    const g = gameWithStaff();
+    g.salesmanHere = true;
+    buyCareerManual(g);
+    const s = g.staff[0]!;
+    s.careers.writer = 5;
+    expect(applyCareerManual(g, s.id, 'director').ok).toBe(false); // кодер ещё Lv1
+    s.careers.coder = 5;
+    expect(applyCareerManual(g, s.id, 'director').ok).toBe(true);
+    expect(s.activeCareer).toBe('director');
+    expect(g.careerManuals).toBe(0);
+    buyCareerManual(g);
+    expect(applyCareerManual(g, s.id, 'director').ok).toBe(false); // уже эта профессия
     expect(g.careerManuals).toBe(1);
   });
 });

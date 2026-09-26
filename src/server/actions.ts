@@ -5,7 +5,7 @@ import { CONFIG } from '../core/config';
 import { consoleById, genreById, typeById } from '../core/data/db';
 import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
-  changeCareerAction, dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
+  dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
@@ -291,10 +291,6 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.emit();
       return;
     }
-    case 'change_career':
-      s.run(changeCareerAction(s.game, msg.staffId, msg.target));
-      s.emit();
-      return;
     case 'buy_booster': {
       const res = buyBoosterAction(s.game, msg.booster);
       s.run(res);

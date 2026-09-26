@@ -521,9 +521,6 @@ export function actionTrain(staffId: string, trainingId: number) {
 export function actionChatMessage(text: string) {
   send({ type: 'chat_message', text });
 }
-export function actionChangeCareer(staffId: string, target: string) {
-  send({ type: 'change_career', staffId, target });
-}
 export function actionBuyBooster(booster: string) {
   send({ type: 'buy_booster', booster });
 }

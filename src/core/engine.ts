@@ -14,7 +14,7 @@ import {
   debugTick, devTick, releaseGame, resolveBoost, startProject,
 } from './systems/dev';
 import {
-  applyCareerManual, buyAd, buyBooster, buyCareerManual, buyDeadBull, changeCareer, dismissSalesman,
+  applyCareerManual, buyAd, buyBooster, buyCareerManual, buyDeadBull, dismissSalesman,
   levelUpStaff, moveOffice, startOwnConsole, takeContract, tickContracts, tickOwnConsole,
   tickSalesman, trainStaff, trainToMax, applyBooster,
 } from './systems/progression';
@@ -252,10 +252,6 @@ export function trainAction(state: GameState, staffId: string, trainingId: numbe
   const res = trainStaff(state, staffId, trainingId, rng);
   state.rngState = rng.state;
   return res;
-}
-
-export function changeCareerAction(state: GameState, staffId: string, target: CareerId, viaManual = false) {
-  return changeCareer(state, staffId, target, viaManual);
 }
 
 export function buyBoosterAction(state: GameState, type: string) {

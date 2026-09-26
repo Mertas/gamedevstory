@@ -1,4 +1,4 @@
-// Продавец: бустеры, Dead Bull, Career Manual (в запас — применение в «Найм» → «Профессии»)
+// Продавец: бустеры, Dead Bull, Career Manual (в запас — применение в окне сотрудника)
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import { actionBuyBooster, actionBuyCareerManual, actionBuyDeadBull, useGame, useMeta } from '../../store';
@@ -52,7 +52,7 @@ export function SalesmanPanel() {
             <td>{fmtK(manualPrice)}</td>
             <td>
               <button className="w95-btn" data-autopilot="buy-career-manual" disabled={game.money < manualPrice} onClick={() => actionBuyCareerManual()}>Купить</button>
-              <span className="w95-hint"> применяется в «Найм» → «Профессии»</span>
+              <span className="w95-hint"> применяется в окне сотрудника (нужны требования)</span>
             </td>
           </tr>
         </tbody>

@@ -8,7 +8,7 @@ import { log } from '../log';
 import type { CareerId } from '../data/schema';
 import { CAREER_LABELS } from '../../shared/careers';
 import { busyStaffIds, pushHistory } from './staff';
-import { capGain, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../shared/train';
+import { capGain, careerChangePreview, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../shared/train';
 import { OWN_CONSOLE_TYPES, OWN_CONSOLE_CPUS, OWN_CONSOLE_MEDIA, ownConsoleDays } from '../../shared/consoles';
 import type { Rng } from '../rng';
 import type {
@@ -195,55 +195,50 @@ export function trainToMax(state: GameState, staffId: string, rng: Rng): ActionR
 }
 
 // ─── смена профессии ───
-function careerPrereqsMet(s: Staff, target: CareerId): boolean {
-  const req = CONFIG.CAREER_PREREQ[target];
-  if (!req) return true; // базовые профессии — свободно
-  return Object.entries(req).every(([job, lv]) => (s.careers[job as CareerId] ?? 0) >= lv);
+/** чего не хватает для смены профессии (пустой список = требования выполнены) */
+export function careerPrereqMissing(s: Staff, target: CareerId): string[] {
+  const req = CONFIG.CAREER_PREREQ[target] ?? {};
+  return Object.entries(req)
+    .filter(([job, lv]) => (s.careers[job as CareerId] ?? 0) < lv)
+    .map(([job, lv]) => `${CAREER_LABELS[job] ?? job} Lv${lv} (у вас Lv${s.careers[job as CareerId] ?? 0})`);
 }
 
-export function changeCareer(state: GameState, staffId: string, target: CareerId, viaManual = false): ActionResult {
+/** механика перехода: бонусы первого входа + переключение профессии. Вызывается ТОЛЬКО из
+ *  applyCareerManual — свободной смены профессии в игре нет (требования проверяет он же). */
+export function changeCareer(state: GameState, staffId: string, target: CareerId): ActionResult {
   const s = staffOf(state, staffId);
   if (!s) return { ok: false, error: 'Нет такого сотрудника' };
   if (target === s.activeCareer) return { ok: false, error: 'Уже эта профессия' };
-  if (!viaManual && !careerPrereqsMet(s, target)) {
-    const req = CONFIG.CAREER_PREREQ[target] ?? {};
-    const need = Object.entries(req).map(([j, lv]) => `${j} Lv${lv}`).join(' + ');
-    return { ok: false, error: `Требуются уровни: ${need}` };
-  }
   const old = s.activeCareer;
   s.activeCareer = target;
   // PLAN-41: бонусы смены — только при ПЕРВОМ входе в профессию (fresh): статы тянутся к её
   // профилю (что-то растёт, что-то слабеет), пороги подрастают (веса ×CAP_CHANGE_MULT; ×10 если
   // стат был залит). Возврат в уже освоенную профессию — просто переключение (иначе бесконечная
   // «ферма» бонусов туда-обратно). Новичок в профессии начинает с Lv1 — чтобы её сразу можно было качать.
-  const fresh = (s.careers[target] ?? 0) < 1;
+  const preview = careerChangePreview(s.stats, s.caps, s.careers, target);
+  const fresh = preview.fresh;
   if (fresh) s.careers[target] = 1;
-  const statBefore: Record<string, number> = { program: s.stats.program, scenario: s.stats.scenario, graphics: s.stats.graphics, sound: s.stats.sound };
-  const capBefore: Record<string, number> = { program: s.caps.program, scenario: s.caps.scenario, graphics: s.caps.graphics, sound: s.caps.sound };
   const shiftTxt: string[] = [];
   const capTxt: string[] = [];
-  let maxedCount = 0;
+  const maxedCount = preview.maxedCount;
   if (fresh) {
-    const shift = CONFIG.CAREER_STAT_SHIFT[target] ?? {};
-    const weights = CONFIG.CAP_GROW[target] ?? {};
     for (const k of STAT_KEYS) {
-      const maxed = (statBefore[k] ?? 0) >= (capBefore[k] ?? 0);
-      if (maxed) maxedCount += 1;
-      const m = shift[k] ?? 1;
-      if (m !== 1) {
-        const nv = Math.max(0, Math.round((statBefore[k] ?? 0) * m));
-        s.stats[k] = nv;
-        if (nv !== statBefore[k]) shiftTxt.push(`${STAT_SHORT[k]} ${nv > (statBefore[k] ?? 0) ? '+' : ''}${nv - (statBefore[k] ?? 0)}`);
+      const st = preview.stats[k];
+      if (st.to !== st.from) {
+        s.stats[k] = st.to;
+        shiftTxt.push(`${STAT_SHORT[k]} ${st.to > st.from ? '+' : ''}${st.to - st.from}`);
       }
-      const g = capGain(weights[k] ?? 0, CONFIG.CAP_CHANGE_MULT, maxed);
-      if (g > 0) {
-        s.caps[k] = (s.caps[k] ?? 0) + g;
-        capTxt.push(`${STAT_SHORT[k]} +${g}${maxed ? ' ×10' : ''}`);
+    }
+    for (const k of STAT_KEYS) {
+      const cp = preview.caps[k];
+      if (cp.gain > 0) {
+        s.caps[k] = (s.caps[k] ?? 0) + cp.gain;
+        capTxt.push(`${STAT_SHORT[k]} +${cp.gain}${cp.maxed ? ' ×10' : ''}`);
       }
     }
     for (const k of STAT_KEYS) s.stats[k] = Math.min(s.stats[k] ?? 0, s.caps[k] ?? 0); // статы не выше порогов
   }
-  log(state, `🔁 ${s.name}: смена профессии ${old} → ${target}${viaManual ? ' (по руководству)' : ''}${fresh && shiftTxt.length ? ` (статы: ${shiftTxt.join(', ')}; пороги: ${capTxt.join(', ')})` : ''}`);
+  log(state, `🔁 ${s.name}: смена профессии ${old} → ${target} (по руководству)${fresh && shiftTxt.length ? ` (статы: ${shiftTxt.join(', ')}; пороги: ${capTxt.join(', ')})` : ''}`);
   pushHistory(s, state.week, 'career', `🔁 ${CAREER_LABELS[old] ?? old} → ${CAREER_LABELS[target] ?? target}${fresh ? '' : ' (профессия знакома)'}${fresh && shiftTxt.length ? `; статы: ${shiftTxt.join(', ')}` : ''}${fresh && capTxt.length ? `; пороги: ${capTxt.join(', ')}` : ''}`);
   const lines: string[] = [`🔁 ${CAREER_LABELS[old] ?? old} → ${CAREER_LABELS[target] ?? target}`];
   if (!fresh) {
@@ -365,10 +360,15 @@ export function buyCareerManual(state: GameState): ActionResult {
   return { ok: true };
 }
 
-// применить руководство из запаса: смена профессии БЕЗ требований (запас −1; неудача — не тратим)
+// применить руководство из запаса: смена профессии. Требования ОБЯЗАТЕЛЬНЫ (руководство их
+// не снимает); запас −1 только при успехе; неудача — руководство не тратится.
 export function applyCareerManual(state: GameState, staffId: string, target: CareerId): ActionResult {
   if ((state.careerManuals ?? 0) <= 0) return { ok: false, error: 'Нет руководства в запасе — продавец приходит в мае' };
-  const res = changeCareer(state, staffId, target, true);
+  const s = staffOf(state, staffId);
+  if (!s) return { ok: false, error: 'Нет такого сотрудника' };
+  const missing = careerPrereqMissing(s, target);
+  if (missing.length > 0) return { ok: false, error: `Не хватает: ${missing.join(', ')}` };
+  const res = changeCareer(state, staffId, target);
   if (!res.ok) return res;
   state.careerManuals -= 1;
   log(state, `📘 Применено руководство: осталось ${state.careerManuals}`);

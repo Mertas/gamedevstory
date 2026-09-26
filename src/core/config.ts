@@ -153,12 +153,14 @@ export const CONFIG = {
     hw: [{ p: 13, s: 13, g: 4, so: 5 }, { p: 13, s: 13, g: 4, so: 5 }, { p: 13, s: 13, g: 4, so: 5 }, { p: 14, s: 12, g: 5, so: 4 }],
     hacker: [{ p: 20, s: 20, g: 20, so: 20 }, { p: 20, s: 20, g: 20, so: 20 }, { p: 20, s: 20, g: 20, so: 20 }, { p: 20, s: 20, g: 20, so: 20 }],
   } as Record<string, Array<{ p: number; s: number; g: number; so: number }>>,
-  // смена профессии: пререквизиты (уровни на ТОМ ЖЕ сотруднике)
+  // смена профессии: пререквизиты (уровни на ТОМ ЖЕ сотруднике). Смена — ТОЛЬКО по руководству
+  // (продавец, май) и только когда требования выполнены; руководство требования НЕ снимает.
+  // База (coder/writer/designer/sound) — без требований. Хакер — высшая ступень: всё остальное по 5.
   CAREER_PREREQ: {
     director: { writer: 5, coder: 5 },
-    producer: { designer: 5, sound: 5 },
+    producer: { writer: 5, designer: 5 },
     hw: { director: 5, producer: 5 },
-    hacker: { hw: 5 },
+    hacker: { coder: 5, writer: 5, designer: 5, sound: 5, director: 5, producer: 5, hw: 5 },
   } as Record<string, Record<string, number>>,
 
   // ─── M3: продавец (research/02 §11) ───

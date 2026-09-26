@@ -55,11 +55,10 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'level_up'; staffId: string }
   | { type: 'train'; staffId: string; trainingId: number }
   | { type: 'chat_message'; text: string }
-  | { type: 'change_career'; staffId: string; target: CareerId }
   | { type: 'buy_booster'; booster: string }
   | { type: 'use_booster'; staffId: string; booster: string }
   | { type: 'buy_dead_bull'; staffId: string }
-  | { type: 'buy_career_manual' } // в запас (применяется в «Найм» → «Профессии»)
+  | { type: 'buy_career_manual' } // в запас (применяется в окне сотрудника)
   | { type: 'apply_career_manual'; staffId: string; target: CareerId }
   | { type: 'rest_staff'; staffId: string } // PLAN-41: отправить в отпуск (7 дней → POWER полный)
   | { type: 'train_to_max'; staffId: string } // PLAN-41: автотренировка до порогов

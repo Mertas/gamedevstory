@@ -5,11 +5,11 @@ import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
 import { StaffAvatar } from '../../StaffAvatar';
-import { actionFire, actionLevelUp, actionRestStaff, actionTrain, actionTrainToMax, useGame, useMeta } from '../../store';
+import { actionApplyCareerManual, actionFire, actionLevelUp, actionRestStaff, actionTrain, actionTrainToMax, useGame, useMeta } from '../../store';
 import { useWindows } from '../../wm';
 import { fmtK } from '../../../shared/nums';
 import { dateLabel } from '../../../shared/meta';
-import { capGain, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../../shared/train';
+import { capGain, careerChangePreview, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../../shared/train';
 import type { Staff } from '../../../core/types';
 import type { CareerId } from '../../../core/data/schema';
 
@@ -31,6 +31,7 @@ export function StaffWindow({ winId }: { winId: string }) {
   const meta = useMeta();
   const wm = useWindows();
   const [fireArm, setFireArm] = useState(false);
+  const [careerTarget, setCareerTarget] = useState<CareerId | null>(null);
 
   const s = staffFromWinId(game, winId);
   if (!s) return <div className="w95-hint" style={{ padding: 10 }}>Сотрудник не найден — возможно, он уволен.</div>;
@@ -47,6 +48,11 @@ export function StaffWindow({ winId }: { winId: string }) {
   const powerPct = s.maxPower > 0 ? Math.max(0, Math.min(1, s.power / s.maxPower)) : 0;
   const powerColor = powerPct > 0.5 ? '#1a7a1a' : powerPct > 0.25 ? '#b08a00' : '#c00000';
   const weights = CONFIG.CAP_GROW[s.activeCareer] ?? {};
+  const manuals = game.careerManuals ?? 0;
+  /** чего не хватает для смены профессии («у вас LvN» для каждого требования) */
+  const careerMissing = (t: CareerId) => Object.entries(CONFIG.CAREER_PREREQ[t] ?? {})
+    .filter(([job, need]) => (s.careers[job as CareerId] ?? 0) < need)
+    .map(([job, need]) => `${CAREER_LABELS[job] ?? job} Lv${need} (у вас Lv${s.careers[job as CareerId] ?? 0})`);
 
   // статус
   let status = 'Свободен';
@@ -200,21 +206,95 @@ export function StaffWindow({ winId }: { winId: string }) {
         </table>
       </div>
 
-      {/* профессии */}
+      {/* профессии: смена — ТОЛЬКО по руководству и только при выполненных требованиях */}
       <div className="arc-sec">
         <b>Профессии</b>
+        <div className="w95-row" style={{ marginTop: 3 }}>
+          <span className="w95-hint">📘 Руководств в запасе: <b>{manuals}</b></span>
+          {manuals <= 0 && <span className="w95-hint" style={{ color: '#c00000' }}>продавец приходит в первую неделю мая (с года 2)</span>}
+        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
           {CAREER_ORDER.map((c) => {
             const cl = s.careers[c] ?? 0;
             const act = c === s.activeCareer;
+            const sel = c === careerTarget;
+            const locked = careerMissing(c).length > 0;
             return (
-              <span key={c} className="w95-hint" style={{ border: '1px solid var(--w95-dark)', padding: '0 4px', background: act ? '#000080' : '#e8e8e8', color: act ? '#fff' : undefined }}>
-                {CAREER_LABELS[c] ?? c} Lv{cl}
-              </span>
+              <button
+                key={c}
+                className="w95-btn"
+                style={{
+                  padding: '0 5px', fontSize: 11,
+                  border: sel && !act ? '2px solid #000080' : undefined,
+                  background: act ? '#000080' : sel ? '#c8d4f8' : undefined,
+                  color: act ? '#fff' : undefined,
+                }}
+                onClick={() => setCareerTarget(c)}
+                title={locked ? '🔒 требования не выполнены' : 'требования выполнены'}
+              >
+                {CAREER_LABELS[c] ?? c} Lv{cl}{act ? ' ●' : locked ? ' 🔒' : ''}
+              </button>
             );
           })}
         </div>
-        <div className="w95-hint" style={{ marginTop: 3 }}>Смена профессии — в «Найм» → «Профессии» (свободно по уровням на высшие или по руководству). Первый вход в профессию усиливает пороги.</div>
+        {careerTarget === null && (
+          <div className="w95-hint" style={{ marginTop: 3 }}>Выберите профессию — покажу требования и как изменятся статы и пороги (смена — по руководству).</div>
+        )}
+        {careerTarget === s.activeCareer && (
+          <div className="w95-hint" style={{ marginTop: 3 }}>Это текущая профессия ({CAREER_LABELS[careerTarget] ?? careerTarget} Lv{lv}).</div>
+        )}
+        {careerTarget !== null && careerTarget !== s.activeCareer && (() => {
+          const t = careerTarget;
+          const missing = careerMissing(t);
+          const reqs = Object.entries(CONFIG.CAREER_PREREQ[t] ?? {});
+          const prev = careerChangePreview(s.stats, s.caps, s.careers, t);
+          const statParts = STAT_KEYS.filter((k) => prev.stats[k].to !== prev.stats[k].from)
+            .map((k) => `${STAT_SHORT[k]} ${prev.stats[k].from} → ${prev.stats[k].to}`);
+          const capParts = STAT_KEYS.filter((k) => prev.caps[k].gain > 0)
+            .map((k) => `${STAT_SHORT[k]} ${prev.caps[k].from} → ${prev.caps[k].to} (+${prev.caps[k].gain}${prev.caps[k].maxed ? ' ×10' : ''})`);
+          return (
+            <div className="w95-panel" style={{ gap: 3, marginTop: 4 }}>
+              <div className="w95-row">
+                {reqs.length === 0 ? (
+                  <span className="w95-hint">Базовая профессия — требований нет.</span>
+                ) : (
+                  reqs.map(([job, need]) => {
+                    const have = s.careers[job as CareerId] ?? 0;
+                    const ok = have >= need;
+                    return (
+                      <span key={job} className="w95-hint" style={{ color: ok ? '#008000' : '#c00000' }}>
+                        {CAREER_LABELS[job] ?? job} Lv{need} — у вас Lv{have} {ok ? '✓' : '✗'}
+                      </span>
+                    );
+                  })
+                )}
+              </div>
+              {prev.fresh ? (
+                <>
+                  <div className="w95-hint">Статы (первый вход): {statParts.length ? statParts.join(' · ') : 'без изменений'}</div>
+                  <div className="w95-hint">Пороги: {capParts.length ? capParts.join(' · ') : 'без изменений'}{prev.maxedCount > 0 ? ` · залито ${prev.maxedCount}/4 — рост ×10 отмечен` : ''}</div>
+                </>
+              ) : (
+                <div className="w95-hint">Профессия знакома — простое переключение, статы и пороги не изменятся.</div>
+              )}
+              <div className="w95-row">
+                <button
+                  className="w95-btn"
+                  data-autopilot="staff-career-apply"
+                  disabled={missing.length > 0 || manuals <= 0}
+                  onClick={() => actionApplyCareerManual(s.id, t)}
+                >
+                  📘 Сменить на «{CAREER_LABELS[t] ?? t}» (руководств: {manuals})
+                </button>
+                <span className="w95-hint">
+                  {missing.length > 0 ? `не хватает: ${missing.join(', ')}`
+                    : manuals <= 0 ? 'запаса нет — продавец в мае'
+                      : 'потратит 1 руководство из запаса'}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* история */}

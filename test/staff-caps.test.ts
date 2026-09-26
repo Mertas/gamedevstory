@@ -82,7 +82,7 @@ describe('PLAN-41: пороги статов (caps)', () => {
     const s = g.staff[0]!;
     s.caps = { program: 100, scenario: 100, graphics: 100, sound: 100 };
     s.stats = { program: 100, scenario: 100, graphics: 100, sound: 100 };
-    const res = changeCareer(g, s.id, 'writer', true); // fresh: shift Sc×1.15, P×0.9; веса Sc40 P15…
+    const res = changeCareer(g, s.id, 'writer'); // fresh: shift Sc×1.15, P×0.9; веса Sc40 P15…
     expect(res.ok).toBe(true);
     expect(s.stats.scenario).toBe(115); // 100 × 1.15
     expect(s.stats.program).toBe(90); // 100 × 0.9
@@ -90,9 +90,9 @@ describe('PLAN-41: пороги статов (caps)', () => {
     expect(s.caps.program).toBe(100 + Math.round(15 * CONFIG.CAP_CHANGE_MULT * CONFIG.CAP_MAX_BONUS)); // +225
     expect(s.careers.writer).toBe(1); // новичок в профессии — с Lv1 (можно качать)
     // возврат в профессию — без бонусов (иначе «ферма» туда-обратно)
-    changeCareer(g, s.id, 'coder', true); // coder уже Lv1 — просто переключение
+    changeCareer(g, s.id, 'coder'); // coder уже Lv1 — просто переключение
     const capsBefore = { ...s.caps };
-    changeCareer(g, s.id, 'writer', true); // writer уже Lv1 — знаком
+    changeCareer(g, s.id, 'writer'); // writer уже Lv1 — знаком
     expect(s.caps).toEqual(capsBefore);
     expect(s.history.filter((h) => h.kind === 'career').length).toBe(3);
   });
@@ -153,7 +153,7 @@ describe('PLAN-41: пороги статов (caps)', () => {
     for (const c of order) {
       if (c !== s.activeCareer) {
         fill(); // залито по максимуму перед сменой → пороги ×10
-        expect(changeCareer(g, s.id, c, true).ok).toBe(true);
+        expect(changeCareer(g, s.id, c).ok).toBe(true);
       }
       while ((s.careers[c] ?? 0) < 5) {
         fill();
