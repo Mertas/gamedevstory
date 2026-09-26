@@ -73,7 +73,7 @@ export function MinigameModal() {
           scrolling="no"
           style={{
             width: SONNY_SCREEN.w, height: SONNY_SCREEN.h, border: 0, display: 'block',
-            background: '#000', borderRadius: 9,
+            background: '#000', borderRadius: 10,
           }}
         />
       </SonnyMonitor>
