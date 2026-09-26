@@ -71,7 +71,6 @@ export function SonnyMonitor({ title, children }: { title: string; children: Rea
         <text x="772" y="614" textAnchor="middle" fontFamily="'Segoe UI', Arial, sans-serif" fontSize="7.5" letterSpacing="1" fill="#6f6a61">POWER</text>
         <rect x="752" y="620" width="40" height="27" rx="5" fill="#c3bdb0" stroke="#8b857a" strokeWidth="1" />
         <rect x="753.5" y="621.5" width="37" height="10" rx="4" fill="rgba(255,255,255,.25)" />
-        <rect x="752" y="647.5" width="40" height="2" rx="1" fill="rgba(0,0,0,.10)" />
         <circle cx="772" cy="633.5" r="6.8" fill="none" stroke="#2f7d3a" strokeWidth="2" />
         <line x1="772" y1="625.5" x2="772" y2="632" stroke="#2f7d3a" strokeWidth="2" strokeLinecap="round" />
         <circle cx="806" cy="633" r="9.5" fill="rgba(120,220,120,.32)" />
@@ -81,7 +80,6 @@ export function SonnyMonitor({ title, children }: { title: string; children: Rea
         <rect x="753.5" y="657.5" width="19" height="5" rx="2.5" fill="rgba(255,255,255,.3)" />
         <rect x="778" y="656" width="22" height="14" rx="7" fill="#c3bdb0" stroke="#8b857a" strokeWidth="1" />
         <rect x="779.5" y="657.5" width="19" height="5" rx="2.5" fill="rgba(255,255,255,.3)" />
-        <rect x="752" y="670.5" width="48" height="2" rx="1" fill="rgba(0,0,0,.10)" />
         <text x="763" y="683" textAnchor="middle" fontFamily="'Segoe UI', Arial, sans-serif" fontSize="7" fill="#6b665c">MENU</text>
         <text x="789" y="683" textAnchor="middle" fontFamily="'Segoe UI', Arial, sans-serif" fontSize="7" fill="#6b665c">OK</text>
 
