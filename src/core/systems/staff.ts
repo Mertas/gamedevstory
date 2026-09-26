@@ -4,8 +4,10 @@ import { STAFF } from '../data/db';
 import { salaryWithLevels } from '../formulas';
 import { log } from '../log';
 import type { Rng } from '../rng';
-import type { ActionResult, GameState, Staff } from '../types';
+import type { ActionResult, GameState, Staff, StaffHistoryEntry } from '../types';
 import { HIRE_BANDS, HIRE_METHOD_LABELS, unlockedMystery } from '../../shared/hire';
+import { CAREER_LABELS } from '../../shared/careers';
+import { capInit } from '../../shared/train';
 
 export function makeStaffFromData(id: string): Staff | null {
   const d = STAFF.find((s) => s.id === id);
@@ -26,7 +28,18 @@ export function makeStaffFromData(id: string): Staff | null {
     avatar: '',
     homeWeeks: 0,
     lastRole: null,
+    caps: capInit(d.stats),
+    history: [],
+    trainCount: {},
+    restDays: 0,
   };
+}
+
+/** PLAN-41: запись в историю сотрудника (кольцо — храним последние 60 записей) */
+export function pushHistory(s: Staff, week: number, kind: StaffHistoryEntry['kind'], text: string): void {
+  s.history ??= [];
+  s.history.push({ week, kind, text });
+  if (s.history.length > 60) s.history.splice(0, s.history.length - 60);
 }
 
 const AVATAR_COUNT = 48; // public/avatars/avatar-01..48.png (tools/make-avatars.ts)
@@ -96,6 +109,7 @@ export function hireFromSearch(
   state.hiredIds.push(staff.id);
   search.ids = search.ids.filter((id) => id !== staffId);
   log(state, `Нанят: ${staff.name} (${staff.activeCareer} Lv${staff.careers[staff.activeCareer]}, взнос ${staff.hireFee}K, зарплата ${staff.salary}K/год)`);
+  pushHistory(staff, state.week, 'hire', `Нанят: ${CAREER_LABELS[staff.activeCareer] ?? staff.activeCareer} Lv${staff.careers[staff.activeCareer] ?? 1}, взнос ${staff.hireFee}K`);
   return { ok: true, staffId: staff.id };
 }
 
@@ -139,6 +153,7 @@ export function bankrupt(state: GameState): void {
 export function dailyPower(state: GameState, worked: boolean, rng: Rng): void {
   if (state.week % 7 !== 1) return; // обновляем раз в 7 дней (как было еженедельно)
   for (const s of state.staff) {
+    if ((s.restDays ?? 0) > 0) continue; // PLAN-41: в отпуске — POWER не тратит и не копит (вернётся полным)
     if (s.homeWeeks > 0) {
       s.homeWeeks--;
       s.power = Math.min(s.maxPower, s.power + 3);
@@ -164,4 +179,33 @@ export function busyStaffIds(state: GameState): Set<string> {
     for (const id of c.staffIds) busy.add(id);
   }
   return busy;
+}
+
+// ─── PLAN-41: отпуск («отправить на отдых») ───
+
+/** отправить сотрудника в отпуск: CONFIG.REST_DAYS дней, по возвращении POWER полный */
+export function restStaff(state: GameState, staffId: string): ActionResult {
+  const s = state.staff.find((x) => x.id === staffId);
+  if (!s) return { ok: false, error: 'Нет такого сотрудника' };
+  if ((s.restDays ?? 0) > 0) return { ok: false, error: `${s.name} уже в отпуске (${s.restDays} дн.)` };
+  if (s.homeWeeks > 0) return { ok: false, error: `${s.name} сейчас дома (вымотался)` };
+  if (busyStaffIds(state).has(s.id)) return { ok: false, error: `${s.name} занят на контракте` };
+  if (s.power >= s.maxPower) return { ok: false, error: 'POWER и так на максимуме' };
+  s.restDays = CONFIG.REST_DAYS;
+  log(state, `🧳 ${s.name} уходит в отпуск (${CONFIG.REST_DAYS} дн.) — POWER восстановится полностью`);
+  pushHistory(s, state.week, 'rest', `Отпуск ${CONFIG.REST_DAYS} дн. (POWER ${Math.round(s.power)}/${s.maxPower})`);
+  return { ok: true };
+}
+
+/** ежедневный тик отпуска (вызывается из tick): отсчёт дней и полное восстановление POWER */
+export function tickRest(state: GameState): void {
+  for (const s of state.staff) {
+    if ((s.restDays ?? 0) <= 0) continue;
+    s.restDays -= 1;
+    if (s.restDays === 0) {
+      s.power = s.maxPower;
+      log(state, `🧳 ${s.name} вернулся из отпуска (POWER ${s.maxPower}/${s.maxPower})`);
+      pushHistory(s, state.week, 'back', `Вернулся из отпуска — POWER полный (${s.maxPower})`);
+    }
+  }
 }

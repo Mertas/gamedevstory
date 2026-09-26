@@ -7,7 +7,7 @@ import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   changeCareerAction, dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, startOwnConsoleAction, startProjectAction,
-  takeContractAction, trainAction, applyBoosterAction,
+  takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
 import type { GamedexOption, GameState } from '../core/types';
 import { sanitizeUi } from './ui-state';
@@ -263,6 +263,18 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       return;
     case 'train':
       s.run(trainAction(s.game, msg.staffId, msg.trainingId));
+      s.emit();
+      return;
+    // PLAN-41: окно сотрудника — отпуск и автотренировка до порогов
+    case 'rest_staff': {
+      const res = restStaffAction(s.game, msg.staffId);
+      s.run(res);
+      if (res.ok) s.pushSystem(`🧳 Сотрудник ушёл в отпуск — через ${CONFIG.REST_DAYS} дн. вернётся с полным POWER`);
+      s.emit();
+      return;
+    }
+    case 'train_to_max':
+      s.run(trainToMaxAction(s.game, msg.staffId));
       s.emit();
       return;
     // игрок пишет в чат → команда отвечает серией реплик (по одной, по очереди)

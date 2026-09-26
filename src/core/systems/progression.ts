@@ -7,7 +7,8 @@ import {
 import { log } from '../log';
 import type { CareerId } from '../data/schema';
 import { CAREER_LABELS } from '../../shared/careers';
-import { busyStaffIds } from './staff';
+import { busyStaffIds, pushHistory } from './staff';
+import { capGain, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../shared/train';
 import { OWN_CONSOLE_TYPES, OWN_CONSOLE_CPUS, OWN_CONSOLE_MEDIA, ownConsoleDays } from '../../shared/consoles';
 import type { Rng } from '../rng';
 import type {
@@ -26,7 +27,7 @@ export function levelUpStaff(state: GameState, staffId: string, _rng: Rng): Acti
   const career = s.activeCareer;
   const lv = s.careers[career] ?? 0;
   if (lv >= 5) return { ok: false, error: 'Максимальный уровень' };
-  const price = CONFIG.LEVEL_PR[career]?.[lv - 1];
+  const price = CONFIG.LEVEL_PR[career]?.[Math.max(0, lv - 1)];
   if (!price) return { ok: false, error: 'Нет данных о цене' };
   if (state.research < price) return { ok: false, error: `Нужно ${price} PR (есть ${Math.round(state.research)})` };
 
@@ -42,7 +43,25 @@ export function levelUpStaff(state: GameState, staffId: string, _rng: Rng): Acti
     s.stats.graphics += gain.g;
     s.stats.sound += gain.so;
   }
-  log(state, `⬆ ${s.name}: ${career} → Lv${newLv} (−${price} PR, зарплата ×1.2)`);
+  // PLAN-41: пороги растут от профессии; у ЗАЛИТОГО до порога стата прирост ×CAP_MAX_BONUS
+  const capRows: string[] = [];
+  const weights = CONFIG.CAP_GROW[career] ?? {};
+  let capJump = 0;
+  let maxedCount = 0;
+  for (const k of STAT_KEYS) {
+    const maxed = (statBefore[k] ?? 0) >= (s.caps[k] ?? 0);
+    if (maxed) maxedCount += 1;
+    const g = capGain(weights[k] ?? 0, 1, maxed);
+    if (g > 0) {
+      const was = s.caps[k] ?? 0;
+      s.caps[k] = was + g;
+      capJump += g;
+      capRows.push(`${STAT_RU[k]}: ${was} → ${was + g} (+${g}${maxed ? ' — залит, ×10!' : ''})`);
+    }
+  }
+  // статы не могут превысить новые пороги
+  for (const k of STAT_KEYS) s.stats[k] = Math.min(s.stats[k] ?? 0, s.caps[k] ?? 0);
+  log(state, `⬆ ${s.name}: ${career} → Lv${newLv} (−${price} PR, зарплата ×1.2, пороги +${capJump}${maxedCount > 0 ? `, залито ${maxedCount}/4 — ×10` : ''})`);
 
   // что открылось этим уровнем: жанры и типы под профессию (уровень достиг только что)
   const opened: string[] = [];
@@ -63,20 +82,50 @@ export function levelUpStaff(state: GameState, staffId: string, _rng: Rng): Acti
       if (dv > 0) lines.push(`${STAT_RU[k]}: ${statBefore[k]} → ${s.stats[k]} (+${dv})`);
     }
   }
+  if (capRows.length) lines.push('', 'Пороги статов:', ...capRows);
   if (opened.length) lines.push('', 'Открыто:', ...opened.map((o) => `• ${o}`));
   const popup: PopupInfo = {
     title: 'Повышение уровня',
     text: `⬆ ${s.name}\n${lines.join('\n')}`,
   };
+  pushHistory(s, state.week, 'levelup', `⬆ ${CAREER_LABELS[career] ?? career}: Lv${lv} → Lv${newLv}, пороги +${capJump}${maxedCount > 0 ? ` (залито ${maxedCount}/4 — ×10)` : ''}`);
   return { ok: true, popup };
 }
 
 // ─── обучение ───
+// PLAN-41: прирост тренировки масштабируется от порога стата (×floor(порог/100), мин ×1),
+// обучение не может превысить порог; супер-эффект ×3 (может усилить и минус). Учтено в счётчике.
+function applyTraining(state: GameState, s: Staff, t: (typeof TRAININGS)[number], rng: Rng): { lines: string[]; applied: Record<string, number>; crits: number } {
+  const before: Record<string, number> = { program: s.stats.program, scenario: s.stats.scenario, graphics: s.stats.graphics, sound: s.stats.sound };
+  const deltas = { program: t.program ?? 0, scenario: t.scenario ?? 0, graphics: t.graphics ?? 0, sound: t.sound ?? 0 };
+  const lines: string[] = [];
+  const applied: Record<string, number> = { program: 0, scenario: 0, graphics: 0, sound: 0 };
+  let crits = 0;
+  for (const k of STAT_KEYS) {
+    let d = effTrainDelta(deltas[k], s.caps[k] ?? 0);
+    if (d === 0) continue;
+    const crit = rng.chance(0.08);
+    if (crit) { d *= 3; crits += 1; }
+    const val = Math.max(0, Math.min(s.caps[k] ?? 0, (s.stats[k] ?? 0) + d));
+    s.stats[k] = val;
+    applied[k] = val - (before[k] ?? 0);
+    if (val === before[k]) lines.push(`${STAT_RU[k]}: ${before[k]} (на пороге ${s.caps[k]})`);
+    else lines.push(`${STAT_RU[k]}: ${before[k]} → ${val} (${val - (before[k] ?? 0) > 0 ? '+' : ''}${val - (before[k] ?? 0)})${crit ? ' — супер-эффект ×3!' : ''}`);
+  }
+  if (!state.unlockedTrainings.includes(t.name)) state.unlockedTrainings.push(t.name);
+  // PLAN-41: агрегат по методам (для истории/сводки в окне сотрудника)
+  const agg = (s.trainCount ??= {})[String(t.id)] ??= { n: 0, gains: { program: 0, scenario: 0, graphics: 0, sound: 0 } };
+  agg.n += 1;
+  for (const k of STAT_KEYS) agg.gains[k] = (agg.gains[k] ?? 0) + (applied[k] ?? 0);
+  return { lines, applied, crits };
+}
+
 export function trainStaff(state: GameState, staffId: string, trainingId: number, rng: Rng): ActionResult {
   const s = staffOf(state, staffId);
   if (!s) return { ok: false, error: 'Нет такого сотрудника' };
   const t = TRAININGS.find((x) => x.id === trainingId);
   if (!t) return { ok: false, error: 'Нет такого тренинга' };
+  if ((s.restDays ?? 0) > 0) return { ok: false, error: `${s.name} в отпуске (${s.restDays} дн.)` };
   if (state.officeLevel < (t.office ?? 1)) return { ok: false, error: `Нужен офис ${t.office}` };
   const cost = (t.costWan ?? 0) / 10;
   if (state.money < cost) return { ok: false, error: `Нужно ${cost}K` };
@@ -84,24 +133,63 @@ export function trainStaff(state: GameState, staffId: string, trainingId: number
 
   state.money -= cost;
   s.power = Math.max(0, s.power - (t.power ?? 0));
-  const before: Record<string, number> = { program: s.stats.program, scenario: s.stats.scenario, graphics: s.stats.graphics, sound: s.stats.sound };
-  const deltas = { program: t.program ?? 0, scenario: t.scenario ?? 0, graphics: t.graphics ?? 0, sound: t.sound ?? 0 };
-  const lines: string[] = [];
-  for (const k of ['program', 'scenario', 'graphics', 'sound'] as const) {
-    let d = deltas[k];
-    if (d === 0) continue;
-    // супер-эффективность: шанс ×3 (research/01 §4)
-    const crit = rng.chance(0.08);
-    if (crit) d *= 3;
-    s.stats[k] = Math.max(0, s.stats[k] + d);
-    lines.push(`${STAT_RU[k]}: ${before[k]} → ${s.stats[k]} (+${d})${crit ? ' — супер-эффект ×3!' : ''}`);
-  }
-  if (!state.unlockedTrainings.includes(t.name)) state.unlockedTrainings.push(t.name);
+  const res = applyTraining(state, s, t, rng);
   const tName = t.nameRu ?? t.name;
   log(state, `🎓 ${s.name}: тренинг «${tName}» (−${cost}K, POWER −${t.power ?? 0})`);
+  const gained = STAT_KEYS.filter((k) => (res.applied[k] ?? 0) > 0).map((k) => `${STAT_SHORT[k]} +${res.applied[k]}`).join(' ');
+  pushHistory(s, state.week, 'train', `🎓 «${tName}»${gained ? `: ${gained}` : ''}${res.crits ? ' — ×3!' : ''}`);
   const popup: PopupInfo = {
     title: 'Результат тренировки',
-    text: `🎓 ${s.name} — «${tName}»\n(−${cost}K, POWER −${t.power ?? 0})\n\n${lines.length ? lines.join('\n') : 'Статы не изменились'}`,
+    text: `🎓 ${s.name} — «${tName}»\n(−${cost}K, POWER −${t.power ?? 0})\n\n${res.lines.length ? res.lines.join('\n') : 'Статы не изменились'}`,
+  };
+  return { ok: true, popup };
+}
+
+/** PLAN-41: «Тренировать до максимума» — сама крутит доступные методы, пока статы не упрутся
+ *  в пороги или не кончатся POWER/деньги. Один сводный попап и одна запись в историю. */
+export function trainToMax(state: GameState, staffId: string, rng: Rng): ActionResult {
+  const s = staffOf(state, staffId);
+  if (!s) return { ok: false, error: 'Нет такого сотрудника' };
+  if ((s.restDays ?? 0) > 0) return { ok: false, error: `${s.name} в отпуске (${s.restDays} дн.)` };
+  const base = (t: (typeof TRAININGS)[number], k: StatKey): number =>
+    (k === 'program' ? t.program : k === 'scenario' ? t.scenario : k === 'graphics' ? t.graphics : t.sound) ?? 0;
+  const pool = TRAININGS.filter((t) => state.officeLevel >= (t.office ?? 1));
+  const total: Record<string, number> = { program: 0, scenario: 0, graphics: 0, sound: 0 };
+  let sessions = 0;
+  let spent = 0;
+  let powerSpent = 0;
+  let crits = 0;
+  outer: for (let iter = 0; iter < 60; iter++) {
+    for (const t of pool) {
+      if (s.power < 1 || s.power < (t.power ?? 0)) continue;
+      const cost = (t.costWan ?? 0) / 10;
+      if (state.money < cost) continue;
+      const worth = STAT_KEYS.some((k) => effTrainDelta(base(t, k), s.caps[k] ?? 0) > 0 && (s.stats[k] ?? 0) < (s.caps[k] ?? 0));
+      if (!worth) continue;
+      state.money -= cost;
+      s.power = Math.max(0, s.power - (t.power ?? 0));
+      const r = applyTraining(state, s, t, rng);
+      sessions += 1;
+      spent += cost;
+      powerSpent += t.power ?? 0;
+      crits += r.crits;
+      for (const k of STAT_KEYS) total[k] = (total[k] ?? 0) + (r.applied[k] ?? 0);
+      if (s.power <= 0) break outer; // выдохся — стоп (как ручное обучение, не доводим до «ушёл домой»)
+      continue outer;
+    }
+    break; // ни один метод больше не работает — всё на порогах / нет денег
+  }
+  if (sessions === 0) {
+    return { ok: false, error: 'Нечего тренировать: статы на порогах (или не хватает POWER/денег)' };
+  }
+  const gainedTxt = STAT_KEYS.filter((k) => (total[k] ?? 0) > 0).map((k) => `${STAT_SHORT[k]} +${total[k]}`).join(', ');
+  const atCap = STAT_KEYS.every((k) => (s.stats[k] ?? 0) >= (s.caps[k] ?? 0));
+  log(state, `⚡ ${s.name}: автотренировка ×${sessions} (−${Math.round(spent)}K, POWER −${powerSpent})${gainedTxt ? ` — ${gainedTxt}` : ''}${crits ? ` (×3 ×${crits})` : ''}`);
+  pushHistory(s, state.week, 'train', `⚡ Автотренировка ×${sessions}${gainedTxt ? `: ${gainedTxt}` : ''}${crits ? ' — ×3!' : ''}`);
+  const capsTxt = STAT_KEYS.map((k) => `${STAT_SHORT[k]} ${s.stats[k]}/${s.caps[k]}`).join(' · ');
+  const popup: PopupInfo = {
+    title: 'Автотренировка',
+    text: `⚡ ${s.name}: ${sessions} занятий (−${Math.round(spent)}K, POWER −${powerSpent})\n${gainedTxt || 'прироста нет'}\n${capsTxt}${atCap ? '\n🎯 Все статы на порогах! Пора на левелап.' : ''}`,
   };
   return { ok: true, popup };
 }
@@ -124,8 +212,49 @@ export function changeCareer(state: GameState, staffId: string, target: CareerId
   }
   const old = s.activeCareer;
   s.activeCareer = target;
-  log(state, `🔁 ${s.name}: смена профессии ${old} → ${target}${viaManual ? ' (по руководству)' : ''}`);
-  return { ok: true };
+  // PLAN-41: бонусы смены — только при ПЕРВОМ входе в профессию (fresh): статы тянутся к её
+  // профилю (что-то растёт, что-то слабеет), пороги подрастают (веса ×CAP_CHANGE_MULT; ×10 если
+  // стат был залит). Возврат в уже освоенную профессию — просто переключение (иначе бесконечная
+  // «ферма» бонусов туда-обратно). Новичок в профессии начинает с Lv1 — чтобы её сразу можно было качать.
+  const fresh = (s.careers[target] ?? 0) < 1;
+  if (fresh) s.careers[target] = 1;
+  const statBefore: Record<string, number> = { program: s.stats.program, scenario: s.stats.scenario, graphics: s.stats.graphics, sound: s.stats.sound };
+  const capBefore: Record<string, number> = { program: s.caps.program, scenario: s.caps.scenario, graphics: s.caps.graphics, sound: s.caps.sound };
+  const shiftTxt: string[] = [];
+  const capTxt: string[] = [];
+  let maxedCount = 0;
+  if (fresh) {
+    const shift = CONFIG.CAREER_STAT_SHIFT[target] ?? {};
+    const weights = CONFIG.CAP_GROW[target] ?? {};
+    for (const k of STAT_KEYS) {
+      const maxed = (statBefore[k] ?? 0) >= (capBefore[k] ?? 0);
+      if (maxed) maxedCount += 1;
+      const m = shift[k] ?? 1;
+      if (m !== 1) {
+        const nv = Math.max(0, Math.round((statBefore[k] ?? 0) * m));
+        s.stats[k] = nv;
+        if (nv !== statBefore[k]) shiftTxt.push(`${STAT_SHORT[k]} ${nv > (statBefore[k] ?? 0) ? '+' : ''}${nv - (statBefore[k] ?? 0)}`);
+      }
+      const g = capGain(weights[k] ?? 0, CONFIG.CAP_CHANGE_MULT, maxed);
+      if (g > 0) {
+        s.caps[k] = (s.caps[k] ?? 0) + g;
+        capTxt.push(`${STAT_SHORT[k]} +${g}${maxed ? ' ×10' : ''}`);
+      }
+    }
+    for (const k of STAT_KEYS) s.stats[k] = Math.min(s.stats[k] ?? 0, s.caps[k] ?? 0); // статы не выше порогов
+  }
+  log(state, `🔁 ${s.name}: смена профессии ${old} → ${target}${viaManual ? ' (по руководству)' : ''}${fresh && shiftTxt.length ? ` (статы: ${shiftTxt.join(', ')}; пороги: ${capTxt.join(', ')})` : ''}`);
+  pushHistory(s, state.week, 'career', `🔁 ${CAREER_LABELS[old] ?? old} → ${CAREER_LABELS[target] ?? target}${fresh ? '' : ' (профессия знакома)'}${fresh && shiftTxt.length ? `; статы: ${shiftTxt.join(', ')}` : ''}${fresh && capTxt.length ? `; пороги: ${capTxt.join(', ')}` : ''}`);
+  const lines: string[] = [`🔁 ${CAREER_LABELS[old] ?? old} → ${CAREER_LABELS[target] ?? target}`];
+  if (!fresh) {
+    lines.push('Профессия знакома — пороги без бонуса (бонус даётся при первом входе в профессию)');
+  } else {
+    if (shiftTxt.length) lines.push(`Статы: ${shiftTxt.join(', ')}`);
+    if (capTxt.length) lines.push(`Пороги: ${capTxt.join(', ')}`);
+    lines.push(maxedCount === 4 ? '🎯 Было залито по максимуму — пороги выросли ×10!' : `Залито ${maxedCount}/4 статов — залей все до порогов перед сменой: рост порогов ×10`);
+  }
+  const popup: PopupInfo = { title: 'Смена профессии', text: `🔁 ${s.name}\n${lines.join('\n')}` };
+  return { ok: true, popup };
 }
 
 // ─── продавец (1–31 мая, с года 2); приход ставит время на паузу (как в оригинале) ───

@@ -374,12 +374,16 @@ export function ProjectWizard() {
               <div className="w95-staff-grid">
                 {game.staff.map((s) => {
                   const busyRole = (Object.entries(roles) as [Role, string][]).find(([, v]) => v === s.id)?.[0];
+                  // PLAN-41: отдыхающие и «дома» вклада не дают — в команду не берём
+                  const away = (s.restDays ?? 0) > 0 || s.homeWeeks > 0;
+                  const awayNote = (s.restDays ?? 0) > 0 ? `🧳 в отпуске ${s.restDays} дн.` : s.homeWeeks > 0 ? `🏠 дома ${s.homeWeeks} нед.` : undefined;
                   return (
                     <StaffCard
                       key={s.id}
                       st={s}
                       selected={roles[roleTab] === s.id}
-                      note={busyRole && busyRole !== roleTab ? `сейчас: ${ROLE_LABELS[busyRole]}` : undefined}
+                      disabled={away}
+                      note={awayNote ?? (busyRole && busyRole !== roleTab ? `сейчас: ${ROLE_LABELS[busyRole]}` : undefined)}
                       onClick={() => handleStaffClick(s)}
                     />
                   );

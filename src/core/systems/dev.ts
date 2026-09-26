@@ -142,7 +142,7 @@ function roleContributors(state: GameState, game: ActiveGame, role: Role, busy: 
   const ids = game.assignments[role] ?? [];
   return ids
     .map((id) => state.staff.find((s) => s.id === id))
-    .filter((s): s is Staff => !!s && s.homeWeeks === 0 && !busy.has(s.id))
+    .filter((s): s is Staff => !!s && s.homeWeeks === 0 && (s.restDays ?? 0) === 0 && !busy.has(s.id)) // PLAN-41: в отпуске — вклада нет
     .map((s) => ({ stat: s.stats[ROLE_STAT[role]], power: s.power }));
 }
 
@@ -168,7 +168,7 @@ export function devTick(state: GameState, rng: Rng): void {
     ...byRole('proposal'), ...byRole('program'), ...byRole('graphics'), ...byRole('sound'),
     // универсалы (без роли в проекте)
     ...state.staff
-      .filter((s) => s.homeWeeks === 0 && !busy.has(s.id) && !Object.values(game.assignments).some((ids) => ids.includes(s.id)))
+      .filter((s) => s.homeWeeks === 0 && (s.restDays ?? 0) === 0 && !busy.has(s.id) && !Object.values(game.assignments).some((ids) => ids.includes(s.id)))
       .map((s) => {
         const st = s.stats;
         return { stat: (st.program + st.scenario + st.graphics + st.sound) / 4, power: s.power };
@@ -185,6 +185,7 @@ export function devTick(state: GameState, rng: Rng): void {
   const totalStat = contributors.reduce((a, c) => a + c.stat, 0) || 1;
   for (const s of state.staff) {
     if (s.homeWeeks > 0) continue; // ушёл домой — вклада нет
+    if ((s.restDays ?? 0) > 0) continue; // PLAN-41: в отпуске — вклада нет
     if (busy.has(s.id)) continue; // M9: на контракте — вклада в проект нет
     let stat = 0;
     for (const r of ['proposal', 'program', 'graphics', 'sound'] as const) {

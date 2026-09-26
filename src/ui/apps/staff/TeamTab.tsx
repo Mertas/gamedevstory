@@ -24,7 +24,7 @@ export function TeamTab() {
                 <td>
                   <span className="w95-row">
                     <StaffAvatar staff={st} size={20} />
-                    {st.name}
+                    {st.name}{(st.restDays ?? 0) > 0 && <span title={`В отпуске ещё ${st.restDays} дн.`}> 🧳</span>}
                   </span>
                 </td>
                 <td>{CAREER_LABELS[st.activeCareer] ?? st.activeCareer} Lv{lv}</td>

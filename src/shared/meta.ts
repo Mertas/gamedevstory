@@ -15,6 +15,7 @@ export interface MetaData {
     id: string; name: string; gender: string; salary: number; hireFee: number;
     maxPower: number; stats: { program: number; scenario: number; graphics: number; sound: number };
     careers: Record<CareerId, number>; activeCareer: CareerId; unlock: string;
+    persona: string | null; // PLAN-41: характер — показывается в окне сотрудника
   }[];
   comboGrades: Record<string, string>;
   genreOrder: string[];

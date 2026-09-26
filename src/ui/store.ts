@@ -539,6 +539,15 @@ export function actionBuyCareerManual() {
 export function actionApplyCareerManual(staffId: string, target: string) {
   send({ type: 'apply_career_manual', staffId, target });
 }
+
+// PLAN-41: окно сотрудника
+export function actionRestStaff(staffId: string) {
+  send({ type: 'rest_staff', staffId });
+}
+
+export function actionTrainToMax(staffId: string) {
+  send({ type: 'train_to_max', staffId });
+}
 export function actionMoveOffice() {
   send({ type: 'move_office' });
 }

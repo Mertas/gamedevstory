@@ -171,6 +171,40 @@ export const CONFIG = {
   DEAD_BULL_RESEARCH: 10,
   CAREER_MANUAL_PRICE: [50, 200, 550],
 
+  // ─── PLAN-41: пороги статов сотрудника ───
+  // У каждого сотрудника свои пороги (caps) на 4 стата. Пороги растут при левелапе
+  // и смене профессии; если стат ЗАЛИТ до текущего порога — рост этого порога ×CAP_MAX_BONUS
+  // («намного эффективней»). Полный проход (все 8 профессий, Lv5, с заливом до порогов
+  // каждого уровня) даёт максимальный стат ≈ 10 000 — калибровка: test/staff-caps.test.ts.
+  CAP_INIT_MULT: 2, // стартовый порог = стат × 2
+  CAP_INIT_FLAT: 10, // ...или стат + 10 (что больше)
+  CAP_MAX_BONUS: 10, // «залит по максимуму» → прирост порога ×10
+  // прирост порогов за левелап (база, ×CAP_MAX_BONUS если стат залит) — по профессиям
+  CAP_GROW: {
+    coder: { program: 40, scenario: 15, graphics: 20, sound: 15 },
+    writer: { program: 15, scenario: 40, graphics: 15, sound: 15 },
+    designer: { program: 15, scenario: 15, graphics: 40, sound: 15 },
+    sound: { program: 15, scenario: 15, graphics: 15, sound: 40 },
+    director: { program: 30, scenario: 30, graphics: 15, sound: 15 },
+    producer: { program: 15, scenario: 30, graphics: 30, sound: 30 },
+    hw: { program: 35, scenario: 25, graphics: 10, sound: 10 },
+    hacker: { program: 25, scenario: 25, graphics: 25, sound: 25 },
+  } as Record<string, Record<string, number>>,
+  CAP_CHANGE_MULT: 1.5, // смена профессии: прирост порогов = веса профессии × 1.5 (×10 если залит)
+  // смена профессии двигает САМИ статы: куда переходишь — то и растёт, обратное слабеет
+  CAREER_STAT_SHIFT: {
+    coder: { program: 1.15, scenario: 0.9, graphics: 0.95, sound: 0.95 },
+    writer: { program: 0.9, scenario: 1.15, graphics: 0.95, sound: 0.95 },
+    designer: { program: 0.95, scenario: 0.9, graphics: 1.15, sound: 0.95 },
+    sound: { program: 0.95, scenario: 0.9, graphics: 0.95, sound: 1.15 },
+    director: { program: 1.1, scenario: 1.1, graphics: 0.95, sound: 0.95 },
+    producer: { program: 0.9, scenario: 1.1, graphics: 1.1, sound: 1.1 },
+    hw: { program: 1.1, scenario: 1.1, graphics: 0.9, sound: 0.9 },
+    hacker: { program: 1.1, scenario: 1.1, graphics: 1.1, sound: 1.1 },
+  } as Record<string, Record<string, number>>,
+  TRAIN_SCALE_DIV: 100, // прирост тренировки ×floor(порог/100) (мин ×1) — и плюсы, и минусы
+  REST_DAYS: 7, // отпуск: 7 дней → POWER до максимума (не вносит вклад, недоступен для обучения)
+
   // ─── M4: реклама (research/02 §12; потолки — plan/09) ───
   // Фанаты растут с убыванием: у каждого типа свой потолок (ключ = id в БД ads),
   // прирост за кампанию = (кап − накоплено типом) × AD_FAN_GROWTH + AD_FAN_MIN.

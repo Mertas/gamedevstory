@@ -4,6 +4,8 @@ import { Window95 } from './Window95';
 import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { CARD_WIN_PREFIX, GameCardWindow, cardWinId, cardWinTitle } from './apps/archive/GameCardWindow';
+import { StaffWindow, staffFromWinId, staffWinId } from './apps/staff/StaffWindow';
+import { StaffAvatar } from './StaffAvatar';
 import { WebampLayer } from './WebampLayer';
 import {
   actionSetAutopilot, actionSetUi, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
@@ -56,6 +58,22 @@ function findCardRecord(game: GameState, id: string): GameRecord | null {
   if (!id.startsWith(CARD_WIN_PREFIX)) return null;
   return game.history.find((h) => cardWinId(h) === id) ?? null;
 }
+
+/** PLAN-41: окна сотрудников ('staff:<id>') — как карточки: компонент стабилен на id (memo). */
+const staffCompCache = new Map<string, ComponentType>();
+function staffComponentFor(id: string): ComponentType {
+  let c = staffCompCache.get(id);
+  if (!c) {
+    c = memo(function StaffWin() {
+      return <StaffWindow winId={id} />;
+    });
+    staffCompCache.set(id, c);
+  }
+  return c;
+}
+
+/** элемент рабочего стола: приложение, таскбар-winamp или сотрудник (PLAN-41) */
+type DeskIconItem = { id: string; title: string; icon: string; iconFile?: string; kind: string; staffId?: string; open: () => void };
 
 export function Desktop({ onExit }: { onExit: () => void }) {
   const wm = useWindows();
@@ -245,12 +263,15 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   }, [deskPos]);
 
   const deskItems = useMemo(() => {
-    const items = apps.map((d) => ({ id: d.id, title: d.title, icon: d.icon, iconFile: DEFAULT_ICONS[d.id], kind: 'app', open: () => wmRef.current.open(d.id) }));
+    const items: DeskIconItem[] = apps.map((d) => ({ id: d.id, title: d.title, icon: d.icon, iconFile: DEFAULT_ICONS[d.id], kind: 'app', open: () => wmRef.current.open(d.id) }));
     items.push({ id: 'winamp', title: 'Winamp', icon: '🎵', iconFile: DEFAULT_ICONS.winamp, kind: 'media', open: openWinamp });
+    // PLAN-41: у каждого сотрудника — своя иконка-«приложение» (появляется при найме, исчезает при увольнении)
+    for (const st of game.staff) {
+      items.push({ id: staffWinId(st.id), title: st.name, icon: '👤', kind: 'staff', staffId: st.id, open: () => wmRef.current.open(staffWinId(st.id)) });
+    }
     return items;
     // PLAN-40: apps пересчитывается при прогрессах — иконки открывшегося появляются сразу.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apps]);
+  }, [apps, game.staff]);
   const sortedIcons = useMemo(() => {
     const arr = [...deskItems];
     if (deskSort === 'name') arr.sort((a, b) => a.title.localeCompare(b.title, 'ru'));
@@ -293,7 +314,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   useEffect(() => {
     if (!iconsSeeded.current) return;
     setDeskPos((p) => {
-      const known = new Set([...APP_DEFS.map((d) => d.id), 'winamp']);
+      const known = new Set([...APP_DEFS.map((d) => d.id), 'winamp', ...game.staff.map((st) => staffWinId(st.id))]);
       const stale = Object.keys(p).filter((id) => !known.has(id));
       const missing = sortedIcons.filter((it) => !p[it.id]);
       if (stale.length === 0 && missing.length === 0) return p;
@@ -496,7 +517,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             }}
             onMouseDown={(e) => onIconDown(e, it.id)}
           >
-            {customIcons[it.id] ?? it.iconFile ? (
+            {it.staffId && !customIcons[it.id] ? (
+              <StaffAvatar staff={game.staff.find((st) => st.id === it.staffId)!} size={32} fallback={<span style={{ fontSize: 30 }}>👤</span>} />
+            ) : customIcons[it.id] ?? it.iconFile ? (
               <img className="w95-ic" src={`/icons/${customIcons[it.id] ?? it.iconFile}`} alt="" draggable={false} />
             ) : (
               <span style={{ fontSize: 30 }}>{it.icon}</span>
@@ -510,18 +533,19 @@ export function Desktop({ onExit }: { onExit: () => void }) {
       {wins.map((w) => {
         const def = apps.find((a) => a.id === w.id);
         const card = findCardRecord(game, w.id); // M8: окно карточки игры из архива
-        if (!def && !card) return null;
+        const staffS = staffFromWinId(game, w.id); // PLAN-41: окно сотрудника
+        if (!def && !card && !staffS) return null;
         // UI-01/02: контент — стабильная ссылка на компонент + memo(Window95):
         // ререндер Desktop (тик/снапшот/драг) не тянет за собой все окна
         return (
           <Window95
             key={w.id}
             win={w}
-            title={def ? def.title : cardWinTitle(card!.name)}
-            icon={def ? def.icon : '🎮'}
+            title={def ? def.title : card ? cardWinTitle(card.name) : staffS!.name}
+            icon={def ? def.icon : card ? '🎮' : '👤'}
             iconUrl={iconUrlFor(w.id) ?? undefined}
             focused={!winampActive && activeId === w.id}
-            component={def ? def.component : cardComponentFor(w.id)}
+            component={def ? def.component : card ? cardComponentFor(w.id) : staffComponentFor(w.id)}
           />
         );
       })}
@@ -679,7 +703,8 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           if (w.closed) return null;
           const def = apps.find((a) => a.id === w.id);
           const card = def ? null : findCardRecord(game, w.id); // M8: карточка игры
-          if (!def && !card) return null;
+          const staffS = def || card ? null : staffFromWinId(game, w.id); // PLAN-41: сотрудник
+          if (!def && !card && !staffS) return null;
           const isActive = !winampActive && !w.minimized && activeId === w.id;
           return (
             <button
@@ -695,9 +720,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
               {iconUrlFor(w.id) ? (
                 <img className="w95-task-ic" src={iconUrlFor(w.id) ?? ''} alt="" draggable={false} />
               ) : (
-                <span className="w95-task-emo">{def?.icon ?? '🎮'}</span>
+                <span className="w95-task-emo">{def?.icon ?? (card ? '🎮' : '👤')}</span>
               )}
-              {def?.title ?? (card ? cardWinTitle(card.name) : w.id)}
+              {def?.title ?? (card ? cardWinTitle(card.name) : staffS ? staffS.name : w.id)}
             </button>
           );
         })}

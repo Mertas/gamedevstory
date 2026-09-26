@@ -55,6 +55,15 @@ export const DIRECTION_WEIGHTS: Record<DirectionAxis, Stats> = {
 
 export type Role = 'proposal' | 'program' | 'graphics' | 'sound' | 'debug';
 
+/** PLAN-41: персональные пороги статов сотрудника */
+export interface StaffCaps { program: number; scenario: number; graphics: number; sound: number }
+/** PLAN-41: запись истории сотрудника (кольцо ≤ 60) */
+export interface StaffHistoryEntry {
+  week: number;
+  kind: 'hire' | 'career' | 'levelup' | 'train' | 'rest' | 'back';
+  text: string;
+}
+
 export interface Staff {
   id: string;
   name: string;
@@ -71,6 +80,10 @@ export interface Staff {
   avatar: string; // путь к аватарке (UI)
   homeWeeks: number; // >0: ушёл домой
   lastRole: Role | null; // штраф «повтор» (механика prev)
+  caps: StaffCaps; // PLAN-41: пороги статов — обучение не может их превысить
+  history: StaffHistoryEntry[]; // PLAN-41: история (профессии, левелапы, обучение, отпуск)
+  trainCount: Record<string, { n: number; gains: StaffCaps }>; // PLAN-41: сводка обучения по методам
+  restDays: number; // PLAN-41: >0 — в отпуске (дней осталось)
 }
 
 export interface ActiveGame {

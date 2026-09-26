@@ -8,7 +8,7 @@ import { SAVE_VERSION } from './migrate';
 import type { ActionResult, DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
 import { minigameClosedOutcome, minigameOutcome, minigameTitle } from '../shared/minigames';
 import {
-  fireStaff, startSearch, hireFromSearch, makeStaffFromData, paySalaries, pickAvatar, dailyPower,
+  fireStaff, startSearch, hireFromSearch, makeStaffFromData, paySalaries, pickAvatar, dailyPower, restStaff, tickRest,
 } from './systems/staff';
 import {
   debugTick, devTick, releaseGame, resolveBoost, startProject,
@@ -16,7 +16,7 @@ import {
 import {
   applyCareerManual, buyAd, buyBooster, buyCareerManual, buyDeadBull, changeCareer, dismissSalesman,
   levelUpStaff, moveOffice, startOwnConsole, takeContract, tickContracts, tickOwnConsole,
-  tickSalesman, trainStaff, applyBooster,
+  tickSalesman, trainStaff, trainToMax, applyBooster,
 } from './systems/progression';
 import type { CareerId } from './data/schema';
 import {
@@ -281,6 +281,18 @@ export function applyCareerManualAction(state: GameState, staffId: string, targe
   return applyCareerManual(state, staffId, target);
 }
 
+// PLAN-41: отпуск и автотренировка (окно сотрудника)
+export function restStaffAction(state: GameState, staffId: string) {
+  return restStaff(state, staffId);
+}
+
+export function trainToMaxAction(state: GameState, staffId: string) {
+  const rng = rngFromState(state.rngState, state.seed);
+  const res = trainToMax(state, staffId, rng);
+  state.rngState = rng.state;
+  return res;
+}
+
 export function moveOfficeAction(state: GameState) {
   return moveOffice(state);
 }
@@ -326,6 +338,7 @@ export function tick(state: GameState): void {
     debugTick(state, rng);
   }
   dailyPower(state, worked, rng);
+  tickRest(state); // PLAN-41: отсчёт отпуска — по возвращении POWER полный
 
   // 2. продажи + медиа-события после релиза (статья/TV/баг) + письма фанатов
   dailySales(state);
