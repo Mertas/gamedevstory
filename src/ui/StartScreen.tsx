@@ -1,6 +1,6 @@
 // PLAN-18: начальное меню игрока — список сохранений (как список файлов), новая игра, смена пользователя.
 import { useEffect, useState } from 'react';
-import { apiDeleteSave, apiLoadSave, apiLogout, apiSaves, type MeInfo, type SaveInfo } from './api';
+import { apiDeleteSave, apiLoadSave, apiLogout, apiPurgeProgress, apiSaves, type MeInfo, type SaveInfo } from './api';
 import { NewGameForm } from './NewGameForm';
 import { dateLabel } from '../shared/meta';
 import { useProfile } from './profile';
@@ -20,6 +20,8 @@ export function StartScreen({ me }: { me: MeInfo }) {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  /** «Удалить весь прогресс» — второй клик подтверждает (первый «взводит» кнопку на 5 с). */
+  const [purgeArm, setPurgeArm] = useState(false);
   // PLAN-22: профиль = уровень игрока (число открытых комбо) и звание по порогам
   const pr = useProfile();
   const done = pr ? pr.count - pr.rank.from : 0;
@@ -63,6 +65,26 @@ export function StartScreen({ me }: { me: MeInfo }) {
     setBusy(false);
     if (!r.ok) setError(r.error ?? 'Не удалось удалить сохранение');
     else refresh();
+  }
+
+  // PLAN-18+: «Удалить весь прогресс» — все сохранения и достижения аккаунта; в два шага, без возврата.
+  async function purge(): Promise<void> {
+    if (busy) return;
+    if (!purgeArm) {
+      setPurgeArm(true);
+      window.setTimeout(() => setPurgeArm(false), 5000);
+      return;
+    }
+    setPurgeArm(false);
+    setBusy(true);
+    setError('');
+    const r = await apiPurgeProgress();
+    if (!r.ok) {
+      setBusy(false);
+      setError(r.error ?? 'Не удалось удалить прогресс');
+      return;
+    }
+    location.reload(); // профиль и список перезагрузятся уже пустыми
   }
 
   const selected = (saves ?? []).find((s) => s.id === sel) ?? null;
@@ -143,7 +165,16 @@ export function StartScreen({ me }: { me: MeInfo }) {
                   <span className="w95-grow" />
                   <span className="w95-hint">двойной клик — открыть</span>
                 </div>
-                <div className="w95-row" style={{ justifyContent: 'flex-end' }}>
+                <div className="w95-row">
+                  <button
+                    className={`w95-btn${purgeArm ? ' active' : ''}`}
+                    disabled={busy}
+                    title="Убрать ВСЕ сохранения и достижения аккаунта — навсегда"
+                    onClick={() => void purge()}
+                  >
+                    {purgeArm ? '❓ Точно? Всё исчезнет' : '🧨 Удалить весь прогресс'}
+                  </button>
+                  <span className="w95-grow" />
                   <button className="w95-btn" onClick={() => setCreating(true)}>🆕 Новая игра</button>
                   <button className="w95-btn" onClick={() => refresh(true)}>🔄 Обновить</button>
                   <button className="w95-btn" onClick={() => void apiLogout().then(() => location.reload())}>🚪 Сменить пользователя</button>

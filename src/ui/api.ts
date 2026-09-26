@@ -113,6 +113,9 @@ export const apiCreateSave = (studioName: string, staffIds: string[], difficulty
   call<{ id?: number }>('/api/saves', { studioName, staffIds, difficulty });
 export const apiLoadSave = (id: number) => call<{ id?: number }>(`/api/saves/${id}/load`, {});
 export const apiDeleteSave = (id: number) => call<Record<string, never>>(`/api/saves/${id}`, undefined, 'DELETE');
+/** PLAN-18+: «Удалить весь прогресс» — все сохранения и достижения аккаунта (необратимо). */
+export const apiPurgeProgress = () =>
+  call<{ deleted?: { saves: number; combos: number; flags: number } }>('/api/saves/purge', {});
 
 /** M6: уровни сложности (метки — с сервера; числа живут в ядре, difficulty-presets.json). */
 export interface DifficultyOption {

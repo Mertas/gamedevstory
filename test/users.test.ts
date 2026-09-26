@@ -348,3 +348,97 @@ describe('PLAN-34: мировой список всех аккаунтов', () 
     users.close();
   });
 });
+
+describe('PLAN-18+: «Удалить весь прогресс» — все сейвы и достижения аккаунта', () => {
+  it('сервис: wipeProgress чистит сейвы/комбо/флаги, но только своего аккаунта', () => {
+    const u = new UserService(tmpDb());
+    const a = u.register('Aaa', '12345678');
+    const b = u.register('Bbb', '12345678');
+    const ida = a.ok ? a.user.id : 0;
+    const idb = b.ok ? b.user.id : 0;
+    u.createSave(ida, 'Студия A', '{}');
+    u.createSave(ida, 'Студия A2', '{}');
+    u.createSave(idb, 'Студия B', '{}');
+    u.addCombos(ida, ['rpg|action', 'sim|girl']);
+    u.addCombos(idb, ['rpg|action']);
+    u.setFlag(ida, 'mg_bag', '{"q":[]}');
+    u.setFlag(idb, 'mg_bag', '{"q":[]}');
+
+    expect(u.wipeProgress(ida)).toEqual({ saves: 2, combos: 2, flags: 1 });
+    expect(u.listSaves(ida)).toEqual([]);
+    expect(u.listCombos(ida)).toEqual([]);
+    expect(u.getFlag(ida, 'mg_bag')).toBeNull();
+    // чужой аккаунт не тронут
+    expect(u.listSaves(idb).length).toBe(1);
+    expect(u.listCombos(idb).length).toBe(1);
+    expect(u.getFlag(idb, 'mg_bag')).not.toBeNull();
+    // повторный вайп — нечего удалять, всё по нулям
+    expect(u.wipeProgress(ida)).toEqual({ saves: 0, combos: 0, flags: 0 });
+    u.close();
+  });
+
+  it('REST: POST /api/saves/purge роняет живую сессию, обнуляет профиль и не трогает соседей', async () => {
+    const users = new UserService(tmpDb());
+    const registry = new SessionRegistry(users);
+    const app = express();
+    app.use(express.json());
+    registerApi(app, { users, mail: { send: async () => 'dev' as const }, sessions: registry });
+    const srv = app.listen(0);
+    const port = (srv.address() as { port: number }).port;
+    const base = `http://127.0.0.1:${port}`;
+    try {
+      const reg = async (login: string): Promise<string> => {
+        const code = users.createInvites('тест', 1)[0]!.code;
+        const r = await fetch(`${base}/api/auth/register`, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ login, password: '12345678', invite: code }),
+        });
+        return r.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+      };
+      const cookieA = await reg('PurgeA');
+      const cookieB = await reg('PurgeB');
+      const mk = async (cookie: string, name: string): Promise<void> => {
+        const r = await fetch(`${base}/api/saves`, {
+          method: 'POST', headers: { 'content-type': 'application/json', cookie },
+          body: JSON.stringify({ studioName: name, staffIds: ['dee-coder', 's-presso'] }),
+        });
+        expect(((await r.json()) as { ok: boolean }).ok).toBe(true);
+      };
+      await mk(cookieA, 'К Пепелищу');
+      await mk(cookieB, 'Сосед');
+
+      const userA = users.userByToken(cookieA.slice('gds_session='.length))!;
+      const userB = users.userByToken(cookieB.slice('gds_session='.length))!;
+      users.addCombos(userA.id, ['rpg|action']);
+      users.setFlag(userA.id, 'mg_bag', '{"q":[],"last":null}');
+      expect(registry.server(userA.id)).not.toBeNull();
+
+      // без входа — отказ
+      const anon = await fetch(`${base}/api/saves/purge`, { method: 'POST' });
+      expect(anon.status).toBe(401);
+
+      const purge = await fetch(`${base}/api/saves/purge`, { method: 'POST', headers: { cookie: cookieA } });
+      const body = (await purge.json()) as { ok: boolean; deleted: { saves: number; combos: number; flags: number } };
+      expect(body.ok).toBe(true);
+      expect(body.deleted).toEqual({ saves: 1, combos: 1, flags: 1 });
+
+      // у A: пусто, сессия закрыта, профиль обнулён
+      const listA = await fetch(`${base}/api/saves`, { headers: { cookie: cookieA } });
+      expect(((await listA.json()) as { saves: unknown[] }).saves.length).toBe(0);
+      expect(registry.server(userA.id)).toBeNull();
+      const profA = await fetch(`${base}/api/profile`, { headers: { cookie: cookieA } });
+      expect(((await profA.json()) as { count: number }).count).toBe(0);
+
+      // у B всё на месте (и его сессия жива)
+      const listB = await fetch(`${base}/api/saves`, { headers: { cookie: cookieB } });
+      const savesB = ((await listB.json()) as { saves: Array<{ studioName: string }> }).saves;
+      expect(savesB.length).toBe(1);
+      expect(savesB[0]!.studioName).toBe('Сосед');
+      expect(registry.server(userB.id)).not.toBeNull();
+    } finally {
+      registry.disposeAll();
+      srv.close();
+      users.close();
+    }
+  });
+});

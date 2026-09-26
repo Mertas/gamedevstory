@@ -600,4 +600,16 @@ export class UserService {
     const info = this.db.prepare('DELETE FROM saves WHERE id = ? AND user_id = ?').run(saveId, userId);
     return Number(info.changes) > 0;
   }
+
+  /**
+   * PLAN-18+: «Удалить весь прогресс» — все сохранения, достижения (открытые комбо/звание)
+   * и флаги аккаунта (мешок мини-игр и будущие награды). Сам аккаунт, вход и инвайты
+   * не трогаются. Действие необратимо; живую сессию игрока роняет вызывающий (api.ts).
+   */
+  wipeProgress(userId: number): { saves: number; combos: number; flags: number } {
+    const saves = Number(this.db.prepare('DELETE FROM saves WHERE user_id = ?').run(userId).changes);
+    const combos = Number(this.db.prepare('DELETE FROM user_combos WHERE user_id = ?').run(userId).changes);
+    const flags = Number(this.db.prepare('DELETE FROM user_flags WHERE user_id = ?').run(userId).changes);
+    return { saves, combos, flags };
+  }
 }

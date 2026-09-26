@@ -351,5 +351,16 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     });
   });
 
+  // PLAN-18+: «Удалить весь прогресс» — все сохранения + достижения аккаунта (необратимо).
+  // Живую сессию роняем ДО удаления: её dispose допишет партию, и только потом всё стирается.
+  app.post('/api/saves/purge', (req, res) => {
+    withUser(req, res, (u) => {
+      const sid = sessions.activeSaveId(u.id);
+      if (sid !== null) sessions.drop(u.id, sid);
+      const deleted = users.wipeProgress(u.id);
+      res.json({ ok: true, deleted });
+    });
+  });
+
   return who;
 }
