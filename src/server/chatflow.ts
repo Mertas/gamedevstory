@@ -114,8 +114,8 @@ export class ChatOrchestrator {
     if (!t) return;
     if (t.left > 0 && t.errors < 3) return;
     this.h.chatThread = null;
-    // LLM-02: серия оборвалась из-за ошибок LLM — игрок должен это видеть
-    if (t.errors >= 3) this.pushSystem('📡 Связь с командой пропала — они не смогли ответить. Напишите ещё раз.');
+    // 26.09.2026 (решение игрока): плашку «Связь с командой пропала…» НЕ выводим —
+    // серия при 3 ошибках LLM закрывается молча (как отыгранная); следующие реплики/события продолжат.
     const nextPlayer = this.h.pendingPlayers.shift();
     if (nextPlayer !== undefined) {
       // сначала ответим на вопросы игрока (FIFO), потом — отложенные события
