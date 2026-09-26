@@ -2,7 +2,7 @@
 // Паттерн из LLMKing/src/server/models.ts: самоподписанный TLS Сбера — rejectUnauthorized:false.
 import * as crypto from 'crypto';
 import * as https from 'https';
-import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET, LLM_TIMEOUT_MS, LLM_TOTAL_MS, gigaReady } from './config';
+import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET, GIGACHAT2_CLIENT_ID, GIGACHAT2_CLIENT_SECRET, LLM_TIMEOUT_MS, LLM_TOTAL_MS, gigaReady } from './config';
 
 export const GIGA_BASE = 'https://gigachat.devices.sberbank.ru/api/v1';
 const GIGA_MODELS = ['GigaChat-2-Max', 'GigaChat-2-Pro', 'GigaChat-2'];
@@ -12,8 +12,22 @@ export interface LlmMessage { role: 'system' | 'user' | 'assistant'; content: st
 /** LLM-функция (LLM-05): инъекция fake-LLM в тестах вместо GigaChat */
 export type LlmFn = (messages: LlmMessage[], maxTokens: number) => Promise<{ text: string; model: string }>;
 
-let gigaToken: string | null = null;
-let gigaExp = 0;
+// LLM-08: аккаунты GigaChat — основной и резервный. Токен кэшируется на каждый отдельно
+// (30 мин); каскад стартует с последнего удачного аккаунта и переключается при его отказе.
+interface GigaAccount { label: string; id: string; secret: string; token: string | null; exp: number }
+
+const GIGA_ACCOUNTS: GigaAccount[] = [];
+if (GIGACHAT_CLIENT_ID && GIGACHAT_CLIENT_SECRET) GIGA_ACCOUNTS.push({ label: 'основной', id: GIGACHAT_CLIENT_ID, secret: GIGACHAT_CLIENT_SECRET, token: null, exp: 0 });
+if (GIGACHAT2_CLIENT_ID && GIGACHAT2_CLIENT_SECRET) GIGA_ACCOUNTS.push({ label: 'резервный', id: GIGACHAT2_CLIENT_ID, secret: GIGACHAT2_CLIENT_SECRET, token: null, exp: 0 });
+let gigaCurrent = 0;
+
+/** Порядок обхода аккаунтов: текущий (последний удачный) первым, остальные следом. */
+export function gigaOrder(current: number, total: number): number[] {
+  const start = current >= 0 && current < total ? current : 0;
+  const out = [start];
+  for (let i = 0; i < total; i++) if (i !== start) out.push(i);
+  return out;
+}
 // SER-21: Сбер отвечает пустотой на всплески запросов (у игры их много: фазы, письма, автопилот,
 // пресса). Держим минимальный зазор между ВСЕМИ запросами к GigaChat — сглаживает лимиты.
 let gigaLastAt = 0;
@@ -42,8 +56,8 @@ function gigaPost(url: string, headers: Record<string, string>, body: string, ti
   });
 }
 
-async function refreshGigaToken(): Promise<string> {
-  const auth = Buffer.from(`${GIGACHAT_CLIENT_ID}:${GIGACHAT_CLIENT_SECRET}`).toString('base64');
+async function refreshGigaToken(acc: GigaAccount): Promise<string> {
+  const auth = Buffer.from(`${acc.id}:${acc.secret}`).toString('base64');
   const d = await gigaPost('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
     'Content-Type': 'application/x-www-form-urlencoded',
     'Accept': 'application/json',
@@ -51,20 +65,20 @@ async function refreshGigaToken(): Promise<string> {
     'RqUID': crypto.randomUUID(),
   }, 'scope=GIGACHAT_API_PERS');
   const token = d.access_token;
-  if (typeof token !== 'string') throw new Error('GigaChat OAuth failed');
-  gigaToken = token;
-  gigaExp = Date.now() + (typeof d.expires_in === 'number' ? d.expires_in : 1800) * 1000;
+  if (typeof token !== 'string') throw new Error(`GigaChat OAuth failed (${acc.label} аккаунт)`);
+  acc.token = token;
+  acc.exp = Date.now() + (typeof d.expires_in === 'number' ? d.expires_in : 1800) * 1000;
   return token;
 }
 
-async function gigaTokenOrThrow(): Promise<string> {
-  if (gigaToken && Date.now() < gigaExp - 60000) return gigaToken;
-  return refreshGigaToken();
+async function gigaTokenOrThrow(acc: GigaAccount): Promise<string> {
+  if (acc.token && Date.now() < acc.exp - 60000) return acc.token;
+  return refreshGigaToken(acc);
 }
 
-async function gigaChat(model: string, messages: LlmMessage[], maxTokens: number, timeoutMs = LLM_TIMEOUT_MS): Promise<string> {
+async function gigaChat(acc: GigaAccount, model: string, messages: LlmMessage[], maxTokens: number, timeoutMs = LLM_TIMEOUT_MS): Promise<string> {
   await gigaGap();
-  const token = await gigaTokenOrThrow();
+  const token = await gigaTokenOrThrow(acc);
   const d = await gigaPost(`${GIGA_BASE}/chat/completions`, {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -111,21 +125,18 @@ export async function deepseek(messages: LlmMessage[], maxTokens: number): Promi
   });
 }
 
-/** Чат: только GigaChat (по просьбе). Цепочка Max → Pro → 2; при недоступности — чат молчит. */
-export async function generateWithFallback(messages: LlmMessage[], maxTokens = 800): Promise<{ text: string; model: string }> {
-  if (!gigaReady) throw new Error('GigaChat недоступен: проверьте .env (GIGACHAT_CLIENT_ID/SECRET)');
+/** Каскад моделей для одного аккаунта: Max → Pro → 2, два прохода (SER-21: Сбер иногда разово
+ *  отвечает пустотой/лимитом — повторяем). Дедлайн общий на всю операцию (LLM-01). */
+async function gigaCascade(acc: GigaAccount, messages: LlmMessage[], maxTokens: number, deadline: number): Promise<{ text: string; model: string }> {
   let lastErr: unknown = null;
-  // LLM-01: общий дедлайн на каскад — чат не должен «замирать» на минуты
-  const deadline = Date.now() + LLM_TOTAL_MS;
-  // 2 прохода: GigaChat иногда разово отвечает пустотой (rate limit) — повторяем
   for (let attempt = 0; attempt < 2; attempt++) {
     for (const model of GIGA_MODELS) {
       const left = deadline - Date.now();
       if (left <= 1000) break;
       try {
-        return { text: await gigaChat(model, messages, maxTokens, Math.min(LLM_TIMEOUT_MS, left)), model: `GigaChat ${model}` };
+        return { text: await gigaChat(acc, model, messages, maxTokens, Math.min(LLM_TIMEOUT_MS, left)), model: `GigaChat ${model}` };
       } catch (e) {
-        lastErr = e; /* следующий */
+        lastErr = e; /* следующая модель/попытка */
       }
     }
     if (Date.now() + 1500 >= deadline) break;
@@ -134,9 +145,36 @@ export async function generateWithFallback(messages: LlmMessage[], maxTokens = 8
   throw lastErr instanceof Error ? lastErr : new Error('GigaChat не ответил');
 }
 
-export function llmStatus(): { giga: boolean; deepseek: boolean } {
+/** Чат: только GigaChat (по просьбе). Аккаунты по очереди — текущий, затем резервный (LLM-08);
+ *  на удачном остаёмся (туда же возвращаемся, если резервный откажет). Оба молчат — чат молчит. */
+export async function generateWithFallback(messages: LlmMessage[], maxTokens = 800): Promise<{ text: string; model: string }> {
+  if (!gigaReady) throw new Error('GigaChat недоступен: проверьте .env (GIGACHAT_CLIENT_ID/SECRET)');
+  let lastErr: unknown = null;
+  const deadline = Date.now() + LLM_TOTAL_MS;
+  for (const idx of gigaOrder(gigaCurrent, GIGA_ACCOUNTS.length)) {
+    const acc = GIGA_ACCOUNTS[idx]!;
+    try {
+      const res = await gigaCascade(acc, messages, maxTokens, deadline);
+      if (idx !== gigaCurrent) {
+        gigaCurrent = idx;
+        console.log(`[gds] GigaChat: переключаюсь на ${acc.label} аккаунт`);
+      }
+      return res;
+    } catch (e) {
+      lastErr = e; // пробуем следующий аккаунт
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('GigaChat не ответил');
+}
+
+export function llmStatus(): { giga: boolean; deepseek: boolean; gigaAccounts: number; gigaActive: string } {
   // аудит 05.09: deepseek фолбэк отключён в generateWithFallback — не врать в /api/health
-  return { giga: gigaReady, deepseek: false };
+  return {
+    giga: gigaReady,
+    deepseek: false,
+    gigaAccounts: GIGA_ACCOUNTS.length,
+    gigaActive: GIGA_ACCOUNTS[gigaCurrent]?.label ?? '—',
+  };
 }
 
 // вытащить JSON-объект из ответа LLM (устойчиво к тексту вокруг)

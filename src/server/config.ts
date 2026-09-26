@@ -3,6 +3,9 @@ import 'dotenv/config';
 
 export const GIGACHAT_CLIENT_ID = process.env.GIGACHAT_CLIENT_ID ?? '';
 export const GIGACHAT_CLIENT_SECRET = process.env.GIGACHAT_CLIENT_SECRET ?? '';
+// LLM-08: второй аккаунт GigaChat — резерв, включается, если основной не отвечает.
+export const GIGACHAT2_CLIENT_ID = process.env.GIGACHAT2_CLIENT_ID ?? '';
+export const GIGACHAT2_CLIENT_SECRET = process.env.GIGACHAT2_CLIENT_SECRET ?? '';
 export const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY ?? '';
 export const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL ?? 'https://api.deepseek.com';
 export const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL ?? 'deepseek-chat';
@@ -33,4 +36,4 @@ export const SMTP_USER = process.env.SMTP_USER ?? '';
 export const SMTP_PASS = process.env.SMTP_PASS ?? '';
 export const MAIL_FROM = process.env.MAIL_FROM ?? 'Game Dev Studio <no-reply@example.com>';
 
-export const gigaReady = !!(GIGACHAT_CLIENT_ID && GIGACHAT_CLIENT_SECRET);
+export const gigaReady = !!((GIGACHAT_CLIENT_ID && GIGACHAT_CLIENT_SECRET) || (GIGACHAT2_CLIENT_ID && GIGACHAT2_CLIENT_SECRET));

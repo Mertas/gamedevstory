@@ -42,7 +42,7 @@ app.use(express.json({ limit: '8mb' }));
 app.set('trust proxy', 'loopback');
 
 const server = app.listen(PORT, HOST, () => {
-  console.log(`[gds] сервер на http://${HOST}:${PORT}; GigaChat: ${gigaReady ? 'подключён' : 'НЕТ ключей (чат будет молчать)'}`);
+  console.log(`[gds] сервер на http://${HOST}:${PORT}; GigaChat: ${gigaReady ? `подключён (аккаунтов: ${llmStatus().gigaAccounts})` : 'НЕТ ключей (чат будет молчать)'}`);
 });
 
 // PLAN-18: пользователи, почта, реестр партий — у каждого пользователя своя игровая сессия.
