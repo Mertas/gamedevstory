@@ -533,8 +533,11 @@ export function actionUseBooster(staffId: string, booster: string) {
 export function actionBuyDeadBull(staffId: string) {
   send({ type: 'buy_dead_bull', staffId });
 }
-export function actionBuyCareerManual(staffId: string, target: string) {
-  send({ type: 'buy_career_manual', staffId, target });
+export function actionBuyCareerManual() {
+  send({ type: 'buy_career_manual' });
+}
+export function actionApplyCareerManual(staffId: string, target: string) {
+  send({ type: 'apply_career_manual', staffId, target });
 }
 export function actionMoveOffice() {
   send({ type: 'move_office' });

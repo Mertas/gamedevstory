@@ -225,16 +225,25 @@ export function buyDeadBull(state: GameState, staffId: string): ActionResult {
   return { ok: true };
 }
 
-// Career Change Manual: смена профессии без требований
-export function buyCareerManual(state: GameState, staffId: string, target: CareerId): ActionResult {
+// Career Change Manual: покупка В ЗАПАС (применяется в «Найм» → «Профессии»)
+export function buyCareerManual(state: GameState): ActionResult {
   if (!state.salesmanHere) return { ok: false, error: 'Продавец ушёл' };
   const price = CONFIG.CAREER_MANUAL_PRICE[state.officeLevel - 1] ?? 550;
   if (state.money < price) return { ok: false, error: `Нужно ${price}K` };
   state.money -= price;
+  state.careerManuals = (state.careerManuals ?? 0) + 1;
+  log(state, `📘 Куплено руководство по смене профессии (−${price}K, в запасе: ${state.careerManuals})`);
+  return { ok: true };
+}
+
+// применить руководство из запаса: смена профессии БЕЗ требований (запас −1; неудача — не тратим)
+export function applyCareerManual(state: GameState, staffId: string, target: CareerId): ActionResult {
+  if ((state.careerManuals ?? 0) <= 0) return { ok: false, error: 'Нет руководства в запасе — продавец приходит в мае' };
   const res = changeCareer(state, staffId, target, true);
   if (!res.ok) return res;
-  log(state, `📘 Руководство по смене профессии (−${price}K)`);
-  return { ok: true };
+  state.careerManuals -= 1;
+  log(state, `📘 Применено руководство: осталось ${state.careerManuals}`);
+  return res;
 }
 
 // ─── M4: реклама ───

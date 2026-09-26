@@ -1,15 +1,12 @@
-// ─── Найм: вкладка «Команда» — таблица сотрудников и смена профессии (UI-08) ───
-import { useState } from 'react';
+// ─── Найм: вкладка «Команда» — таблица сотрудников (UI-08; смена профессии — во вкладке «Профессии») ───
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
 import { StaffAvatar } from '../../StaffAvatar';
-import { actionChangeCareer, actionFire, actionLevelUp, useGame } from '../../store';
+import { actionFire, actionLevelUp, useGame } from '../../store';
 import { fmtK } from '../../../shared/nums';
 
 export function TeamTab() {
   const game = useGame();
-  const [careerFor, setCareerFor] = useState<string>('');
-  const s = game.staff.find((x) => x.id === careerFor);
 
   return (
     <>
@@ -54,18 +51,6 @@ export function TeamTab() {
           })}
         </tbody>
       </table>
-      <div className="w95-row">
-        <span className="w95-hint">Смена профессии (нужны уровни на этом сотруднике):</span>
-        <select className="w95-input" value={careerFor} onChange={(e) => setCareerFor(e.target.value)}>
-          <option value="">— сотрудник —</option>
-          {game.staff.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
-        </select>
-        <select className="w95-input" onChange={(e) => { if (careerFor && e.target.value) actionChangeCareer(careerFor, e.target.value); e.target.value = ''; }}>
-          <option value="">— новая профессия —</option>
-          {['director', 'producer', 'hw', 'hacker'].map((c) => <option key={c} value={c}>{CAREER_LABELS[c] ?? c}</option>)}
-        </select>
-        {s && <span className="w95-hint">требования: {Object.entries(CONFIG.CAREER_PREREQ[s.activeCareer] ?? {}).map(([j, lv]) => `${CAREER_LABELS[j] ?? j} Lv${lv}`).join(' + ')}</span>}
-      </div>
     </>
   );
 }

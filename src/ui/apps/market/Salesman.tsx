@@ -1,7 +1,6 @@
-// Продавец: бустеры, Dead Bull, Career Manual
+// Продавец: бустеры, Dead Bull, Career Manual (в запас — применение в «Найм» → «Профессии»)
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
-import { CAREER_LABELS } from '../../careers';
 import { actionBuyBooster, actionBuyCareerManual, actionBuyDeadBull, useGame, useMeta } from '../../store';
 import { fmtK } from '../../../shared/nums';
 
@@ -9,7 +8,6 @@ export function SalesmanPanel() {
   const game = useGame();
   const meta = useMeta();
   const [staffId, setStaffId] = useState('');
-  const [manualTarget, setManualTarget] = useState('director');
   if (!game.salesmanHere) {
     return <div className="w95-hint">Продавец Тыквенных Продуктов приходит в первую неделю мая (с года 2).</div>;
   }
@@ -50,17 +48,11 @@ export function SalesmanPanel() {
             </td>
           </tr>
           <tr>
-            <td>Руководство по смене профессии</td>
+            <td>Руководство по смене профессии <span className="w95-hint">(в запас)</span></td>
             <td>{fmtK(manualPrice)}</td>
             <td>
-              <select className="w95-input" value={staffId} onChange={(e) => setStaffId(e.target.value)}>
-                <option value="">— сотрудник —</option>
-                {game.staff.map((s2) => <option key={s2.id} value={s2.id}>{s2.name}</option>)}
-              </select>
-              <select className="w95-input" value={manualTarget} onChange={(e) => setManualTarget(e.target.value)}>
-                {['coder', 'writer', 'designer', 'sound', 'director', 'producer', 'hw', 'hacker'].map((c) => <option key={c} value={c}>{CAREER_LABELS[c] ?? c}</option>)}
-              </select>
-              <button className="w95-btn" disabled={!staffId} onClick={() => staffId && actionBuyCareerManual(staffId, manualTarget)}>Купить</button>
+              <button className="w95-btn" data-autopilot="buy-career-manual" disabled={game.money < manualPrice} onClick={() => actionBuyCareerManual()}>Купить</button>
+              <span className="w95-hint"> применяется в «Найм» → «Профессии»</span>
             </td>
           </tr>
         </tbody>

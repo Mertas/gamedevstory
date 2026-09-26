@@ -4,7 +4,7 @@
 import type { GameState, Staff } from './types';
 import { staffNameRu } from './data/staff-ru';
 
-export const SAVE_VERSION = 7; // 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 8; // 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -36,6 +36,10 @@ export function migrateSave(state: GameState): GameState {
   if (v < 7) {
     // 16.09: имена сотрудников в UI — на русские (по id; в данных имена остаются английскими)
     for (const s of state.staff) s.name = staffNameRu(s.id, s.name);
+  }
+  if (v < 8) {
+    // запас руководств по смене профессии (новое поле; старые сейвы — 0)
+    state.careerManuals = typeof state.careerManuals === 'number' ? state.careerManuals : 0;
   }
 
   // repair-нормализации, не зависящие от версии (висящие инварианты легаси-сейвов):

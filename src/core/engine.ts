@@ -14,7 +14,7 @@ import {
   debugTick, devTick, releaseGame, resolveBoost, startProject,
 } from './systems/dev';
 import {
-  buyAd, buyBooster, buyCareerManual, buyDeadBull, changeCareer, dismissSalesman,
+  applyCareerManual, buyAd, buyBooster, buyCareerManual, buyDeadBull, changeCareer, dismissSalesman,
   levelUpStaff, moveOffice, startOwnConsole, takeContract, tickContracts, tickOwnConsole,
   tickSalesman, trainStaff, applyBooster,
 } from './systems/progression';
@@ -71,6 +71,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     rngState: rng.state,
     salesmanHere: false,
     boosterPurchases: {},
+    careerManuals: 0,
     unlockedTrainings: [],
     gamedexHere: false,
     lastGamedex: null,
@@ -272,8 +273,12 @@ export function buyDeadBullAction(state: GameState, staffId: string) {
   return buyDeadBull(state, staffId);
 }
 
-export function buyCareerManualAction(state: GameState, staffId: string, target: CareerId) {
-  return buyCareerManual(state, staffId, target);
+export function buyCareerManualAction(state: GameState) {
+  return buyCareerManual(state);
+}
+
+export function applyCareerManualAction(state: GameState, staffId: string, target: CareerId) {
+  return applyCareerManual(state, staffId, target);
 }
 
 export function moveOfficeAction(state: GameState) {

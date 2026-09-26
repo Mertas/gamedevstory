@@ -4,7 +4,7 @@
 import { CONFIG } from '../core/config';
 import { consoleById, genreById, typeById } from '../core/data/db';
 import {
-  buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
+  applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   changeCareerAction, dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction,
@@ -299,7 +299,11 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.emit();
       return;
     case 'buy_career_manual':
-      s.run(buyCareerManualAction(s.game, msg.staffId, msg.target));
+      s.run(buyCareerManualAction(s.game));
+      s.emit();
+      return;
+    case 'apply_career_manual':
+      s.run(applyCareerManualAction(s.game, msg.staffId, msg.target));
       s.emit();
       return;
     case 'move_office': {

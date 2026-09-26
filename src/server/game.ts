@@ -59,7 +59,8 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'buy_booster'; booster: string }
   | { type: 'use_booster'; staffId: string; booster: string }
   | { type: 'buy_dead_bull'; staffId: string }
-  | { type: 'buy_career_manual'; staffId: string; target: CareerId }
+  | { type: 'buy_career_manual' } // в запас (применяется в «Найм» → «Профессии»)
+  | { type: 'apply_career_manual'; staffId: string; target: CareerId }
   | { type: 'move_office' }
   // M4
   | { type: 'buy_ad'; adId: number }

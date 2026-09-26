@@ -292,6 +292,7 @@ export interface GameState {
   // ─── M3 ───
   salesmanHere: boolean; // продавец в офисе (май, с года 2)
   boosterPurchases: Record<string, number>; // тип бустера → куплено раз (цены растут)
+  careerManuals: number; // запас руководств по смене профессии (продавец; применяются в «Найм» → «Профессии»)
   unlockedTrainings: string[]; // тренинги, пройденные хотя бы раз (анлок типов)
   releasePopupShown: boolean; // попап «игра готова» уже показан для текущей игры
   devContrib: DevContrib[]; // вклад сотрудников за последний тик (UI-анимация)

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import {
-  buyAd, buyBooster, changeCareer, levelUpStaff, startOwnConsole, takeContract,
+  applyCareerManual, buyAd, buyBooster, buyCareerManual, changeCareer, levelUpStaff, startOwnConsole, takeContract,
   trainStaff, applyBooster,
 } from '../src/core/systems/progression';
 import { isUnlocked, devTick } from '../src/core/systems/dev';
@@ -96,11 +96,33 @@ describe('M3: карьеры', () => {
     expect(s.activeCareer).toBe('director');
   });
 
-  it('Career Manual меняет профессию без требований', () => {
+  it('руководство покупается в запас и НЕ меняет профессию сразу', () => {
     const g = gameWithStaff();
     const s = g.staff[0]!;
-    expect(changeCareer(g, s.id, 'hacker', true).ok).toBe(true);
+    expect(buyCareerManual(g).ok).toBe(false); // продавца нет
+    g.salesmanHere = true;
+    const money0 = g.money;
+    expect(buyCareerManual(g).ok).toBe(true);
+    expect(g.careerManuals).toBe(1);
+    expect(g.money).toBe(money0 - 50); // офис 1
+    expect(s.activeCareer).toBe('coder'); // профессия не изменилась
+  });
+
+  it('применение руководства снимает требования; запас тратится только при успехе', () => {
+    const g = gameWithStaff();
+    g.salesmanHere = true;
+    buyCareerManual(g);
+    const s = g.staff[0]!;
+    expect(applyCareerManual(g, s.id, 'hacker').ok).toBe(true); // без уровней
     expect(s.activeCareer).toBe('hacker');
+    expect(g.careerManuals).toBe(0);
+    // запас пуст — отказ, профессия прежняя
+    expect(applyCareerManual(g, s.id, 'director').ok).toBe(false);
+    expect(s.activeCareer).toBe('hacker');
+    // неудача не тратит руководство (уже эта профессия)
+    buyCareerManual(g);
+    expect(applyCareerManual(g, s.id, 'hacker').ok).toBe(false);
+    expect(g.careerManuals).toBe(1);
   });
 });
 
