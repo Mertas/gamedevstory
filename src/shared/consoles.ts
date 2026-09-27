@@ -40,3 +40,22 @@ export const OWN_CONSOLE_MEDIA = [
 export function ownConsoleDays(cpuIdx: number, mediaIdx: number): number {
   return (CONFIG.OWN_CONSOLE_WEEKS_BASE + (cpuIdx + mediaIdx) * CONFIG.OWN_CONSOLE_WEEKS_PER_INDEX) * 7;
 }
+
+// ─── своя консоль: сила платформы от компонентов (решение игрока 27.09: «сила зависит от вложений») ───
+/** Множитель своей консоли: ×8 (16-бит + картридж) … ×29 (Картошка + Перфокарты). */
+export function ownConsoleCostMult(cpuIdx: number, mediaIdx: number): number {
+  return 8 + 3 * (cpuIdx + mediaIdx);
+}
+
+/** Множитель по id компонентов; старые сейвы без них — базовая сборка (×8). */
+export function ownConsoleMult(cpu?: string, media?: string): number {
+  const ci = OWN_CONSOLE_CPUS.findIndex((c) => c.id === cpu);
+  const mi = OWN_CONSOLE_MEDIA.findIndex((m) => m.id === media);
+  if (ci < 0 || mi < 0) return ownConsoleCostMult(0, 0);
+  return ownConsoleCostMult(ci, mi);
+}
+
+/** Стартовая база своей консоли: фанаты студии покупают её (фанаты/25, без потолка — решение игрока 27.09). */
+export function ownConsoleStartBase(fans: number): number {
+  return Math.floor(fans / 25);
+}

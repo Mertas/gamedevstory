@@ -2,7 +2,8 @@
 // Очереди фаз и реплик, серии диалогов, системные записи, фазы по прогрессу проекта.
 // Состояние (chatThread/pendingPlayers/pendingPhases) остаётся в GameServer — класс
 // работает с ним через ChatHost (структурная проверка при конструировании).
-import { STAFF, consoleById, genreById, typeById } from '../core/data/db';
+import { STAFF, genreById, typeById } from '../core/data/db';
+import { consoleDataFor } from '../core/systems/dev';
 import { avatarFor, chatSystem, type ChatMsg, type ChatState } from '../shared/chat';
 import { buildMessages, parseSingleMessage } from './chatgen';
 import type { GameState } from '../core/types';
@@ -236,7 +237,7 @@ export class ChatOrchestrator {
       ? {
           genre: genreById(g.genreId)?.name ?? g.genreId,
           type: typeById(g.typeId)?.name ?? g.typeId,
-          console: consoleById(g.consoleId)?.name ?? g.consoleId,
+          console: consoleDataFor(this.h.game, g.consoleId)?.name ?? g.consoleId,
           mode: g.mode,
           combo: g.comboGrade,
           progress: Math.round(g.progress * 100),

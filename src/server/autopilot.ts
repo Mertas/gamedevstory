@@ -3,10 +3,10 @@
 // «театр» событий, обсуждение→решение, таймаут плана.
 import { CONFIG } from '../core/config';
 import type { HireMethodId } from '../core/config';
-import { GENRES, TYPES, CONSOLES, TRAININGS, ADS, STAFF, consoleById, genreById, typeById } from '../core/data/db';
+import { GENRES, TYPES, CONSOLES, TRAININGS, ADS, STAFF, genreById, typeById } from '../core/data/db';
 import { startProjectAction } from '../core/engine';
 import { HIRE_METHOD_LABELS } from '../shared/hire';
-import { consoleAvailable } from '../core/systems/dev';
+import { consoleAvailable, consoleDataFor } from '../core/systems/dev';
 import { autopilotProjectInput, comboCostK, sequelOpportunity, type PolicyAction, resolvePendingEvent } from '../core/sim/policy';
 import { createPlayer, type PolicyStats } from '../core/sim/policy';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../core/types';
@@ -573,7 +573,7 @@ export class AutopilotController {
         const plan = final.plan;
         const genre = genreById(plan.genreId);
         const type = typeById(plan.typeId);
-        const con = consoleById(plan.consoleId);
+        const con = consoleDataFor(this.h.game, plan.consoleId);
         if (cancelled()) return;
         // реплики обсуждения — из того же ответа: чат и решение не могут разойтись
         const team = new Set(this.h.game.staff.map((s) => s.name));

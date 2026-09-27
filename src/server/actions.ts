@@ -2,13 +2,14 @@
 // Вынесено из game.ts; GameServer.handle() делегирует сюда.
 // SessionHost — контракт сессии: публичные «внутренности» GameServer (намеренно, ради этого модуля).
 import { CONFIG } from '../core/config';
-import { consoleById, genreById, typeById } from '../core/data/db';
+import { genreById, typeById } from '../core/data/db';
 import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
+import { consoleDataFor } from '../core/systems/dev';
 import type { GamedexOption, GameState } from '../core/types';
 import { sanitizeUi } from './ui-state';
 import { resetChat, type ChatState } from '../shared/chat';
@@ -163,7 +164,7 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
         // форматируются в «241K»); без них модель считала релиз 40/40 «куцым» (диагноз по игре)
         const rg = g ? genreById(g.genreId) : undefined;
         const rt = g ? typeById(g.typeId) : undefined;
-        const rc = g ? consoleById(g.consoleId) : undefined;
+        const rc = g ? consoleDataFor(s.game, g.consoleId) : undefined;
         void s.generatePhase('release', {
           score: g?.score ?? 0,
           units: g?.units ?? 0,

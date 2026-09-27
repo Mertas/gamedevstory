@@ -9,7 +9,7 @@ import type { CareerId } from '../data/schema';
 import { CAREER_LABELS } from '../../shared/careers';
 import { busyStaffIds, pushHistory } from './staff';
 import { capGain, careerChangePreview, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../shared/train';
-import { OWN_CONSOLE_TYPES, OWN_CONSOLE_CPUS, OWN_CONSOLE_MEDIA, ownConsoleDays } from '../../shared/consoles';
+import { OWN_CONSOLE_TYPES, OWN_CONSOLE_CPUS, OWN_CONSOLE_MEDIA, ownConsoleDays, ownConsoleStartBase } from '../../shared/consoles';
 import type { Rng } from '../rng';
 import type {
   ActionResult, GameState, OwnConsoleState, PopupInfo, Staff,
@@ -512,13 +512,17 @@ export function tickOwnConsole(state: GameState): void {
   if (oc.progress >= oc.weeksTotal) {
     state.ownConsole = null;
     const id = `own-${oc.type}`;
+    const startBase = ownConsoleStartBase(state.fans); // фанаты студии покупают свою консоль
     state.consoles[id] = {
       licensed: true,
-      base: 0,
+      base: startBase,
       availableAtWeek: state.week,
       removedAtWeek: null,
+      name: oc.name,
+      cpu: oc.cpu,
+      media: oc.media,
     };
-    log(state, `🕹 Своя консоль «${oc.name}» готова! База: 0K, растёт с релизами`);
+    log(state, `🕹 Своя консоль «${oc.name}» готова! База: ${startBase}K (фанаты студии), растёт с релизами`);
   }
 }
 

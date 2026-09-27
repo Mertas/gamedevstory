@@ -3,7 +3,7 @@
 // живёт в таскбаре, раскладка сохраняется в сейве вместе с остальными окнами).
 import { useMemo } from 'react';
 import { CONFIG } from '../../../core/config';
-import { dateLabel } from '../../../shared/meta';
+import { allConsoles, dateLabel } from '../../../shared/meta';
 import { useGame, useMeta } from '../../store';
 import { pressVerdict } from '../../../shared/rules';
 import { fmtK } from '../../../shared/nums';
@@ -29,7 +29,8 @@ export function GameCardWindow({ winId }: { winId: string }) {
   const key = winId.startsWith(CARD_WIN_PREFIX) ? winId.slice(CARD_WIN_PREFIX.length) : winId;
   const h = game.history.find((x) => `${x.name}#${x.releaseWeek}` === key) ?? null;
 
-  const consoleMult = meta.consoles.find((c) => c.id === h?.consoleId)?.costMult ?? 1;
+  const cons = useMemo(() => allConsoles(meta, game), [meta, game]);
+  const consoleMult = cons.find((c) => c.id === h?.consoleId)?.costMult ?? 1;
   const curve = useMemo(() => (h ? rebuildSalesCurve(h, consoleMult) : []), [h, consoleMult]);
   // M8: пока игра ЕЩЁ ПРОДАЁТСЯ — карточка живая, как окно продаж справа (динамические числа и график)
   const view = useMemo(() => {
@@ -45,7 +46,7 @@ export function GameCardWindow({ winId }: { winId: string }) {
   const planRevenue = curve.reduce((a, d) => a + d.revenue, 0);
   const genreName = meta.genres.find((g) => g.id === h.genreId)?.ru ?? h.genreId;
   const typeName = meta.types.find((t) => t.id === h.typeId)?.nameRu ?? h.typeId;
-  const consoleName = meta.consoles.find((c) => c.id === h.consoleId)?.name ?? h.consoleId;
+  const consoleName = cons.find((c) => c.id === h.consoleId)?.name ?? h.consoleId;
   const factUnits = h.paidUnits ?? h.units;
   const factRev = h.paidRevenue ?? h.revenue;
   const criticRows = h.judgeScores ?? [];

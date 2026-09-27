@@ -2,7 +2,7 @@
 // M1 (plan/31): анимация вклада переехала в canvas-движок dev-anim.ts
 // (один rAF, пул частиц, размаз по такту, счётчики и полоски мимо React).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { consoleById, genreById, typeById } from '../../../shared/meta';
+import { allConsoles, genreById, typeById } from '../../../shared/meta';
 import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
 import { studioRecords } from '../../../shared/records';
@@ -159,7 +159,7 @@ export function DevStatus() {
   if (!g) return null;
   const genre = genreById(meta, g.genreId);
   const type = typeById(meta, g.typeId);
-  const consoleData = consoleById(meta, g.consoleId);
+  const consoleData = allConsoles(meta, game).find((c) => c.id === g.consoleId);
   const attrs = [
     { id: 'fun' as const, k: 'Fun', c: '#000080' },
     { id: 'creativity' as const, k: 'Creativity', c: '#800080' },

@@ -1,6 +1,8 @@
 // Метаданные игры для клиента (сервер шлёт один раз при подключении) + чистые хелперы.
 import type { CareerId } from '../core/data/schema';
+import type { ConsoleState } from '../core/types';
 import { comboGradeFrom } from './rules';
+import { ownConsoleMult } from './consoles';
 
 export interface MetaData {
   genres: { id: string; name: string; ru: string; popularity: string; costWan: number; unlockJob: string | null; unlockLevel: number | null }[];
@@ -41,6 +43,31 @@ export function typeById(meta: MetaData, id: string) {
 
 export function consoleById(meta: MetaData, id: string) {
   return meta.consoles.find((c) => c.id === id);
+}
+
+/**
+ * Общий список платформ партии: рыночные из меты + готовые свои консоли (own-*).
+ * Своя консоль появляется в мастере разработки и окне «Железо» через этот хелпер.
+ */
+export function allConsoles(
+  meta: MetaData,
+  game: { consoles: Record<string, ConsoleState>; studioName: string },
+): MetaData['consoles'] {
+  const list: MetaData['consoles'] = [...meta.consoles];
+  for (const [id, cs] of Object.entries(game.consoles)) {
+    if (!id.startsWith('own-') || !cs.licensed) continue;
+    list.push({
+      id,
+      name: cs.name ?? 'Своя консоль',
+      company: game.studioName,
+      licenseCost: 0,
+      installBase: cs.base,
+      costMult: ownConsoleMult(cs.cpu, cs.media),
+      unlock: null,
+      removed: null,
+    });
+  }
+  return list;
 }
 
 export function comboGrade(meta: MetaData, genreId: string, typeId: string): string {

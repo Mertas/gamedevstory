@@ -4,8 +4,9 @@
 import type { GameState, Staff } from './types';
 import { staffNameRu } from './data/staff-ru';
 import { capInit } from '../shared/train';
+import { ownConsoleStartBase } from '../shared/consoles';
 
-export const SAVE_VERSION = 9; // 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 10; // 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -55,6 +56,13 @@ export function migrateSave(state: GameState): GameState {
       }
       // легаси-фикс: активная профессия с уровнем 0 (её нельзя было качать) — с Lv1
       if ((st.careers[st.activeCareer] ?? 0) < 1) st.careers[st.activeCareer] = 1;
+    }
+  }
+  if (v < 10) {
+    // v1.34: своя консоль — стартовая база от фанатов. У старых сейвов база 0 (первая игра
+    // продавала 0 копий); компоненты/имя не восстановить — консоль получит базовую силу ×8.
+    for (const [id, cs] of Object.entries(state.consoles)) {
+      if (id.startsWith('own-') && cs.base === 0) cs.base = ownConsoleStartBase(state.fans ?? 0);
     }
   }
 

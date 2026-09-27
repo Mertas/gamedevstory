@@ -3,7 +3,7 @@ import { actionBuyLicense, useGame, useMeta } from '../../store';
 import { OwnConsolePanel } from './OwnConsole';
 import { fmtK } from '../../../shared/nums';
 import { dateToDay, EVENT_CONSOLE_REQ } from '../../../shared/consoles';
-import { dateLabel } from '../../../shared/meta';
+import { allConsoles, dateLabel } from '../../../shared/meta';
 
 /** копии: units в тысячах → «6.1M» / «74K» (как в окне продаж) */
 function unitsLabel(units: number): string {
@@ -23,9 +23,10 @@ export function HardwareApp() {
           <tr><th>Консоль</th><th>Компания</th><th>Статус</th><th>База</th><th>Лицензия</th><th></th></tr>
         </thead>
         <tbody>
-          {meta.consoles.map((c) => {
+          {allConsoles(meta, game).map((c) => {
             const cs = game.consoles[c.id];
             if (!cs) return null;
+            const isOwn = c.id.startsWith('own-');
             if (cs.removedAtWeek !== null && cs.removedAtWeek <= game.week) return null; // снята — не показываем
 
             // таймер снятия (дата известна заранее; слух в журнале — за 3 недели)
@@ -35,7 +36,9 @@ export function HardwareApp() {
             let status = <span className="w95-hint">недоступна</span>;
             let buyDisabled = true;
             let buyTitle = '';
-            if (cs.licensed) {
+            if (isOwn) {
+              status = <span style={{ color: '#008000' }}>✓ ваша консоль</span>;
+            } else if (cs.licensed) {
               status = <span style={{ color: '#008000' }}>✓ куплена</span>;
             } else if (Array.isArray(c.unlock)) {
               // рыночная консоль: либо уже в продаже, либо известна дата появления
@@ -74,7 +77,7 @@ export function HardwareApp() {
                   )}
                 </td>
                 <td>{fmtK(cs.base)}</td>
-                <td>{c.licenseCost === 0 ? 'бесплатно' : fmtK(c.licenseCost)}</td>
+                <td>{isOwn ? '—' : c.licenseCost === 0 ? 'бесплатно' : fmtK(c.licenseCost)}</td>
                 <td>
                   {!cs.licensed && (
                     <button

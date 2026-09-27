@@ -1,7 +1,7 @@
 // ─── Архив: все игры студии — фильтры, сортировка, «показать ещё»; клик → окно-карточка игры ───
 import { useEffect, useMemo, useState } from 'react';
 import { CONFIG } from '../../../core/config';
-import { dateLabel } from '../../../shared/meta';
+import { allConsoles, dateLabel } from '../../../shared/meta';
 import { useGame, useMeta } from '../../store';
 import { useWindows } from '../../wm';
 import { score100 } from '../../../shared/rules';
@@ -30,9 +30,10 @@ export function ArchiveApp() {
     setLimit(ARCHIVE_PAGE);
   }, [f, sort]);
 
+  const cons = useMemo(() => allConsoles(meta, game), [meta, game]);
   const genreName = (id: string) => meta.genres.find((g) => g.id === id)?.ru ?? id;
   const typeName = (id: string) => meta.types.find((t) => t.id === id)?.nameRu ?? id;
-  const consoleName = (id: string) => meta.consoles.find((c) => c.id === id)?.name ?? id;
+  const consoleName = (id: string) => cons.find((c) => c.id === id)?.name ?? id;
 
   // клик по заголовку — сортировка; шеврон ▼/▲ у активной колонки
   const th = (label: string, key: ArchiveSortKey) => (
@@ -74,7 +75,7 @@ export function ArchiveApp() {
         </select>
         <select className="w95-input" value={f.consoleId} onChange={(e) => setF({ ...f, consoleId: e.target.value })}>
           <option value="">Платформа: все</option>
-          {meta.consoles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {cons.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <label className="w95-row" style={{ gap: 4 }}>
           <input type="checkbox" checked={f.awardsOnly} onChange={(e) => setF({ ...f, awardsOnly: e.target.checked })} />

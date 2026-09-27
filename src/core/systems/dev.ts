@@ -2,6 +2,7 @@
 import { CONFIG } from '../config';
 import { CRITICS, PRESS_FALLBACK_RU } from '../data/critics'; // PLAN-30: пресса — 10 журналов
 import { COMBO_GRADES, CONSOLES, GENRES, GENRE_ORDER, MESSAGES, TYPES } from '../data/db';
+import type { ConsoleData } from '../data/schema';
 import { log } from '../log';
 import {
   debugRate, distributePoints, judgeScore, projectCost, reviewTotal, spreadScores,
@@ -13,6 +14,7 @@ import type {
 } from '../types';
 import { DIRECTION_WEIGHTS, EMPTY_STATS } from '../types';
 import { comboGradeFrom, consoleReleased as consoleAvailable, isUnlocked, score100 } from '../../shared/rules';
+import { ownConsoleMult } from '../../shared/consoles';
 import { busyStaffIds } from './staff';
 
 export function genreById(id: string) {
@@ -25,6 +27,28 @@ export function typeById(id: string) {
 
 export function consoleById(id: string) {
   return CONSOLES.find((c) => c.id === id)!;
+}
+
+/**
+ * Данные консоли для игры/релиза: рыночные — из справочника, свои (own-*) — синтетика из состояния
+ * партии (имя/компоненты сохраняются при завершении; старые сейвы без них — базовая ×8).
+ */
+export function consoleDataFor(state: GameState, id: string): ConsoleData | undefined {
+  const own = state.consoles[id];
+  if (id.startsWith('own-') && own) {
+    return {
+      id,
+      name: own.name ?? 'Своя консоль',
+      devCost: 0,
+      licenseCost: 0,
+      company: 'Своя студия',
+      unlock: null,
+      removed: null,
+      installBase: own.base,
+      costMult: ownConsoleMult(own.cpu, own.media),
+    };
+  }
+  return consoleById(id);
 }
 
 export function comboGrade(genreId: string, typeId: string): ComboGrade {
@@ -48,7 +72,7 @@ function isSequel(state: GameState, genreId: string, typeId: string): boolean {
 export function startProject(state: GameState, input: StartProjectInput): ActionResult {
   const genre = genreById(input.genreId);
   const type = typeById(input.typeId);
-  const consoleData = consoleById(input.consoleId);
+  const consoleData = consoleDataFor(state, input.consoleId);
   const cs = state.consoles[input.consoleId];
   if (!genre || !type || !consoleData || !cs) return { ok: false, error: 'Неизвестный выбор' };
   if (state.activeGame) return { ok: false, error: 'Идёт другой проект' };
@@ -371,7 +395,8 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   // план продаж
   const cs = state.consoles[game.consoleId];
   if (!cs) return { ok: false, error: 'Консоль не найдена' };
-  const consoleData = consoleById(game.consoleId);
+  const consoleData = consoleDataFor(state, game.consoleId);
+  if (!consoleData) return { ok: false, error: 'Консоль не найдена' };
   const plan = salesPlan({
     installBase: cs.base,
     // PLAN-30: продажи считаются от старой шкалы рецензий (12–40) — приводим /100 обратно

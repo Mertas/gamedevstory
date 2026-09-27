@@ -1,6 +1,7 @@
 // Игровая сессия на сервере: состояние + тикер + действия + чат-фазы (GigaChat) + автосейв.
 import { type HireMethodId } from '../core/config';
-import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, MESSAGES, STAFF, TRAININGS, TYPES, consoleById, genreById, typeById } from '../core/data/db';
+import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, MESSAGES, STAFF, TRAININGS, TYPES, genreById, typeById } from '../core/data/db';
+import { consoleDataFor } from '../core/systems/dev';
 import { CRITICS, PRESS_FALLBACK_RU } from '../core/data/critics'; // PLAN-30: 10 журналов
 import type { CareerId } from '../core/data/schema';
 import { newGame } from '../core/engine';
@@ -412,7 +413,7 @@ export class GameServer {
       `Игра: «${rec.name}»`,
       `Описание: ${rec.plot || 'без описания'}`,
       `Формула: ${genreById(rec.genreId)?.ru ?? rec.genreId} × ${typeById(rec.typeId)?.nameRu ?? typeById(rec.typeId)?.name ?? rec.typeId}`,
-      `Консоль: ${consoleById(rec.consoleId)?.name ?? rec.consoleId}`,
+      `Консоль: ${consoleDataFor(this.game, rec.consoleId)?.name ?? rec.consoleId}`,
       `Оценка прессы: ${rec.score ?? 0}/100`,
       rec.contrib && Object.keys(rec.contrib).length > 0
         ? `Вклад команды (топ-3): ${Object.entries(rec.contrib)

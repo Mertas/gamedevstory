@@ -163,6 +163,10 @@ export interface ConsoleState {
   base: number; // тыс.
   availableAtWeek: number | null;
   removedAtWeek: number | null;
+  // своя консоль (own-*): имя и компоненты сохраняются при завершении; старые сейвы — без них
+  name?: string;
+  cpu?: string;
+  media?: string;
 }
 
 export interface LogEntry {

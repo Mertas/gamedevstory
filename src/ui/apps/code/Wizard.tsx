@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Mode } from '../../../core/config';
 import { projectCostBreakdown } from '../../../core/formulas';
 import {
-  comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
+  allConsoles, comboGrade, consoleAvailable, genreById, isUnlocked, typeById,
 } from '../../../shared/meta';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../../../core/types';
 import type { DirectionAxis, Role } from '../../../core/types';
@@ -84,7 +84,7 @@ export function ProjectWizard() {
   const openedGenres = useMemo(() => new Set([...opened].map((k) => k.split('|')[0] ?? '')), [opened]);
   const openedTypes = useMemo(() => new Set([...opened].map((k) => k.split('|')[1] ?? '')), [opened]);
 
-  const consoles = useMemo(() => meta.consoles.filter((c) => {
+  const consoles = useMemo(() => allConsoles(meta, game).filter((c) => {
     const cs = game.consoles[c.id];
     return cs && cs.licensed && consoleAvailable(game, c.id);
   }), [game, meta]);
@@ -112,7 +112,7 @@ export function ProjectWizard() {
 
   const genre = genreId ? genreById(meta, genreId) : null;
   const type = typeId ? typeById(meta, typeId) : null;
-  const consoleData = consoleId ? consoleById(meta, consoleId) : null;
+  const consoleData = consoleId ? (allConsoles(meta, game).find((c) => c.id === consoleId) ?? null) : null;
   const costBd = genre && type && consoleData
     ? projectCostBreakdown(
         genre.costWan,
