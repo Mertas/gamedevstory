@@ -516,6 +516,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
               it.open();
             }}
             onMouseDown={(e) => onIconDown(e, it.id)}
+            onDragStart={(e) => e.preventDefault()}
           >
             {it.staffId && !customIcons[it.id] ? (
               <StaffAvatar staff={game.staff.find((st) => st.id === it.staffId)!} size={32} fallback={<span style={{ fontSize: 30 }}>👤</span>} />

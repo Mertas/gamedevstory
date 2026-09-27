@@ -23,6 +23,7 @@ export function StaffAvatar({ staff, size, className, fallback }: StaffAvatarPro
     <img
       src={src}
       alt=""
+      draggable={false}
       className={className}
       style={size ? { width: size, height: size } : undefined}
       onError={() => setStage((s) => (s === 0 && staff.avatar ? 1 : 2))}

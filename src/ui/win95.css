@@ -36,6 +36,9 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 [data-wa-host] .wa-playlist-window-shade,
 [data-wa-host] .wa-webamp-context-menu { pointer-events: auto; }
 .w95-d-icon .w95-ic { width: 32px; height: 32px; margin: 0 auto 3px; display: block; }
+/* картинки в иконках стола не участвуют в НАТИВНОМ drag: иначе браузер тянет ghost-картинку
+   (аватарки сотрудников), ломая наш mouse-драг; sub-иконки (W95) — другой размер */
+.w95-desktop-icons img { -webkit-user-drag: none; }
 .w95-d-icon span { font-size: 11px; line-height: 1.15; display: block; }
 
 /* ── Панель задач ── */
