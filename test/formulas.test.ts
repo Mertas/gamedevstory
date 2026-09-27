@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   comboMult, debugRate, distributePoints, fanMult, judgeScore, pricePerCopy, projectCost,
+  projectCostBreakdown,
   reviewTotal, salesPlan, spreadScores, totalBugs, weeklyPoints, hypeMult, weekFactor, baseWeekShares,
 } from '../src/core/formulas';
 import { createRng, type Rng } from '../src/core/rng';
@@ -55,6 +56,25 @@ describe('стоимость проекта', () => {
   it('консольный множитель масштабирует стоимость', () => {
     const pc = projectCost(300, 0, 0, 1, 'normal');
     expect(projectCost(300, 0, 0, 8, 'normal')).toBeCloseTo(pc * 8);
+  });
+  it('разбор стоимости: слагаемые и множители сходятся с projectCost', () => {
+    const cases = [
+      [300, 0, 0, 1, 'normal'],
+      [300, 3, 2, 1, 'normal'],
+      [1000, 5, 5, 1.5, 'speed'],
+      [431, 2, 7, 8, 'budget'],
+      [120, 1, 1, 1, 'research'],
+    ] as const;
+    for (const [costWan, glv, tlv, mult, mode] of cases) {
+      const bd = projectCostBreakdown(costWan, glv, tlv, mult, mode);
+      expect(bd.total).toBeCloseTo(projectCost(costWan, glv, tlv, mult, mode), 10);
+      expect(bd.genreBaseK).toBeCloseTo(costWan * 0.1);
+      expect(bd.genreK).toBeCloseTo(costWan * 0.1 * (1 + 0.5 * glv));
+      expect(bd.typeBaseK).toBeCloseTo(CONFIG.TYPE_COST_DEFAULT);
+      expect(bd.typeK).toBeCloseTo(CONFIG.TYPE_COST_DEFAULT * (1 + 0.3 * tlv));
+      expect(bd.baseK).toBeCloseTo(bd.genreK + bd.typeK);
+      expect(bd.total).toBeCloseTo(bd.baseK * mult * CONFIG.MODE[mode].cost * CONFIG.DEV_COST_SCALE);
+    }
   });
 });
 

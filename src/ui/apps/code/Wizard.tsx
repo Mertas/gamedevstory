@@ -1,7 +1,7 @@
 // ─── Код: мастер нового проекта — шаги, сюжет, команда (UI-08: вынесено из CodeApp.tsx) ───
 import { useEffect, useMemo, useState } from 'react';
 import type { Mode } from '../../../core/config';
-import { projectCost } from '../../../core/formulas';
+import { projectCostBreakdown } from '../../../core/formulas';
 import {
   comboGrade, consoleAvailable, consoleById, genreById, isUnlocked, typeById,
 } from '../../../shared/meta';
@@ -14,12 +14,14 @@ import {
 } from '../../store';
 import { useProfile } from '../../profile';
 import { MODES, ROLE_LABELS } from './shared';
-import { fmtK } from '../../../shared/nums';
+import { fmtK, fmtK1 } from '../../../shared/nums';
 
 const DIRECTION_AXES: { id: DirectionAxis; label: string }[] = DIRECTION_ORDER.map((id) => ({
   id, label: DIRECTION_LABELS[id],
 }));
 // ─── мастер проекта: пошаговый визард ───
+// множитель для разбора стоимости: «×1», «×2.44»
+const fmtMult = (n: number) => `×${Number(n.toFixed(2))}`;
 const WIZ_STEPS = [
   { id: 1, label: 'Платформа' },
   { id: 2, label: 'Жанр' },
@@ -111,15 +113,16 @@ export function ProjectWizard() {
   const genre = genreId ? genreById(meta, genreId) : null;
   const type = typeId ? typeById(meta, typeId) : null;
   const consoleData = consoleId ? consoleById(meta, consoleId) : null;
-  const cost = genre && type && consoleData
-    ? projectCost(
+  const costBd = genre && type && consoleData
+    ? projectCostBreakdown(
         genre.costWan,
         game.genreLevels[genre.id] ?? 0,
         game.typeLevels[type.id] ?? 0,
         consoleData.costMult,
         mode,
       )
-    : 0;
+    : null;
+  const cost = costBd ? costBd.total : 0;
 
   const canAfford = cost > 0 && cost <= game.money;
 
@@ -413,11 +416,21 @@ export function ProjectWizard() {
                     Сценарий: {assignedNames('proposal')} · Программирование: {assignedNames('program')} · Графика: {assignedNames('graphics')} · Звук: {assignedNames('sound')} · Отладка: {assignedNames('debug')}
                   </td></tr>
                   <tr><td>Стоимость</td><td>
-                    <b>{fmtK(cost)}</b>
+                    <b>{fmtK1(cost)}</b>
                     {!canAfford && cost > 0 && <span style={{ color: '#c00000' }}> — не хватает денег!</span>}
                   </td></tr>
                 </tbody>
               </table>
+
+              {costBd && (
+                <div className="w95-bevel-in" style={{ padding: 4, marginTop: 6, fontSize: 11 }} data-autopilot="cost-breakdown">
+                  <b>Из чего складывается стоимость:</b>
+                  <div>Жанр «{genre!.ru}»: база {fmtK1(costBd.genreBaseK)}, уровень {game.genreLevels[genre!.id] ?? 0} → {fmtMult(costBd.genreLvMult)} = {fmtK1(costBd.genreK)}</div>
+                  <div>Тип «{type!.nameRu ?? type!.name}»: база {fmtK1(costBd.typeBaseK)}, уровень {game.typeLevels[type!.id] ?? 0} → {fmtMult(costBd.typeLvMult)} = {fmtK1(costBd.typeK)}</div>
+                  <div>Платформа «{consoleData!.name}»: {fmtMult(costBd.consoleMult)} · режим «{MODES.find((m) => m.id === mode)?.label}»: {fmtMult(costBd.modeCost)} · масштаб баланса: {fmtMult(costBd.scale)}</div>
+                  <div>Итого: ({fmtK1(costBd.genreK)} + {fmtK1(costBd.typeK)}) {fmtMult(costBd.consoleMult)} {fmtMult(costBd.modeCost)} {fmtMult(costBd.scale)} = <b>{fmtK1(costBd.total)}</b></div>
+                </div>
+              )}
 
               <div className="w95-bevel-out" style={{ padding: 4, marginTop: 6 }}>
                 <div className="w95-row" style={{ justifyContent: 'space-between' }}>
@@ -463,7 +476,7 @@ export function ProjectWizard() {
       <div className="w95-bevel-out" style={{ padding: 4, margin: 4 }}>
         <div className="w95-row" style={{ justifyContent: 'space-between' }}>
           <span>
-            Стоимость: <b>{cost > 0 ? `${Math.round(cost)}K` : '—'}</b>
+            Стоимость: <b>{cost > 0 ? fmtK1(cost) : '—'}</b>
 
             <span className="w95-hint"> · В кассе: {fmtK(game.money)}</span>
             {cost > 0 && !canAfford && <span style={{ color: '#c00000' }}> — не хватает!</span>}

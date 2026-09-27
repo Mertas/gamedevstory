@@ -27,6 +27,40 @@ export function projectCost(
   return base * consoleMult * CONFIG.MODE[mode].cost * CONFIG.DEV_COST_SCALE;
 }
 
+/** Разбор стоимости проекта — те же слагаемые/множители, что в projectCost (для показа в мастере). */
+export interface ProjectCostBreakdown {
+  genreBaseK: number; // база жанра в K (costWan / 10)
+  genreLvMult: number; // GENRE_LV_COST_MULT
+  genreK: number;
+  typeBaseK: number; // TYPE_COST_DEFAULT
+  typeLvMult: number; // TYPE_LV_COST_MULT
+  typeK: number;
+  baseK: number;
+  consoleMult: number;
+  modeCost: number;
+  scale: number;
+  total: number;
+}
+
+export function projectCostBreakdown(
+  genreCostWan: number,
+  genreLevel: number,
+  typeLevel: number,
+  consoleMult: number,
+  mode: Mode,
+): ProjectCostBreakdown {
+  const genreBaseK = genreCostWan * 0.1;
+  const genreLvMult = CONFIG.GENRE_LV_COST_MULT(genreLevel);
+  const genreK = genreBaseK * genreLvMult;
+  const typeBaseK = CONFIG.TYPE_COST_DEFAULT;
+  const typeLvMult = CONFIG.TYPE_LV_COST_MULT(typeLevel);
+  const typeK = typeBaseK * typeLvMult;
+  const baseK = genreK + typeK;
+  const modeCost = CONFIG.MODE[mode].cost;
+  const scale = CONFIG.DEV_COST_SCALE;
+  return { genreBaseK, genreLvMult, genreK, typeBaseK, typeLvMult, typeK, baseK, consoleMult, modeCost, scale, total: baseK * consoleMult * modeCost * scale };
+}
+
 // ---------- 2.2 недельный прогресс ----------
 // contributors: вклад по ролям (program→program, graphics→graphics, sound→sound)
 export function weeklyPoints(
