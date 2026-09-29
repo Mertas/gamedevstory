@@ -1,10 +1,10 @@
 // Аватар сотрудника: сначала персональная иконка из LLMPics (avatars/<staffId>.png),
 // затем случайная из набора (st.avatar), затем — фолбэк (например, эмодзи).
+// Тип — структурный минимум: подходит и Staff, и кандидат из meta.staff (без аватарки).
 import { useEffect, useState } from 'react';
-import type { Staff } from '../core/types';
 
 export interface StaffAvatarProps {
-  staff: Staff;
+  staff: { id: string; avatar?: string };
   size?: number;
   className?: string;
   /** Что показать, если файлов нет вовсе (по умолчанию — ничего). */

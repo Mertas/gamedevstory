@@ -250,6 +250,24 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-staff-power-label { font-size: 9px; color: #333; }
 .w95-staff-stats { display: flex; justify-content: center; gap: 4px; font-size: 10px; margin-top: 2px; }
 .w95-staff-note { font-size: 9px; color: #000080; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ─── мини-карточка кандидата (клик в списке найма, 28.09) ─── */
+.w95-minicard {
+  display: flex; gap: 6px; margin-top: 4px; padding: 4px 6px;
+  border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  background: var(--w95-face);
+}
+.w95-minicard-avatar {
+  flex: none; width: 48px; height: 48px; line-height: 48px; text-align: center; font-size: 30px;
+  border: 1px solid var(--w95-dark); background: #fff;
+}
+.w95-minicard-avatar img { width: 46px; height: 46px; vertical-align: middle; }
+.w95-minicard-body { min-width: 0; flex: 1; }
+.w95-career-chip {
+  display: inline-block; margin: 0 3px 2px 0; padding: 0 4px; font-size: 10px;
+  border: 1px solid var(--w95-dark); background: #fff;
+}
+.w95-career-chip.on { background: #000080; color: #fff; border-color: #000080; }
 .w95-btn.active { border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); background: #d5d5d5; }
 .w95-start-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px 4px 6px; font-weight: bold; }
 .w95-start-logo { width: 16px; height: 16px; }

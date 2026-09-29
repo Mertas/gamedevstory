@@ -1,9 +1,11 @@
 // ─── Найм: «Поиск сотрудников» — тип поиска (платно) → список кандидатов → найм (UI-08, M7) ───
+// Клик по кандидату показывает мини-карточку (профессии — обязательно; запрос игрока 28.09.2026).
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import type { HireMethodId } from '../../../core/config';
 import { HIRE_METHOD_LABELS, MYSTERY_IDS } from '../../../shared/hire';
 import { CAREER_LABELS } from '../../careers';
+import { StaffMiniCard } from '../../StaffMiniCard';
 import { actionHire, actionSearch, useGame, useMeta } from '../../store';
 import { fmtK } from '../../../shared/nums';
 
@@ -11,12 +13,15 @@ export function SearchTab() {
   const game = useGame();
   const meta = useMeta();
   const [method, setMethod] = useState<HireMethodId>('word-of-mouth');
+  const [candId, setCandId] = useState<string | null>(null);
   const cfg = CONFIG.HIRE_METHODS[method];
   const officeCap = CONFIG.OFFICE_CAPACITY[game.officeLevel] ?? 4;
   const officeFull = game.staff.length >= officeCap;
   const search = game.activeSearch;
   const activeCfg = search ? CONFIG.HIRE_METHODS[search.method] : null;
   const rows = (search?.ids ?? []).map((id) => meta.staff.find((d) => d.id === id)).filter(Boolean);
+  const picked = rows.find((c) => c && c.id === candId) ?? null;
+  const pickedPersona = picked?.persona ?? null;
 
   return (
     <>
@@ -61,7 +66,13 @@ export function SearchTab() {
             <table className="w95-table">
               <tbody>
                 {rows.map((c) => c && (
-                  <tr key={c.id}>
+                  <tr
+                    key={c.id}
+                    style={{ cursor: 'pointer' }}
+                    title="Показать карточку кандидата"
+                    data-autopilot={`hire-row-${c.id}`}
+                    onClick={() => setCandId((v) => (v === c.id ? null : c.id))}
+                  >
                     <td>{MYSTERY_IDS.has(c.id) ? '🌟 ' : ''}{c.name}</td>
                     <td>{CAREER_LABELS[c.activeCareer as keyof typeof CAREER_LABELS] ?? c.activeCareer}</td>
                     <td>П{c.stats.program} С{c.stats.scenario} Г{c.stats.graphics} З{c.stats.sound}</td>
@@ -72,7 +83,7 @@ export function SearchTab() {
                         className="w95-btn"
                         data-autopilot={`hire-${c.id}`}
                         disabled={officeFull || game.money < c.hireFee}
-                        onClick={() => actionHire(c.id)}
+                        onClick={(e) => { e.stopPropagation(); actionHire(c.id); }}
                         title={officeFull ? 'Офис заполнен — купите офис больше' : game.money < c.hireFee ? `Нужно ${Math.round(c.hireFee)}K` : `Нанять за ${Math.round(c.hireFee)}K`}
                       >
                         Нанять
@@ -84,6 +95,17 @@ export function SearchTab() {
             </table>
           ) : (
             <div className="w95-hint">Из этого списка всех разобрали — ищите заново.</div>
+          )}
+          {picked && (
+            <StaffMiniCard
+              st={picked}
+              persona={pickedPersona}
+              footer={
+                <div className="w95-hint" style={{ marginTop: 2 }}>
+                  Взнос {fmtK(picked.hireFee)} · {Math.round(picked.salary)}K/год. Повторный клик по кандидату скрывает карточку.
+                </div>
+              }
+            />
           )}
           <div className="w95-hint">
             Список живёт до следующего поиска: нанять можно сколько угодно, за каждого — только взнос.

@@ -3,7 +3,7 @@
 // обучение (включая авто «до максимума»), отпуск, история профессий/обучения, персона.
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
-import { CAREER_LABELS } from '../../careers';
+import { CAREER_LABELS, CAREER_ORDER } from '../../careers';
 import { StaffAvatar } from '../../StaffAvatar';
 import { actionApplyCareerManual, actionFire, actionLevelUp, actionRestStaff, actionTrain, actionTrainToMax, useGame, useMeta } from '../../store';
 import { useWindows } from '../../wm';
@@ -23,7 +23,6 @@ export function staffFromWinId(game: { staff: Staff[] }, winId: string): Staff |
 
 const ROLE_RU: Record<string, string> = { proposal: 'сценарий', program: 'код', graphics: 'графика', sound: 'звук', debug: 'отладка' };
 const HIST_ICON: Record<string, string> = { hire: '📥', career: '🔁', levelup: '⬆', train: '🎓', rest: '🧳', back: '✅' };
-const CAREER_ORDER: CareerId[] = ['coder', 'writer', 'designer', 'sound', 'director', 'producer', 'hw', 'hacker'];
 
 /** окно сотрудника: winId = 'staff:<id>' */
 export function StaffWindow({ winId }: { winId: string }) {

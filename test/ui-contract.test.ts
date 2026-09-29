@@ -40,6 +40,16 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(deskSrc).toContain('if (w.closed) return null');   // таскбар не рисует закрытые окна
   });
 
+  it('мини-карточка кандидата: клик в найме показывает профессии (28.09)', () => {
+    const search = read('../src/ui/apps/hire/SearchTab.tsx');
+    const mini = read('../src/ui/StaffMiniCard.tsx');
+    expect(search).toContain('data-autopilot={`hire-row-${c.id}`}'); // строка кандидата кликабельна
+    expect(search).toContain('StaffMiniCard');
+    expect(mini).toContain('data-autopilot="hire-minicard"');
+    expect(mini).toContain('CAREER_ORDER'); // профессии — обязательная часть карточки
+    expect(mini).toContain('w95-career-chip');
+  });
+
   it('видимость автопилота: якоря действий политики и «витринное» нажатие (plan/14)', () => {
     const hire = read('../src/ui/apps/hire/HireApp.tsx');
     const team = read('../src/ui/apps/staff/TeamTab.tsx');
