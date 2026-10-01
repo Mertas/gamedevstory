@@ -50,6 +50,19 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(mini).toContain('w95-career-chip');
   });
 
+  it('справка: содержание + статья, разделы из двух частей (28.09, v1.36.0)', () => {
+    const help = read('../src/ui/apps/help/Help.tsx');
+    const a = read('../src/ui/apps/help/sections-a.tsx');
+    const b = read('../src/ui/apps/help/sections-b.tsx');
+    expect(help).toContain('data-autopilot="help-nav"');
+    expect(help).toContain('data-autopilot={`help-section-${open.id}`}');
+    expect(help).toContain('SECTIONS_A');
+    expect(help).toContain('SECTIONS_B');
+    expect(a).toContain("id: 'careers'");
+    expect(b).toContain("id: 'awards'");
+    expect(a + b).toContain('Тренировать до максимума');
+  });
+
   it('видимость автопилота: якоря действий политики и «витринное» нажатие (plan/14)', () => {
     const hire = read('../src/ui/apps/hire/HireApp.tsx');
     const team = read('../src/ui/apps/staff/TeamTab.tsx');

@@ -130,6 +130,18 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-list { background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); overflow-y: auto; }
 .w95-list .w95-li { padding: 2px 6px; cursor: default; }
 .w95-list .w95-li:hover { background: #000080; color: #fff; }
+/* HELP: справка — содержание слева, статья справа (v1.36.0) */
+.w95-help { flex: 1 1 auto; min-height: 0; display: flex; padding: 2px; }
+.w95-help-nav { width: 152px; flex: none; display: flex; flex-direction: column; gap: 1px; overflow-y: auto; margin-right: 4px; }
+.w95-help-navbtn { display: flex; align-items: center; gap: 5px; text-align: left; font-size: 11px; padding: 3px 6px; }
+.w95-help-navbtn.on { font-weight: 700; background: #dcdcd4; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); }
+.w95-help-navicon { font-size: 12px; flex: none; }
+.w95-help-body { flex: 1; min-width: 0; overflow-y: auto; background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 8px 10px 14px; }
+.w95-help-h { margin: 0 0 6px; font-size: 13px; color: var(--w95-navy); border-bottom: 1px solid var(--w95-dark); padding-bottom: 3px; }
+.w95-help-sub { margin: 9px 0 3px; font-size: 11px; }
+.w95-help-p { margin: 0 0 6px; line-height: 1.45; }
+.w95-help-ul { margin: 0 0 8px; padding-left: 18px; line-height: 1.45; }
+.w95-help-ul li { margin-bottom: 2px; }
 
 /* ── Меню ── */
 .w95-menu { position: absolute; z-index: 9500; min-width: 180px; background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); box-shadow: 2px 2px 0 rgba(0,0,0,.4); padding: 2px; }
