@@ -1,4 +1,5 @@
-// PLAN-44: сюжетные линии — арки «Оффер», «Выгорание», «Игра мечты» и миграция v11.
+// PLAN-44: сюжетные линии — арки «Оффер», «Выгорание», «Игра мечты», арки-взаимодействия
+// между сотрудниками («Спор самолюбий», «Наставник», «Старые против новых») и миграция v11.
 import { expect, it } from 'vitest';
 import { newGame } from '../src/core/engine';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
@@ -14,10 +15,17 @@ function ready(seed = 3, releases = 2, week = 60): GameState {
   return g;
 }
 
+const ALL_ARCS = ['offer', 'burnout', 'dream', 'rivalry', 'mentorship', 'generations'] as const;
+
 /** Пометить арку закрытой (чтобы протестировать следующую по очереди). */
 function closeArc(g: GameState, id: string): void {
   g.story = g.story ?? { arcs: {}, flags: {} };
   g.story.arcs[id] = { step: 2, done: true };
+}
+
+/** Закрыть все арки, кроме указанной (проверяем конкретную арку). */
+function only(g: GameState, keep: (typeof ALL_ARCS)[number]): void {
+  for (const id of ALL_ARCS) if (id !== keep) closeArc(g, id);
 }
 
 function failRng(): Rng {
@@ -43,6 +51,7 @@ it('свежая студия: арки молчат', () => {
 
 it('с 60-й недели и двух релизов приходит «Оффер» (участник Lv2+)', () => {
   const g = ready();
+  only(g, 'offer');
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'offer', step: 1 });
   expect(g.story?.arcs.offer?.staffId).toBe(g.staff[0]!.id);
@@ -51,6 +60,7 @@ it('с 60-й недели и двух релизов приходит «Оффе
 
 it('raise: −200K, сотрудник остаётся; эпилог через 8 недель: +стат и +150 фанатов', () => {
   const g = ready();
+  only(g, 'offer');
   tickStory(g, R);
   const id = g.staff[0]!.id;
   const m0 = g.money;
@@ -75,6 +85,7 @@ it('raise: −200K, сотрудник остаётся; эпилог через
 
 it('talk с провалом: сотрудник уходит; эпилог «письмо» даёт +100 фанатов', () => {
   const g = ready();
+  only(g, 'offer');
   tickStory(g, R);
   const id = g.staff[0]!.id;
   expect(resolveStory(g, 'talk', failRng()).ok).toBe(true);
@@ -92,6 +103,7 @@ it('talk с провалом: сотрудник уходит; эпилог «п
 
 it('letgo: +150K и сотрудник уходит', () => {
   const g = ready();
+  only(g, 'offer');
   tickStory(g, R);
   const id = g.staff[0]!.id;
   const m0 = g.money;
@@ -102,6 +114,7 @@ it('letgo: +150K и сотрудник уходит', () => {
 
 it('деньги важны: raise без 200K не проходит, событие остаётся', () => {
   const g = ready();
+  only(g, 'offer');
   tickStory(g, R);
   g.money = 10;
   const res = resolveStory(g, 'raise', createRng(1));
@@ -113,6 +126,7 @@ it('деньги важны: raise без 200K не проходит, событ
 
 it('«Выгорание»: с 45-й недели; отпуск −100K → через 6 недель эпилог +4 стат и +50 фанатов', () => {
   const g = ready(3, 2, 50);
+  only(g, 'burnout');
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'burnout', step: 1 });
   const id = g.staff[0]!.id;
@@ -137,6 +151,7 @@ it('«Выгорание»: с 45-й недели; отпуск −100K → че
 
 it('«Выгорание» риск: 50/50 — «сломался» (−3 стата) или «вытянул» (+2)', () => {
   const broken = ready(3, 2, 50);
+  only(broken, 'burnout');
   tickStory(broken, R);
   expect(resolveStory(broken, 'risk', R).ok).toBe(true);
   expect(broken.story!.arcs.burnout!.waitUntil).toBe(54);
@@ -150,6 +165,7 @@ it('«Выгорание» риск: 50/50 — «сломался» (−3 ста
   expect(broken.story!.arcs.burnout!.done).toBe(true);
 
   const coped = ready(3, 2, 50);
+  only(coped, 'burnout');
   tickStory(coped, R);
   resolveStory(coped, 'risk', R);
   coped.week = 54;
@@ -165,8 +181,7 @@ it('«Выгорание» риск: 50/50 — «сломался» (−3 ста
 
 it('«Игра мечты»: обещание → релиз нужного жанра в срок → +5 стат и +150 фанатов', () => {
   const g = ready(3, 3, 75);
-  closeArc(g, 'offer');
-  closeArc(g, 'burnout');
+  only(g, 'dream');
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'dream', step: 1 });
   const arc = g.story!.arcs.dream!;
@@ -192,8 +207,7 @@ it('«Игра мечты»: обещание → релиз нужного жа
 
 it('«Игра мечты» не сбылась: без релиза эпилог «подождёт», наград нет', () => {
   const g = ready(3, 3, 75);
-  closeArc(g, 'offer');
-  closeArc(g, 'burnout');
+  only(g, 'dream');
   tickStory(g, R);
   expect(resolveStory(g, 'promise', R).ok).toBe(true);
   g.week = 115;
@@ -207,14 +221,151 @@ it('«Игра мечты» не сбылась: без релиза эпило�
 
 it('«Игра мечты» отказ: вежливый эпилог и закрытие арки', () => {
   const g = ready(3, 3, 75);
-  closeArc(g, 'offer');
-  closeArc(g, 'burnout');
+  only(g, 'dream');
   tickStory(g, R);
   expect(resolveStory(g, 'decline', R).ok).toBe(true);
   tickStory(g, R); // waitUntil = текущая неделя — ответ придёт сразу следующим днём
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'dream', step: 4 });
   expect(resolveStory(g, 'ok', R).ok).toBe(true);
   expect(g.story!.arcs.dream!.done).toBe(true);
+});
+
+// ─── Арки-взаимодействия между сотрудниками (v1.39.0) ───
+
+it('«Спор самолюбий»: с 25-й недели; код-дуэль −50K → через 6 недель +2 обоим', () => {
+  const g = ready(3, 1, 30);
+  only(g, 'rivalry');
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'rivalry', step: 1 });
+  const arc = g.story!.arcs.rivalry!;
+  expect(arc.staffId).toBeTruthy();
+  expect(arc.staffId2).toBeTruthy();
+  expect(arc.staffId2).not.toBe(arc.staffId);
+
+  const m0 = g.money;
+  expect(resolveStory(g, 'contest', R).ok).toBe(true);
+  expect(g.money).toBe(m0 - 50);
+  expect(g.story!.arcs.rivalry!.waitUntil).toBe(36);
+
+  g.week = 36;
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'rivalry', step: 2 });
+  const s1 = g.staff.find((s) => s.id === arc.staffId)!;
+  const s2 = g.staff.find((s) => s.id === arc.staffId2)!;
+  const b1 = s1.stats[bestOf(s1)];
+  const b2 = s2.stats[bestOf(s2)];
+  expect(resolveStory(g, 'ok', R).ok).toBe(true);
+  expect(s1.stats[bestOf(s1)]).toBe(b1 + 2);
+  expect(s2.stats[bestOf(s2)]).toBe(b2 + 2);
+  expect(g.story!.arcs.rivalry!.done).toBe(true);
+});
+
+it('«Спор самолюбий»: «пусть сами» → через 4 недели рулетка; неудача — осадок −2', () => {
+  const g = ready(3, 1, 30);
+  only(g, 'rivalry');
+  tickStory(g, R);
+  const arc = g.story!.arcs.rivalry!;
+  expect(resolveStory(g, 'ignore', R).ok).toBe(true);
+  expect(arc.waitUntil).toBe(34);
+
+  g.week = 34;
+  tickStory(g, failRng()); // ролл «осадок»
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'rivalry', step: 3 });
+  const s1 = g.staff.find((s) => s.id === arc.staffId)!;
+  const b1 = s1.stats[bestOf(s1)];
+  expect(resolveStory(g, 'ok', R).ok).toBe(true);
+  expect(s1.stats[bestOf(s1)]).toBe(b1 - 2);
+});
+
+it('«Наставник»: с 32-й недели; наставничество → новичку +4, ветерану +1', () => {
+  const g = ready(3, 1, 35);
+  g.staff[0]!.stats = { program: 200, scenario: 100, graphics: 100, sound: 100 }; // ветеран, 500
+  g.staff[1]!.stats = { program: 30, scenario: 20, graphics: 10, sound: 10 }; // новичок, 70
+  only(g, 'mentorship');
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'mentorship', step: 1 });
+  const arc = g.story!.arcs.mentorship!;
+  expect(arc.staffId).toBe(g.staff[0]!.id); // сильнейший — ветеран
+  expect(arc.staffId2).toBe(g.staff[1]!.id); // слабейший — новичок
+
+  expect(resolveStory(g, 'mentor', R).ok).toBe(true);
+  expect(arc.waitUntil).toBe(41);
+
+  g.week = 41;
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'mentorship', step: 2 });
+  const student = g.staff.find((s) => s.id === arc.staffId2)!;
+  const mentor = g.staff.find((s) => s.id === arc.staffId)!;
+  const bs = student.stats[bestOf(student)];
+  const bm = mentor.stats[bestOf(mentor)];
+  expect(resolveStory(g, 'ok', R).ok).toBe(true);
+  expect(student.stats[bestOf(student)]).toBe(bs + 4);
+  expect(mentor.stats[bestOf(mentor)]).toBe(bm + 1);
+  expect(g.story!.arcs.mentorship!.done).toBe(true);
+});
+
+it('«Наставник»: «не отвлекать ветерана» → новичок сам +1', () => {
+  const g = ready(3, 1, 35);
+  g.staff[0]!.stats = { program: 200, scenario: 100, graphics: 100, sound: 100 };
+  g.staff[1]!.stats = { program: 30, scenario: 20, graphics: 10, sound: 10 };
+  only(g, 'mentorship');
+  tickStory(g, R);
+  const arc = g.story!.arcs.mentorship!;
+  expect(resolveStory(g, 'decline', R).ok).toBe(true);
+  expect(arc.waitUntil).toBe(39);
+
+  g.week = 39;
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'mentorship', step: 3 });
+  const student = g.staff.find((s) => s.id === arc.staffId2)!;
+  const bs = student.stats[bestOf(student)];
+  expect(resolveStory(g, 'ok', R).ok).toBe(true);
+  expect(student.stats[bestOf(student)]).toBe(bs + 1);
+});
+
+it('«Старые против новых»: поддержка ветерана → он +2, молодой −1', () => {
+  const g = ready(3, 2, 45);
+  g.staff[1]!.careers[g.staff[1]!.activeCareer] = 1; // молодой явно ниже уровнем
+  only(g, 'generations');
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'generations', step: 1 });
+  const arc = g.story!.arcs.generations!;
+  expect(arc.staffId).toBe(g.staff[0]!.id); // ветеран — Lv2
+  expect(arc.staffId2).toBe(g.staff[1]!.id); // молодой — Lv1
+
+  expect(resolveStory(g, 'veteran', R).ok).toBe(true);
+  expect(arc.waitUntil).toBe(50);
+
+  g.week = 50;
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'generations', step: 2 });
+  const vet = g.staff.find((s) => s.id === arc.staffId)!;
+  const young = g.staff.find((s) => s.id === arc.staffId2)!;
+  const bv = vet.stats[bestOf(vet)];
+  const by = young.stats[bestOf(young)];
+  expect(resolveStory(g, 'ok', R).ok).toBe(true);
+  expect(vet.stats[bestOf(vet)]).toBe(bv + 2);
+  expect(young.stats[bestOf(young)]).toBe(by - 1);
+});
+
+it('«Старые против новых»: «каждый по-своему» → рулетка; удача — синтез +2 обоим', () => {
+  const g = ready(3, 2, 45);
+  g.staff[1]!.careers[g.staff[1]!.activeCareer] = 1;
+  only(g, 'generations');
+  tickStory(g, R);
+  const arc = g.story!.arcs.generations!;
+  expect(resolveStory(g, 'both', R).ok).toBe(true);
+  g.week = 50;
+  tickStory(g, luckyRng()); // ролл «синтез»
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'generations', step: 4 });
+  const vet = g.staff.find((s) => s.id === arc.staffId)!;
+  const young = g.staff.find((s) => s.id === arc.staffId2)!;
+  const bv = vet.stats[bestOf(vet)];
+  const by = young.stats[bestOf(young)];
+  expect(resolveStory(g, 'ok', R).ok).toBe(true);
+  expect(vet.stats[bestOf(vet)]).toBe(bv + 2);
+  expect(young.stats[bestOf(young)]).toBe(by + 2);
+  expect(g.story!.arcs.generations!.done).toBe(true);
 });
 
 // ─── Миграция ───

@@ -1,6 +1,7 @@
 // PLAN-44: сюжетные линии — триггеры и резолв (движок). Контент: src/shared/storylines.ts.
-// Арки: «Оффер» (M1), «Выгорание» и «Игра мечты» (M2). Правила: одна активная арка за раз;
-// события встают в общую очередь pendingEvent (пауза); эффекты — деньги/фанаты/статы, умеренные.
+// Арки: «Оффер» (M1); «Выгорание», «Игра мечты» (M2); «Спор самолюбий», «Наставник»,
+// «Старые против новых» (M2+, взаимодействия двух сотрудников). Правила: одна активная арка
+// за раз; каждая — один раз за партию; события идут в общую очередь pendingEvent (пауза).
 import { STORY_ARCS } from '../../shared/storylines';
 import type { StatKey } from '../../shared/train';
 import { GENRES } from '../data/db';
@@ -29,20 +30,66 @@ function raiseStat(staff: Staff, delta: number): void {
   if (staff.caps) staff.caps[k] = Math.max(staff.caps[k] ?? 0, staff.stats[k]);
 }
 
-/** Кандидат для «личных» арок: свободен от контрактов, Lv2+, не «дома». */
+/** Сумма характеристик (сила специалиста). */
+function sumStats(s: Staff): number {
+  return s.stats.program + s.stats.scenario + s.stats.graphics + s.stats.sound;
+}
+
+/** Уровень сотрудника (максимум по карьерам). */
+function lvOf(s: Staff): number {
+  return Math.max(0, ...Object.values(s.careers ?? {}));
+}
+
+/** Свободные сотрудники (не на контракте, не «дома»), сильнейшие — первыми. */
+function freeSorted(state: GameState): Staff[] {
+  const busy = new Set((state.contracts ?? []).filter((c) => !c.done).flatMap((c) => c.staffIds));
+  return state.staff
+    .filter((s) => !busy.has(s.id) && s.homeWeeks === 0)
+    .sort((a, b) => sumStats(b) - sumStats(a));
+}
+
+/** Пара для «личных» арок: свободен от контрактов, Lv2+, не «дома». */
 function personCandidate(state: GameState): { id: string; name: string } | null {
   const busy = new Set((state.contracts ?? []).filter((c) => !c.done).flatMap((c) => c.staffIds));
   let best: { id: string; name: string } | null = null;
   let bestLv = 1; // берём только Lv2+
   for (const s of state.staff) {
     if (busy.has(s.id) || s.homeWeeks > 0) continue;
-    const lv = Math.max(0, ...Object.values(s.careers ?? {}));
+    const lv = lvOf(s);
     if (lv >= 2 && lv > bestLv) {
       best = { id: s.id, name: s.name };
       bestLv = lv;
     }
   }
   return best;
+}
+
+/** Пара «двух сильнейших» (спор самолюбий). */
+function pairTop2(state: GameState): [Staff, Staff] | null {
+  const free = freeSorted(state);
+  if (free.length < 2) return null;
+  return [free[0]!, free[1]!];
+}
+
+/** Пара «сильнейший и слабейший» (наставничество). */
+function pairTopBottom(state: GameState): [Staff, Staff] | null {
+  const free = freeSorted(state);
+  if (free.length < 2) return null;
+  const top = free[0]!;
+  const bottom = free[free.length - 1]!;
+  if (top.id === bottom.id) return null;
+  return [top, bottom];
+}
+
+/** Пара «ветеран и молодой» — по уровню карьер (старые против новых). */
+function pairByLevel(state: GameState): [Staff, Staff] | null {
+  const free = freeSorted(state);
+  if (free.length < 2) return null;
+  const byLv = [...free].sort((a, b) => lvOf(b) - lvOf(a) || sumStats(b) - sumStats(a));
+  const vet = byLv[0]!;
+  const young = byLv[byLv.length - 1]!;
+  if (vet.id === young.id || lvOf(vet) <= lvOf(young)) return null;
+  return [vet, young];
 }
 
 function removeStaffQuiet(state: GameState, id: string): void {
@@ -76,6 +123,27 @@ function epilogueBurnout(state: GameState, arc: StoryArcState, rng: Rng): void {
   state.pendingEvent = { type: 'story', arcId: 'burnout', step: arc.step };
 }
 
+/** Эпилог «Спора самолюбий»: дуэль — гарантия; разговор — по роллу; «пусть сами» — рулетка. */
+function epilogueRivalry(state: GameState, arc: StoryArcState, rng: Rng): void {
+  const good = arc.outcome === 'contest' ? true : arc.outcome === 'talk' ? arc.good === true : rng.chance(0.5);
+  arc.step = good ? 2 : 3;
+  state.pendingEvent = { type: 'story', arcId: 'rivalry', step: arc.step };
+}
+
+/** Эпилог «Наставника»: ветеран подтянул новичка — или новичок сам разобрался. */
+function epilogueMentorship(state: GameState, arc: StoryArcState): void {
+  arc.step = arc.outcome === 'mentor' ? 2 : 3;
+  state.pendingEvent = { type: 'story', arcId: 'mentorship', step: arc.step };
+}
+
+/** Эпилог «Старых против новых»: чья взяла; «каждый по-своему» — рулетка (синтез/перемирие). */
+function epilogueGenerations(state: GameState, arc: StoryArcState, rng: Rng): void {
+  if (arc.outcome === 'veteran') arc.step = 2;
+  else if (arc.outcome === 'young') arc.step = 3;
+  else arc.step = rng.chance(0.5) ? 4 : 5;
+  state.pendingEvent = { type: 'story', arcId: 'generations', step: arc.step };
+}
+
 /** Дневной триггер: сначала эпилоги незакрытых арок, потом завязки (одна арка за раз). */
 export function tickStory(state: GameState, rng: Rng): void {
   if (state.pendingEvent) return;
@@ -86,12 +154,66 @@ export function tickStory(state: GameState, rng: Rng): void {
     if (id === 'offer') epilogueOffer(state, arc);
     else if (id === 'dream') epilogueDream(state, arc);
     else if (id === 'burnout') epilogueBurnout(state, arc, rng);
+    else if (id === 'rivalry') epilogueRivalry(state, arc, rng);
+    else if (id === 'mentorship') epilogueMentorship(state, arc);
+    else if (id === 'generations') epilogueGenerations(state, arc, rng);
     else continue;
     return;
   }
   // Есть незакрытая арка — новую не начинаем (одна сюжетная история за раз)
   if (Object.values(st.arcs).some((a) => !a.done)) return;
 
+  // «Спор самолюбий»: 1+ релиз, с 25-й недели — взаимодействие двух сильнейших
+  if (!st.arcs.rivalry && state.history.length >= 1 && state.week >= 25) {
+    const pair = pairTop2(state);
+    if (pair) {
+      st.arcs.rivalry = {
+        step: 1,
+        done: false,
+        staffId: pair[0].id,
+        staffName: pair[0].name,
+        staffId2: pair[1].id,
+        staffName2: pair[1].name,
+      };
+      state.pendingEvent = { type: 'story', arcId: 'rivalry', step: 1 };
+      log(state, `⚔️ ${pair[0].name} и ${pair[1].name}: спор о том, чей вклад важнее`);
+      return;
+    }
+  }
+  // «Наставник»: 1+ релиз, с 32-й недели — ветеран заметно сильнее новичка (разрыв 60+)
+  if (!st.arcs.mentorship && state.history.length >= 1 && state.week >= 32) {
+    const pair = pairTopBottom(state);
+    if (pair && sumStats(pair[0]) - sumStats(pair[1]) >= 60) {
+      st.arcs.mentorship = {
+        step: 1,
+        done: false,
+        staffId: pair[0].id,
+        staffName: pair[0].name,
+        staffId2: pair[1].id,
+        staffName2: pair[1].name,
+      };
+      state.pendingEvent = { type: 'story', arcId: 'mentorship', step: 1 };
+      log(state, `🧑🏫 ${pair[0].name} и ${pair[1].name}: пора подтянуть отстающего`);
+      return;
+    }
+  }
+  // «Старые против новых»: 2+ релиза, с 42-й недели — у участников разный уровень
+  if (!st.arcs.generations && state.history.length >= 2 && state.week >= 42) {
+    const pair = pairByLevel(state);
+    if (pair) {
+      st.arcs.generations = {
+        step: 1,
+        done: false,
+        staffId: pair[0].id,
+        staffName: pair[0].name,
+        staffId2: pair[1].id,
+        staffName2: pair[1].name,
+      };
+      state.pendingEvent = { type: 'story', arcId: 'generations', step: 1 };
+      log(state, `🕹️ ${pair[0].name} и ${pair[1].name}: старые методы против новых`);
+      return;
+    }
+  }
   // «Оффер»: 2+ релиза, с 60-й недели (каждая арка запускается один раз за партию)
   if (!st.arcs.offer && state.history.length >= 2 && state.week >= 60) {
     const cand = personCandidate(state);
@@ -155,7 +277,9 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
   if (opt.fans) state.fans += opt.fans;
 
   const name = arcState.staffName ?? 'Сотрудник';
+  const name2 = arcState.staffName2 ?? 'Коллега';
   const staff = state.staff.find((s) => s.id === arcState.staffId);
+  const staff2 = state.staff.find((s) => s.id === arcState.staffId2);
 
   if (ev.arcId === 'offer') {
     const arc = STORY_ARCS.offer!;
@@ -240,6 +364,89 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     } else if (ev.step === 3 || ev.step === 4) {
       arcState.done = true;
       log(state, `🌠 Мечта ${name} пока не сбылась`);
+    }
+  } else if (ev.arcId === 'rivalry') {
+    const arc = STORY_ARCS.rivalry!;
+    if (ev.step === 1) {
+      if (optionId === 'contest') {
+        arcState.outcome = 'contest';
+        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        log(state, `⚔️ Код-дуэль: ${name} против ${name2} (−${opt.cost}K)`);
+      } else if (optionId === 'talk') {
+        arcState.outcome = 'talk';
+        arcState.good = rng.chance(0.6);
+        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        log(state, `🗣️ Разговор с ${name} и ${name2} состоялся`);
+      } else if (optionId === 'ignore') {
+        arcState.outcome = 'ignore';
+        arcState.waitUntil = state.week + 4; // рулетка — 4 недели
+        log(state, `⚔️ Ссора ${name} и ${name2}: решили не вмешиваться`);
+      }
+    } else if (ev.step === 2) {
+      if (staff) raiseStat(staff, 2);
+      if (staff2) raiseStat(staff2, 2);
+      arcState.done = true;
+      log(state, `🤝 ${name} и ${name2} выросли из спора (+2 обоим)`);
+    } else if (ev.step === 3) {
+      if (staff) raiseStat(staff, -2);
+      arcState.done = true;
+      log(state, `😔 ${name}: осадок после ссоры (−2)`);
+    }
+  } else if (ev.arcId === 'mentorship') {
+    const arc = STORY_ARCS.mentorship!;
+    if (ev.step === 1) {
+      if (optionId === 'mentor') {
+        arcState.outcome = 'mentor';
+        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        log(state, `🧑🏫 ${name} взялся подтянуть ${name2}`);
+      } else if (optionId === 'decline') {
+        arcState.outcome = 'decline';
+        arcState.waitUntil = state.week + 4;
+        log(state, `🧑🏫 ${name2} разбирается сам`);
+      }
+    } else if (ev.step === 2) {
+      if (staff2) raiseStat(staff2, 4);
+      if (staff) raiseStat(staff, 1);
+      arcState.done = true;
+      log(state, `📈 ${name2}: наставничество ${name} дало +4 (ветерану +1)`);
+    } else if (ev.step === 3) {
+      if (staff2) raiseStat(staff2, 1);
+      arcState.done = true;
+      log(state, `📈 ${name2}: малый рост самостоятельностью (+1)`);
+    }
+  } else if (ev.arcId === 'generations') {
+    const arc = STORY_ARCS.generations!;
+    if (ev.step === 1) {
+      if (optionId === 'veteran' || optionId === 'young' || optionId === 'both') {
+        arcState.outcome = optionId;
+        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        log(
+          state,
+          optionId === 'veteran'
+            ? `🕹️ Поддержали ${name}`
+            : optionId === 'young'
+              ? `🕹️ Поддержали ${name2}`
+              : '🕹️ Каждый остался при своём',
+        );
+      }
+    } else if (ev.step === 2) {
+      if (staff) raiseStat(staff, 2);
+      if (staff2) raiseStat(staff2, -1);
+      arcState.done = true;
+      log(state, `🕹️ ${name}: опыт победил (+2; ${name2} −1)`);
+    } else if (ev.step === 3) {
+      if (staff2) raiseStat(staff2, 2);
+      if (staff) raiseStat(staff, -1);
+      arcState.done = true;
+      log(state, `🕹️ ${name2}: новое победило (+2; ${name} −1)`);
+    } else if (ev.step === 4) {
+      if (staff) raiseStat(staff, 2);
+      if (staff2) raiseStat(staff2, 2);
+      arcState.done = true;
+      log(state, `✨ ${name} и ${name2}: синтез подходов (+2 обоим)`);
+    } else if (ev.step === 5) {
+      arcState.done = true;
+      log(state, `❄️ ${name} и ${name2}: холодное перемирие`);
     }
   }
   state.pendingEvent = null;

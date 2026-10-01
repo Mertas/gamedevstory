@@ -159,8 +159,10 @@ function EventWatcher() {
       const stepData = STORY_ARCS[ev.arcId]?.steps?.[ev.step - 1];
       if (stepData) {
         const name = arcState?.staffName ?? 'Сотрудник';
+        const name2 = arcState?.staffName2 ?? 'Коллега';
         const genreRu = arcState?.genreId && snap.meta ? (genreById(snap.meta, arcState.genreId)?.ru ?? '') : '';
-        const sub = (s: string) => s.replace(/\{name\}/g, name).replace(/\{genre\}/g, genreRu);
+        const sub = (s: string) =>
+          s.replace(/\{name2\}/g, name2).replace(/\{name\}/g, name).replace(/\{genre\}/g, genreRu);
         const money = snap.game?.money ?? 0;
         const opts = stepData.options.filter((o) => o.cost == null || money >= o.cost);
         popup({

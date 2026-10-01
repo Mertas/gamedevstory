@@ -235,11 +235,16 @@ export interface StoryArcState {
   /** участник арки */
   staffId?: string;
   staffName?: string;
+  /** второй участник (арки-взаимодействия между сотрудниками) */
+  staffId2?: string;
+  staffName2?: string;
   /** «Игра мечты»: жанр из обещания (сверяется с релизами) */
   genreId?: string;
   /** неделя старта арки (релизы после неё считаются исполнением мечты) */
   startWeek?: number;
-  outcome?: 'stay' | 'left' | 'promise' | 'declined' | 'rest' | 'bonus' | 'risk';
+  /** промежуточный ролл арки («разговор» в споре самолюбий) */
+  good?: boolean;
+  outcome?: 'stay' | 'left' | 'promise' | 'declined' | 'rest' | 'bonus' | 'risk' | 'contest' | 'talk' | 'ignore' | 'mentor' | 'decline' | 'veteran' | 'young' | 'both';
 }
 
 export interface StoryState {
