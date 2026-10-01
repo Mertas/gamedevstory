@@ -20,6 +20,7 @@ import { UpdateNotice } from './UpdateNotice';
 import { sfx } from './sfx';
 import { SalesWidget } from './SalesWidget';
 import { PressModal } from './PressModal';
+import { genreById } from '../shared/meta';
 import { fmtK } from '../shared/nums';
 import { STORY_ARCS } from '../shared/storylines';
 
@@ -153,21 +154,23 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'story') {
-      // PLAN-44: сюжетная арка — текст шага из контента, выбор кнопками
+      // PLAN-44: сюжетная арка — текст шага из контента ({name}, {genre}), выбор кнопками
       const arcState = snap.game?.story?.arcs?.[ev.arcId];
       const stepData = STORY_ARCS[ev.arcId]?.steps?.[ev.step - 1];
       if (stepData) {
         const name = arcState?.staffName ?? 'Сотрудник';
+        const genreRu = arcState?.genreId && snap.meta ? (genreById(snap.meta, arcState.genreId)?.ru ?? '') : '';
+        const sub = (s: string) => s.replace(/\{name\}/g, name).replace(/\{genre\}/g, genreRu);
         const money = snap.game?.money ?? 0;
         const opts = stepData.options.filter((o) => o.cost == null || money >= o.cost);
         popup({
-          title: stepData.title.replace('{name}', name),
+          title: sub(stepData.title),
           autopilotTarget: 'mb-ok',
           body: (
-            <div style={{ lineHeight: 1.45 }}>{stepData.text.replace(/\{name\}/g, name)}</div>
+            <div style={{ lineHeight: 1.45 }}>{sub(stepData.text)}</div>
           ),
           buttons: opts.map((o) => ({
-            label: o.label.replace('{name}', name),
+            label: sub(o.label),
             onClick: () => { closeMessageBox(); actionResolveStory(o.id); },
           })),
         });

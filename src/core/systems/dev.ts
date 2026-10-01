@@ -255,7 +255,9 @@ export function devTick(state: GameState, rng: Rng): void {
       const staff = state.staff.filter((s) => s.homeWeeks === 0);
       if (staff.length > 0) {
         const s = staff[rng.int(0, staff.length - 1)]!;
-        const cost = Math.max(CONFIG.BOOST_COST_MIN, Math.round(state.research / CONFIG.BOOST_COST_DIV));
+        // 01.10: цена масштабируется от автора идеи — как и прибавка (сильный специалист предлагает дороже)
+        const sum = s.stats.program + s.stats.scenario + s.stats.graphics + s.stats.sound;
+        const cost = Math.max(CONFIG.BOOST_COST_MIN, Math.round(sum * CONFIG.BOOST_COST_STAT_PCT));
         state.pendingEvent = { type: 'boost', staffId: s.id, cost };
         log(state, `${s.name} предлагает улучшить игру (${cost} PR)`);
       }

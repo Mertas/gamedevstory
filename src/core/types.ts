@@ -235,7 +235,11 @@ export interface StoryArcState {
   /** участник арки */
   staffId?: string;
   staffName?: string;
-  outcome?: 'stay' | 'left';
+  /** «Игра мечты»: жанр из обещания (сверяется с релизами) */
+  genreId?: string;
+  /** неделя старта арки (релизы после неё считаются исполнением мечты) */
+  startWeek?: number;
+  outcome?: 'stay' | 'left' | 'promise' | 'declined' | 'rest' | 'bonus' | 'risk';
 }
 
 export interface StoryState {

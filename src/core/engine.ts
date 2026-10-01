@@ -369,7 +369,7 @@ export function tick(state: GameState): void {
   tickGamedex(state);
   tickContracts(state, rng);
   tickOwnConsole(state);
-  tickStory(state);
+  tickStory(state, rng);
 
   // 6. конец недели
   state.rngState = rng.state;

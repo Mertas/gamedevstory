@@ -1,10 +1,10 @@
-// 28.09: буст масштабируется с силой сотрудника — удачный буст даёт ~10–15% суммы характеристик
-// автора идеи (запрос босса; раньше был флэт 25..50 очков и не масштабировался вовсе).
+// 28.09–01.10: буст масштабируется с силой сотрудника — удачный буст даёт ~10–15% суммы характеристик
+// автора идеи, а цена предложения масштабируется так же (~10% суммы, минимум 10 PR; запрос босса).
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import { newGame } from '../src/core/engine';
 import type { Rng } from '../src/core/rng';
-import { resolveBoost } from '../src/core/systems/dev';
+import { devTick, resolveBoost } from '../src/core/systems/dev';
 import type { ActiveGame, GameState } from '../src/core/types';
 
 function stubRng(pick: (a: number, b: number) => number, success = true): Rng {
@@ -34,6 +34,22 @@ function withBoost(): GameState {
   g.activeGame = ag;
   g.pendingEvent = { type: 'boost', staffId: s.id, cost: 20 };
   return g;
+}
+
+/** Проект на ~30% разработки, предложение буста ещё не приходило. */
+function withOfferPrepared(): GameState {
+  const g = withBoost();
+  const ag = g.activeGame!;
+  g.pendingEvent = null;
+  ag.boostOffered = false;
+  g.week = 60; // держим недели положительными (DEV_DAYS = 96)
+  ag.weekStarted = 30; // прогресс = 30/96 ≈ 0.31 — пора для предложения
+  return g;
+}
+
+/** rng для devTick: шанс буста срабатывает, аварии — нет; сотрудник — первый в списке. */
+function tickRng(): Rng {
+  return { int: (a: number) => a, chance: (p: number) => p >= 0.5, state: 0 } as unknown as Rng;
 }
 
 const pointsSum = (g: GameState) => {
@@ -81,5 +97,28 @@ describe('буст от силы сотрудника (28.09, v1.37.0)', () => {
     resolveBoost(g, stubRng((a) => a, false), true, 20);
     expect(pointsSum(g)).toBe(before);
     expect(g.activeGame!.bugs).toBeGreaterThan(0);
+  });
+});
+
+describe('цена буста скалируется от автора идеи (01.10, v1.38.0)', () => {
+  it('сильный автор: сумма 500 → предложение 50 PR', () => {
+    const g = withOfferPrepared();
+    devTick(g, tickRng());
+    expect(g.pendingEvent).toMatchObject({ type: 'boost', staffId: g.staff[0]!.id, cost: 50 });
+  });
+
+  it('слабый автор: сумма 100 → цена у минимума, 10 PR', () => {
+    const g = withOfferPrepared();
+    g.staff[0]!.stats = { program: 40, scenario: 20, graphics: 20, sound: 20 };
+    devTick(g, tickRng());
+    expect(g.pendingEvent).toMatchObject({ type: 'boost', cost: 10 });
+  });
+
+  it('сумма 600 → ровно 10% — 60 PR', () => {
+    const g = withOfferPrepared();
+    g.staff[0]!.stats.program = 350;
+    g.staff[0]!.stats.scenario = 150; // 350+150+50+50 = 600
+    devTick(g, tickRng());
+    expect(g.pendingEvent).toMatchObject({ type: 'boost', cost: 60 });
   });
 });
