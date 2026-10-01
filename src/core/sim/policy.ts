@@ -11,10 +11,11 @@ import { candidateBand } from '../systems/staff';
 import { unlockedMystery } from '../../shared/hire';
 import { DIRECTION_ORDER } from '../types';
 import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
+import { STORY_ARCS } from '../../shared/storylines';
 import {
   applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, searchAction,
   hireFromSearchAction, levelUpAction,
-  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction,
+  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveStoryAction,
   skipMinigame, startProjectAction, trainAction,
 } from '../engine';
 
@@ -66,6 +67,13 @@ export function resolvePendingEvent(state: GameState, stats: PolicyStats, journa
         const accept = amount >= 1;
         resolveBoostAction(state, accept, amount);
         if (accept) stats.boostAccepts++;
+      }
+      // PLAN-44: сюжетные арки — автопилот берёт первый доступный вариант (по деньгам)
+      if (state.pendingEvent?.type === 'story') {
+        const ev = state.pendingEvent;
+        const step = STORY_ARCS[ev.arcId]?.steps[ev.step - 1];
+        const opt = step?.options.find((o) => o.cost == null || state.money >= o.cost);
+        resolveStoryAction(state, opt?.id ?? '');
       }
       // AP-06: продавец — не просто «прогоняем»: пока он в городе, берём бустеры (при деньгах)
       if (state.pendingEvent?.type === 'salesman' || state.salesmanHere) {

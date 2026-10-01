@@ -24,6 +24,7 @@ import {
   tickMediaEvents, tryUnlockEventConsoles,
 } from './systems/market';
 import { tickFanLetters } from './systems/mail';
+import { resolveStory, tickStory } from './systems/story';
 
 /** PLAN-18: что игрок выбирает на старте (экран новой игры). */
 export interface NewGameOptions {
@@ -66,6 +67,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     emergencyFundUsed: false,
     bankrupt: false,
     pendingEvent: null,
+    story: { arcs: {}, flags: {} },
     lastPopup: null,
     log: [],
     rngState: rng.state,
@@ -320,6 +322,14 @@ export function resolveGamedexAction(state: GameState, option: GamedexOption) {
   return res;
 }
 
+// PLAN-44: сюжетная линия — игрок выбрал вариант в попапе
+export function resolveStoryAction(state: GameState, option: string): ActionResult {
+  const rng = rngFromState(state.rngState, state.seed);
+  const res = resolveStory(state, option, rng);
+  state.rngState = rng.state;
+  return res;
+}
+
 // ---- тик ----
 
 export function tick(state: GameState): void {
@@ -359,6 +369,7 @@ export function tick(state: GameState): void {
   tickGamedex(state);
   tickContracts(state, rng);
   tickOwnConsole(state);
+  tickStory(state);
 
   // 6. конец недели
   state.rngState = rng.state;

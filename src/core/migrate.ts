@@ -6,7 +6,7 @@ import { staffNameRu } from './data/staff-ru';
 import { capInit } from '../shared/train';
 import { ownConsoleStartBase } from '../shared/consoles';
 
-export const SAVE_VERSION = 10; // 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 11; // 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -70,6 +70,10 @@ export function migrateSave(state: GameState): GameState {
   // продавец ушёл, а пауза-событие осталось — иначе игра встанет навсегда
   if (state.pendingEvent?.type === 'salesman' && !state.salesmanHere) state.pendingEvent = null;
 
+  if (v < 11) {
+    // PLAN-44: сюжетные линии — каркас состояния (старые сейвы без арок)
+    state.story = state.story ?? { arcs: {}, flags: {} };
+  }
   state.saveVersion = SAVE_VERSION;
   return state;
 }

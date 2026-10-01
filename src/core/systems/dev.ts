@@ -504,7 +504,11 @@ export function resolveBoost(state: GameState, rng: Rng, accept: boolean, amount
     Math.max(0.15, CONFIG.BOOST_SUCCESS_BASE + (spend - ev.cost) * CONFIG.BOOST_RATE_PER_PR + sum / CONFIG.BOOST_SUCCESS_STAT_DIV),
   );
   if (rng.chance(chance)) {
-    const gain = rng.int(CONFIG.BOOST_GAIN[0], CONFIG.BOOST_GAIN[1]);
+    // 28.09: удачный буст масштабируется с силой сотрудника — 10–15% суммы характеристик (запрос босса)
+    const sumAll = st ? st.stats.program + st.stats.scenario + st.stats.graphics + st.stats.sound : 0;
+    const gainLo = Math.max(1, Math.round(sumAll * CONFIG.BOOST_GAIN_PCT[0]));
+    const gainHi = Math.max(gainLo, Math.round(sumAll * CONFIG.BOOST_GAIN_PCT[1]));
+    const gain = rng.int(gainLo, gainHi);
     const key = st ? bestAttr(st) : 'fun';
     game.points[key] += gain;
     game.hype += CONFIG.BOOST_HYPE_GAIN; // успех повышает ожидания — продажи при релизе

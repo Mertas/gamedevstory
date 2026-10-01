@@ -225,6 +225,24 @@ export interface FanLetter {
 // ─── M5: Gamedex (выставка в июле, офис 2+) ───
 export type GamedexOption = 'none' | 'booth' | 'costumes' | 'girls' | 'star';
 
+// ─── PLAN-44: сюжетные линии (контент — shared/storylines.ts; движок — core/systems/story.ts) ───
+export interface StoryArcState {
+  /** 1-based номер шага, который ждёт решения игрока */
+  step: number;
+  done: boolean;
+  /** неделя, на которой придёт эпилог (ставится при выборе в завязке) */
+  waitUntil?: number;
+  /** участник арки */
+  staffId?: string;
+  staffName?: string;
+  outcome?: 'stay' | 'left';
+}
+
+export interface StoryState {
+  arcs: Record<string, StoryArcState>;
+  flags: Record<string, number>;
+}
+
 export type PendingEvent =
   | { type: 'boost'; staffId: string; cost: number }
   | { type: 'boost_result'; text: string; outcome: 'success' | 'fail' }
@@ -236,6 +254,8 @@ export type PendingEvent =
   | { type: 'info'; title: string; text: string }
   /** PLAN-39: мини-игра на 50% разработки; gameId добирает сервер из мешка аккаунта */
   | { type: 'minigame'; gameId: string }
+  /** PLAN-44: сюжетная линия — ждём выбор игрока (текст шага рендерит UI из STORY_ARCS) */
+  | { type: 'story'; arcId: string; step: number }
   | null;
 
 /** PLAN-24: сохраняемый вид рабочего стола (фон + раскладка окон). Игровая логика его не читает. */
@@ -300,6 +320,8 @@ export interface GameState {
   emergencyFundUsed: boolean;
   bankrupt: boolean;
   pendingEvent: PendingEvent;
+  /** PLAN-44: сюжетные линии (миграция v11; у очень старых сейвов пересоздастся в migrate) */
+  story?: StoryState;
   /** отложенный попап результата действия (показывается после текущего события) */
   lastPopup: PopupInfo | null;
   log: LogEntry[];

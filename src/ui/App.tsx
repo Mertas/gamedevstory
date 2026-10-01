@@ -6,7 +6,7 @@ import { MinigameModal } from './MinigameModal';
 import { ActionToast } from './ActionToast';
 import { LevelToast } from './LevelToast';
 import {
-  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, clearDismissedEvKey,
+  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, actionResolveStory, clearDismissedEvKey,
   closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, startSession, stopSession,
   useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
@@ -21,17 +21,69 @@ import { sfx } from './sfx';
 import { SalesWidget } from './SalesWidget';
 import { PressModal } from './PressModal';
 import { fmtK } from '../shared/nums';
+import { STORY_ARCS } from '../shared/storylines';
+
+/** Тело попапа буста (28.09): живой компонент — слайдер, шанс и «Принять» обновляются локально,
+ *  серверный evKey-пульс не пересоздаёт попап (из-за этого слайдер «замирал», и приём слал 0 PR). */
+function BoostOfferBody({ proposalStaffId, baseCost }: { proposalStaffId: string; baseCost: number }) {
+  const snap = useSnapshot();
+  const research = Math.floor(snap.game?.research ?? 0);
+  const maxAmount = Math.max(1, research);
+  const minAmount = Math.min(Math.max(1, baseCost), maxAmount);
+  const [amount, setAmount] = useState<number | null>(null); // null — базовая ставка (= предложение)
+  const value = Math.min(Math.max(amount ?? minAmount, minAmount), maxAmount);
+  const staff = snap.game?.staff.find((s) => s.id === proposalStaffId);
+  const sum = staff ? staff.stats.program + staff.stats.scenario + staff.stats.graphics + staff.stats.sound : 0;
+  const chance = Math.min(
+    CONFIG.BOOST_SUCCESS_CAP,
+    Math.max(0.15, CONFIG.BOOST_SUCCESS_BASE + (value - baseCost) * CONFIG.BOOST_RATE_PER_PR + sum / CONFIG.BOOST_SUCCESS_STAT_DIV),
+  );
+  const gainLo = Math.max(1, Math.round(sum * CONFIG.BOOST_GAIN_PCT[0]));
+  const gainHi = Math.max(gainLo, Math.round(sum * CONFIG.BOOST_GAIN_PCT[1]));
+  if (research < baseCost) {
+    return (
+      <div>
+        💡 {staff?.name ?? 'Сотрудник'} предлагает улучшить игру (база {baseCost} PR), но в казне
+        исследований не хватает: есть {research}. Откажитесь — случай вернётся в другой разработке.
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div>💡 {staff?.name ?? 'Сотрудник'} предлагает улучшить игру (база {baseCost} PR).</div>
+      <div style={{ marginTop: 6 }}>
+        Вложить: <b>{value}</b> PR (есть {research})
+      </div>
+      <input
+        type="range" min={minAmount} max={maxAmount} step={1}
+        value={value}
+        onChange={(e) => setAmount(Number(e.target.value))}
+        style={{ width: '100%', marginTop: 2 }}
+      />
+      <div style={{ marginTop: 2 }}>
+        Шанс успеха: <b>{Math.round(chance * 100)}%</b>
+        {' '}<span className="w95-hint">успех: +{gainLo}..{gainHi} очков (10–15% характеристик автора) · провал: +20..30 багов</span>
+      </div>
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+        <button
+          className="w95-btn" style={{ minWidth: 130 }}
+          data-autopilot="mb-accept"
+          onClick={() => { closeMessageBox(); actionResolveBoost(true, value); }}
+        >
+          Принять ({value} PR)
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // следим за событиями, требующими решения игрока
 function EventWatcher() {
   const snap = useSnapshot();
   const ev = snap.game?.pendingEvent;
-  // ставка улучшения (PR) — выбирается слайдером
-  const [boostAmount, setBoostAmount] = useState(0);
   const mb = useMessageBox();
   useEffect(() => {
     if (!ev) {
-      setBoostAmount(0);
       // аудит 05.09: событие снято сервером — закрыть любой оставшийся попап (например,
       // «Не участвовать» в Gamedex не закрывал попап локально, и он висел навсегда)
       closeMessageBox();
@@ -49,38 +101,13 @@ function EventWatcher() {
     if (mb && mb.evKey === evKey) return;
     const popup = (d: Omit<MessageBoxData, 'evKey'>) => showMessageBox(Object.assign(d, { evKey }));
     if (ev.type === 'boost') {
-      const staff = snap.game?.staff.find((s) => s.id === ev.staffId);
-      setBoostAmount((a) => (a === 0 ? ev.cost : a)); // не сбрасываем выбор игрока
-      const research = snap.game?.research ?? 0;
-      const max = Math.max(1, Math.floor(research));
-      const sum = staff ? staff.stats.program + staff.stats.scenario + staff.stats.graphics + staff.stats.sound : 0;
-      const chance = (amount: number) => Math.min(
-        CONFIG.BOOST_SUCCESS_CAP,
-        Math.max(0.15, CONFIG.BOOST_SUCCESS_BASE + (amount - ev.cost) * CONFIG.BOOST_RATE_PER_PR + sum / CONFIG.BOOST_SUCCESS_STAT_DIV),
-      );
+      // 28.09: тело — живой компонент. Слайдер держит состояние сам (раньше boostAmount жил в
+      // EventWatcher, попап не пересобирался из-за evKey-пульса — слайдер «замирал» на 0, и
+      // «Принять (0 PR)» слало нулевую ставку).
       popup({
         title: 'Предложение улучшить игру',
-        autopilotTarget: 'mb-accept',
-        body: (
-          <div>
-            <div>💡 {staff?.name ?? 'Сотрудник'} предлагает улучшить игру (база {ev.cost} PR).</div>
-            <div style={{ marginTop: 6 }}>
-              Вложить: <b>{Math.min(boostAmount, max)}</b> PR (есть {Math.floor(research)})
-            </div>
-            <input
-              type="range" min={1} max={max} step={1}
-              value={Math.min(boostAmount, max)}
-              onChange={(e) => setBoostAmount(Number(e.target.value))}
-              style={{ width: '100%', marginTop: 2 }}
-            />
-            <div style={{ marginTop: 2 }}>
-              Шанс успеха: <b>{Math.round(chance(Math.min(boostAmount, max)) * 100)}%</b>
-              {' '}<span className="w95-hint">успех: +25..50 очков · провал: +20..30 багов</span>
-            </div>
-          </div>
-        ),
+        body: <BoostOfferBody proposalStaffId={ev.staffId} baseCost={ev.cost} />,
         buttons: [
-          { label: `Принять (${Math.min(boostAmount, max)} PR)`, onClick: () => actionResolveBoost(true, Math.min(boostAmount, max)) },
           { label: 'Отклонить', onClick: () => actionResolveBoost(false) },
         ],
       });
@@ -124,6 +151,27 @@ function EventWatcher() {
           { label: 'Не участвовать', onClick: () => actionResolveGamedex('none') },
         ],
       });
+    }
+    if (ev.type === 'story') {
+      // PLAN-44: сюжетная арка — текст шага из контента, выбор кнопками
+      const arcState = snap.game?.story?.arcs?.[ev.arcId];
+      const stepData = STORY_ARCS[ev.arcId]?.steps?.[ev.step - 1];
+      if (stepData) {
+        const name = arcState?.staffName ?? 'Сотрудник';
+        const money = snap.game?.money ?? 0;
+        const opts = stepData.options.filter((o) => o.cost == null || money >= o.cost);
+        popup({
+          title: stepData.title.replace('{name}', name),
+          autopilotTarget: 'mb-ok',
+          body: (
+            <div style={{ lineHeight: 1.45 }}>{stepData.text.replace(/\{name\}/g, name)}</div>
+          ),
+          buttons: opts.map((o) => ({
+            label: o.label.replace('{name}', name),
+            onClick: () => { closeMessageBox(); actionResolveStory(o.id); },
+          })),
+        });
+      }
     }
     if (ev.type === 'disaster') {
       popup({
@@ -174,7 +222,7 @@ function EventWatcher() {
       actionResolveEvent(true);
       return;
     }
-  }, [ev, snap.game, boostAmount, mb]);
+  }, [ev, snap.game, mb]);
   return null;
 }
 

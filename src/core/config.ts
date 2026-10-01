@@ -73,7 +73,8 @@ export const CONFIG = {
   BOOST_RATE_PER_PR: 0.025, // шанс успеха растёт на это за каждый PR сверх предложения
   BOOST_SUCCESS_STAT_DIV: 400,
   BOOST_SUCCESS_CAP: 0.8,
-  BOOST_GAIN: [25, 50] as const,
+  // 28.09: доля суммы характеристик автора идеи — удачный буст масштабируется с прокачкой (запрос босса)
+  BOOST_GAIN_PCT: [0.10, 0.15] as const,
   BOOST_HYPE_GAIN: 10, // хайп за успешный буст — влияет на продажи при релизе (hypeMult)
   BLACKOUT_CHANCE: 0.00539, // чемпион лаборатории (v8)
   BLACKOUT_LOSS: 0.3, // −30% всех очков

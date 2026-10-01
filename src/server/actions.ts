@@ -6,7 +6,7 @@ import { genreById, typeById } from '../core/data/db';
 import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
-  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, startOwnConsoleAction, startProjectAction,
+  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
 import { consoleDataFor } from '../core/systems/dev';
@@ -245,6 +245,12 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       // PLAN-39: результат врезки или досрочное закрытие (максимальный штраф) — считает движок
       s.run(resolveMinigameAction(s.game, Number(msg.pct) || 0, msg.closed === true));
       s.emit();
+      return;
+    }
+    case 'resolve_story': {
+      // PLAN-44: выбор в сюжетной арке — вариант сверяет движок (список опций в STORY_ARCS)
+      s.run(resolveStoryAction(s.game, String(msg.option ?? '')));
+      s.emit(); // SRV-10: на паузе без emit() клиент не видел снятие события
       return;
     }
     case 'resolve_event':

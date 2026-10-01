@@ -385,6 +385,9 @@ export function actionDismissSalesman() {
 export function actionResolveGamedex(option: string) {
   send({ type: 'resolve_gamedex', option });
 }
+export function actionResolveStory(option: string) {
+  send({ type: 'resolve_story', option });
+}
 export function actionTyping() {
   // SER-27: «печатает» для панели разговоров (не действие босса)
   send({ type: 'user_typing' });
