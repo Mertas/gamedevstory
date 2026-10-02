@@ -80,6 +80,25 @@ function trackLevel(g: GameState | null): void {
   showLevelNotice(levelUpNotice(prev, combos.length, combo));
 }
 
+/**
+ * v1.43: продавец пришёл в офис (весь май) — заметка-тост вместо блокирующего попапа.
+ * Один раз: переход «нет → здесь» либо вход в партию, где продавец уже в городе.
+ */
+let salesmanSeen: boolean | null = null;
+function trackSalesman(g: GameState | null): void {
+  if (!g) return;
+  const here = Boolean(g.salesmanHere);
+  const prev = salesmanSeen;
+  salesmanSeen = here;
+  if (!here || prev === true) return;
+  showSysNotice({
+    title: 'Продавец Тыквенных Продуктов',
+    icon: '🛒',
+    head: 'Продавец в офисе — весь май!',
+    text: 'Бустеры, Dead Bull и Руководство по смене профессии — во вкладке «Продавец» окна «Найм».',
+  });
+}
+
 let levelNotice: LevelNotice | null = null;
 let levelNoticeVer = 0;
 
@@ -93,6 +112,23 @@ export function showLevelNotice(n: LevelNotice): void {
 export function useLevelNotice(): LevelNotice | null {
   useSyncExternalStore(subscribe, () => levelNoticeVer);
   return levelNotice;
+}
+
+// v1.43: системные заметки-тосты (приход продавца и т.п.) — тот же win95-тост, что у уровня
+export interface SysNotice { title: string; icon: string; head?: string; text: string }
+
+let sysNotice: SysNotice | null = null;
+let sysNoticeVer = 0;
+
+export function showSysNotice(n: SysNotice): void {
+  sysNotice = n;
+  sysNoticeVer++;
+  emit();
+}
+
+export function useSysNotice(): SysNotice | null {
+  useSyncExternalStore(subscribe, () => sysNoticeVer);
+  return sysNotice;
 }
 
 // ─── WebSocket ───
@@ -200,6 +236,7 @@ function connect(): void {
         // SRV-16: автопилот выключен — очередь шагов не доигрываем (мышь не жмёт за игрока)
         if (!snap.autopilot) autopilotQueue.length = 0;
         trackLevel(snap.game); // PLAN-22: новый уровень → тост
+        trackSalesman(snap.game); // v1.43: приход продавца (май) → тост-заметка
         emit();
       }
       if (d.type === 'state2' && Array.isArray(d.ops)) {
@@ -226,6 +263,7 @@ function connect(): void {
         };
         if (!snap.autopilot) autopilotQueue.length = 0; // SRV-16: как в полном снапшоте
         trackLevel(snap.game); // PLAN-22: новый уровень → тост
+        trackSalesman(snap.game); // v1.43: приход продавца (май) → тост-заметка
         emit();
         return;
       }

@@ -114,15 +114,10 @@ function EventWatcher() {
       });
     }
     if (ev.type === 'salesman') {
-      popup({
-        title: 'Продавец Тыквенных Продуктов',
-        autopilotTarget: 'mb-ok',
-        clickToClose: true, // v1.18.1: просто уведомление
-        text: '🛒 Продавец пришёл в офис! Бустеры, Dead Bull и Руководство по смене профессии — во вкладке «Продавец» окна «Найм».',
-        buttons: [
-          { label: 'Заглянуть', onClick: () => actionDismissSalesman() },
-        ],
-      });
+      // v1.43: продавец — тост-заметка (store.trackSalesman), без блокирующего попапа.
+      // Событие может прийти только от старой живой сессии до перезагрузки вкладки —
+      // снимаем молча, чтобы не оставить вечную паузу (новые приходы паузы не ставят).
+      actionDismissSalesman();
     }
     if (ev.type === 'gamedex') {
       const money = snap.game?.money ?? 0;

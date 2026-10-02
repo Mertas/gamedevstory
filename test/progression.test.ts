@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import {
   applyCareerManual, buyAd, buyBooster, buyCareerManual, levelUpStaff, startOwnConsole, takeContract,
-  trainStaff, applyBooster,
+  trainStaff, applyBooster, tickSalesman,
 } from '../src/core/systems/progression';
 import { isUnlocked, devTick } from '../src/core/systems/dev';
 import { createRng } from '../src/core/rng';
@@ -199,6 +199,28 @@ describe('M3: продавец и бустеры', () => {
     const before3 = g.activeGame!.points.fun;
     applyBooster(g, s.id, 'fun', rng());
     expect(g.activeGame!.points.fun).toBe(before3);
+  });
+});
+
+describe('v1.43: приход продавца — без паузы (тост на клиенте)', () => {
+  it('1 мая (год 2): salesmanHere=true, pendingEvent НЕ ставится', () => {
+    const g = newGame(3);
+    g.year = 2;
+    g.week = CONFIG.SALESMAN_DAY; // w = SALESMAN_DAY−1 — день прихода
+    g.salesmanHere = false;
+    tickSalesman(g);
+    expect(g.salesmanHere).toBe(true);
+    expect(g.pendingEvent).toBeNull();
+  });
+
+  it('конец мая: продавец уходит, паузы не остаётся', () => {
+    const g = newGame(3);
+    g.year = 2;
+    g.salesmanHere = true;
+    g.week = CONFIG.SALESMAN_DAY_END + 1; // w = SALESMAN_DAY_END — день ухода
+    tickSalesman(g);
+    expect(g.salesmanHere).toBe(false);
+    expect(g.pendingEvent).toBeNull();
   });
 });
 

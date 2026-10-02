@@ -67,8 +67,9 @@ export function migrateSave(state: GameState): GameState {
   }
 
   // repair-нормализации, не зависящие от версии (висящие инварианты легаси-сейвов):
-  // продавец ушёл, а пауза-событие осталось — иначе игра встанет навсегда
-  if (state.pendingEvent?.type === 'salesman' && !state.salesmanHere) state.pendingEvent = null;
+  // v1.43: продавец — тост-заметка без паузы; висящий salesman-попап снимаем всегда —
+  // в новых клиентах его нет, иначе игра встала бы навсегда
+  if (state.pendingEvent?.type === 'salesman') state.pendingEvent = null;
 
   if (v < 11) {
     // PLAN-44: сюжетные линии — каркас состояния (старые сейвы без арок)

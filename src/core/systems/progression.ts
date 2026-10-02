@@ -252,19 +252,18 @@ export function changeCareer(state: GameState, staffId: string, target: CareerId
   return { ok: true, popup };
 }
 
-// ─── продавец (1–31 мая, с года 2); приход ставит время на паузу (как в оригинале) ───
-// доступен весь май — чтобы успеть даже на ускорении
+// ─── продавец (1–31 мая, с года 2) ───
+// v1.43: приход БЕЗ паузы-попапа — игра идёт своим ходом, клиент показывает тост-заметку
+// (store.trackSalesman); доступен весь май — чтобы успеть даже на ускорении
 export function tickSalesman(state: GameState): void {
   const w = (state.week - 1) % CONFIG.YEAR_LENGTH;
   if (state.year >= 2) {
     if (w === CONFIG.SALESMAN_DAY - 1 && !state.salesmanHere) {
       state.salesmanHere = true;
-      state.pendingEvent = { type: 'salesman' };
       log(state, '🛒 Продавец Тыквенных Продуктов в офисе! Загляните в «Найм»');
     }
     if (w === CONFIG.SALESMAN_DAY_END && state.salesmanHere) {
       state.salesmanHere = false;
-      if (state.pendingEvent?.type === 'salesman') state.pendingEvent = null; // не оставляем паузу навсегда
       log(state, '🛒 Продавец ушёл. До следующего мая');
     }
   }

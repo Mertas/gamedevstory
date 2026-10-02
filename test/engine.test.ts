@@ -241,6 +241,18 @@ describe('миграции сейва (saveVersion)', () => {
     expect(mig.pendingEvent).toBeNull(); // иначе игра встала бы навсегда
   });
 
+  it('v1.43: висящий salesman-попап снимается и когда продавец ещё в городе', () => {
+    const g = newGame(1);
+    const old = JSON.parse(JSON.stringify(g)) as GameState;
+    old.pendingEvent = { type: 'salesman' };
+    old.salesmanHere = true;
+
+    const mig = migrateSave(old);
+
+    expect(mig.salesmanHere).toBe(true); // сам продавец остаётся в городе
+    expect(mig.pendingEvent).toBeNull(); // а пауза-попап уходит — в новых клиентах его нет
+  });
+
   it('v2 → v3: письма создаются, старые поля не трогаются', () => {
     const g = newGame(1);
     const old = JSON.parse(JSON.stringify(g)) as GameState;
