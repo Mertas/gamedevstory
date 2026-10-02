@@ -101,4 +101,17 @@ describe('DOM-контракт автопилота и карточек', () => 
     // кнопки попапов прыгают вперёд очереди (иначе таймаут 2.6с закроет попап раньше мыши)
     expect(storeSrc).toContain("startsWith('mb-')");
   });
+
+  it('PLAN-46: попап шага квеста — арт-баннер, фолбэк и автопилот-кнопки', () => {
+    const box = read('../src/ui/MessageBox.tsx');
+    const art = read('../src/ui/questArt.ts');
+    const app = read('../src/ui/App.tsx');
+    expect(box).toContain('w95-quest-art');      // баннер 16:9 во всю ширину окна
+    expect(box).toContain('w95-quest-fallback'); // пока картинки нет — плитка с эмодзи
+    expect(box).toContain('data-autopilot={i === 0 ? mb.autopilotTarget : undefined}');
+    expect(art).toContain('quests/');            // файлы public/quests/<key>.png
+    expect(art).toContain('burnout:');           // тема арки — в карте
+    expect(art).toContain('${arcId}-s${step}');  // ключ арки: arcId-s<step> (ветки эпилогов)
+    expect(app).toContain('art: questArt(ev.arcId, ev.step, arcState?.gen)');
+  });
 });

@@ -23,6 +23,7 @@ import { PressModal } from './PressModal';
 import { genreById } from '../shared/meta';
 import { fmtK } from '../shared/nums';
 import { STORY_ARCS } from '../shared/storylines';
+import { questArt } from './questArt';
 
 /** Тело попапа буста (28.09): живой компонент — слайдер, шанс и «Принять» обновляются локально,
  *  обновления состояния не пересоздают попап (из-за этого слайдер «замирал», и приём слал 0 PR). */
@@ -165,6 +166,8 @@ function EventWatcher() {
         popup({
           title: sub(content.title),
           autopilotTarget: 'mb-ok',
+          // PLAN-46: арт-баннер шага (квесты и арки); картинки ещё нет — попап покажет фолбэк
+          art: questArt(ev.arcId, ev.step, arcState?.gen),
           body: (
             <div style={{ lineHeight: 1.45 }}>{sub(content.text)}</div>
           ),

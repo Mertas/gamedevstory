@@ -562,3 +562,21 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .arc-th-sort { cursor: pointer; user-select: none; }
 .arc-th-sort:hover { background: #d7e3ff; }
 .arc-chev { margin-left: 4px; font-size: 9px; }
+/* PLAN-46 (v1.44.0): попап шага квеста — большая сцена 16:9 во всю ширину окна */
+.w95-quest-overlay {
+  position: fixed; inset: 0; z-index: 20000; background: rgba(0,0,0,.25);
+  display: flex; align-items: center; justify-content: center;
+}
+.w95-quest {
+  position: relative; z-index: 20001; width: 660px; max-width: 94vw;
+  min-height: 0; display: flex; flex-direction: column; max-height: 94vh;
+  animation: w95QuestIn .16s ease-out;
+}
+.w95-quest-art { width: 100%; aspect-ratio: 16 / 9; background: #0d1526; overflow: hidden; flex: 0 1 auto; min-height: 140px; }
+.w95-quest-art img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.w95-quest-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.w95-quest-fallback span { font-size: 64px; line-height: 1; filter: drop-shadow(0 3px 8px rgba(0,0,0,.55)); }
+.w95-quest-stripe { height: 4px; flex: 0 0 auto; }
+.w95-quest-text { padding: 13px 16px 2px; font-size: 12px; line-height: 1.5; flex: 0 0 auto; }
+.w95-quest-btns { padding: 12px 16px 14px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; flex: 0 0 auto; }
+@keyframes w95QuestIn { from { opacity: .4; transform: scale(.97) translateY(6px); } to { opacity: 1; transform: none; } }

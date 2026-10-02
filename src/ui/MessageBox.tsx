@@ -2,8 +2,8 @@
 // v1.18.1: информационные попапы (обучение, уровни, происшествия, сводки) закрываются кликом
 // по окну — в стиле карточек прессы (клик/Enter/Space/Esc). Выборные попапы (улучшение, Gamedex)
 // и «Выпустить игру» кликом не закрываются: клик не должен принимать решение за игрока.
-import { useEffect } from 'react';
-import { useMessageBox, closeMessageBox } from './store';
+import { useEffect, useState } from 'react';
+import { useMessageBox, closeMessageBox, type MessageBoxData } from './store';
 
 export function MessageBox() {
   const mb = useMessageBox();
@@ -25,6 +25,8 @@ export function MessageBox() {
   }, [mb, clickToClose]);
 
   if (!mb) return null;
+  // PLAN-46: попап шага квеста — большая сцена с арт-баннером (разметка ниже)
+  if (mb.art) return <QuestBox mb={mb} />;
   // клик по окну = нажать единственную кнопку (обычно «Ок»)
   const press = clickToClose
     ? () => {
@@ -70,6 +72,52 @@ export function MessageBox() {
             ))}
           </div>
           {clickToClose && <div className="press-hint">клик — закрыть</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// PLAN-46 (v1.44.0): большой попап шага квеста/арки — арт-баннер 16:9 во всю ширину окна,
+// фолбэк-плитка с эмодзи (пока картинка не сгенерирована), акцентная полоса, текст и кнопки.
+// Кнопки/evKey/автопилот — как у обычного попапа: механика решения не менялась.
+function QuestBox({ mb }: { mb: MessageBoxData }) {
+  const art = mb.art!;
+  const [imgOk, setImgOk] = useState(true);
+  useEffect(() => setImgOk(true), [art.src]);
+  const accent = art.accent ?? '#4a6fa5';
+  return (
+    <div className="w95-quest-overlay">
+      <div className="w95-window focused w95-quest">
+        <div className="w95-titlebar"><span className="w95-title">{mb.title}</span></div>
+        <div className="w95-quest-art">
+          {imgOk ? (
+            <img src={art.src} alt="" draggable={false} onError={() => setImgOk(false)} />
+          ) : (
+            <div
+              className="w95-quest-fallback"
+              style={{ background: `radial-gradient(130% 150% at 50% 12%, ${accent}59, #0d1526 72%)` }}
+            >
+              <span>{art.emoji ?? '📜'}</span>
+            </div>
+          )}
+        </div>
+        <div className="w95-quest-stripe" style={{ background: accent }} />
+        <div className="w95-quest-text">
+          {mb.body ?? <div style={{ whiteSpace: 'pre-wrap' }}>{mb.text}</div>}
+        </div>
+        <div className="w95-quest-btns">
+          {mb.buttons.map((b, i) => (
+            <button
+              key={b.label}
+              className="w95-btn"
+              style={{ minWidth: 90, maxWidth: '100%', whiteSpace: 'normal', lineHeight: 1.35 }}
+              data-autopilot={i === 0 ? mb.autopilotTarget : undefined}
+              onClick={() => { closeMessageBox(); b.onClick(); }}
+            >
+              {b.label}
+            </button>
+          ))}
         </div>
       </div>
     </div>

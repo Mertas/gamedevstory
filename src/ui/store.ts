@@ -1,5 +1,6 @@
 // Игровой стор: WebSocket-клиент. Вся игра — на сервере; здесь только снапшоты и отправка действий.
 import { useRef, useSyncExternalStore } from 'react';
+import type { QuestArt } from './questArt';
 import type * as React from 'react';
 import type { HireMethodId } from '../core/config';
 import type { GameState, StartProjectInput, UiWindow } from '../core/types';
@@ -682,6 +683,8 @@ export interface MessageBoxData {
   /** v1.18.1: информационный попап — закрывается кликом по окну (в стиле карточек прессы).
    *  Выборные попапы (улучшение, Gamedex) и «Выпустить игру» — НЕ ставить: клик не должен решать. */
   clickToClose?: boolean;
+  /** PLAN-46: большой попап-сцена шага квеста/арки — баннер 16:9 (public/quests), emoji/accent — фолбэк. */
+  art?: QuestArt;
 }
 
 let messageBox: MessageBoxData | null = null;
