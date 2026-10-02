@@ -8,6 +8,7 @@ import { genreById, typeById, type MetaData } from '../shared/meta';
 import { levelUpNotice, type LevelNotice } from '../shared/rank';
 import type { AutopilotStep } from '../shared/autopilot';
 import { Outbox } from './outbox';
+import { applyOps, type SyncOp } from '../shared/sync'; // PLAN-45: кадры-диффы
 
 import { APP_VERSION, BUILD_DATE } from '../shared/version';
 export interface Snapshot {
@@ -102,6 +103,8 @@ export function useLevelNotice(): LevelNotice | null {
 const SID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 const outbox = new Outbox();
 let seqN = 0;
+/** PLAN-45: версия состояния (кадры-диффы накладываются строго на неё). */
+let syncVer = -1;
 
 /** «1 действие», «2 действия», «5 действий» */
 function actionsWord(n: number): string {
@@ -140,21 +143,35 @@ export function stopSession(): void {
   emit();
 }
 
+// PLAN-45: вкладка в фоне — состояние не шлём (сервер копит кадры), при возврате — догон.
+// Сообщение идёт мимо outbox/seq: доставка не критична, потеря лечится следующим событием.
+function sendVis(): void {
+  const wss = (globalThis as { __gdsWs?: WebSocket }).__gdsWs;
+  if (wss?.readyState === WebSocket.OPEN) {
+    wss.send(JSON.stringify({ type: 'visibility', visible: !document.hidden }));
+  }
+}
+if (!(globalThis as { __gdsVisHook?: boolean }).__gdsVisHook) {
+  (globalThis as { __gdsVisHook?: boolean }).__gdsVisHook = true;
+  document.addEventListener('visibilitychange', sendVis);
+}
+
 function connect(): void {
   if (!socketWanted) return;
   // SRV-19: адрес от самой страницы (а не хардкод :3001) — в dev-режиме vite проксирует /ws
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws`);
   (globalThis as { __gdsWs?: WebSocket }).__gdsWs = ws;
-  // после (пере)подключения сразу синхронизируемся — иначе при паузе (висит событие,
-  // тикер молчит) state не придёт и потерянный клик не вернёт попап решения
+  // PLAN-45: при (пере)подключении сервер сам шлёт meta + полный снапшот (в т.ч. на паузе —
+  // событие висит, тикер молчит) — отдельный get_state больше не нужен; после открытия
+  // сообщаем видимость вкладки (могла открыться в фоне).
   ws.onopen = () => {
     autopilotQueue.length = 0; // SRV-16: после реконнекта старые шаги мыши не доигрываем
     // SRV-06: повторяем недоставленные действия (не старше TTL) — клик не пропадает молча
     const { ready, dropped } = outbox.drain();
     if (dropped > 0) raiseError(`Связь пропала: ${dropped} ${actionsWord(dropped)} не доставлено`);
     for (const it of ready) ws.send(it.data);
-    send({ type: 'get_state' });
+    sendVis();
     void checkBuild(); // PLAN-25: сервер мог перезапуститься с новой сборкой — старый бандл надо обновить
   };
   ws.onmessage = (e) => {
@@ -163,12 +180,14 @@ function connect(): void {
         type: string; game?: GameState; chat?: ChatState; speed?: number; data?: MetaData; error?: string;
         ok?: boolean; title?: string; plot?: string; autopilot?: boolean; step?: unknown; seq?: number; reqId?: number;
         victory?: boolean; accountReleases?: number;
+        ver?: number; base?: number; ops?: unknown[]; // PLAN-45: кадр-дифф {state2}
       };
       if (d.type === 'meta' && d.data) {
         snap = { ...snap, meta: d.data };
         emit();
       }
       if (d.type === 'state' && d.game) {
+        syncVer = typeof d.ver === 'number' ? d.ver : -1; // PLAN-45: база для кадров-диффов
         // UI-01: чат меняется редко (только новые сообщения) — сохраняем прежнюю ссылку,
         // иначе окно чата ререндерилось бы каждый игровой тик
         const nextChat = d.chat ?? snap.chat;
@@ -182,6 +201,33 @@ function connect(): void {
         if (!snap.autopilot) autopilotQueue.length = 0;
         trackLevel(snap.game); // PLAN-22: новый уровень → тост
         emit();
+      }
+      if (d.type === 'state2' && Array.isArray(d.ops)) {
+        // PLAN-45: кадр-дифф. base — версия, на которую накладывается; не совпал (пропуск
+        // кадра/перезапуск сервера) — просим полный снапшот и живём дальше
+        if (typeof d.base !== 'number' || d.base !== syncVer || !snap.game) {
+          send({ type: 'get_state' });
+          return;
+        }
+        let next: Snapshot;
+        try {
+          next = applyOps(snap, d.ops as SyncOp[]);
+        } catch {
+          send({ type: 'get_state' }); // битый кадр — полная синхронизация
+          return;
+        }
+        syncVer = typeof d.ver === 'number' ? d.ver : syncVer + 1;
+        const nextChat = next.chat ?? snap.chat;
+        snap = {
+          ...next,
+          // UI-01: неизменный чат сохраняет ссылку — окно чата не ререндерится каждый тик
+          chat: chatSig(nextChat) === chatSig(snap.chat) ? snap.chat : nextChat,
+          connected: true, sessionLost: false,
+        };
+        if (!snap.autopilot) autopilotQueue.length = 0; // SRV-16: как в полном снапшоте
+        trackLevel(snap.game); // PLAN-22: новый уровень → тост
+        emit();
+        return;
       }
       if (d.type === 'autopilot_step' && d.step) {
         const st = d.step as AutopilotStep;
@@ -604,9 +650,12 @@ let messageBox: MessageBoxData | null = null;
 // аудит 05.09 (баг «Оценки критиков не закрываются с 1-го клика»): клик закрывает попап
 // локально, но pendingEvent на сервере ещё висит пару мс — EventWatcher переоткрывал тот же
 // попап (mb=null при ev≠null). Отклонение действует только EV_DISMISS_MS: если за это время
-// сервер не снял событие (клик потерян при обрыве WS) — попап возвращается (пульс 1.5с).
+// сервер не снял событие — клик потерян (обрыв WS), попап возвращается.
+// PLAN-45: возврат делает локальный таймер (раньше — серверный пульс полным снапшотом ~1.5с).
 export const EV_DISMISS_MS = 3000;
 let dismissedEv: { key: string; at: number } | null = null;
+let dismissedBox: MessageBoxData | null = null; // закрытый попап события — вернём, если клик потерялся
+let dismissTimer: number | null = null;
 
 export function useMessageBox(): MessageBoxData | null {
   return useSyncExternalStore(subscribe, () => messageBox);
@@ -619,7 +668,23 @@ export function showMessageBox(mb: MessageBoxData): void {
 
 export function closeMessageBox(): void {
   if (!messageBox) return;
-  if (messageBox.evKey) dismissedEv = { key: messageBox.evKey, at: Date.now() };
+  if (messageBox.evKey) {
+    dismissedEv = { key: messageBox.evKey, at: Date.now() };
+    dismissedBox = messageBox;
+    if (dismissTimer !== null) window.clearTimeout(dismissTimer);
+    // PLAN-45: если через EV_DISMISS_MS событие всё ещё висит (клик не дошёл — обрыв WS) —
+    // возвращаем закрытый попап из памяти: клик можно повторить
+    dismissTimer = window.setTimeout(() => {
+      dismissTimer = null;
+      const d = dismissedEv;
+      const box = dismissedBox;
+      if (!d || !box || messageBox) return; // другой попап уже открыт — не мешаем
+      const ev = snap.game?.pendingEvent;
+      if (!ev || JSON.stringify(ev) !== d.key) return; // событие снято — клик дошёл
+      messageBox = box;
+      emit();
+    }, EV_DISMISS_MS + 120);
+  }
   messageBox = null;
   emit();
 }
@@ -630,4 +695,6 @@ export function evDismissed(): { key: string; at: number } | null {
 
 export function clearDismissedEvKey(): void {
   dismissedEv = null;
+  dismissedBox = null;
+  if (dismissTimer !== null) { window.clearTimeout(dismissTimer); dismissTimer = null; }
 }

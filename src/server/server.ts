@@ -83,7 +83,8 @@ for (const sig of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 // ─── WebSocket: игра и чат ───
-const wss = new WebSocketServer({ server });
+// PLAN-45: крупные кадры (первый снапшот, meta) — со сжатием; мелкие кадры не трогаем (порог)
+const wss = new WebSocketServer({ server, perMessageDeflate: { threshold: 4096 } });
 // SRV-14: без обработчика 'error' необработанная ошибка сокета роняла процесс
 wss.on('error', (e) => console.error('[gds] wss error:', String(e).slice(0, 300)));
 wss.on('connection', (ws, req) => {
@@ -110,15 +111,55 @@ wss.on('connection', (ws, req) => {
   live.isAlive = true; // SRV-13: сердцебиение — молчуна отключит heartbeat-тик
   ws.on('pong', () => { live.isAlive = true; });
   ws.send(JSON.stringify({ type: 'meta', data: game.meta() }));
-  // сразу шлём текущее состояние: новый клиент или переподключение на паузе (событие
-  // висит, тикер молчит) иначе не получат state, и попап решения не вернётся
-  ws.send(JSON.stringify({ type: 'state', ...game.snapshot() }));
-  const unsub = game.subscribe((snap) => sendSafe(ws, JSON.stringify({ type: 'state', ...snap })));
+  // PLAN-45: полный снапшот — только вход/восстановление; дальше кадры-диффы {state2}.
+  // Новый клиент и переподключение (в т.ч. на паузе — событие висит, тикер молчит) получают
+  // полное состояние прямо здесь, поэтому get_state при открытии сокета больше не нужен.
+  let myVer = -1; // версия состояния у этого сокета (-1 = ещё не синхронизирован)
+  let hidden = false; // фоновая вкладка: кадры не шлём, они копятся в кольце (догон при возврате)
+  // Отправка с учётом backpressure: если клиент не читает (буфер полон) — myVer НЕ двигаем,
+  // иначе кадр потерялся бы молча; следующий триггер даст догон из кольца (или полный снапшот).
+  const trySend = (json: string, ver: number): void => {
+    if (ws.readyState !== ws.OPEN || ws.bufferedAmount > MAX_BUFFERED) return;
+    ws.send(json);
+    myVer = ver;
+  };
+  const sendDelta = (): void => {
+    if (hidden) return;
+    const p = game.syncPayload(myVer);
+    if (!p) return;
+    trySend(p.json, p.ver);
+  };
+  {
+    const p = game.syncPayloadFull();
+    trySend(p.json, p.ver);
+  }
+  const unsub = game.subscribeSync((f) => {
+    if (f.full) {
+      // состояние заменено целиком (импорт сейва / новая партия) — только полный снапшот
+      const p = game.syncPayloadFull();
+      trySend(p.json, p.ver);
+      return;
+    }
+    sendDelta();
+  });
   ws.on('message', (raw) => {
     let seq: number | undefined;
     try {
       const msg = JSON.parse(String(raw)) as ClientAction & { sid?: string; seq?: number };
       seq = typeof msg.seq === 'number' ? msg.seq : undefined;
+      // PLAN-45: видимость вкладки — в фоне кадры не шлём (вне seq-очереди, без ack)
+      if (msg.type === 'visibility') {
+        hidden = msg.visible === false;
+        if (!hidden) sendDelta(); // вернулись из фона — догон кадров (или полный снапшот)
+        return;
+      }
+      // PLAN-45: полный снапшот — точечно этому сокету (раньше уходил broadcast'ом всем)
+      if (msg.type === 'get_state') {
+        const p = game.syncPayloadFull();
+        trySend(p.json, p.ver);
+        if (seq !== undefined) sendSafe(ws, JSON.stringify({ type: 'action_result', seq, ok: true }));
+        return;
+      }
       if (seqGuard.check(typeof msg.sid === 'string' ? msg.sid : null, seq) === 'dup') {
         // SRV-06: повтор при переподключении — уже обрабатывали, только подтверждаем
         sendSafe(ws, JSON.stringify({ type: 'action_result', seq, ok: true, dup: true }));

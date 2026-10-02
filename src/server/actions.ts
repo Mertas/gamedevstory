@@ -53,6 +53,8 @@ export interface SessionHost {
   /** PLAN-39/40: релиз — счётчики аккаунта и возможная победа (100/100) */
   noteRelease(score: number): void;
   emit(): void;
+  /** PLAN-45: состояние заменено целиком (новая партия) — клиентам полный снапшот */
+  syncInvalidate(): void;
   pushSystem(text: string): void;
   generatePhase(phase: string, extra?: Record<string, unknown>, openingFor?: string): Promise<void>;
   runStory(msg: { genreId: string; typeId: string; reqId?: number }): Promise<void>;
@@ -131,10 +133,10 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.game = newGame(Math.floor(Math.random() * 99991) + 1);
       s.chat = resetChat();
       s.resetSession(); // SRV-09: ответы старой партии не должны прилетать в новую
-      s.setSpeed(1); // BUG-01: новая партия — чистый старт на 1× (паузу от авторежима не наследуем)
       s.mailShownId = 0;
+      s.syncInvalidate(); // PLAN-45: партия заменена целиком — клиентам полный снапшот
+      s.setSpeed(1); // BUG-01: новая партия — чистый старт на 1× (паузу от авторежима не наследуем)
       s.saveNow();
-      s.emit();
       return;
     }
     case 'start_project': {

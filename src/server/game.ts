@@ -20,6 +20,11 @@ import { MINIGAME_ROTATION } from '../shared/minigames';
 import { GameTicker } from './ticker';
 import { ChatOrchestrator } from './chatflow';
 import { MailService } from './mail';
+import { diffOps, type SyncOp } from '../shared/sync'; // PLAN-45: диффы состояния по сокету
+
+// PLAN-45: поток состояния диффами — кольцо кадров для догона и окно схлопывания эмитов тикера
+const RING_SIZE = 64;
+const EMIT_MIN_MS = 250;
 
 export interface SessionSnapshot {
   game: GameState;
@@ -53,6 +58,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'autopilot_log'; entry: unknown } // PLAN-26: журнал промахов автопилота
   | { type: 'new_game' }
   | { type: 'get_state' }
+  | { type: 'visibility'; visible: boolean } // PLAN-45: вкладка видима/в фоне (в фоне кадры не шлём)
   // M3
   | { type: 'level_up'; staffId: string }
   | { type: 'train'; staffId: string; trainingId: number }
@@ -198,6 +204,17 @@ export class GameServer {
   victory = false;
   accountReleases = 0;
 
+  // ─── PLAN-45: синхронизация диффами ───
+  private syncSinks = new Set<(f: { full: boolean }) => void>();
+  private syncVer = 0; // версия последнего опубликованного кадра
+  private syncMirror: SessionSnapshot | null = null; // состояние на момент syncVer (для диффа)
+  private syncRing: { ver: number; ops: SyncOp[] }[] = []; // кольцо кадров (догон отставших)
+  private syncFrameStr: string | null = null; // последний кадр строкой (одна строка на всех)
+  private syncFullCache: { ver: number; json: string } | null = null; // полный снапшот строкой
+  private forceFull = false;
+  private tickTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastTickEmit = 0;
+
   constructor(deps: GameServerDeps = {}) {
     this.llm = deps.llm ?? generateWithFallback;
     this.story = deps.story ?? generateStory;
@@ -231,6 +248,60 @@ export class GameServer {
       game: this.game, chat: this.chat, speed: this.speed, autopilot: this.autopilotOn,
       victory: this.victory, accountReleases: this.accountReleases,
     };
+  }
+
+  // ─── PLAN-45: поток состояния диффами (сокет) ───
+
+  /** Подписка на кадры-диффы: () — есть новый кадр, {full:true} — состояние заменено целиком. */
+  subscribeSync(fn: (f: { full: boolean }) => void): () => void {
+    this.syncSinks.add(fn);
+    if (this.syncSinks.size === 1) {
+      // первый клиент потока: зеркало = только что отправленный ему полный снапшот
+      // (состояние меняется только в emit — между эмитами оно стабильно)
+      this.syncMirror = structuredClone(this.snapshot());
+    }
+    return () => {
+      this.syncSinks.delete(fn);
+      if (this.syncSinks.size === 0) this.syncMirror = null;
+    };
+  }
+
+  /** Что отправить клиенту на версии myVer: кадр / догон кольцом / полный; null — он актуален. */
+  syncPayload(myVer: number): { json: string; ver: number } | null {
+    const ver = this.syncVer;
+    if (myVer === ver) return null;
+    if (myVer === ver - 1 && this.syncFrameStr !== null) {
+      return { json: this.syncFrameStr, ver };
+    }
+    if (myVer >= 0) {
+      // догон: непрерывная цепочка кадров из кольца собирается в один state2
+      const need = this.syncRing.filter((f) => f.ver > myVer);
+      let complete = need.length > 0 && need[need.length - 1]!.ver === ver;
+      for (let i = 0; complete && i < need.length; i++) {
+        if (need[i]!.ver !== myVer + 1 + i) complete = false;
+      }
+      if (complete) {
+        const ops: SyncOp[] = [];
+        for (const f of need) for (const op of f.ops) ops.push(op);
+        return { json: JSON.stringify({ type: 'state2', base: myVer, ver, ops }), ver };
+      }
+    }
+    return this.syncPayloadFull();
+  }
+
+  /** Полный снапшот состояния (вход/восстановление); кеш на версию — одна строка на всех. */
+  syncPayloadFull(): { json: string; ver: number } {
+    const ver = this.syncVer;
+    if (this.syncFullCache?.ver !== ver) {
+      this.syncFullCache = { ver, json: JSON.stringify({ type: 'state', ...this.snapshot(), ver }) };
+    }
+    return { json: this.syncFullCache.json, ver };
+  }
+
+  /** PLAN-45: состояние заменено целиком (импорт сейва/новая партия) — всем полный снапшот. */
+  syncInvalidate(): void {
+    this.forceFull = true;
+    this.emit();
   }
 
   // шаги хореографии автопилота (виртуальная мышь клиента)
@@ -277,7 +348,55 @@ export class GameServer {
 
   emit(): void {
     const snap = this.snapshot();
-    for (const l of this.listeners) l(snap);
+    for (const l of this.listeners) l(snap); // legacy-подписки (тесты): полный снапшот
+    if (this.syncSinks.size === 0) {
+      // поток никто не слушает — диффы не считаем; зеркало восстановится при подключении
+      this.syncMirror = null;
+      this.forceFull = false;
+      return;
+    }
+    if (this.forceFull) {
+      // PLAN-45: состояние заменено целиком (импорт/новая партия) — всем полный снапшот
+      this.forceFull = false;
+      this.syncVer += 1;
+      this.syncMirror = structuredClone(snap);
+      this.syncRing = [];
+      this.syncFrameStr = null;
+      this.syncFullCache = null;
+      for (const l of this.syncSinks) l({ full: true });
+      return;
+    }
+    if (this.syncMirror === null) {
+      // первый эмит при живом клиенте: он уже получил полный снапшот — фиксируем зеркало
+      this.syncMirror = structuredClone(snap);
+      return;
+    }
+    const ops = diffOps(this.syncMirror, snap);
+    this.syncMirror = structuredClone(snap);
+    if (ops.length === 0) return; // ничего не изменилось — кадр не нужен
+    this.syncVer += 1;
+    this.syncFrameStr = JSON.stringify({ type: 'state2', base: this.syncVer - 1, ver: this.syncVer, ops });
+    this.syncFullCache = null;
+    this.syncRing.push({ ver: this.syncVer, ops });
+    if (this.syncRing.length > RING_SIZE) this.syncRing.shift();
+    for (const l of this.syncSinks) l({ full: false });
+  }
+
+  /** PLAN-45: эмит тикера — кадры схлопываются окном (на скоростях ≤4× не влияет); действия мгновенны. */
+  emitTick(): void {
+    const now = Date.now();
+    const wait = EMIT_MIN_MS - (now - this.lastTickEmit);
+    if (wait <= 0) {
+      this.lastTickEmit = now;
+      this.emit();
+      return;
+    }
+    if (this.tickTimer !== null) return; // кадр уже запланирован — изменения вольются в него
+    this.tickTimer = setTimeout(() => {
+      this.tickTimer = null;
+      this.lastTickEmit = Date.now();
+      this.emit();
+    }, wait);
   }
 
   // ─── тикер ───
@@ -527,6 +646,7 @@ export class GameServer {
   /** остановка тикера (тесты, graceful shutdown) */
   dispose(): void {
     this.ticker.stop();
+    if (this.tickTimer !== null) { clearTimeout(this.tickTimer); this.tickTimer = null; }
   }
 
   exportSave(): string {
@@ -541,7 +661,7 @@ export class GameServer {
     this.resetSession(); // SRV-09
     this.mailShownId = this.game.mail?.length ? this.game.mail[this.game.mail.length - 1]!.id : 0;
     this.saves.autosave(this.game, this.chat, true);
-    this.emit();
+    this.syncInvalidate(); // PLAN-45: партия заменена целиком — клиентам полный снапшот
     return true;
   }
 }
