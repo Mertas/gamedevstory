@@ -1,5 +1,6 @@
 // PLAN-44: сюжетные линии — арки «Оффер», «Выгорание», «Игра мечты», арки-взаимодействия
-// между сотрудниками («Спор самолюбий», «Наставник», «Старые против новых») и миграция v11.
+// («Спор самолюбий», «Наставник», «Старые против новых»), процедурные квесты (v1.40: раз в
+// год, генератор questgen.ts) и миграции v11–v12.
 import { expect, it } from 'vitest';
 import { newGame } from '../src/core/engine';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
@@ -26,6 +27,11 @@ function closeArc(g: GameState, id: string): void {
 /** Закрыть все арки, кроме указанной (проверяем конкретную арку). */
 function only(g: GameState, keep: (typeof ALL_ARCS)[number]): void {
   for (const id of ALL_ARCS) if (id !== keep) closeArc(g, id);
+}
+
+/** Закрыть все авторские арки (проверяем процедурный квест). */
+function noArcs(g: GameState): void {
+  for (const id of ALL_ARCS) closeArc(g, id);
 }
 
 function failRng(): Rng {
@@ -179,7 +185,7 @@ it('«Выгорание» риск: 50/50 — «сломался» (−3 ста
 
 // ─── Арка «Игра мечты» (M2) ───
 
-it('«Игра мечты»: обещание → релиз нужного жанра в срок → +5 стат и +150 фанатов', () => {
+it('«Игра мечты»: обещание → релиз нужного жанра в срок (полгода) → +5 стат и +150 фанатов', () => {
   const g = ready(3, 3, 75);
   only(g, 'dream');
   tickStory(g, R);
@@ -189,10 +195,10 @@ it('«Игра мечты»: обещание → релиз нужного жа
   expect(arc.startWeek).toBe(75);
 
   expect(resolveStory(g, 'promise', R).ok).toBe(true);
-  expect(g.story!.arcs.dream!.waitUntil).toBe(115); // 40 недель на мечту
+  expect(g.story!.arcs.dream!.waitUntil).toBe(255); // v1.40: полгода (180 недель) на мечту
 
-  g.history.push({ genreId: arc.genreId, releaseWeek: 100 } as GameRecord);
-  g.week = 115;
+  g.history.push({ genreId: arc.genreId, releaseWeek: 200 } as GameRecord);
+  g.week = 255;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'dream', step: 2 });
   const staff = g.staff.find((s) => s.id === arc.staffId)!;
@@ -210,7 +216,7 @@ it('«Игра мечты» не сбылась: без релиза эпило�
   only(g, 'dream');
   tickStory(g, R);
   expect(resolveStory(g, 'promise', R).ok).toBe(true);
-  g.week = 115;
+  g.week = 255;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'dream', step: 3 });
   const fans0 = g.fans;
@@ -368,14 +374,82 @@ it('«Старые против новых»: «каждый по-своему»
   expect(g.story!.arcs.generations!.done).toBe(true);
 });
 
+// ─── Процедурные квесты (v1.40) ───
+
+it('после авторской арки годовой слот сдвигается на год (+365)', () => {
+  const g = ready();
+  only(g, 'offer');
+  tickStory(g, R);
+  expect(resolveStory(g, 'raise', R).ok).toBe(true);
+  g.week = 68;
+  tickStory(g, R);
+  expect(resolveStory(g, 'ok', R).ok).toBe(true); // арка закрыта
+  expect(g.story!.arcs.offer!.done).toBe(true);
+  expect(g.story!.flags.nextQuestWeek).toBe(68 + 365);
+});
+
+it('процедурный квест: приходит на годовом слоте; «судиться» тратит сумму из params', () => {
+  const g = ready();
+  noArcs(g);
+  tickStory(g, failRng());
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'quest', step: 1 });
+  const gen = g.story!.arcs.quest!.gen!;
+  expect(gen.template).toBe('pirates'); // первый валидный при int→0
+  expect(gen.options.length).toBeGreaterThanOrEqual(2);
+
+  const m0 = g.money;
+  const fans0 = g.fans;
+  expect(resolveStory(g, 'sue', failRng()).ok).toBe(true); // неудачный ролл: −A, +5 фанатов
+  expect(g.money).toBe(m0 - (gen.params.a ?? 0));
+  expect(g.fans).toBe(fans0 + 5);
+  expect(g.story!.arcs.quest!.done).toBe(true);
+  expect(g.story!.flags.nextQuestWeek).toBe(g.week + 365);
+});
+
+it('до слота квест не приходит; через год — новый, прошлый шаблон не повторяется', () => {
+  const g = ready();
+  noArcs(g);
+  tickStory(g, failRng());
+  const fans0 = g.fans;
+  expect(resolveStory(g, 'ignore', R).ok).toBe(true); // закрываем «пиратов»
+  expect(g.fans).toBe(Math.max(0, fans0 - 10));
+  const next = g.story!.flags.nextQuestWeek!;
+  expect(next).toBe(60 + 365);
+
+  g.week = next - 1;
+  tickStory(g, failRng());
+  expect(g.pendingEvent).toBeNull(); // ещё не год
+
+  g.week = next;
+  tickStory(g, failRng());
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'quest', step: 1 });
+  expect(g.story!.arcs.quest!.gen!.template).not.toBe('pirates'); // подряд не повторяем
+});
+
 // ─── Миграция ───
 
-it('миграция v10 → v11: каркас story появляется, версия поднимается', () => {
+it('миграция v10 → v12: каркас story появляется, слот квестов ставится (+60 от недели)', () => {
   const g = newGame(1);
   g.saveVersion = 10;
   delete (g as { story?: unknown }).story;
   const m = migrateSave(g);
-  expect(m.story).toEqual({ arcs: {}, flags: {} });
+  expect(m.story!.arcs).toEqual({});
+  expect(m.story!.flags.nextQuestWeek).toBe(m.week + 60);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(11);
+  expect(SAVE_VERSION).toBe(12);
+});
+
+it('миграция v11 → v12: слот квестов появляется; уже стоявший слот не трогаем', () => {
+  const g = newGame(1);
+  g.saveVersion = 11;
+  g.week = 100;
+  g.story!.flags = {};
+  const m = migrateSave(g);
+  expect(m.story!.flags.nextQuestWeek).toBe(160);
+
+  const g2 = newGame(1);
+  g2.saveVersion = 11;
+  g2.story!.flags = { nextQuestWeek: 500 };
+  const m2 = migrateSave(g2);
+  expect(m2.story!.flags.nextQuestWeek).toBe(500);
 });

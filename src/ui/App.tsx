@@ -157,19 +157,21 @@ function EventWatcher() {
       // PLAN-44: сюжетная арка — текст шага из контента ({name}, {genre}), выбор кнопками
       const arcState = snap.game?.story?.arcs?.[ev.arcId];
       const stepData = STORY_ARCS[ev.arcId]?.steps?.[ev.step - 1];
-      if (stepData) {
+      // v1.40: у процедурного квеста контент лежит в состоянии (gen) — рендерим как обычный шаг
+      const content = arcState?.gen ?? stepData;
+      if (content) {
         const name = arcState?.staffName ?? 'Сотрудник';
         const name2 = arcState?.staffName2 ?? 'Коллега';
         const genreRu = arcState?.genreId && snap.meta ? (genreById(snap.meta, arcState.genreId)?.ru ?? '') : '';
         const sub = (s: string) =>
           s.replace(/\{name2\}/g, name2).replace(/\{name\}/g, name).replace(/\{genre\}/g, genreRu);
         const money = snap.game?.money ?? 0;
-        const opts = stepData.options.filter((o) => o.cost == null || money >= o.cost);
+        const opts = content.options.filter((o) => o.cost == null || money >= o.cost);
         popup({
-          title: sub(stepData.title),
+          title: sub(content.title),
           autopilotTarget: 'mb-ok',
           body: (
-            <div style={{ lineHeight: 1.45 }}>{sub(stepData.text)}</div>
+            <div style={{ lineHeight: 1.45 }}>{sub(content.text)}</div>
           ),
           buttons: opts.map((o) => ({
             label: sub(o.label),

@@ -54,14 +54,14 @@ export function MessageBox() {
         )}
           <div
             className="w95-row"
-            style={{ justifyContent: 'center', marginTop: 14, gap: 8 }}
+            style={{ justifyContent: 'center', marginTop: 14, gap: 8, flexWrap: 'wrap' }}
             onClick={(e) => e.stopPropagation()}
           >
             {mb.buttons.map((b, i) => (
               <button
                 key={b.label}
                 className="w95-btn"
-                style={{ minWidth: 90 }}
+                style={{ minWidth: 90, maxWidth: '100%', whiteSpace: 'normal', lineHeight: 1.35 }}
                 data-autopilot={i === 0 ? mb.autopilotTarget : undefined}
                 onClick={() => { closeMessageBox(); b.onClick(); }}
               >

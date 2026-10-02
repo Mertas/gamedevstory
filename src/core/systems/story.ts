@@ -1,13 +1,15 @@
 // PLAN-44: сюжетные линии — триггеры и резолв (движок). Контент: src/shared/storylines.ts.
-// Арки: «Оффер» (M1); «Выгорание», «Игра мечты» (M2); «Спор самолюбий», «Наставник»,
-// «Старые против новых» (M2+, взаимодействия двух сотрудников). Правила: одна активная арка
-// за раз; каждая — один раз за партию; события идут в общую очередь pendingEvent (пауза).
+// Арки: «Оффер», «Выгорание», «Игра мечты», «Спор самолюбий», «Наставник», «Старые против
+// новых» + процедурные квесты (questgen.ts, раз в год — v1.40.0). Правила: одна активная арка
+// за раз; авторские — раз за партию; квесты не заканчиваются; события — в очередь pendingEvent.
 import { STORY_ARCS } from '../../shared/storylines';
 import type { StatKey } from '../../shared/train';
+import { CONFIG } from '../config';
 import { GENRES } from '../data/db';
 import { log } from '../log';
 import type { Rng } from '../rng';
 import type { ActionResult, GameState, Staff, StoryArcState, StoryState } from '../types';
+import { buildGeneratedQuest, resolveGeneratedQuest } from './questgen';
 
 export function storyState(state: GameState): StoryState {
   if (!state.story) state.story = { arcs: {}, flags: {} };
@@ -48,7 +50,7 @@ function freeSorted(state: GameState): Staff[] {
     .sort((a, b) => sumStats(b) - sumStats(a));
 }
 
-/** Пара для «личных» арок: свободен от контрактов, Lv2+, не «дома». */
+/** Кандидат для «личных» арок: свободен от контрактов, Lv2+, не «дома». */
 function personCandidate(state: GameState): { id: string; name: string } | null {
   const busy = new Set((state.contracts ?? []).filter((c) => !c.done).flatMap((c) => c.staffIds));
   let best: { id: string; name: string } | null = null;
@@ -144,7 +146,7 @@ function epilogueGenerations(state: GameState, arc: StoryArcState, rng: Rng): vo
   state.pendingEvent = { type: 'story', arcId: 'generations', step: arc.step };
 }
 
-/** Дневной триггер: сначала эпилоги незакрытых арок, потом завязки (одна арка за раз). */
+/** Дневной триггер: эпилоги незакрытых арок; завязки — раз в год, потом по условиям. */
 export function tickStory(state: GameState, rng: Rng): void {
   if (state.pendingEvent) return;
   const st = storyState(state);
@@ -162,6 +164,8 @@ export function tickStory(state: GameState, rng: Rng): void {
   }
   // Есть незакрытая арка — новую не начинаем (одна сюжетная история за раз)
   if (Object.values(st.arcs).some((a) => !a.done)) return;
+  // v1.40: квесты — раз в год (слот ставит newGame/миграция; после завершения — снова +год)
+  if (state.week < (st.flags.nextQuestWeek ?? 0)) return;
 
   // «Спор самолюбий»: 1+ релиз, с 25-й недели — взаимодействие двух сильнейших
   if (!st.arcs.rivalry && state.history.length >= 1 && state.week >= 25) {
@@ -193,7 +197,7 @@ export function tickStory(state: GameState, rng: Rng): void {
         staffName2: pair[1].name,
       };
       state.pendingEvent = { type: 'story', arcId: 'mentorship', step: 1 };
-      log(state, `🧑🏫 ${pair[0].name} и ${pair[1].name}: пора подтянуть отстающего`);
+      log(state, `🧑‍🏫 ${pair[0].name} и ${pair[1].name}: пора подтянуть отстающего`);
       return;
     }
   }
@@ -214,7 +218,7 @@ export function tickStory(state: GameState, rng: Rng): void {
       return;
     }
   }
-  // «Оффер»: 2+ релиза, с 60-й недели (каждая арка запускается один раз за партию)
+  // «Оффер»: 2+ релиза, с 60-й недели (каждая авторская арка запускается один раз за партию)
   if (!st.arcs.offer && state.history.length >= 2 && state.week >= 60) {
     const cand = personCandidate(state);
     if (cand) {
@@ -255,6 +259,15 @@ export function tickStory(state: GameState, rng: Rng): void {
       }
     }
   }
+  // Все авторские арки исчерпаны/недоступны — процедурный квест (не заканчиваются)
+  if (!st.arcs.quest || st.arcs.quest.done) {
+    const gen = buildGeneratedQuest(state, rng);
+    if (gen) {
+      st.arcs.quest = { step: 1, done: false, gen };
+      state.pendingEvent = { type: 'story', arcId: 'quest', step: 1 };
+      log(state, `📜 ${gen.title}`);
+    }
+  }
 }
 
 function genreName(id?: string): string {
@@ -265,10 +278,14 @@ function genreName(id?: string): string {
 export function resolveStory(state: GameState, optionId: string, rng: Rng): ActionResult {
   const ev = state.pendingEvent;
   if (ev?.type !== 'story') return { ok: false, error: 'Сейчас нет сюжетного события' };
-  const arcState = storyState(state).arcs[ev.arcId];
-  const stepData = STORY_ARCS[ev.arcId]?.steps[ev.step - 1];
-  if (!arcState || !stepData) return { ok: false, error: 'Шаг сюжета не найден' };
-  const opt = stepData.options.find((o) => o.id === optionId);
+  const st = storyState(state);
+  const arcState = st.arcs[ev.arcId];
+  if (!arcState) return { ok: false, error: 'Шаг сюжета не найден' };
+  const gen = arcState.gen;
+  const stepData = gen ? undefined : STORY_ARCS[ev.arcId]?.steps[ev.step - 1];
+  const options = gen ? gen.options : stepData?.options;
+  if (!options) return { ok: false, error: 'Шаг сюжета не найден' };
+  const opt = options.find((o) => o.id === optionId);
   if (!opt) return { ok: false, error: 'Нет такой опции' };
   if (opt.cost != null && state.money < opt.cost) return { ok: false, error: `Нужно ${opt.cost}K` };
 
@@ -281,7 +298,12 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
   const staff = state.staff.find((s) => s.id === arcState.staffId);
   const staff2 = state.staff.find((s) => s.id === arcState.staffId2);
 
-  if (ev.arcId === 'offer') {
+  if (ev.arcId === 'quest') {
+    const logText = resolveGeneratedQuest(state, gen!, optionId, rng);
+    if (logText == null) return { ok: false, error: 'Нет такой опции' };
+    arcState.done = true;
+    log(state, logText);
+  } else if (ev.arcId === 'offer') {
     const arc = STORY_ARCS.offer!;
     if (ev.step === 1) {
       if (optionId === 'raise') {
@@ -350,7 +372,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
       if (optionId === 'promise') {
         arcState.outcome = 'promise';
         arcState.startWeek = state.week;
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks; // мечте — 40 недель
+        arcState.waitUntil = state.week + arc.epilogueAfterWeeks; // v1.40: на мечту — полгода
         log(state, `🌠 Обещали ${name} игру в жанре «${genreName(arcState.genreId)}»`);
       } else if (optionId === 'decline') {
         arcState.outcome = 'declined';
@@ -398,11 +420,11 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
       if (optionId === 'mentor') {
         arcState.outcome = 'mentor';
         arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
-        log(state, `🧑🏫 ${name} взялся подтянуть ${name2}`);
+        log(state, `🧑‍🏫 ${name} взялся подтянуть ${name2}`);
       } else if (optionId === 'decline') {
         arcState.outcome = 'decline';
         arcState.waitUntil = state.week + 4;
-        log(state, `🧑🏫 ${name2} разбирается сам`);
+        log(state, `🧑‍🏫 ${name2} разбирается сам`);
       }
     } else if (ev.step === 2) {
       if (staff2) raiseStat(staff2, 4);
@@ -450,5 +472,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     }
   }
   state.pendingEvent = null;
+  // v1.40: завершённый квест открывает следующий слот только через год
+  if (arcState.done) st.flags.nextQuestWeek = state.week + CONFIG.YEAR_LENGTH;
   return { ok: true };
 }

@@ -67,7 +67,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     emergencyFundUsed: false,
     bankrupt: false,
     pendingEvent: null,
-    story: { arcs: {}, flags: {} },
+    story: { arcs: {}, flags: { nextQuestWeek: 25 } },
     lastPopup: null,
     log: [],
     rngState: rng.state,

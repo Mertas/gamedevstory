@@ -226,10 +226,22 @@ export interface FanLetter {
 export type GamedexOption = 'none' | 'booth' | 'costumes' | 'girls' | 'star';
 
 // ─── PLAN-44: сюжетные линии (контент — shared/storylines.ts; движок — core/systems/story.ts) ───
+/** v1.40: процедурный квест — собран questgen.ts, хранится в сейве целиком (текст и params). */
+export interface GenQuestData {
+  template: string;
+  title: string;
+  text: string;
+  options: { id: string; label: string; cost?: number; fans?: number; money?: number }[];
+  /** числа, согласованные между текстом и эффектами (суммы в K) */
+  params: Record<string, number>;
+}
+
 export interface StoryArcState {
   /** 1-based номер шага, который ждёт решения игрока */
   step: number;
   done: boolean;
+  /** v1.40: данные процедурного квеста (только для arcId === 'quest') */
+  gen?: GenQuestData;
   /** неделя, на которой придёт эпилог (ставится при выборе в завязке) */
   waitUntil?: number;
   /** участник арки */

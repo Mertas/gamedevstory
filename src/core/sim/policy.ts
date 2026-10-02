@@ -71,8 +71,10 @@ export function resolvePendingEvent(state: GameState, stats: PolicyStats, journa
       // PLAN-44: сюжетные арки — автопилот берёт первый доступный вариант (по деньгам)
       if (state.pendingEvent?.type === 'story') {
         const ev = state.pendingEvent;
+        // v1.40: у процедурных квестов опции лежат в состоянии, у авторских — в STORY_ARCS
         const step = STORY_ARCS[ev.arcId]?.steps[ev.step - 1];
-        const opt = step?.options.find((o) => o.cost == null || state.money >= o.cost);
+        const opts = state.story?.arcs[ev.arcId]?.gen?.options ?? step?.options ?? [];
+        const opt = opts.find((o) => o.cost == null || state.money >= o.cost);
         resolveStoryAction(state, opt?.id ?? '');
       }
       // AP-06: продавец — не просто «прогоняем»: пока он в городе, берём бустеры (при деньгах)

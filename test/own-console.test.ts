@@ -129,13 +129,13 @@ describe('своя консоль: движок', () => {
     expect(g.consoles['own-console']!.base).toBe(1093); // +93 за релиз
   });
 
-  it('миграция v9→v11: у старой своей консоли база 0 → от фанатов', () => {
+  it('миграция v9→v12: у старой своей консоли база 0 → от фанатов', () => {
     const g = newGame(1);
     g.saveVersion = 9;
     g.fans = 25000;
     g.consoles['own-console'] = { licensed: true, base: 0, availableAtWeek: 1, removedAtWeek: null };
     migrateSave(g);
     expect(g.consoles['own-console']!.base).toBe(1000);
-    expect(g.saveVersion).toBe(11); // каскад миграций доводит до текущей (v1.37: +PLAN-44)
+    expect(g.saveVersion).toBe(12); // каскад миграций доводит до текущей (v1.40: +годовые квесты)
   });
 });
