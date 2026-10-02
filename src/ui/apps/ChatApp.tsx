@@ -3,20 +3,27 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useChat, useGameSelector, actionChatMessage, actionTyping } from '../store';
 import { fmtCopies } from '../../shared/sales-stats';
 import { typingName } from '../../shared/chat';
+import { AV } from '../StaffAvatar';
 
 /**
  * PLAN-28: аватар автора в чате. Сообщения несут только имя и «случайную» иконку из сейва
- * (`m.avatar`, она зашита при старте партии) — персональную (avatars/<staffId>.png) находим
- * по имени в текущей команде: она свежее и совпадает с карточками найма. Цепочка:
- * персональная → иконка из сообщения → эмодзи.
+ * (`m.avatar`) — персональную находим по имени в текущей команде. Цепочка (v1.41.0):
+ * новая иконка LLMPics avatars/<id>/<id>_<вариант>.png → старая плоская avatars/<id>.png →
+ * иконка из сообщения → эмодзи. Нативный размер (вариант места — в AV), кроме size.
  */
-function ChatAvatar({ name, legacy, size = 48 }: { name: string; legacy?: string; size?: number }) {
+function ChatAvatar({ name, legacy, variant, size }: { name: string; legacy?: string; variant: string; size?: number }) {
   const id = useGameSelector((g) => g.staff.find((s) => s.name === name)?.id ?? '');
-  const [stage, setStage] = useState(0); // 0 — персональная, 1 — из сообщения, 2 — эмодзи
-  const src = stage === 0 && id ? `avatars/${id}.png` : stage <= 1 && legacy ? legacy : '';
+  const [stage, setStage] = useState(0); // 0 — новая LLMPics, 1 — плоская, 2 — из сообщения, 3 — эмодзи
+  const urls = [
+    id ? `avatars/${id}/${id}_${variant}.png` : '',
+    id ? `avatars/${id}.png` : '',
+    legacy || '',
+  ].filter(Boolean) as string[];
+  const src = urls[stage] ?? '';
   if (!src) {
+    const box = size ?? 64;
     return (
-      <div className="w95-avatar" style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size > 24 ? 16 : 12 }}>
+      <div className="w95-avatar" style={{ width: box, height: box, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: box > 24 ? 16 : 12 }}>
         {name === 'Вы' ? '🕹️' : '💬'}
       </div>
     );
@@ -24,10 +31,10 @@ function ChatAvatar({ name, legacy, size = 48 }: { name: string; legacy?: string
   return (
     <img
       className="w95-avatar"
-      style={{ width: size, height: size, verticalAlign: 'middle' }}
+      style={{ verticalAlign: 'middle', ...(size ? { width: size, height: size } : null) }}
       src={src}
       alt=""
-      onError={() => setStage((s) => (s === 0 && legacy ? 1 : 2))}
+      onError={() => setStage((s) => s + 1)}
     />
   );
 }
@@ -260,7 +267,7 @@ export function ChatApp() {
         )}
         {chat.msgs.slice(from).map((m, i) => (
           <div key={from + i} className={`w95-chat-msg ${m.system ? 'system' : ''} ${m.author === 'Вы' ? 'self' : ''}`}>
-            <ChatAvatar name={m.author} legacy={m.avatar} />
+            <ChatAvatar name={m.author} legacy={m.avatar} variant={AV.chat} />
             <div style={{ flex: 1 }}>
               <div className="w95-cname">{m.author}</div>
               <div className="w95-ctext">{m.text}</div>
@@ -270,7 +277,7 @@ export function ChatApp() {
         {typing && (
           <div className="w95-chat-typing">
             <span style={{ marginRight: 6, display: 'inline-flex' }}>
-              <ChatAvatar name={typing} legacy={typingAvatar} size={20} />
+              <ChatAvatar name={typing} legacy={typingAvatar} variant={AV.chatTyping} size={21} />
             </span>
             {typing} печатает…
           </div>

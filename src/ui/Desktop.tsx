@@ -5,7 +5,7 @@ import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
 import { CARD_WIN_PREFIX, GameCardWindow, cardWinId, cardWinTitle } from './apps/archive/GameCardWindow';
 import { StaffWindow, staffFromWinId, staffWinId } from './apps/staff/StaffWindow';
-import { StaffAvatar } from './StaffAvatar';
+import { AV, StaffAvatar } from './StaffAvatar';
 import { WebampLayer } from './WebampLayer';
 import {
   actionSetAutopilot, actionSetUi, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
@@ -170,6 +170,8 @@ export function Desktop({ onExit }: { onExit: () => void }) {
     const f = customIcons[appId] ?? DEFAULT_ICONS[appId];
     return f ? `/icons/${f}` : null;
   };
+  // v1.41: иконка сотрудника (LLMPics, нативная 16px) — для таскбара и заголовка его окна
+  const staffIconUrl = (id: string): string => `avatars/${id}/${id}_${AV.taskbar}.png`;
   // Winamp «активен» (держит фокус) — окна игры при этом неактивны (серые заголовки, кнопки выпуклые)
   const winampActive = waOpen && !waHidden && waZ;
   const winampActiveRef = useRef(winampActive);
@@ -519,7 +521,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             onDragStart={(e) => e.preventDefault()}
           >
             {it.staffId && !customIcons[it.id] ? (
-              <StaffAvatar staff={game.staff.find((st) => st.id === it.staffId)!} size={32} fallback={<span style={{ fontSize: 30 }}>👤</span>} />
+              <StaffAvatar staff={game.staff.find((st) => st.id === it.staffId)!} variant={AV.desktop} fallback={<span style={{ fontSize: 30 }}>👤</span>} />
             ) : customIcons[it.id] ?? it.iconFile ? (
               <img className="w95-ic" src={`/icons/${customIcons[it.id] ?? it.iconFile}`} alt="" draggable={false} />
             ) : (
@@ -544,7 +546,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             win={w}
             title={def ? def.title : card ? cardWinTitle(card.name) : staffS!.name}
             icon={def ? def.icon : card ? '🎮' : '👤'}
-            iconUrl={iconUrlFor(w.id) ?? undefined}
+            iconUrl={iconUrlFor(w.id) ?? (staffS ? staffIconUrl(staffS.id) : undefined)}
             focused={!winampActive && activeId === w.id}
             component={def ? def.component : card ? cardComponentFor(w.id) : staffComponentFor(w.id)}
           />
@@ -707,6 +709,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           const staffS = def || card ? null : staffFromWinId(game, w.id); // PLAN-41: сотрудник
           if (!def && !card && !staffS) return null;
           const isActive = !winampActive && !w.minimized && activeId === w.id;
+          const taskIcon = iconUrlFor(w.id) ?? (staffS ? staffIconUrl(staffS.id) : null);
           return (
             <button
               key={w.id}
@@ -718,12 +721,12 @@ export function Desktop({ onExit }: { onExit: () => void }) {
                 else wm.focus(w.id);
               }}
             >
-              {iconUrlFor(w.id) ? (
-                <img className="w95-task-ic" src={iconUrlFor(w.id) ?? ''} alt="" draggable={false} />
+              {taskIcon ? (
+                <img className="w95-task-ic" src={taskIcon} alt="" draggable={false} />
               ) : (
                 <span className="w95-task-emo">{def?.icon ?? (card ? '🎮' : '👤')}</span>
               )}
-              {def?.title ?? (card ? cardWinTitle(card.name) : staffS ? staffS.name : w.id)}
+              <span className="w95-task-label">{def?.title ?? (card ? cardWinTitle(card.name) : staffS ? staffS.name : w.id)}</span>
             </button>
           );
         })}
@@ -739,7 +742,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             }}
           >
             <img className="w95-task-ic" src={iconUrlFor('winamp') ?? '/icons/winamp.png'} alt="" draggable={false} />
-            Winamp
+            <span className="w95-task-label">Winamp</span>
           </button>
         )}
 

@@ -2,6 +2,7 @@
 import { Fragment, useEffect, useState , useRef } from 'react';
 import { apiCreateSave, apiDifficulties, apiPool, type DifficultyOption, type PoolStaff } from './api';
 import { CAREER_LABELS } from '../shared/careers';
+import { AV, StaffAvatar } from './StaffAvatar';
 import { fmtK } from '../shared/nums';
 
 const ROLE_EMOJI: Record<string, string> = {
@@ -169,12 +170,12 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                 }
               }}
             >
-              <div className="w95-staff-avatar">{ROLE_EMOJI[s.activeCareer] ?? '👤'}</div>
-              <div className="w95-pick-head">
-                <span className="w95-pick-box">{on ? '✓' : ''}</span>
-                <span className="w95-staff-name" style={{ flex: 1 }}>{s.name}</span>
+              <span className="w95-pick-box w95-pick-check">{on ? '✓' : ''}</span>
+              <div className="w95-pick-ava">
+                <StaffAvatar staff={s} variant={AV.newGame} fallback={<span style={{ fontSize: 56 }}>{ROLE_EMOJI[s.activeCareer] ?? '👤'}</span>} />
               </div>
-              <div className="w95-staff-sub">{CAREER_LABELS[s.activeCareer] ?? s.activeCareer}</div>
+              <div className="w95-pick-name">{s.name}</div>
+              <div className="w95-staff-sub" style={{ textAlign: 'center' }}>{CAREER_LABELS[s.activeCareer] ?? s.activeCareer}</div>
               <div className="w95-pick-stats">
                 {STATS.map(([k, label]) => (
                   <Fragment key={k}>
@@ -186,7 +187,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                   </Fragment>
                 ))}
               </div>
-              <div className="w95-staff-sub" style={{ marginTop: 4 }}>{s.salary}K/год</div>
+              <div className="w95-staff-sub" style={{ marginTop: 4, textAlign: 'center' }}>{s.salary}K/год</div>
             </div>
           );
         })}

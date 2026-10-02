@@ -2,7 +2,7 @@
 // Аватар, имя, профессия+уровень, усталость (POWER-полоска), параметры.
 import type { Staff } from '../core/types';
 import { CAREER_LABELS } from './careers';
-import { StaffAvatar } from './StaffAvatar';
+import { AV, StaffAvatar } from './StaffAvatar';
 
 export interface StaffCardProps {
   st: Staff;
@@ -28,7 +28,7 @@ export function StaffCard({ st, selected, disabled, note, onClick }: StaffCardPr
       title={disabled ? 'Сотрудник вымотался (POWER 0)' : undefined}
     >
       <div className="w95-staff-avatar">
-        <StaffAvatar staff={st} fallback={<span>👤</span>} />
+        <StaffAvatar staff={st} variant={AV.training} fallback={<span>👤</span>} />
       </div>
       <div className="w95-staff-name">{st.name}</div>
       <div className="w95-staff-sub">{CAREER_LABELS[st.activeCareer] ?? st.activeCareer} Lv{lv}</div>

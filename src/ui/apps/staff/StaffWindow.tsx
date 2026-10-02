@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS, CAREER_ORDER } from '../../careers';
-import { StaffAvatar } from '../../StaffAvatar';
+import { AV, StaffAvatar } from '../../StaffAvatar';
 import { actionApplyCareerManual, actionFire, actionLevelUp, actionRestStaff, actionTrain, actionTrainToMax, useGame, useMeta } from '../../store';
 import { useWindows } from '../../wm';
 import { fmtK } from '../../../shared/nums';
@@ -76,8 +76,8 @@ export function StaffWindow({ winId }: { winId: string }) {
     <div style={{ overflowY: 'auto', height: '100%', paddingBottom: 8 }}>
       {/* шапка: аватар + кто это */}
       <div className="arc-sec" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', paddingTop: 6 }}>
-        <div style={{ flex: 'none', width: 120, height: 120, border: '2px solid var(--w95-dark)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <StaffAvatar staff={s} size={116} fallback={<span style={{ fontSize: 64 }}>{s.gender === 'F' ? '👩' : '👨'}</span>} />
+        <div style={{ flex: 'none', width: 132, height: 132, border: '2px solid var(--w95-dark)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <StaffAvatar staff={s} variant={AV.staffWindow} fallback={<span style={{ fontSize: 64 }}>{s.gender === 'F' ? '👩' : '👨'}</span>} />
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 'bold' }}>{s.name}</div>

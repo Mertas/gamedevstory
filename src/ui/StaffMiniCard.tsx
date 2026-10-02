@@ -5,7 +5,7 @@
 import type { ReactNode } from 'react';
 import type { CareerId } from '../core/data/schema';
 import { CAREER_LABELS, CAREER_ORDER } from '../shared/careers';
-import { StaffAvatar } from './StaffAvatar';
+import { AV, StaffAvatar } from './StaffAvatar';
 
 export interface MiniStaff {
   id: string;
@@ -35,7 +35,7 @@ export function StaffMiniCard({ st, persona, footer }: StaffMiniCardProps) {
   return (
     <div className="w95-minicard" data-autopilot="hire-minicard">
       <div className="w95-minicard-avatar">
-        <StaffAvatar staff={st} size={44} fallback={<span>{st.gender === 'F' ? '👩' : '👨'}</span>} />
+        <StaffAvatar staff={st} variant={AV.hirePreview} fallback={<span>{st.gender === 'F' ? '👩' : '👨'}</span>} />
       </div>
       <div className="w95-minicard-body">
         <div>

@@ -46,12 +46,13 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   position: absolute; left: 0; right: 0; bottom: 0; height: 30px;
   background: var(--w95-face); border-top: 2px solid var(--w95-light);
   display: flex; align-items: center; padding: 2px 3px; gap: 4px; z-index: 9000;
+  overflow: hidden;
 }
-.w95-start-btn { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 4px; font-weight: 700; font-size: 11px; }
+.w95-start-btn { display: flex; align-items: center; gap: 4px; flex: none; height: 24px; padding: 0 8px 0 4px; font-weight: 700; font-size: 11px; }
 .w95-start-btn .w95-ic { width: 18px; height: 18px; }
 .w95-task-btn {
-  height: 24px; min-width: 120px; max-width: 180px; padding: 0 8px; text-align: left;
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  height: 26px; min-width: 0; max-width: 160px; padding: 3px 5px; text-align: left;
+  overflow: hidden; white-space: nowrap;
 }
 .w95-task-btn.active {
   border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark);
@@ -60,7 +61,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 }
 .w95-start-btn.active { border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); background: #d5d5d5; }
 .w95-task-btn.flash { background: var(--w95-navy); color: #fff; font-weight: 700; }
-.w95-tray { margin-left: auto; display: flex; align-items: center; gap: 4px; height: 24px; }
+.w95-tray { margin-left: auto; flex: none; display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; }
 .w95-tray-clock { border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 2px 8px; font-size: 11px; }
 .w95-speed { display: flex; align-items: center; gap: 1px; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 1px; }
 .w95-speed button { min-width: 22px; height: 18px; font-size: 10px; padding: 0 3px; }
@@ -127,6 +128,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-table th { background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); padding: 2px 6px; text-align: left; font-weight: 700; }
 .w95-table td { border: 1px solid var(--w95-dark); border-color: #d4d0c8; padding: 2px 6px; }
 .w95-table tr:nth-child(even) td { background: #f4f4f0; }
+.w95-table.hire-team td { vertical-align: middle; }
 .w95-list { background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); overflow-y: auto; }
 .w95-list .w95-li { padding: 2px 6px; cursor: default; }
 .w95-list .w95-li:hover { background: #000080; color: #fff; }
@@ -202,7 +204,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* ── Чат ── */
 .w95-chat { display: flex; flex-direction: column; height: 100%; background: #fff; }
 .w95-chat-msg { display: flex; gap: 6px; padding: 4px 6px; border-bottom: 1px solid #e8e4dc; }
-.w95-chat-msg .w95-avatar { width: 48px; height: 48px; border: 1px solid var(--w95-dark); background: #c0c0c0; flex: none; image-rendering: pixelated; }
+.w95-chat-msg .w95-avatar { border: 1px solid var(--w95-dark); background: #c0c0c0; flex: none; image-rendering: pixelated; }
 .w95-chat-msg .w95-cname { font-weight: 700; color: #000080; }
 .w95-chat-msg .w95-ctext { white-space: pre-wrap; word-break: break-word; }
 .w95-chat-msg.self { background: #eef3fb; }
@@ -253,8 +255,8 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   background: #d5d5d5;
 }
 .w95-staff-card.disabled { opacity: 0.45; }
-.w95-staff-avatar { height: 30px; line-height: 30px; font-size: 20px; }
-.w95-staff-avatar img { width: 28px; height: 28px; }
+.w95-staff-avatar { line-height: 30px; font-size: 20px; }
+.w95-staff-avatar img { display: block; margin: 0 auto; }
 .w95-staff-name { font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w95-staff-sub { font-size: 10px; color: #333; }
 .w95-staff-power { height: 6px; border: 1px solid var(--w95-dark); background: #fff; margin: 4px 4px 1px; }
@@ -270,10 +272,10 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   background: var(--w95-face);
 }
 .w95-minicard-avatar {
-  flex: none; width: 48px; height: 48px; line-height: 48px; text-align: center; font-size: 30px;
+  flex: none; width: 87px; height: 87px; line-height: 85px; text-align: center; font-size: 30px;
   border: 1px solid var(--w95-dark); background: #fff;
 }
-.w95-minicard-avatar img { width: 46px; height: 46px; vertical-align: middle; }
+.w95-minicard-avatar img { width: 85px; height: 85px; vertical-align: middle; }
 .w95-minicard-body { min-width: 0; flex: 1; }
 .w95-career-chip {
   display: inline-block; margin: 0 3px 2px 0; padding: 0 4px; font-size: 10px;
@@ -283,7 +285,9 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-btn.active { border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); background: #d5d5d5; }
 .w95-start-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px 4px 6px; font-weight: bold; }
 .w95-start-logo { width: 16px; height: 16px; }
-.w95-task-btn { display: inline-flex; align-items: center; gap: 4px; max-width: 160px; overflow: hidden; }
+.w95-task-btn { display: inline-flex; align-items: center; gap: 4px; flex: 0 1 auto; min-width: 0; max-width: 160px; overflow: hidden; }
+/* v1.41: при нехватке места подпись кнопки режется многоточием, трей не отдаёт ширину */
+.w95-task-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
 .w95-task-ic { width: 16px; height: 16px; flex: none; }
 .w95-title-ic { width: 16px; height: 16px; margin: 0 5px 0 2px; vertical-align: -3px; }
 .w95-task-emo { font-size: 12px; }
@@ -406,11 +410,19 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-saves-empty { color: GrayText; padding: 10px; text-align: center; }
 
 /* выбор стартовой пары (карточка = флажок: клик по карточке отмечает кандидата) */
-.w95-pick-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 2px; }
+.w95-pick-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 2px; }
 .w95-pick-card {
-  position: relative; width: 152px; min-height: 136px; text-align: left; padding: 5px 6px 6px; cursor: pointer;
+  position: relative; width: 152px; text-align: center; padding: 5px 6px 6px; cursor: pointer;
 }
 .w95-pick-card:hover { background: #e8e8f8; }
+.w95-pick-ava {
+  width: 132px; height: 132px; margin: 2px auto 5px; background: #fff;
+  border: 2px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark);
+  display: flex; align-items: center; justify-content: center;
+}
+.w95-pick-ava img { display: block; }
+.w95-pick-check { position: absolute; top: 10px; left: 10px; }
+.w95-pick-name { font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w95-pick-card:focus { outline: 1px dotted #000; outline-offset: -3px; }
 /* выбранный кандидат — как выделенная строка в Windows 95: синий фон, белый текст */
 .w95-pick-card.selected, .w95-pick-card.selected:hover { background: #000080; color: #fff; }

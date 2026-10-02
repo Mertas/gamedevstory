@@ -1,7 +1,7 @@
 // ─── Найм: вкладка «Команда» — таблица сотрудников (UI-08; смена профессии — во вкладке «Профессии») ───
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
-import { StaffAvatar } from '../../StaffAvatar';
+import { AV, StaffAvatar } from '../../StaffAvatar';
 import { actionFire, actionLevelUp, useGame } from '../../store';
 import { fmtK } from '../../../shared/nums';
 
@@ -11,7 +11,7 @@ export function TeamTab() {
   return (
     <>
       <b>Команда ({game.staff.length}/{CONFIG.OFFICE_CAPACITY[game.officeLevel]})</b>
-      <table className="w95-table">
+      <table className="w95-table hire-team">
         <thead>
           <tr><th>Сотрудник</th><th>Профессия</th><th>Пр</th><th>Сц</th><th>Гр</th><th>Зв</th><th>POWER</th><th>Зарплата</th><th>Действия</th><th></th></tr>
         </thead>
@@ -23,7 +23,7 @@ export function TeamTab() {
               <tr key={st.id}>
                 <td>
                   <span className="w95-row">
-                    <StaffAvatar staff={st} size={20} />
+                    <StaffAvatar staff={st} variant={AV.hireTeam} />
                     {st.name}{(st.restDays ?? 0) > 0 && <span title={`В отпуске ещё ${st.restDays} дн.`}> 🧳</span>}
                   </span>
                 </td>
