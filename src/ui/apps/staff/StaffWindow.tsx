@@ -89,7 +89,7 @@ export function StaffWindow({ winId }: { winId: string }) {
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 'bold' }}>{s.name}{isHero ? ' 🛡️' : isPartner ? ` 🤝 ${partnerPct}%` : ''}</div>
-          <div className="w95-hint">{CAREER_LABELS[s.activeCareer] ?? s.activeCareer} Lv{lv}{lv >= 5 ? ' (максимум)' : ''} · оклад {fmtK(salaryNow)}K/год{lv < 5 ? ` → после левелапа ${fmtK(salaryNext)}K` : ''}</div>
+          <div className="w95-hint">{CAREER_LABELS[s.activeCareer] ?? s.activeCareer} Lv{lv}{lv >= 5 ? ' (максимум)' : ''} · оклад {fmtK(salaryNow)}/год{lv < 5 ? ` → после левелапа ${fmtK(salaryNext)}` : ''}</div>
           <div style={{ marginTop: 2 }}>{status}</div>
           {persona && <div className="w95-hint" style={{ marginTop: 2, fontStyle: 'italic' }}>{persona}</div>}
           {isHero && <div className="w95-hint" style={{ marginTop: 2 }}>Основатель студии — это вы. Уволить себя нельзя.</div>}
@@ -338,7 +338,7 @@ export function StaffWindow({ winId }: { winId: string }) {
               {partnerArm === null && (
                 <div className="w95-row" style={{ gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                   <button className="w95-btn" onClick={() => setPartnerArm('buyout')}>
-                    💰 Выкупить долю — {partnerPct}% кассы разом (≈{fmtK(partnerBuyoutCost)}K)
+                    💰 Выкупить долю — {partnerPct}% кассы разом (≈{fmtK(partnerBuyoutCost)})
                   </button>
                   <button className="w95-btn" onClick={() => setPartnerArm('rent')}>
                     📉 Отдавать {fmtPct(partnerRentPct)}% дохода от игр — навсегда
@@ -347,7 +347,7 @@ export function StaffWindow({ winId }: { winId: string }) {
               )}
               {partnerArm === 'buyout' && (
                 <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-                  <span>Выплатить {s.name} {partnerPct}% кассы — ≈{fmtK(partnerBuyoutCost)}K разом?</span>
+                  <span>Выплатить {s.name} {partnerPct}% кассы — ≈{fmtK(partnerBuyoutCost)} разом?</span>
                   <button className="w95-btn" onClick={() => { wm.close(staffWinId(s.id)); actionPartnerBuyout(); }}>Да, выплатить</button>
                   <button className="w95-btn" onClick={() => setPartnerArm(null)}>Отмена</button>
                 </span>

@@ -142,13 +142,13 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
         : step === 2
           ? (statsOk ? `Все ${HERO_POINTS} очков распределены ✓.` : `Осталось очков: ${left} из ${HERO_POINTS} (кап — ${HERO_STAT_CAP} на навык).`)
           : step === 3
-            ? <>Характер: <b>{customChar.length > 0 ? 'свой вариант' : char.label}</b>. Уйдёт в чат команды и в LLM.</>
+            ? <>Характер: <b>{customChar.length > 0 ? 'свой вариант' : char.label}</b>.</>
             : !nameOk
               ? 'Впишите имя героя (без совпадений с командой).'
               : !statsOk
                 ? `Распределите ровно ${HERO_POINTS} очков навыков (сейчас ${statSum}).`
                 : partner
-                  ? <>Состав: <b>{heroNameTrim}</b> ({CAREER_LABELS[heroCareer]}) + <b>{partner.name}</b> · доля {share}% · зарплата {fmtK(HERO_SALARY + partner.salary)}K/год</>
+                  ? <>Состав: <b>{heroNameTrim}</b> ({CAREER_LABELS[heroCareer]}) + <b>{partner.name}</b> · доля {share}% · зарплата {fmtK(HERO_SALARY + partner.salary)} в год</>
                   : 'Выберите партнёра из пула.';
 
   return (
@@ -284,11 +284,10 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
         <>
           <div className="w95-caption">
             <span>Шаг {step + 1} из {STEPS.length} — герой: характер</span>
-            <span className="w95-hint">10 на выбор или свой текст — уйдёт в чат команды и в LLM</span>
+            <span className="w95-hint">10 на выбор или свой текст</span>
           </div>
           <div className="w95-hero">
             <div className="w95-form-row" style={{ alignItems: 'flex-start' }}>
-              <label>Характер</label>
               <div style={{ flex: 1 }}>
                 <div className="w95-row" style={{ gap: 6, alignItems: 'baseline' }}>
                   <b style={{ flex: 'none' }}>{char.label}</b>
@@ -300,7 +299,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                   style={{ width: '100%', minHeight: 72, resize: 'vertical' }}
                   rows={3}
                   maxLength={200}
-                  placeholder="…или впишите свой характер — он уйдёт в чат команды как есть"
+                  placeholder="…или впишите свой характер"
                   value={charCustom}
                   onChange={(e) => setCharCustom(e.target.value)}
                 />
