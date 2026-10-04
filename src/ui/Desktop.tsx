@@ -1,5 +1,6 @@
 // Рабочий стол + панель задач + меню «Пуск».
 import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
+import { createPortal } from 'react-dom';
 import { Window95 } from './Window95';
 import { useWinState, useWindows } from './wm';
 import { APP_DEFS } from './apps';
@@ -860,24 +861,33 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 function SoundTray() {
   const level = useSyncExternalStore(subscribeSound, () => sfx.soundLevel);
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ right: number; bottom: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
   // клик мимо — закрыть, как в Win95
   useEffect(() => {
     if (!open) return;
     const off = (e: PointerEvent) => {
-      if (e.target instanceof Element && e.target.closest('.w95-snd')) return;
+      if (e.target instanceof Element && e.target.closest('.w95-snd, .w95-snd-pop')) return;
       setOpen(false);
     };
     window.addEventListener('pointerdown', off, true);
     return () => window.removeEventListener('pointerdown', off, true);
   }, [open]);
+  // Меню — порталом на body: панель задач клипует всё, что вылезает вверх (overflow: hidden).
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ right: Math.max(4, Math.round(window.innerWidth - r.right)), bottom: Math.max(4, Math.round(window.innerHeight - r.top + 4)) });
+    setOpen(true);
+  };
   const icon = level === 'off' ? '🔇' : level === 'low' ? '🔈' : level === 'mid' ? '🔉' : '🔊';
   return (
     <span className="w95-snd">
-      <button className="w95-snd-btn" title={`Звук: ${soundLabel(level)}`} onClick={() => setOpen((v) => !v)}>
+      <button ref={btnRef} className="w95-snd-btn" title={`Звук: ${soundLabel(level)}`} onClick={toggle}>
         {icon}
       </button>
-      {open && (
-        <div className="w95-menu w95-snd-pop">
+      {open && pos && createPortal(
+        <div className="w95-menu w95-snd-pop" style={{ right: pos.right, bottom: pos.bottom }}>
           {SOUND_LEVELS.map((l) => (
             <div
               key={l}
@@ -891,7 +901,8 @@ function SoundTray() {
               {soundLabel(l)}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </span>
   );

@@ -177,7 +177,8 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   padding: 1px 3px; color: inherit; font-family: inherit;
 }
 .w95-snd-btn:hover { background: rgba(0, 0, 128, 0.25); }
-.w95-snd-pop { position: absolute; bottom: 22px; right: 0; z-index: 60; min-width: 112px; }
+/* портал на body: панель задач клипует overflow — якорь задаёт inline style (right/bottom) */
+.w95-snd-pop { position: fixed; min-width: 112px; }
 
 /* M3.8: список уровней эффектов в модалке */
 .w95-fx-list { display: flex; flex-direction: column; gap: 2px; min-width: 340px; }

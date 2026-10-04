@@ -329,6 +329,34 @@ app.get('/api/music', async (_req, res) => {
 app.use('/music', express.static(MUSIC_DIR));
 app.use('/skin', express.static(path.join(ROOT, 'public', 'winamp-skin')));
 
+// PLAN-39: песочница мини-игр по /lab/ (dev — vite-плагин labStatic; прод — nginx /srv/gds/lab).
+// Локальный `pnpm server` тоже обязан её отдавать: иначе SPA-фолбэк показывает в iframe саму игру.
+const LAB_MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.png': 'image/png',
+  '.otf': 'font/otf',
+  '.woff2': 'font/woff2',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+};
+app.use('/lab', (req, res) => {
+  const dir = process.env.GDS_LAB_DIR ?? 'E:/MY/gds-minigames';
+  try {
+    const raw = (req.url ?? '/').split('?')[0] ?? '/';
+    const u = decodeURIComponent(raw);
+    if (raw.includes('..') || u.includes('..')) { res.status(403).end('forbidden'); return; }
+    const abs = path.join(dir, u === '/' || u === '' ? '/index.html' : u);
+    if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) { res.status(404).end('not found'); return; }
+    res.setHeader('Content-Type', LAB_MIME[path.extname(abs).toLowerCase()] ?? 'application/octet-stream');
+    fs.createReadStream(abs).pipe(res);
+  } catch {
+    res.status(404).end('not found');
+  }
+});
+
 // ─── статика собранного клиента (после pnpm build) ───
 if (fs.existsSync(DIST)) {
   app.use(express.static(DIST, {
