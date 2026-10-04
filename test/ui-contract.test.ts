@@ -124,6 +124,7 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(form).toContain('HERO_CHARACTERS');   // 10 характеров — обязательный шаг героя
     expect(form).toContain('PLAYER_AVATARS');    // сетка 20 аватарок игрока
     expect(form).toContain('hero-grid');
+    expect(form).toContain('w95-hero-big');      // v1.47.1: большая версия выбранной аватарки — под сеткой
     expect(form).toContain('Далее →');           // v1.45.2: шаги листаются «Назад/Далее», счётчик в заголовке
     expect(form).toContain('<textarea');         // v1.45.3: свой характер — textarea (до 200 симв.)
     expect(form).toContain("'Партнёр'");         // последний шаг — выбор партнёра

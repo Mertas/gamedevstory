@@ -53,7 +53,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
 
   // ── PLAN-48: главный герой (игрок) ──
   const [heroName, setHeroName] = useState(randomHeroName);
-  const [heroAvatar, setHeroAvatar] = useState(PLAYER_AVATARS[0]!);
+  const [heroAvatar, setHeroAvatar] = useState(PLAYER_AVATARS[0]!); // по умолчанию всегда выбрана первая
   const [heroStats, setHeroStats] = useState<Record<StatKey, number>>({ program: 10, scenario: 10, graphics: 10, sound: 10 });
   const [heroCareer, setHeroCareer] = useState<CareerId>(HERO_CAREERS[0]!);
   const [charIdx, setCharIdx] = useState(0);
@@ -233,6 +233,13 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                       <StaffAvatar staff={{ id: av, avatarId: av }} variant={AV.newGame} size={30} fallback={<span style={{ fontSize: 15 }}>👤</span>} />
                     </button>
                   ))}
+                </div>
+                <div className="w95-hero-big">
+                  <StaffAvatar
+                    staff={{ id: heroAvatar, avatarId: heroAvatar }}
+                    variant={AV.newGame}
+                    fallback={<span style={{ fontSize: 64 }}>👤</span>}
+                  />
                 </div>
                 <div className="w95-hint" style={{ marginTop: 2 }}>20 аватарок игрока</div>
               </div>
