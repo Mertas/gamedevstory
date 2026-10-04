@@ -134,8 +134,6 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const statsOk = statSum === HERO_POINTS;
   const ready = name.trim().length > 0 && nameOk && statsOk && !!partner && !busy;
 
-  // галочки на шагах мастера: шаг закрыт, когда его данные валидны
-  const stepsOk: boolean[] = [name.trim().length > 0, nameOk, statsOk, true, partner !== null];
   const pick = (id: string): void => setPartnerId((p) => (p === id ? null : id));
 
   const footerHint =
@@ -157,24 +155,10 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="w95-form">
-      {/* ── шаги мастера (v1.45.1): клик — переход, ✓ — шаг заполнен ── */}
-      <div className="w95-wiz" data-autopilot="newgame-wizard">
-        {STEPS.map((label, i) => (
-          <button
-            key={label}
-            className={`w95-btn${i === step ? ' active' : ''}${stepsOk[i] ? ' wiz-ok' : ''}`}
-            title={`Шаг ${i + 1} из ${STEPS.length}`}
-            onClick={() => setStep(i)}
-          >
-            {stepsOk[i] ? '✓ ' : ''}{i + 1}. {label}
-          </button>
-        ))}
-      </div>
-
       {step === 0 && (
         <>
           <div className="w95-caption">
-            <span>Студия</span>
+            <span>Шаг {step + 1} из {STEPS.length} — студия</span>
             <span className="w95-hint">название и сложность партии</span>
           </div>
           <div className="w95-form-row">
@@ -222,7 +206,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
       {step === 1 && (
         <>
           <div className="w95-caption">
-            <span>Герой — имя и аватарка</span>
+            <span>Шаг {step + 1} из {STEPS.length} — герой: имя и аватарка</span>
             <span className="w95-hint">это вы: вечный сотрудник, уволить себя нельзя</span>
           </div>
           <div className="w95-hero">
@@ -262,7 +246,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
       {step === 2 && (
         <>
           <div className="w95-caption">
-            <span>Герой — статы и профессия</span>
+            <span>Шаг {step + 1} из {STEPS.length} — герой: статы и профессия</span>
             <span className="w95-hint">{HERO_POINTS} очков, кап {HERO_STAT_CAP} на стат</span>
           </div>
           <div className="w95-hero">
@@ -302,7 +286,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
       {step === 3 && (
         <>
           <div className="w95-caption">
-            <span>Герой — характер</span>
+            <span>Шаг {step + 1} из {STEPS.length} — герой: характер</span>
             <span className="w95-hint">10 на выбор или свой текст — уйдёт в чат команды и в LLM</span>
           </div>
           <div className="w95-hero">
@@ -334,7 +318,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
       {step === 4 && (
         <>
           <div className="w95-caption">
-            <span>Партнёр</span>
+            <span>Шаг {step + 1} из {STEPS.length} — партнёр</span>
             <span className="w95-hint">с кем открываете компанию: клик — выбор, слайдер — доля (0–20%)</span>
           </div>
 
