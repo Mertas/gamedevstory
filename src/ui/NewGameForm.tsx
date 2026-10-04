@@ -5,9 +5,8 @@ import { apiCreateSave, apiDifficulties, apiPool, type DifficultyOption, type Po
 import { CAREER_LABELS } from '../shared/careers';
 import {
   HERO_CAREERS, HERO_CHARACTERS, HERO_NAME_IDEAS, HERO_POINTS, HERO_SALARY, HERO_STAT_CAP,
-  PLAYER_AVATARS, fmtPct, partnerTerms, sanitizeHeroStats,
+  PLAYER_AVATARS, sanitizeHeroStats,
 } from '../shared/hero';
-import { CONFIG } from '../core/config';
 import { STAT_KEYS, type StatKey } from '../shared/train';
 import { AV, StaffAvatar } from './StaffAvatar';
 import { fmtK } from '../shared/nums';
@@ -126,7 +125,6 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const persona = customChar.length > 0 ? customChar : char.persona;
 
   const partner = (pool ?? []).find((p) => p.id === partnerId) ?? null;
-  const terms = partnerTerms(share, CONFIG.START_MONEY);
 
   const heroNameTrim = heroName.trim();
   const nameTaken = (pool ?? []).some((p) => p.name === heroNameTrim) || heroNameTrim === 'Система';
@@ -142,13 +140,13 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
       : step === 1
         ? (nameOk ? 'Имя свободно. Аватарки — из набора игрока (пока заглушки).' : nameTaken ? 'Имя занято сотрудником — придумайте другое.' : 'Впишите имя героя.')
         : step === 2
-          ? (statsOk ? `Все ${HERO_POINTS} очков распределены ✓.` : `Осталось очков: ${left} из ${HERO_POINTS} (кап — ${HERO_STAT_CAP} на стат).`)
+          ? (statsOk ? `Все ${HERO_POINTS} очков распределены ✓.` : `Осталось очков: ${left} из ${HERO_POINTS} (кап — ${HERO_STAT_CAP} на навык).`)
           : step === 3
             ? <>Характер: <b>{customChar.length > 0 ? 'свой вариант' : char.label}</b>. Уйдёт в чат команды и в LLM.</>
             : !nameOk
               ? 'Впишите имя героя (без совпадений с командой).'
               : !statsOk
-                ? `Распределите ровно ${HERO_POINTS} очков статов (сейчас ${statSum}).`
+                ? `Распределите ровно ${HERO_POINTS} очков навыков (сейчас ${statSum}).`
                 : partner
                   ? <>Состав: <b>{heroNameTrim}</b> ({CAREER_LABELS[heroCareer]}) + <b>{partner.name}</b> · доля {share}% · зарплата {fmtK(HERO_SALARY + partner.salary)}K/год</>
                   : 'Выберите партнёра из пула.';
@@ -246,12 +244,11 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
       {step === 2 && (
         <>
           <div className="w95-caption">
-            <span>Шаг {step + 1} из {STEPS.length} — герой: статы и профессия</span>
-            <span className="w95-hint">{HERO_POINTS} очков, кап {HERO_STAT_CAP} на стат</span>
+            <span>Шаг {step + 1} из {STEPS.length} — герой: навыки и профессия</span>
+            <span className="w95-hint">{HERO_POINTS} очков, кап {HERO_STAT_CAP} на навык</span>
           </div>
           <div className="w95-hero">
             <div className="w95-form-row">
-              <label>Статы</label>
               <div style={{ flex: 1 }}>
                 <div className="w95-hero-stats">
                   {STATS.map(([k, label]) => (
@@ -264,12 +261,12 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                     </div>
                   ))}
                 </div>
-                <div className={left === 0 ? 'w95-pick-count' : 'w95-hint'}>
-                  {left === 0 ? 'Все 40 очков распределены ✓' : `Осталось очков: ${left} из ${HERO_POINTS} (кап на стат — ${HERO_STAT_CAP})`}
+                <div className={left === 0 ? 'w95-pick-count' : 'w95-hint'} style={{ marginTop: 8 }}>
+                  {left === 0 ? 'Все 40 очков распределены ✓' : `Осталось очков: ${left} из ${HERO_POINTS} (кап на навык — ${HERO_STAT_CAP})`}
                 </div>
               </div>
             </div>
-            <div className="w95-form-row">
+            <div className="w95-form-row" style={{ marginTop: 12 }}>
               <label>Профессия</label>
               <div className="w95-row" style={{ gap: 4, flexWrap: 'wrap', flex: 1 }}>
                 {HERO_CAREERS.map((c) => (
@@ -290,25 +287,24 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
             <span className="w95-hint">10 на выбор или свой текст — уйдёт в чат команды и в LLM</span>
           </div>
           <div className="w95-hero">
-            <div className="w95-form-row">
+            <div className="w95-form-row" style={{ alignItems: 'flex-start' }}>
               <label>Характер</label>
               <div style={{ flex: 1 }}>
                 <div className="w95-row" style={{ gap: 6, alignItems: 'baseline' }}>
                   <b style={{ flex: 'none' }}>{char.label}</b>
-                  <span className="w95-hint" style={{ flex: 1 }}>{char.persona}</span>
                   <button className="w95-btn" style={{ flex: 'none' }} title="Следующий характер" onClick={() => setCharIdx((i) => (i + 1) % HERO_CHARACTERS.length)}>Следующий ▸</button>
                 </div>
-                <div className="w95-row" style={{ gap: 6, marginTop: 3 }}>
-                  <input
-                    className="w95-input"
-                    style={{ flex: 1 }}
-                    maxLength={120}
-                    placeholder="…или впишите свой характер (пойдёт в чат команды как есть)"
-                    value={charCustom}
-                    onChange={(e) => setCharCustom(e.target.value)}
-                  />
-                  {customChar.length > 0 && <span className="w95-hint" style={{ flex: 'none' }}>используется свой вариант</span>}
-                </div>
+                <div className="w95-hint" style={{ margin: '3px 0 5px' }}>{char.persona}</div>
+                <textarea
+                  className="w95-input"
+                  style={{ width: '100%', minHeight: 72, resize: 'vertical' }}
+                  rows={3}
+                  maxLength={200}
+                  placeholder="…или впишите свой характер — он уйдёт в чат команды как есть"
+                  value={charCustom}
+                  onChange={(e) => setCharCustom(e.target.value)}
+                />
+                {customChar.length > 0 && <div className="w95-hint" style={{ marginTop: 2 }}>используется свой вариант ({customChar.length}/200)</div>}
               </div>
             </div>
           </div>
@@ -393,13 +389,11 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
             </div>
             {partner ? (
               <div className="w95-hint" style={{ marginBottom: 4 }}>
-                Статы партнёра: +{share} ко всем четырём
+                Бонус партнёра: +{share} ко всем навыкам
                 (Код {partner.stats.program + share} · Сюжет {partner.stats.scenario + share} · Графика {partner.stats.graphics + share} · Звук {partner.stats.sound + share}).
-                <br />
-                Если придётся расстаться: выкуп {share}% кассы разом{share > 0 ? ` (≈${fmtK(terms.buyout)}K со стартовой кассы)` : ''} — или {fmtPct(terms.rentPct)}% дохода от игр навсегда.
               </div>
             ) : (
-              <div className="w95-hint" style={{ marginBottom: 4 }}>Выберите партнёра — покажу бонус статов и условия доли.</div>
+              <div className="w95-hint" style={{ marginBottom: 4 }}>Выберите партнёра — покажу бонус к навыкам.</div>
             )}
           </div>
         </>
