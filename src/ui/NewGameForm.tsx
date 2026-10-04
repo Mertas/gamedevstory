@@ -220,7 +220,6 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
               <button className="w95-btn" style={{ flex: 'none' }} title="Случайное имя" onClick={() => setHeroName(randomHeroName())}>🎲</button>
             </div>
             <div className="w95-form-row">
-              <label>Аватарка</label>
               <div style={{ flex: 1 }}>
                 <div className="w95-hero-grid">
                   {PLAYER_AVATARS.map((av) => (
@@ -241,7 +240,6 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                     fallback={<span style={{ fontSize: 64 }}>👤</span>}
                   />
                 </div>
-                <div className="w95-hint" style={{ marginTop: 2 }}>20 аватарок игрока</div>
               </div>
             </div>
           </div>
