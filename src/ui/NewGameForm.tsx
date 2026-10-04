@@ -246,7 +246,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                       title={av}
                       onClick={() => setHeroAvatar(av)}
                     >
-                      <StaffAvatar staff={{ id: av, avatarId: av }} variant={AV.newGame} size={30} fallback={<span style={{ fontSize: 15 }}>👤</span>} />
+                      <StaffAvatar staff={{ id: av, avatarId: av }} variant="256_d8" fallback={<span style={{ fontSize: 15 }}>👤</span>} />
                     </button>
                   ))}
                 </div>
