@@ -302,11 +302,16 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   app.get('/api/studio-name', (req, res) => {
     void withUser(req, res, async () => {
       try {
-        const taken = new Set(users.studioNames().map((n) => n.trim().toLowerCase()));
+        // занятые (из сейвов) + уже показанные в форме (skip) — оба списка уходят в промпт
+        const skip = String(req.query.skip ?? '').split('|').map((s) => s.trim()).filter(Boolean).slice(-80);
+        const saved = users.studioNames().map((n) => n.trim()).filter(Boolean);
+        const taken = new Set([...saved, ...skip].map((n) => n.toLowerCase()));
+        const avoid = [...saved, ...skip];
         for (let round = 0; round < 3; round++) {
-          const names = await generateStudioNames(8);
+          const names = await generateStudioNames(8, avoid);
           const free = names.find((n) => !taken.has(n.trim().toLowerCase()));
           if (free) return void res.json({ ok: true, name: free });
+          avoid.push(...names.map((n) => n.trim())); // раунд пуст — просим другие
         }
         res.json({ ok: false, error: 'все варианты заняты' });
       } catch (e) {

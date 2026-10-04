@@ -52,6 +52,8 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
   // SER-25: имя студии предлагает GigaChat (кнопка «Случайно» — тоже LLM; на провале — локальный список)
   const [nameBusy, setNameBusy] = useState(false);
   const nameTouched = useRef(false);
+  // SER-25: уже показанные названия — уходят в запрос skip-ом, чтобы GigaChat не повторялся
+  const rolledNames = useRef<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   // M6: уровень сложности — выбирается тут и сохраняется в партии
@@ -102,12 +104,20 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const rollName = async (force: boolean) => {
     if (!force && nameTouched.current) return; // игрок уже правил поле — не затираем LLM-ответом
     setNameBusy(true);
-    const local = NAME_IDEAS[Math.floor(Math.random() * NAME_IDEAS.length)] ?? 'Game Dev Studio';
+    const used = rolledNames.current;
+    const fresh = NAME_IDEAS.filter((n) => !used.includes(n));
+    const pool = fresh.length > 0 ? fresh : NAME_IDEAS;
+    const local = pool[Math.floor(Math.random() * pool.length)] ?? 'Game Dev Studio';
     try {
-      const r = await fetch('/api/studio-name');
+      const skip = used.slice(-60);
+      const qs = skip.length > 0 ? `?skip=${encodeURIComponent(skip.join('|'))}` : '';
+      const r = await fetch(`/api/studio-name${qs}`);
       const j = (await r.json()) as { ok?: boolean; name?: string };
-      setName((cur) => (j?.ok && j.name ? j.name : force || !nameTouched.current ? local : cur));
+      const next = j?.ok && j.name ? j.name : local;
+      used.push(next);
+      setName((cur) => (force || !nameTouched.current ? next : cur));
     } catch {
+      used.push(local);
       setName((cur) => (force || !nameTouched.current ? local : cur));
     } finally {
       setNameBusy(false);

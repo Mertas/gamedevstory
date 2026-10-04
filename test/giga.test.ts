@@ -1,6 +1,6 @@
 // LLM-08: порядок аккаунтов GigaChat — текущий первым, резерв следом.
 import { describe, expect, it } from 'vitest';
-import { gigaOrder } from '../src/server/giga';
+import { gigaOrder, studioAvoidLine } from '../src/server/giga';
 
 describe('LLM-08: обход аккаунтов GigaChat (резерв при отказе основного)', () => {
   it('текущий идёт первым, остальные следом', () => {
@@ -11,5 +11,22 @@ describe('LLM-08: обход аккаунтов GigaChat (резерв при о
   it('битый current не ломает порядок', () => {
     expect(gigaOrder(5, 2)).toEqual([0, 1]);
     expect(gigaOrder(-1, 2)).toEqual([0, 1]);
+  });
+});
+
+describe('SER-25: исключения в промпте названий студии', () => {
+  it('пустой список — без хвоста', () => {
+    expect(studioAvoidLine([])).toBe('');
+    expect(studioAvoidLine(['  ', ''])).toBe('');
+  });
+  it('занятые идут «ёлочками», дубли убраны', () => {
+    const line = studioAvoidLine(['Пиксель-Плюс', 'Пиксель-Плюс', 'Байт и К°']);
+    expect(line).toContain('«Пиксель-Плюс»');
+    expect(line).toContain('«Байт и К°»');
+    expect(line.match(/«/g)!.length).toBe(2);
+  });
+  it('не больше 80 названий', () => {
+    const many = Array.from({ length: 120 }, (_, i) => `Студия ${i}`);
+    expect(studioAvoidLine(many).match(/«/g)!.length).toBe(80);
   });
 });

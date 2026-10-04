@@ -218,8 +218,15 @@ export async function generateStory(genreRu: string, typeRu: string): Promise<{ 
   return { title, plot };
 }
 
-/** SER-25: пачка названий для студии — уникальность проверяет вызывающая сторона. */
-export async function generateStudioNames(count = 8): Promise<string[]> {
+/** SER-25: хвост промпта с исключениями — занятые и уже показанные названия (до 80, без дублей). */
+export function studioAvoidLine(exclude: string[]): string {
+  const avoid = [...new Set(exclude.map((s) => s.trim()).filter(Boolean))].slice(0, 80);
+  if (avoid.length === 0) return '';
+  return ` Не предлагай и не перефразируй эти названия — они уже есть: ${avoid.map((s) => `«${s}»`).join(', ')}.`;
+}
+
+/** SER-25: пачка названий для студии — уникальность и исключения проверяет вызывающая сторона. */
+export async function generateStudioNames(count = 8, exclude: string[] = []): Promise<string[]> {
   if (!gigaReady) throw new Error('GigaChat недоступен');
   const out = await generateWithFallback(
     [
@@ -229,7 +236,7 @@ export async function generateStudioNames(count = 8): Promise<string[]> {
       },
       {
         role: 'user',
-        content: `Придумай ${count} разных названий для игровой студии: по-русски, 2–3 слова, без кавычек и точек, с юмором и каламбурами про разработку игр и ретро (баги, пиксели, сейвы, дискеты, коты, боссы). В духе: «Баг как Фича», «Кот и Компилятор», «Ночная Сборка» — эти примеры не повторяй. Не длиннее 30 символов. Формат: ["Название 1", "Название 2", ...]`,
+        content: `Придумай ${count} разных названий для игровой студии: по-русски, 2–3 слова, без кавычек и точек, с юмором и каламбурами про разработку игр и ретро (баги, пиксели, сейвы, дискеты, коты, боссы). В духе: «Баг как Фича», «Кот и Компилятор», «Ночная Сборка» — эти примеры не повторяй. Не длиннее 30 символов.${studioAvoidLine(exclude)} Формат: ["Название 1", "Название 2", ...]`,
       },
     ],
     500,
