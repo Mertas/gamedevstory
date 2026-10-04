@@ -8,6 +8,7 @@ import {
 
 import { actionSetUi, useGameSelector } from './store';
 import { sfx } from './sfx';
+import { WIN_Z_BASE, WIN_Z_CAP, packWinZ } from './winz';
 
 export interface WinState {
   id: string;
@@ -43,7 +44,15 @@ interface WmState {
 const WmApiCtx = createContext<WmApi | null>(null);
 const WmStateCtx = createContext<WmState>({ wins: [], activeId: null });
 
-let zCounter = 10;
+let zCounter = WIN_Z_BASE;
+
+/** Перед поднятием окна: при переполнении счётчика сжать слои окон (см. winz.ts). */
+function prepZ(ws: WinState[]): WinState[] {
+  if (zCounter < WIN_Z_CAP) return ws;
+  const { wins, next } = packWinZ(ws);
+  zCounter = next;
+  return wins;
+}
 
 export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const [wins, setWins] = useState<WinState[]>([]);
@@ -59,8 +68,11 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     // Флаг ставим всегда, иначе в НОВОЙ партии (окон в сейве ещё нет) раскладка не сохранялась бы вовсе.
     seeded.current = true;
     if (!savedWins || savedWins.length === 0) return; // окон в сейве нет — стол пустой, как и был
-    zCounter = Math.max(10, ...savedWins.map((w) => w.z));
-    setWins(savedWins.map((w) => ({ ...w, flash: false })));
+    // v1.47.9: слои из сейва перенумеровываются в 10..N — накопленный за тысячи кликов z
+    // (вплоть до 9834) перекрывал Webamp (8998), панель задач (9000) и меню «Пуск» (9500)
+    const { wins: packed, next } = packWinZ(savedWins.map((w) => ({ ...w, flash: false })));
+    zCounter = next;
+    setWins(packed);
   }, [savedWins]);
 
   // изменения раскладки уходят в сейв с задержкой: перетаскивание окна — это десятки событий
@@ -96,19 +108,20 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       sfx.openWindow(); // M4: звук открытия окна (дух Win95)
       setActiveId(id);
       setWins((ws) => {
-        if (ws.some((w) => w.id === id)) {
+        const base = prepZ(ws);
+        if (base.some((w) => w.id === id)) {
           // UI-07: открытие возвращает ту же инстанцию — состояние (визард/формы) сохраняется
-          return ws.map((w) => (w.id === id ? { ...w, minimized: false, closed: false, flash: false, z: ++zCounter } : w));
+          return base.map((w) => (w.id === id ? { ...w, minimized: false, closed: false, flash: false, z: ++zCounter } : w));
         }
         // UI-07: закрытые окна не занимают позиции каскада новых окон
-        const n = ws.filter((x) => !x.closed).length;
+        const n = base.filter((x) => !x.closed).length;
         const mem = memory.current.get(id);
         const vw = window.innerWidth;
         const vh = window.innerHeight - 30;
         const geo = mem && mem.w >= 240 && mem.h >= 150 && mem.x >= 0 && mem.y >= 0 && mem.x + mem.w <= vw + 20
           ? { ...mem }
           : { x: 40 + (n % 6) * 28, y: 30 + (n % 5) * 24, w: 560, h: 400 };
-        return [...ws, {
+        return [...base, {
           id,
           x: Math.max(0, Math.min(geo.x, vw - 240)),
           y: Math.max(0, Math.min(geo.y, vh - 60)),
@@ -138,7 +151,13 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     },
     focus(id) {
       setActiveId(id);
-      patch(id, (w) => ({ ...w, z: ++zCounter, flash: false }));
+      setWins((ws) => {
+        const cur = ws.find((w) => w.id === id);
+        if (!cur) return ws;
+        if (cur.z === zCounter && !cur.flash) return ws; // окно уже поверх — счётчик не крутим
+        const base = prepZ(ws);
+        return base.map((w) => (w.id === id ? { ...w, z: ++zCounter, flash: false } : w));
+      });
     },
     blur() {
       setActiveId(null);
@@ -150,7 +169,13 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     toggleMax(id) {
       // разворот на весь экран поднимает окно поверх остальных (и оно активно)
       setActiveId(id);
-      patch(id, (w) => (w.maximized ? { ...w, maximized: false } : { ...w, maximized: true, z: ++zCounter }));
+      setWins((ws) => {
+        const cur = ws.find((w) => w.id === id);
+        if (!cur) return ws;
+        if (cur.maximized) return ws.map((w) => (w.id === id ? { ...w, maximized: false } : w));
+        const base = prepZ(ws);
+        return base.map((w) => (w.id === id ? { ...w, maximized: true, z: ++zCounter } : w));
+      });
     },
     move(id, x, y) {
       patch(id, (w) => (w.x === x && w.y === y ? w : { ...w, x, y }));
