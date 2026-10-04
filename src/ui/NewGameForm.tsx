@@ -138,7 +138,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
     step === 0
       ? (name.trim().length > 0 ? <>Перегенерировать название: кнопка <b>🎲 Случайно</b>.</> : 'Впишите название студии.')
       : step === 1
-        ? (nameOk ? 'Имя свободно. Аватарки — из набора игрока (пока заглушки).' : nameTaken ? 'Имя занято сотрудником — придумайте другое.' : 'Впишите имя героя.')
+        ? (nameOk ? 'Имя свободно. Аватарки — из набора игрока.' : nameTaken ? 'Имя занято сотрудником — придумайте другое.' : 'Впишите имя героя.')
         : step === 2
           ? (statsOk ? `Все ${HERO_POINTS} очков распределены ✓.` : `Осталось очков: ${left} из ${HERO_POINTS} (кап — ${HERO_STAT_CAP} на навык).`)
           : step === 3
@@ -234,7 +234,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                     </button>
                   ))}
                 </div>
-                <div className="w95-hint" style={{ marginTop: 2 }}>20 аватарок игрока (появятся после генерации в LLMPics; пока — заглушки)</div>
+                <div className="w95-hint" style={{ marginTop: 2 }}>20 аватарок игрока</div>
               </div>
             </div>
           </div>
