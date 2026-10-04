@@ -4,6 +4,7 @@ import { fireAction, newGame, partnerBuyoutAction, partnerRentAction } from '../
 import { dailySales } from '../src/core/systems/market';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { STAFF } from '../src/core/data/db';
+import { initialPoolIds } from '../src/core/systems/staff';
 import { HERO_CHARACTERS, sanitizeHeroStats } from '../src/shared/hero';
 import type { ActiveGame, GameState } from '../src/core/types';
 
@@ -31,7 +32,7 @@ function releasedGame(g: GameState, revenue: number): ActiveGame {
 
 describe('PLAN-48: главный герой (игрок)', () => {
   it('новый старт: ГГ + партнёр; статы партнёра +D ко всем четырём', () => {
-    const g = newGame(1, { hero: HERO, partnerId: 's-presso', partnerPct: 12 });
+    const g = newGame(1, { hero: HERO, partnerId: 'phil-harmonic', partnerPct: 12 });
     expect(g.staff.length).toBe(2);
     const h = g.staff[0]!;
     expect(h.hero).toBe(true);
@@ -44,7 +45,7 @@ describe('PLAN-48: главный герой (игрок)', () => {
     expect(h.persona).toBe(HERO.persona); // характер уходит в LLM-чат
     expect(h.salary).toBe(20); // стандартный оклад — и у ГГ тоже
     expect(h.hireFee).toBe(0);
-    const d = STAFF.find((x) => x.id === 's-presso')!;
+    const d = STAFF.find((x) => x.id === 'phil-harmonic')!;
     const p = g.staff[1]!;
     expect(p.partnerPct).toBe(12);
     for (const k of ['program', 'scenario', 'graphics', 'sound'] as const) {
@@ -52,7 +53,7 @@ describe('PLAN-48: главный герой (игрок)', () => {
       expect(p.caps[k]).toBeGreaterThanOrEqual(p.stats[k]);
     }
     expect(p.hireFee).toBe(0); // со-основатель — без взноса
-    expect(g.hiredIds).toEqual(['hero', 's-presso']);
+    expect(g.hiredIds).toEqual(['hero', 'phil-harmonic']);
   });
 
   it('ГГ нельзя уволить — даже прямым действием', () => {
@@ -114,6 +115,13 @@ describe('PLAN-48: главный герой (игрок)', () => {
     const g = newGame(5, { hero: HERO, partnerId: 'no-such', partnerPct: 3 });
     expect(g.staff.length).toBe(2);
     expect(g.staff[1]!.partnerPct).toBe(3);
+  });
+
+  it('стартовый пул v1.46.0: звукорежиссёр вместо Эс Прессо', () => {
+    expect(initialPoolIds()).toEqual(['john-gameson', 'newb-ownerton', 'dee-coder', 'phil-harmonic']);
+    const phil = STAFF.find((x) => x.id === 'phil-harmonic')!;
+    expect(phil.activeCareer).toBe('sound');
+    expect(phil.careers.sound).toBe(1);
   });
 
   it('легаси-старт без героя не изменился (двое из пула)', () => {

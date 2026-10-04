@@ -321,7 +321,7 @@ for (const row of tableRows(bStaff)) {
     unlock: clean(row[18]),
   });
 }
-if (staff.length !== 45) throw new Error(`staff: ${staff.length}`);
+if (staff.length !== 46) throw new Error(`staff: ${staff.length}`);
 
 // личности сотрудников (research/04, наш контент [Н]): id → инструкция для LLM-чата
 const bPersonas = section(r4, '## Таблица личностей', '## Конец');
@@ -336,7 +336,7 @@ for (const row of tableRows(bPersonas)) {
   if (personas.some((p) => p.staffId === id)) throw new Error(`persona: дубль id «${id}»`);
   personas.push({ staffId: id, persona });
 }
-if (personas.length !== 45) throw new Error(`personas: ${personas.length} (нужно 45)`);
+if (personas.length !== 46) throw new Error(`personas: ${personas.length} (нужно 46)`);
 
 // реплики рецензентов
 const messages: { points: number; message: string }[] = [];

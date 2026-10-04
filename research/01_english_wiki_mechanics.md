@@ -400,8 +400,9 @@ Career level columns: Coder, Writer, Designer, Snd.Eng., Director, Producer, Har
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | John Gameson | M | $20.0K | $40.0K | 8 | 3 | 24 | 3 | 6 | 36 |  | 1 |  |  |  |  |  |  | Initially available |
 | Newb Ownerton | M | $20.0K | $40.0K | 9 | 18 | 8 | 8 | 3 | 37 | 1 |  |  |  |  |  |  |  | Initially available |
-| S. Presso | M | $24.0K | $40.0K | 10 | 2 | 14 | 15 | 6 | 37 |  | 1 |  |  |  |  |  |  | Initially available |
+| S. Presso | M | $24.0K | $40.0K | 10 | 2 | 14 | 15 | 6 | 37 |  | 1 |  |  |  |  |  |  | Word of Mouth |
 | Dee Coder | F | $28.0K | $40.0K | 13 | 1 | 1 | 36 | 3 | 41 |  |  | 1 |  |  |  |  |  | Initially available |
+| Phil Harmonic | M | $24.0K | $40.0K | 10 | 4 | 3 | 5 | 25 | 37 |  |  |  | 1 |  |  |  |  | Initially available |
 | Biggs Porkins | M | $26.0K | $50.0K | 12 | 15 | 6 | 3 | 7 | 31 | 1 |  |  | 3 |  |  |  |  | Word of Mouth |
 | Sam Ulation | M | $24.0K | $50.0K | 11 | 24 | 4 | 2 | 2 | 32 | 1 |  |  |  |  |  |  |  | Word of Mouth |
 | Amy Less | F | $30.0K | $60.0K | 14 | 7 | 19 | 2 | 10 | 38 |  | 1 |  | 2 |  |  |  |  | Word of Mouth |

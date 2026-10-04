@@ -1,6 +1,6 @@
 // ─── M7: найм — «слои таланта» и спец-сотрудники ───
 // Метод поиска = свой круг кандидатов: дешёвый показывает юниоров, дорогой — звёзд.
-// Слои собраны по силе (Σ статов) из данных original: Word of Mouth (15) разбит на
+// Слои собраны по силе (Σ статов) из данных original: Word of Mouth разбит на
 // три канала, Open House (10) — на «день открытых дверей» и «Голливуд».
 import type { GameState } from '../core/types';
 import type { HireMethodId } from '../core/config';
@@ -17,8 +17,8 @@ export const HIRE_METHOD_LABELS: Record<HireMethodId, string> = {
 
 /** Слои таланта: id сотрудников по методам (юниоры → звёзды). */
 export const HIRE_BANDS: Record<HireMethodId, string[]> = {
-  // Σ статов 31–46: зелёные новички
-  'word-of-mouth': ['biggs-porkins', 'sam-ulation', 'amy-less', 'callie-fornia'],
+  // Σ статов 31–46: зелёные новички (v1.46.0: сюда переведён S. Presso из стартовых)
+  'word-of-mouth': ['biggs-porkins', 'sam-ulation', 'amy-less', 'callie-fornia', 's-presso'],
   // Σ 53–71: крепкая середина
   magazine: ['holly-cow', 'chuck-shultz', 'ann-deroid', 'gilly-bates', 'lady-googoo', 'vincent-vangoo'],
   // Σ 78–115: серьёзные профессионалы
