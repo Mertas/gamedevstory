@@ -40,11 +40,16 @@ while read -r _old new ref; do
   log "ставлю зависимости (первый раз это долго)"
   pnpm install --frozen-lockfile --reporter=append-only
 
-  # контент-БД нужна уже тестам: src/core/data/db.ts открывает её readOnly при импорте
-  if [ ! -f "$SHARED/data/gamedev.db" ]; then
-    log "контент-БД отсутствует — собираю из research/ (до тестов)"
-    pnpm db:build
-  fi
+  # контент-БД нужна уже тестам: src/core/data/db.ts открывает её readOnly при импорте.
+  # v1.47.8: собираем КАЖДЫЙ деплой (контент в research/ мог измениться) — сборка в staging,
+  # затем атомарный mv в shared: живой процесс держит старый файл до рестарта.
+  log "собираю контент-БД из research/ (до тестов)"
+  STAGE="$SHARED/.db-stage"; rm -rf "$STAGE"; mkdir -p "$STAGE"
+  ln -sfn "$STAGE" "$REL/data"
+  pnpm db:build
+  ln -sfn "$SHARED/data" "$REL/data"
+  mv -f "$STAGE/gamedev.db" "$SHARED/data/gamedev.db"
+  rm -rf "$STAGE"
 
   log "гейт: типы + линт + тесты"
   # страховка: тесты никогда не должны открывать боевую users.db (в ней аккаунты и сохранения)
