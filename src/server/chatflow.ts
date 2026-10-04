@@ -233,6 +233,7 @@ export class ChatOrchestrator {
 
   private buildContext(phase: string, extra?: Record<string, unknown>): Record<string, unknown> {
     const g = this.h.game.activeGame;
+    const hero = this.h.game.staff.find((s) => s.hero);
     const project = g
       ? {
           genre: genreById(g.genreId)?.name ?? g.genreId,
@@ -267,12 +268,14 @@ export class ChatOrchestrator {
       staff: this.h.game.staff.map((s) => ({
         id: s.id,
         name: s.name,
+        gender: s.gender,
         career: s.activeCareer,
         stats: s.stats,
         power: s.power,
         // личность: у ГГ — своя (характер из настроек, PLAN-48), у остальных — из контентной БД (research/04 → personalities)
         persona: s.persona ?? STAFF.find((d) => d.id === s.id)?.persona ?? null,
       })),
+      boss: hero ? { name: hero.name, gender: hero.gender } : null,
       facts: extra ?? {},
     };
   }

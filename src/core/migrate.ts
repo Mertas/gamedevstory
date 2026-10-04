@@ -5,8 +5,9 @@ import type { GameState, Staff } from './types';
 import { staffNameRu } from './data/staff-ru';
 import { capInit } from '../shared/train';
 import { ownConsoleStartBase } from '../shared/consoles';
+import { avatarGender } from '../shared/hero';
 
-export const SAVE_VERSION = 13; // 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 14; // 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -83,6 +84,13 @@ export function migrateSave(state: GameState): GameState {
   if (v < 13) {
     // PLAN-48: главный герой и партнёр живут только в новых партиях; старым — ренты нет
     state.partnerRentPct = typeof state.partnerRentPct === 'number' ? state.partnerRentPct : 0;
+  }
+  if (v < 14) {
+    // 11.10.2026: пол героя — по аватарке. До v14 герой всегда создавался с 'M' (даже с женской
+    // аватаркой); выравниваем. Нечётные player-NN — парни, чётные — девушки (shared/hero).
+    for (const s of state.staff) {
+      if (s.hero && s.avatarId) s.gender = avatarGender(s.avatarId);
+    }
   }
   state.saveVersion = SAVE_VERSION;
   return state;

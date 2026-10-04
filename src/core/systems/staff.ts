@@ -8,7 +8,8 @@ import type { ActionResult, GameState, Staff, StaffHistoryEntry } from '../types
 import { HIRE_BANDS, HIRE_METHOD_LABELS, unlockedMystery } from '../../shared/hire';
 import { CAREER_LABELS } from '../../shared/careers';
 import { capInit, STAT_KEYS } from '../../shared/train';
-import { clampPartnerPct, HERO_SALARY, sanitizeHeroStats, type HeroSetup } from '../../shared/hero';
+import { avatarGender, clampPartnerPct, HERO_SALARY, sanitizeHeroStats, type HeroSetup } from '../../shared/hero';
+import { gform } from '../../shared/gender';
 import type { CareerId } from '../data/schema';
 
 export function makeStaffFromData(id: string): Staff | null {
@@ -59,7 +60,7 @@ export function makeHeroStaff(setup: HeroSetup): Staff {
   const st: Staff = {
     id: 'hero',
     name: setup.name.trim().slice(0, 24) || 'Герой',
-    gender: 'M',
+    gender: avatarGender(setup.avatarId),
     salary: HERO_SALARY,
     hireFee: 0,
     maxPower: 10,
@@ -80,7 +81,7 @@ export function makeHeroStaff(setup: HeroSetup): Staff {
     persona: setup.persona.trim().slice(0, 200) || null,
     avatarId: setup.avatarId,
   };
-  pushHistory(st, 1, 'hire', 'Основатель студии — вы здесь с первого дня');
+  pushHistory(st, 1, 'hire', `${gform('Основатель/Основательница', st.gender)} студии — вы здесь с первого дня`);
   return st;
 }
 
@@ -96,7 +97,7 @@ export function makePartnerStaff(id: string | undefined, pct: unknown): Staff | 
   st.caps = capInit(st.stats);
   st.hireFee = 0; // со-основатель — без взноса за найм
   st.partnerPct = D;
-  pushHistory(st, 1, 'hire', D > 0 ? `Соучредитель студии — доля ${D}%` : 'Соучредитель студии');
+  pushHistory(st, 1, 'hire', D > 0 ? `${gform('Соучредитель/Соучредительница', st.gender)} студии — доля ${D}%` : `${gform('Соучредитель/Соучредительница', st.gender)} студии`);
   return st;
 }
 
@@ -130,7 +131,7 @@ export function partnerRent(state: GameState): ActionResult {
   const rent = (p.partnerPct ?? 0) / 4;
   state.partnerRentPct = (state.partnerRentPct ?? 0) + rent;
   leavePartner(state, p);
-  log(state, `Партнёр ${p.name} ушёл на долю дохода: навсегда ${rent}% от продаж игр`);
+  log(state, `Партнёр ${p.name} ${gform('ушёл/ушла', p.gender)} на долю дохода: навсегда ${rent}% от продаж игр`);
   return { ok: true };
 }
 
@@ -200,7 +201,7 @@ export function hireFromSearch(
   state.staff.push(staff);
   state.hiredIds.push(staff.id);
   search.ids = search.ids.filter((id) => id !== staffId);
-  log(state, `Нанят: ${staff.name} (${staff.activeCareer} Lv${staff.careers[staff.activeCareer]}, взнос ${staff.hireFee}K, зарплата ${staff.salary}K/год)`);
+  log(state, `${gform('Нанят/Нанята', staff.gender)}: ${staff.name} (${staff.activeCareer} Lv${staff.careers[staff.activeCareer]}, взнос ${staff.hireFee}K, зарплата ${staff.salary}K/год)`);
   pushHistory(staff, state.week, 'hire', `Нанят: ${CAREER_LABELS[staff.activeCareer] ?? staff.activeCareer} Lv${staff.careers[staff.activeCareer] ?? 1}, взнос ${staff.hireFee}K`);
   return { ok: true, staffId: staff.id };
 }
@@ -216,7 +217,7 @@ export function fireStaff(state: GameState, staffId: string): ActionResult {
   // аудит 05.09: уволенный возвращается в пул кандидатов (раньше hiredIds.push() делал
   // обратное заявленному — повторный найм был невозможен, плюс копились дубли)
   state.hiredIds = state.hiredIds.filter((id) => id !== s.id);
-  log(state, `Уволен: ${s.name}`);
+  log(state, `${gform('Уволен/Уволена', s.gender)}: ${s.name}`);
   return { ok: true };
 }
 
@@ -252,7 +253,7 @@ export function dailyPower(state: GameState, worked: boolean, rng: Rng): void {
     if (s.homeWeeks > 0) {
       s.homeWeeks--;
       s.power = Math.min(s.maxPower, s.power + 3);
-      if (s.homeWeeks === 0) log(state, `${s.name} вернулся в офис`);
+      if (s.homeWeeks === 0) log(state, `${s.name} ${gform('вернулся/вернулась', s.gender)} в офис`);
       continue;
     }
     if (worked) s.power -= 1;
@@ -260,7 +261,7 @@ export function dailyPower(state: GameState, worked: boolean, rng: Rng): void {
     if (s.power <= 0) {
       s.power = 0;
       s.homeWeeks = rng.int(1, 2);
-      log(state, `${s.name} вымотался и ушёл домой`);
+      log(state, `${s.name} ${gform('вымотался и ушёл/вымоталась и ушла', s.gender)} домой`);
     }
   }
 }
@@ -283,7 +284,7 @@ export function restStaff(state: GameState, staffId: string): ActionResult {
   const s = state.staff.find((x) => x.id === staffId);
   if (!s) return { ok: false, error: 'Нет такого сотрудника' };
   if ((s.restDays ?? 0) > 0) return { ok: false, error: `${s.name} уже в отпуске (${s.restDays} дн.)` };
-  if (s.homeWeeks > 0) return { ok: false, error: `${s.name} сейчас дома (вымотался)` };
+  if (s.homeWeeks > 0) return { ok: false, error: `${s.name} сейчас дома (${gform('вымотался/вымоталась', s.gender)})` };
   if (busyStaffIds(state).has(s.id)) return { ok: false, error: `${s.name} занят на контракте` };
   if (s.power >= s.maxPower) return { ok: false, error: 'POWER и так на максимуме' };
   s.restDays = CONFIG.REST_DAYS;
@@ -299,8 +300,8 @@ export function tickRest(state: GameState): void {
     s.restDays -= 1;
     if (s.restDays === 0) {
       s.power = s.maxPower;
-      log(state, `🧳 ${s.name} вернулся из отпуска (POWER ${s.maxPower}/${s.maxPower})`);
-      pushHistory(s, state.week, 'back', `Вернулся из отпуска — POWER полный (${s.maxPower})`);
+      log(state, `🧳 ${s.name} ${gform('вернулся/вернулась', s.gender)} из отпуска (POWER ${s.maxPower}/${s.maxPower})`);
+      pushHistory(s, state.week, 'back', `${gform('Вернулся/Вернулась', s.gender)} из отпуска — POWER полный (${s.maxPower})`);
     }
   }
 }

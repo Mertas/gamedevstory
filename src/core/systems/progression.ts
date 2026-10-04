@@ -129,7 +129,7 @@ export function trainStaff(state: GameState, staffId: string, trainingId: number
   if (state.officeLevel < (t.office ?? 1)) return { ok: false, error: `Нужен офис ${t.office}` };
   const cost = (t.costWan ?? 0) / 10;
   if (state.money < cost) return { ok: false, error: `Нужно ${cost}K` };
-  if (s.power < 1) return { ok: false, error: 'Сотрудник вымотался (POWER 0)' };
+  if (s.power < 1) return { ok: false, error: `${s.name} без сил (POWER 0)` };
 
   state.money -= cost;
   s.power = Math.max(0, s.power - (t.power ?? 0));

@@ -7,6 +7,7 @@ import { log } from './log';
 import { SAVE_VERSION } from './migrate';
 import type { ActionResult, DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
 import { minigameClosedOutcome, minigameOutcome, minigameTitle } from '../shared/minigames';
+import { gform } from '../shared/gender';
 import {
   fireStaff, startSearch, hireFromSearch, makeStaffFromData, paySalaries, pickAvatar, dailyPower, restStaff, tickRest,
   makeHeroStaff, makePartnerStaff, partnerBuyout, partnerRent,
@@ -107,7 +108,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
       state.staff.push(partner);
       state.hiredIds.push(partner.id);
     }
-    log(state, `Основатель: ${hero.name}${partner ? ` · партнёр: ${partner.name} (доля ${partner.partnerPct ?? 0}%)` : ''}`);
+    log(state, `${gform('Основатель/Основательница', hero.gender)}: ${hero.name}${partner ? ` · партнёр: ${partner.name} (доля ${partner.partnerPct ?? 0}%)` : ''}`);
   } else {
     // стартовая команда: выбор игрока (2 из начального пула) или классическая пара.
     // PLAN-18: экран новой игры отдаёт staffIds; дубли и лишние id отсекаем.

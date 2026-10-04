@@ -92,7 +92,7 @@ export function StaffWindow({ winId }: { winId: string }) {
           <div className="w95-hint">{CAREER_LABELS[s.activeCareer] ?? s.activeCareer} Lv{lv}{lv >= 5 ? ' (максимум)' : ''} · оклад {fmtK(salaryNow)}/год{lv < 5 ? ` → после левелапа ${fmtK(salaryNext)}` : ''}</div>
           <div style={{ marginTop: 2 }}>{status}</div>
           {persona && <div className="w95-hint" style={{ marginTop: 2, fontStyle: 'italic' }}>{persona}</div>}
-          {isHero && <div className="w95-hint" style={{ marginTop: 2 }}>Основатель студии — это вы. Уволить себя нельзя.</div>}
+          {isHero && <div className="w95-hint" style={{ marginTop: 2 }}>{s.gender === 'F' ? 'Основательница студии — это вы. Уволить себя нельзя.' : 'Основатель студии — это вы. Уволить себя нельзя.'}</div>}
           {isPartner && <div className="w95-hint" style={{ marginTop: 2 }}>Партнёр: доля {partnerPct}% компании (на старте дала +{partnerPct} ко всем статам).</div>}
         </div>
       </div>
@@ -328,7 +328,7 @@ export function StaffWindow({ winId }: { winId: string }) {
       {(isHero || isPartner || game.staff.length > 2) && (
         <div className="arc-sec">
           {isHero ? (
-            <span className="w95-hint">🛡️ Основатель студии — вечный сотрудник: уволить его нельзя.</span>
+            <span className="w95-hint">{s.gender === 'F' ? '🛡️ Основательница студии — вечный сотрудник: уволить её нельзя.' : '🛡️ Основатель студии — вечный сотрудник: уволить его нельзя.'}</span>
           ) : isPartner ? (
             <>
               <b>Расставание с партнёром</b>

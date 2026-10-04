@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState, useRef } from 'react';
 import { apiCreateSave, apiDifficulties, apiPool, type DifficultyOption, type PoolStaff } from './api';
 import { CAREER_LABELS } from '../shared/careers';
 import {
-  HERO_CAREERS, HERO_CHARACTERS, HERO_NAME_IDEAS, HERO_POINTS, HERO_SALARY, HERO_STAT_CAP,
+  HERO_CAREERS, HERO_CHARACTERS, HERO_POINTS, HERO_SALARY, HERO_STAT_CAP, avatarGender, heroNameIdeasFor,
   PLAYER_AVATARS, sanitizeHeroStats,
 } from '../shared/hero';
 import { STAT_KEYS, type StatKey } from '../shared/train';
@@ -43,7 +43,10 @@ const NAME_IDEAS = [
 ];
 
 /** PLAN-48: имя героя по кнопке 🎲 — локальный список (без LLM). */
-const randomHeroName = (): string => HERO_NAME_IDEAS[Math.floor(Math.random() * HERO_NAME_IDEAS.length)] ?? 'Артём Пикселев';
+const randomHeroName = (g: 'M' | 'F'): string => {
+  const list = heroNameIdeasFor(g);
+  return list[Math.floor(Math.random() * list.length)] ?? 'Артём Пикселев';
+};
 
 export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const [step, setStep] = useState(0);
@@ -61,7 +64,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const [difficulty, setDifficulty] = useState('normal');
 
   // ── PLAN-48: главный герой (игрок) ──
-  const [heroName, setHeroName] = useState(randomHeroName);
+  const [heroName, setHeroName] = useState(() => randomHeroName(avatarGender(PLAYER_AVATARS[0]!)));
   const [heroAvatar, setHeroAvatar] = useState(PLAYER_AVATARS[0]!); // по умолчанию всегда выбрана первая
   const [heroStats, setHeroStats] = useState<Record<StatKey, number>>({ program: 10, scenario: 10, graphics: 10, sound: 10 });
   const [heroCareer, setHeroCareer] = useState<CareerId>(HERO_CAREERS[0]!);
@@ -234,7 +237,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
                 value={heroName}
                 onChange={(e) => setHeroName(e.target.value)}
               />
-              <button className="w95-btn" style={{ flex: 'none' }} title="Случайное имя" onClick={() => setHeroName(randomHeroName())}>🎲</button>
+              <button className="w95-btn" style={{ flex: 'none' }} title="Случайное имя" onClick={() => setHeroName(randomHeroName(avatarGender(heroAvatar)))}>🎲</button>
             </div>
             <div className="w95-form-row">
               <div style={{ flex: 1 }}>

@@ -3,6 +3,7 @@
 // новых» + процедурные квесты (questgen.ts, раз в год — v1.40.0). Правила: одна активная арка
 // за раз; авторские — раз за партию; квесты не заканчиваются; события — в очередь pendingEvent.
 import { STORY_ARCS } from '../../shared/storylines';
+import { gform } from '../../shared/gender';
 import type { StatKey } from '../../shared/train';
 import { CONFIG } from '../config';
 import { GENRES } from '../data/db';
@@ -51,15 +52,15 @@ function freeSorted(state: GameState): Staff[] {
 }
 
 /** Кандидат для «личных» арок: свободен от контрактов, Lv2+, не «дома». */
-function personCandidate(state: GameState): { id: string; name: string } | null {
+function personCandidate(state: GameState): { id: string; name: string; gender: 'M' | 'F' } | null {
   const busy = new Set((state.contracts ?? []).filter((c) => !c.done).flatMap((c) => c.staffIds));
-  let best: { id: string; name: string } | null = null;
+  let best: { id: string; name: string; gender: 'M' | 'F' } | null = null;
   let bestLv = 1; // берём только Lv2+
   for (const s of state.staff) {
     if (busy.has(s.id) || s.homeWeeks > 0) continue;
     const lv = lvOf(s);
     if (lv >= 2 && lv > bestLv) {
-      best = { id: s.id, name: s.name };
+      best = { id: s.id, name: s.name, gender: s.gender };
       bestLv = lv;
     }
   }
@@ -178,6 +179,8 @@ export function tickStory(state: GameState, rng: Rng): void {
         staffName: pair[0].name,
         staffId2: pair[1].id,
         staffName2: pair[1].name,
+        staffGender: pair[0].gender,
+        staffGender2: pair[1].gender,
       };
       state.pendingEvent = { type: 'story', arcId: 'rivalry', step: 1 };
       log(state, `⚔️ ${pair[0].name} и ${pair[1].name}: спор о том, чей вклад важнее`);
@@ -195,6 +198,8 @@ export function tickStory(state: GameState, rng: Rng): void {
         staffName: pair[0].name,
         staffId2: pair[1].id,
         staffName2: pair[1].name,
+        staffGender: pair[0].gender,
+        staffGender2: pair[1].gender,
       };
       state.pendingEvent = { type: 'story', arcId: 'mentorship', step: 1 };
       log(state, `🧑‍🏫 ${pair[0].name} и ${pair[1].name}: пора подтянуть отстающего`);
@@ -212,6 +217,8 @@ export function tickStory(state: GameState, rng: Rng): void {
         staffName: pair[0].name,
         staffId2: pair[1].id,
         staffName2: pair[1].name,
+        staffGender: pair[0].gender,
+        staffGender2: pair[1].gender,
       };
       state.pendingEvent = { type: 'story', arcId: 'generations', step: 1 };
       log(state, `🕹️ ${pair[0].name} и ${pair[1].name}: старые методы против новых`);
@@ -222,7 +229,7 @@ export function tickStory(state: GameState, rng: Rng): void {
   if (!st.arcs.offer && state.history.length >= 2 && state.week >= 60) {
     const cand = personCandidate(state);
     if (cand) {
-      st.arcs.offer = { step: 1, done: false, staffId: cand.id, staffName: cand.name };
+      st.arcs.offer = { step: 1, done: false, staffId: cand.id, staffName: cand.name, staffGender: cand.gender };
       state.pendingEvent = { type: 'story', arcId: 'offer', step: 1 };
       log(state, `💼 ${cand.name}: предложение от конкурентов — решает босс`);
       return;
@@ -232,7 +239,7 @@ export function tickStory(state: GameState, rng: Rng): void {
   if (!st.arcs.burnout && state.history.length >= 2 && state.week >= 45) {
     const cand = personCandidate(state);
     if (cand) {
-      st.arcs.burnout = { step: 1, done: false, staffId: cand.id, staffName: cand.name };
+      st.arcs.burnout = { step: 1, done: false, staffId: cand.id, staffName: cand.name, staffGender: cand.gender };
       state.pendingEvent = { type: 'story', arcId: 'burnout', step: 1 };
       log(state, `🔋 ${cand.name}: похоже на выгорание — решает босс`);
       return;
@@ -250,6 +257,7 @@ export function tickStory(state: GameState, rng: Rng): void {
           done: false,
           staffId: cand.id,
           staffName: cand.name,
+          staffGender: cand.gender,
           genreId: genre.id,
           startWeek: state.week,
         };
@@ -297,6 +305,9 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
   const name2 = arcState.staffName2 ?? 'Коллега';
   const staff = state.staff.find((s) => s.id === arcState.staffId);
   const staff2 = state.staff.find((s) => s.id === arcState.staffId2);
+  // род участников: из состояния арки (пол записан при завязке) — переживает увольнение; запасной — из состава
+  const g1 = arcState.staffGender ?? staff?.gender;
+  const g2 = arcState.staffGender2 ?? staff2?.gender;
 
   if (ev.arcId === 'quest') {
     const logText = resolveGeneratedQuest(state, gen!, optionId, rng);
@@ -331,7 +342,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     } else if (ev.step === 2) {
       if (staff) raiseStat(staff, 5);
       arcState.done = true;
-      log(state, `💪 ${name} закрепился в студии — команда сплотилась (+${opt.fans ?? 0} фанатов)`);
+      log(state, `💪 ${name} ${gform('закрепился/закрепилась', g1)} в студии — команда сплотилась (+${opt.fans ?? 0} фанатов)`);
     } else if (ev.step === 3) {
       arcState.done = true;
       log(state, `✉️ Тёплое письмо от ${name} (+${opt.fans ?? 0} фанатов)`);
@@ -345,7 +356,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
         log(
           state,
           optionId === 'rest'
-            ? `🛌 ${name}: оплачен отпуск (−${opt.cost}K) — вернётся отдохнувшим`
+            ? `🛌 ${name}: оплачен отпуск (−${opt.cost}K) — ${gform('вернётся отдохнувшим/вернётся отдохнувшей', g1)}`
             : `💸 ${name}: премия и мотивация (−${opt.cost}K)`,
         );
       } else if (optionId === 'risk') {
@@ -360,11 +371,11 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     } else if (ev.step === 3) {
       if (staff) raiseStat(staff, -3);
       arcState.done = true;
-      log(state, `💔 ${name} выгорел — перегрузка взяла своё`);
+      log(state, `💔 ${name} ${gform('выгорел/выгорела', g1)} — перегрузка взяла своё`);
     } else if (ev.step === 4) {
       if (staff) raiseStat(staff, 2);
       arcState.done = true;
-      log(state, `🔋 ${name} справился сам — стал только крепче`);
+      log(state, `🔋 ${name} ${gform('справился сам — стал только крепче/справилась сама — стала только крепче', g1)}`);
     }
   } else if (ev.arcId === 'dream') {
     const arc = STORY_ARCS.dream!;
@@ -420,11 +431,11 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
       if (optionId === 'mentor') {
         arcState.outcome = 'mentor';
         arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
-        log(state, `🧑‍🏫 ${name} взялся подтянуть ${name2}`);
+        log(state, `🧑‍🏫 ${name} ${gform('взялся/взялась', g1)} подтянуть ${name2}`);
       } else if (optionId === 'decline') {
         arcState.outcome = 'decline';
         arcState.waitUntil = state.week + 4;
-        log(state, `🧑‍🏫 ${name2} разбирается сам`);
+        log(state, `🧑‍🏫 ${name2} разбирается ${gform('сам/сама', g2)}`);
       }
     } else if (ev.step === 2) {
       if (staff2) raiseStat(staff2, 4);

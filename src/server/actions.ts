@@ -17,6 +17,7 @@ import { resetChat, type ChatState } from '../shared/chat';
 import type { AutopilotPlan } from '../shared/autopilot';
 import type { ClientAction } from './game';
 import { score100 } from '../shared/rules';
+import { gform } from '../shared/gender';
 
 // аудит 09.09 (SRV-01): скорость — конечное число в [0..MAX_SPEED]; иначе Math.round(1000/v)=0 → тик каждую 1 мс
 export const MAX_SPEED = 8;
@@ -289,7 +290,10 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
     case 'rest_staff': {
       const res = restStaffAction(s.game, msg.staffId);
       s.run(res);
-      if (res.ok) s.pushSystem(`🧳 Сотрудник ушёл в отпуск — через ${CONFIG.REST_DAYS} дн. вернётся с полным POWER`);
+      if (res.ok) {
+        const rested = s.game.staff.find((x) => x.id === msg.staffId);
+        if (rested) s.pushSystem(`🧳 ${rested.name} ${gform('ушёл/ушла', rested.gender)} в отпуск — через ${CONFIG.REST_DAYS} дн. вернётся с полным POWER`);
+      }
       s.emit();
       return;
     }

@@ -24,6 +24,7 @@ import { genreById } from '../shared/meta';
 import { fmtK } from '../shared/nums';
 import { STORY_ARCS } from '../shared/storylines';
 import { questArt } from './questArt';
+import { applyGenderSlots } from '../shared/gender';
 
 /** Тело попапа буста (28.09): живой компонент — слайдер, шанс и «Принять» обновляются локально,
  *  обновления состояния не пересоздают попап (из-за этого слайдер «замирал», и приём слал 0 PR). */
@@ -158,9 +159,17 @@ function EventWatcher() {
       if (content) {
         const name = arcState?.staffName ?? 'Сотрудник';
         const name2 = arcState?.staffName2 ?? 'Коллега';
+        // род участников: из состояния арки (переживает увольнение), запасной — из живого состава
+        const staff1 = arcState?.staffId ? snap.game?.staff.find((s) => s.id === arcState.staffId) : undefined;
+        const staff2 = arcState?.staffId2 ? snap.game?.staff.find((s) => s.id === arcState.staffId2) : undefined;
+        const g1 = arcState?.staffGender ?? staff1?.gender ?? 'M';
+        const g2 = arcState?.staffGender2 ?? staff2?.gender ?? 'M';
         const genreRu = arcState?.genreId && snap.meta ? (genreById(snap.meta, arcState.genreId)?.ru ?? '') : '';
         const sub = (s: string) =>
-          s.replace(/\{name2\}/g, name2).replace(/\{name\}/g, name).replace(/\{genre\}/g, genreRu);
+          applyGenderSlots(
+            s.replace(/\{name2\}/g, name2).replace(/\{name\}/g, name).replace(/\{genre\}/g, genreRu),
+            { name: g1, name2: g2 },
+          );
         const money = snap.game?.money ?? 0;
         const opts = content.options.filter((o) => o.cost == null || money >= o.cost);
         popup({

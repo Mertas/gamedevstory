@@ -351,16 +351,16 @@ describe('порядок чата: события не рвут живые ди�
     srv.handle({ type: 'set_autopilot', on: true });
     srv.handle({ type: 'set_autopilot', on: false });
     const snap = srv.snapshot().chat;
-    expect(snap.msgs.some((m) => m.text.includes('Босс вернулся'))).toBe(false);
-    expect(snap.queue.some((m) => m.text.includes('Босс вернулся'))).toBe(true);
-    expect(snap.queue.some((m) => m.text.includes('отдал команде'))).toBe(true);
+    expect(snap.msgs.some((m) => m.text.includes('снова у руля'))).toBe(false);
+    expect(snap.queue.some((m) => m.text.includes('снова у руля'))).toBe(true);
+    expect(snap.queue.some((m) => m.text.includes('команде управление'))).toBe(true);
 
     // время идёт: всё доставляется, системные записи — ПОСЛЕ реплики серии
     await vi.advanceTimersByTimeAsync(6000);
     const msgs = srv.snapshot().chat.msgs;
     const iReply = msgs.findIndex((m) => m.text.includes('Отвечаем, босс!'));
-    const iGive = msgs.findIndex((m) => m.text.includes('отдал команде'));
-    const iBack = msgs.findIndex((m) => m.text.includes('Босс вернулся'));
+    const iGive = msgs.findIndex((m) => m.text.includes('команде управление'));
+    const iBack = msgs.findIndex((m) => m.text.includes('снова у руля'));
     expect(iReply).toBeGreaterThanOrEqual(0);
     expect(iGive).toBeGreaterThan(iReply);
     expect(iBack).toBeGreaterThan(iReply);

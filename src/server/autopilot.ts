@@ -131,7 +131,7 @@ export function buildDecisionContext(state: GameState): {
   return {
     team: state.staff.map((s) => {
       const persona = s.persona ?? STAFF.find((d) => d.id === s.id)?.persona;
-      return `${s.name} (${s.activeCareer} Lv${s.careers[s.activeCareer] ?? 0}, id:${s.id}${persona ? `; личность: ${persona}` : ''})`;
+      return `${s.name} (${s.activeCareer} Lv${s.careers[s.activeCareer] ?? 0}, ${s.gender === 'F' ? 'ж' : 'м'}, id:${s.id}${persona ? `; личность: ${persona}` : ''})`;
     }).join('; '),
     money: Math.round(state.money),
     research: Math.round(state.research),
@@ -357,7 +357,8 @@ export class AutopilotController {
     this.speedBefore = this.h.speed;
     this.autoTarget = Math.max(1, this.h.speed);
     if (this.h.speed < this.autoTarget) this.h.setSpeed(this.autoTarget);
-    this.h.pushSystem('🤖 Босс отдал команде управление — решаем сами!');
+    const heroNow = this.h.game.staff.find((s) => s.hero);
+    this.h.pushSystem(heroNow ? `🤖 ${heroNow.name} передаёт команде управление — решаем сами!` : '🤖 Босс передаёт команде управление — решаем сами!');
     this.h.emitStep({ kind: 'open', app: 'chat' }); // обсуждение должно быть ВИДНО
     this.h.emit();
   }
@@ -382,7 +383,8 @@ export class AutopilotController {
         if (this.h.game.pendingEvent) this.h.game.lastPopup = summary; // не перебиваем открытый попап
         else this.h.game.pendingEvent = { type: 'info', ...summary };
       }
-      this.h.pushSystem('🧑‍💼 Босс вернулся! Команда спешно делает вид, что всё это время усердно работала.');
+      const heroBack = this.h.game.staff.find((s) => s.hero);
+      this.h.pushSystem(`🧑‍💼 ${heroBack ? heroBack.name : 'Босс'} снова у руля! Команда спешно делает вид, что всё это время усердно работала.`);
       void this.h.generatePhase('boss_back');
     }
     this.session = null;

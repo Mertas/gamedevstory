@@ -47,7 +47,7 @@ export function TeamTab() {
                 <td>
                   {/* PLAN-48: ГГ не увольняется; партнёр — только два варианта (кнопка ведёт в его окно) */}
                   {st.hero ? (
-                    <span className="w95-hint" title="Основатель студии — уволить нельзя">🛡️</span>
+                    <span className="w95-hint" title={st.gender === 'F' ? 'Основательница студии — уволить нельзя' : 'Основатель студии — уволить нельзя'}>🛡️</span>
                   ) : typeof st.partnerPct === 'number' ? (
                     <button className="w95-btn" title="Расставание с партнёром: выкуп доли или доля дохода" onClick={() => wm.open(staffWinId(st.id))}>Уволить…</button>
                   ) : game.staff.length > 2 ? (
