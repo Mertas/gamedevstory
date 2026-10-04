@@ -595,3 +595,8 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-stat-bar > div { height: 100%; background: #000080; }
 .w95-partner-share { margin: 4px 0 2px; }
 .w95-range { flex: 1; accent-color: #000080; }
+
+/* v1.45.1: мастер новой игры — переключатель шагов */
+.w95-wiz { display: flex; gap: 3px; flex-wrap: wrap; margin: 2px 0 4px; }
+.w95-wiz .w95-btn { padding: 1px 6px; }
+.w95-wiz .w95-btn.wiz-ok { color: #0a6b0a; }

@@ -124,6 +124,8 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(form).toContain('HERO_CHARACTERS');   // 10 характеров — обязательный шаг героя
     expect(form).toContain('PLAYER_AVATARS');    // сетка 20 аватарок игрока
     expect(form).toContain('hero-grid');
+    expect(form).toContain('w95-wiz');           // v1.45.1: форма — мастер из 5 шагов
+    expect(form).toContain("'Партнёр'");         // последний шаг — выбор партнёра
     expect(storeSrc).toContain("'partner_buyout'"); // два варианта расставания живут в экшенах
     expect(storeSrc).toContain("'partner_rent'");
     expect(team).toContain('st.hero');           // у ГГ нет кнопки «Уволить»
