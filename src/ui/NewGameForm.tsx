@@ -36,7 +36,7 @@ function bestStat(s: PoolStaff): StatKey {
 const NAME_IDEAS = ['Пиксель-Плюс', 'Байт и К°', 'Софт-Сарай', 'Хитрая Лиса', 'Полный Ноль', 'Тёплый Ламповый', 'Game Dev Studio'];
 
 /** PLAN-48: имя героя по кнопке 🎲 — локальный список (без LLM). */
-const randomHeroName = (): string => HERO_NAME_IDEAS[Math.floor(Math.random() * HERO_NAME_IDEAS.length)] ?? 'Макс';
+const randomHeroName = (): string => HERO_NAME_IDEAS[Math.floor(Math.random() * HERO_NAME_IDEAS.length)] ?? 'Артём Пикселев';
 
 export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const [step, setStep] = useState(0);

@@ -5,7 +5,7 @@ import { dailySales } from '../src/core/systems/market';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { STAFF } from '../src/core/data/db';
 import { initialPoolIds } from '../src/core/systems/staff';
-import { HERO_CHARACTERS, sanitizeHeroStats } from '../src/shared/hero';
+import { HERO_CHARACTERS, HERO_NAME_IDEAS, sanitizeHeroStats } from '../src/shared/hero';
 import type { ActiveGame, GameState } from '../src/core/types';
 
 const HERO = {
@@ -139,5 +139,15 @@ describe('PLAN-48: главный герой (игрок)', () => {
     expect(m.saveVersion).toBe(SAVE_VERSION);
     expect(m.partnerRentPct).toBe(0);
     expect(m.staff.map((s) => s.id)).toEqual(['newb-ownerton', 'john-gameson']);
+  });
+});
+
+describe('PLAN-48: подборка имён героя (кнопка 🎲)', () => {
+  it('все варианты — «Имя Фамилия» в стиле игры', () => {
+    expect(HERO_NAME_IDEAS.length).toBeGreaterThanOrEqual(40);
+    for (const n of HERO_NAME_IDEAS) {
+      expect(n.split(' '), n).toHaveLength(2);
+      expect(n.length, n).toBeLessThanOrEqual(24);
+    }
   });
 });
