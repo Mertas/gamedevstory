@@ -43,6 +43,8 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'search'; method: HireMethodId }
   | { type: 'hire'; staffId: string }
   | { type: 'fire'; staffId: string }
+  | { type: 'partner_buyout' } // PLAN-48: расставание с партнёром — выкуп доли (D% кассы разом)
+  | { type: 'partner_rent' } // PLAN-48: расставание с партнёром — рента (D/4 % продаж навсегда)
   | { type: 'buy_license'; consoleId: string }
   | { type: 'resolve_boost'; accept: boolean; amount?: number }
   | { type: 'resolve_salesman' }

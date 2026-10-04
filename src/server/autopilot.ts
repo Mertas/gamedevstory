@@ -130,7 +130,7 @@ export function buildDecisionContext(state: GameState): {
     : undefined;
   return {
     team: state.staff.map((s) => {
-      const persona = STAFF.find((d) => d.id === s.id)?.persona;
+      const persona = s.persona ?? STAFF.find((d) => d.id === s.id)?.persona;
       return `${s.name} (${s.activeCareer} Lv${s.careers[s.activeCareer] ?? 0}, id:${s.id}${persona ? `; личность: ${persona}` : ''})`;
     }).join('; '),
     money: Math.round(state.money),

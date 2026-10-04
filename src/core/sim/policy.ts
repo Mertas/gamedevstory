@@ -269,11 +269,12 @@ function pickBestCandidate(state: GameState, method: HireMethodId, turnedDown: S
   return bestId;
 }
 
-/** Слабейший в команде по той же оценке статов. */
+/** Слабейший в команде по той же оценке статов (ГГ и партнёр неприкосновенны — PLAN-48). */
 function pickWeakest(state: GameState): Staff | null {
   let weak: Staff | null = null;
   let least = Infinity;
   for (const s of state.staff) {
+    if (s.hero || typeof s.partnerPct === 'number') continue; // автопилот не трогает ГГ и партнёра
     const score = staffScore(state, s.stats);
     if (score < least) {
       least = score;

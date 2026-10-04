@@ -270,8 +270,8 @@ export class ChatOrchestrator {
         career: s.activeCareer,
         stats: s.stats,
         power: s.power,
-        // личность из контентной БД (research/04 → personalities): используется промптом чата
-        persona: STAFF.find((d) => d.id === s.id)?.persona ?? null,
+        // личность: у ГГ — своя (характер из настроек, PLAN-48), у остальных — из контентной БД (research/04 → personalities)
+        persona: s.persona ?? STAFF.find((d) => d.id === s.id)?.persona ?? null,
       })),
       facts: extra ?? {},
     };

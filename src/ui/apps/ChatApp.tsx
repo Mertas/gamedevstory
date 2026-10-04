@@ -12,7 +12,13 @@ import { AV } from '../StaffAvatar';
  * иконка из сообщения → эмодзи. Нативный размер (вариант места — в AV), кроме size.
  */
 function ChatAvatar({ name, legacy, variant, size }: { name: string; legacy?: string; variant: string; size?: number }) {
-  const id = useGameSelector((g) => g.staff.find((s) => s.name === name)?.id ?? '');
+  // PLAN-48: у ГГ аватарки живут в папке player-NN (avatarId), у остальных — в своей (staff.id)
+  const id = useGameSelector((g) => {
+    const s = g.staff.find((x) => x.name === name);
+    return s ? (s.avatarId ?? s.id) : '';
+  });
+  // ГГ (и легаси-«Вы» из старых сейвов) в фолбэке — «джойстик»: свои сообщения видно мгновенно
+  const isHero = useGameSelector((g) => g.staff.some((s) => s.hero && s.name === name) || name === 'Вы');
   const [stage, setStage] = useState(0); // 0 — новая LLMPics, 1 — плоская, 2 — из сообщения, 3 — эмодзи
   const urls = [
     id ? `avatars/${id}/${id}_${variant}.png` : '',
@@ -24,7 +30,7 @@ function ChatAvatar({ name, legacy, variant, size }: { name: string; legacy?: st
     const box = size ?? 64;
     return (
       <div className="w95-avatar" style={{ width: box, height: box, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: box > 24 ? 16 : 12 }}>
-        {name === 'Вы' ? '🕹️' : '💬'}
+        {isHero ? '🕹️' : '💬'}
       </div>
     );
   }
@@ -66,6 +72,8 @@ export function ChatApp() {
   // UI-01: подписки точечные — ререндер только при смене «печатает…»/аватара
   const typing = useGameSelector((g) => typingName(g, chat));
   const typingAvatar = useGameSelector((g) => (typing ? g.staff.find((s) => s.name === typing)?.avatar ?? '' : ''));
+  // PLAN-48: игрок подписан именем ГГ (в старых партиях ГГ нет — остаётся «Вы»)
+  const heroName = useGameSelector((g) => g.staff.find((s) => s.hero)?.name ?? 'Вы');
   const [draft, setDraft] = useState('');
   // SER-27: панель «Разговоры» — команда + все зарегистрированные игроки со статусами
   const [roster, setRoster] = useState<RosterUser[] | null>(null);
@@ -266,7 +274,7 @@ export function ChatApp() {
           </div>
         )}
         {chat.msgs.slice(from).map((m, i) => (
-          <div key={from + i} className={`w95-chat-msg ${m.system ? 'system' : ''} ${m.author === 'Вы' ? 'self' : ''}`}>
+          <div key={from + i} className={`w95-chat-msg ${m.system ? 'system' : ''} ${m.author === heroName ? 'self' : ''}`}>
             <ChatAvatar name={m.author} legacy={m.avatar} variant={AV.chat} />
             <div style={{ flex: 1 }}>
               <div className="w95-cname">{m.author}</div>

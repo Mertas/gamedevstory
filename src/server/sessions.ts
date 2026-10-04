@@ -2,6 +2,7 @@
 import { newGame } from '../core/engine';
 import { applyDifficulty, isDifficultyId } from '../core/difficulty';
 import type { GameState } from '../core/types';
+import type { HeroSetup } from '../shared/hero';
 import { resetChat, type ChatState } from '../shared/chat';
 import { GameServer } from './game';
 import { parseSavePayload, type LoadedSave, type PersistAdapter } from './save';
@@ -60,13 +61,23 @@ export class SessionRegistry implements SessionHooks {
 
   constructor(private readonly users: UserService) {}
 
-  /** Создать новую партию (студия + стартовая пара), сохранить в БД и сделать текущей. */
-  create(userId: number, opts: { studioName: string; staffIds: string[]; difficulty?: string }): number {
+  /** Создать новую партию (студия + стартовая пара; PLAN-48 — ГГ и партнёр), сохранить в БД и сделать текущей. */
+  create(userId: number, opts: {
+    studioName: string;
+    staffIds?: string[];
+    hero?: HeroSetup;
+    partnerId?: string;
+    partnerPct?: number;
+    difficulty?: string;
+  }): number {
     const difficulty = isDifficultyId(opts.difficulty) ? opts.difficulty : 'normal';
     applyDifficulty(difficulty); // M6: уровень — до newGame, иначе стартовые числа будут базовыми
     const game = newGame(Math.floor(Math.random() * 99991) + 1, {
       studioName: opts.studioName,
       staffIds: opts.staffIds,
+      hero: opts.hero,
+      partnerId: opts.partnerId,
+      partnerPct: opts.partnerPct,
     });
     game.difficulty = difficulty;
     const chat = resetChat();

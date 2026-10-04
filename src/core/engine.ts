@@ -9,6 +9,7 @@ import type { ActionResult, DirectionAxis, GamedexOption, GameState, StartProjec
 import { minigameClosedOutcome, minigameOutcome, minigameTitle } from '../shared/minigames';
 import {
   fireStaff, startSearch, hireFromSearch, makeStaffFromData, paySalaries, pickAvatar, dailyPower, restStaff, tickRest,
+  makeHeroStaff, makePartnerStaff, partnerBuyout, partnerRent,
 } from './systems/staff';
 import {
   debugTick, devTick, releaseGame, resolveBoost, startProject,
@@ -25,13 +26,20 @@ import {
 } from './systems/market';
 import { tickFanLetters } from './systems/mail';
 import { resolveStory, tickStory } from './systems/story';
+import type { HeroSetup } from '../shared/hero';
 
 /** PLAN-18: что игрок выбирает на старте (экран новой игры). */
 export interface NewGameOptions {
   /** название студии */
   studioName?: string;
-  /** кого взять в стартовую команду — 2 id из начального пула («Initially available») */
+  /** кого взять в стартовую команду — 2 id из начального пула («Initially available»; легаси-путь без ГГ) */
   staffIds?: string[];
+  /** PLAN-48: главный герой (игрок) — первый сотрудник новой партии */
+  hero?: HeroSetup;
+  /** PLAN-48: партнёр — сотрудник из начального пула */
+  partnerId?: string;
+  /** PLAN-48: доля партнёра 0–20% — даёт +D ко всем четырём статам */
+  partnerPct?: number;
 }
 
 /** классическая стартовая пара (фолбэк, если выбор игрока некорректен) */
@@ -87,27 +95,42 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     devContrib: [],
   };
 
-  // стартовая команда: выбор игрока (2 из начального пула) или классическая пара.
-  // PLAN-18: экран новой игры отдаёт staffIds; дубли и лишние id отсекаем.
-  const wanted = (opts.staffIds?.length ? opts.staffIds : [...START_PAIR])
-    .filter((id, i, all) => typeof id === 'string' && all.indexOf(id) === i)
-    .slice(0, 2);
-  for (const id of wanted) {
-    const st = makeStaffFromData(id);
-    if (st) {
-      st.avatar = pickAvatar(rng);
-      state.staff.push(st);
-      state.hiredIds.push(st.id);
+  // PLAN-48: новый старт — главный герой (игрок) + партнёр из начального пула.
+  // Без hero — легаси-путь PLAN-18: двое из начального пула.
+  if (opts.hero) {
+    const hero = makeHeroStaff(opts.hero);
+    state.staff.push(hero);
+    state.hiredIds.push(hero.id);
+    const partner = makePartnerStaff(opts.partnerId, opts.partnerPct ?? 0);
+    if (partner) {
+      partner.avatar = pickAvatar(rng);
+      state.staff.push(partner);
+      state.hiredIds.push(partner.id);
     }
-  }
-  // страховка: невалидный выбор (таких сотрудников нет) — классическая пара
-  if (state.staff.length === 0) {
-    for (const id of START_PAIR) {
+    log(state, `Основатель: ${hero.name}${partner ? ` · партнёр: ${partner.name} (доля ${partner.partnerPct ?? 0}%)` : ''}`);
+  } else {
+    // стартовая команда: выбор игрока (2 из начального пула) или классическая пара.
+    // PLAN-18: экран новой игры отдаёт staffIds; дубли и лишние id отсекаем.
+    const wanted = (opts.staffIds?.length ? opts.staffIds : [...START_PAIR])
+      .filter((id, i, all) => typeof id === 'string' && all.indexOf(id) === i)
+      .slice(0, 2);
+    for (const id of wanted) {
       const st = makeStaffFromData(id);
       if (st) {
         st.avatar = pickAvatar(rng);
         state.staff.push(st);
         state.hiredIds.push(st.id);
+      }
+    }
+    // страховка: невалидный выбор (таких сотрудников нет) — классическая пара
+    if (state.staff.length === 0) {
+      for (const id of START_PAIR) {
+        const st = makeStaffFromData(id);
+        if (st) {
+          st.avatar = pickAvatar(rng);
+          state.staff.push(st);
+          state.hiredIds.push(st.id);
+        }
       }
     }
   }
@@ -170,6 +193,16 @@ export function hireFromSearchAction(state: GameState, staffId: string) {
 
 export function fireAction(state: GameState, staffId: string) {
   return fireStaff(state, staffId);
+}
+
+/** PLAN-48: расставание с партнёром — вариант 1: выкуп доли (D% кассы разом). */
+export function partnerBuyoutAction(state: GameState) {
+  return partnerBuyout(state);
+}
+
+/** PLAN-48: расставание с партнёром — вариант 2: рента (D/4 % продаж игр навсегда). */
+export function partnerRentAction(state: GameState) {
+  return partnerRent(state);
 }
 
 export function buyLicenseAction(state: GameState, consoleId: string): { ok: boolean; error?: string } {

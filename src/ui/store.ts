@@ -447,6 +447,16 @@ export function actionFire(staffId: string) {
   send({ type: 'fire', staffId });
 }
 
+/** PLAN-48: расставание с партнёром — вариант 1: выкуп доли (D% кассы разом). */
+export function actionPartnerBuyout() {
+  send({ type: 'partner_buyout' });
+}
+
+/** PLAN-48: расставание с партнёром — вариант 2: рента (D/4 % продаж игр навсегда). */
+export function actionPartnerRent() {
+  send({ type: 'partner_rent' });
+}
+
 export function actionBuyLicense(consoleId: string) {
   send({ type: 'buy_license', consoleId });
 }

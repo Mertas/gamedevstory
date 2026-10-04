@@ -114,4 +114,22 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(art).toContain('${arcId}-s${step}');  // ключ арки: arcId-s<step> (ветки эпилогов)
     expect(app).toContain('art: questArt(ev.arcId, ev.step, arcState?.gen)');
   });
+
+  it('PLAN-48: главный герой и партнёр — DOM-контракт', () => {
+    const form = read('../src/ui/NewGameForm.tsx');
+    const storeSrc = read('../src/ui/store.ts');
+    const team = read('../src/ui/apps/staff/TeamTab.tsx');
+    const staffWin = read('../src/ui/apps/staff/StaffWindow.tsx');
+    const chat = read('../src/ui/apps/ChatApp.tsx');
+    expect(form).toContain('HERO_CHARACTERS');   // 10 характеров — обязательный шаг героя
+    expect(form).toContain('PLAYER_AVATARS');    // сетка 20 аватарок игрока
+    expect(form).toContain('hero-grid');
+    expect(storeSrc).toContain("'partner_buyout'"); // два варианта расставания живут в экшенах
+    expect(storeSrc).toContain("'partner_rent'");
+    expect(team).toContain('st.hero');           // у ГГ нет кнопки «Уволить»
+    expect(team).toContain('staffWinId');        // партнёр: кнопка ведёт в его окно
+    expect(staffWin).toContain('actionPartnerBuyout');
+    expect(staffWin).toContain('actionPartnerRent');
+    expect(chat).toContain("g.staff.find((s) => s.hero)?.name ?? 'Вы'"); // подпись игрока = имя ГГ
+  });
 });

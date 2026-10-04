@@ -436,7 +436,7 @@ it('миграция v10 → v12: каркас story появляется, сл�
   expect(m.story!.arcs).toEqual({});
   expect(m.story!.flags.nextQuestWeek).toBe(m.week + 60);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(12);
+  expect(SAVE_VERSION).toBe(13);
 });
 
 it('миграция v11 → v12: слот квестов появляется; уже стоявший слот не трогаем', () => {

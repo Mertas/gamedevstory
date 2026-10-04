@@ -84,6 +84,16 @@ export interface Staff {
   history: StaffHistoryEntry[]; // PLAN-41: история (профессии, левелапы, обучение, отпуск)
   trainCount: Record<string, { n: number; gains: StaffCaps }>; // PLAN-41: сводка обучения по методам
   restDays: number; // PLAN-41: >0 — в отпуске (дней осталось)
+
+  // ─── PLAN-48: главный герой (игрок) и партнёр ───
+  /** ГГ: вечный сотрудник-игрок — уволить нельзя; в чате подписан своим именем вместо «Вы» */
+  hero?: boolean;
+  /** доля партнёра 0–20%: даёт +D ко всем четырём статам; увольнение — только выкуп/рента */
+  partnerPct?: number;
+  /** характер для LLM-чата: у ГГ — выбранный/свой; у остальных — persona из контентной БД */
+  persona?: string | null;
+  /** папка аватарок игрока в LLMPics (player-01..20) вместо staff.id */
+  avatarId?: string;
 }
 
 export interface ActiveGame {
@@ -368,6 +378,8 @@ export interface GameState {
   ownConsole: OwnConsoleState | null;
   mail: FanLetter[]; // письма фанатов (текст дописывает LLM на сервере)
   mailId: number; // счётчик id писем
+  /** PLAN-48: вечная рента партнёра — % от продаж игр (после расставания через долю) */
+  partnerRentPct?: number;
 }
 
 export interface StartProjectInput {

@@ -3,10 +3,13 @@ import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
 import { AV, StaffAvatar } from '../../StaffAvatar';
 import { actionFire, actionLevelUp, useGame } from '../../store';
+import { useWindows } from '../../wm';
+import { staffWinId } from './StaffWindow';
 import { fmtK } from '../../../shared/nums';
 
 export function TeamTab() {
   const game = useGame();
+  const wm = useWindows();
 
   return (
     <>
@@ -42,9 +45,14 @@ export function TeamTab() {
                   )}
                 </td>
                 <td>
-                  {game.staff.length > 2 && (
+                  {/* PLAN-48: ГГ не увольняется; партнёр — только два варианта (кнопка ведёт в его окно) */}
+                  {st.hero ? (
+                    <span className="w95-hint" title="Основатель студии — уволить нельзя">🛡️</span>
+                  ) : typeof st.partnerPct === 'number' ? (
+                    <button className="w95-btn" title="Расставание с партнёром: выкуп доли или доля дохода" onClick={() => wm.open(staffWinId(st.id))}>Уволить…</button>
+                  ) : game.staff.length > 2 ? (
                     <button className="w95-btn" data-autopilot={`fire-${st.id}`} onClick={() => actionFire(st.id)}>Уволить</button>
-                  )}
+                  ) : null}
                 </td>
               </tr>
             );

@@ -8,6 +8,8 @@ import type { Mailer } from './mailer';
 import { RateLimit } from './ratelimit';
 import { nextRank, rankFor } from '../shared/rank';
 import { DIFFICULTY, DIFFICULTY_IDS, isDifficultyId } from '../core/difficulty';
+import { clampPartnerPct, HERO_CAREERS, HERO_POINTS, HERO_STAT_CAP, PLAYER_AVATARS, type HeroSetup } from '../shared/hero';
+import { initialPoolIds } from '../core/systems/staff';
 import type { InviteRow, SaveMeta, UserService, UserRow } from './users';
 
 export const SESSION_COOKIE = 'gds_session';
@@ -37,8 +39,18 @@ export function initialPool(): PoolStaffDto[] {
 
 /** Жизненный цикл партий пользователя (реализация — SessionRegistry). */
 export interface SessionHooks {
-  /** Создать новую партию (студия + стартовая пара), сохранить и сделать текущей. */
-  create(userId: number, opts: { studioName: string; staffIds: string[]; difficulty?: string }): number;
+  /** Создать новую партию (студия + стартовая пара; PLAN-48 — ГГ и партнёр), сохранить и сделать текущей. */
+  create(userId: number, opts: {
+    studioName: string;
+    /** PLAN-18: легаси-путь — двое из начального пула (без ГГ) */
+    staffIds?: string[];
+    /** PLAN-48: главный герой (игрок) */
+    hero?: HeroSetup;
+    /** PLAN-48: партнёр из начального пула и его доля 0–20% */
+    partnerId?: string;
+    partnerPct?: number;
+    difficulty?: string;
+  }): number;
   /** Сделать сохранение текущим: создать/поднять GameServer пользователя на этом сейве. */
   load(userId: number, saveId: number): void;
   /** Удалить сохранение и (если оно активно) остановить его сессию. */
@@ -323,12 +335,50 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
 
   app.post('/api/saves', (req, res) => {
     withUser(req, res, (u) => {
-      const { studioName, staffIds, difficulty } = (req.body ?? {}) as { studioName?: string; staffIds?: unknown; difficulty?: unknown };
-      const name = String(studioName ?? '').trim();
-      const ids = Array.isArray(staffIds) ? staffIds.filter((x): x is string => typeof x === 'string') : [];
+      const body = (req.body ?? {}) as {
+        studioName?: unknown; staffIds?: unknown; difficulty?: unknown;
+        hero?: unknown; partnerId?: unknown; partnerPct?: unknown;
+      };
+      const name = String(body.studioName ?? '').trim();
       if (name.length < 1 || name.length > 40) return void res.json({ ok: false, error: 'Название студии: 1–40 символов' });
+      const difficulty = isDifficultyId(body.difficulty) ? body.difficulty : 'normal';
+
+      // PLAN-48: новый старт — главный герой (игрок) + партнёр. Валидируем строго;
+      // движок дополнительно санитайзит (клампы статов, доля 0–20).
+      const rawHero = body.hero && typeof body.hero === 'object' ? (body.hero as Record<string, unknown>) : null;
+      if (rawHero) {
+        const heroName = String(rawHero.name ?? '').trim();
+        if (heroName.length < 1 || heroName.length > 24) return void res.json({ ok: false, error: 'Имя героя: 1–24 символа' });
+        if (heroName === 'Система' || STAFF.some((d) => d.name === heroName)) {
+          return void res.json({ ok: false, error: 'Такое имя уже занято в игре — придумайте другое' });
+        }
+        const avatarId = String(rawHero.avatarId ?? '');
+        if (!PLAYER_AVATARS.includes(avatarId)) return void res.json({ ok: false, error: 'Аватарка героя: выберите из player-01…player-20' });
+        const career = String(rawHero.career ?? '') as CareerId;
+        if (!HERO_CAREERS.includes(career)) return void res.json({ ok: false, error: 'Профессия героя — одна из стартовых: кодер, сценарист, дизайнер, звукорежиссёр' });
+        const persona = String(rawHero.persona ?? '').trim().slice(0, 200);
+        if (persona.length < 1) return void res.json({ ok: false, error: 'Выберите характер героя' });
+        const rawStats = (rawHero.stats ?? {}) as Record<string, unknown>;
+        const pick = (k: string): number => {
+          const n = Math.round(Number(rawStats[k]));
+          return Number.isFinite(n) ? Math.max(0, Math.min(HERO_STAT_CAP, n)) : -1;
+        };
+        const stats = { program: pick('program'), scenario: pick('scenario'), graphics: pick('graphics'), sound: pick('sound') };
+        if (Object.values(stats).some((v) => v < 0)) return void res.json({ ok: false, error: `Статы героя: числа 0–${HERO_STAT_CAP}` });
+        if (Object.values(stats).reduce((a, b) => a + b, 0) > HERO_POINTS) {
+          return void res.json({ ok: false, error: `Статы героя: не больше ${HERO_POINTS} очков` });
+        }
+        const partnerId = String(body.partnerId ?? '');
+        if (!initialPoolIds().includes(partnerId)) return void res.json({ ok: false, error: 'Выберите партнёра из начального пула' });
+        const hero: HeroSetup = { name: heroName, avatarId, stats, career, persona };
+        const id = sessions.create(u.id, { studioName: name, hero, partnerId, partnerPct: clampPartnerPct(body.partnerPct), difficulty });
+        return void res.json({ ok: true, id });
+      }
+
+      // легаси-путь (без героя): двое из начального пула — совместимость со старым клиентом
+      const ids = Array.isArray(body.staffIds) ? body.staffIds.filter((x): x is string => typeof x === 'string') : [];
       if (ids.length !== 2) return void res.json({ ok: false, error: 'Выберите двух сотрудников' });
-      const id = sessions.create(u.id, { studioName: name, staffIds: ids, difficulty: isDifficultyId(difficulty) ? difficulty : 'normal' });
+      const id = sessions.create(u.id, { studioName: name, staffIds: ids, difficulty });
       res.json({ ok: true, id });
     });
   });

@@ -6,6 +6,7 @@ import { genreById, typeById } from '../core/data/db';
 import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
+  partnerBuyoutAction, partnerRentAction,
   releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
@@ -205,6 +206,16 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.run(fireAction(s.game, msg.staffId));
       s.emit();
       return;
+    case 'partner_buyout':
+      // PLAN-48: расставание с партнёром — выкуп доли (D% кассы разом)
+      s.run(partnerBuyoutAction(s.game));
+      s.emit();
+      return;
+    case 'partner_rent':
+      // PLAN-48: расставание с партнёром — рента (D/4 % продаж игр навсегда)
+      s.run(partnerRentAction(s.game));
+      s.emit();
+      return;
     case 'buy_license': {
       const res = buyLicenseAction(s.game, msg.consoleId);
       s.run(res);
@@ -293,7 +304,9 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
         if (s.game.staff.length === 0) {
           s.pushSystem('Пока некому отвечать — наймите первого сотрудника в окне «Найм».');
         } else {
-          s.chat.msgs.push({ week: s.game.week, author: 'Вы', avatar: '', text, trigger: 'week' });
+          // PLAN-48: игрок подписан именем ГГ (не «Вы»); у старых партий имя не задано — «Вы»
+          const author = s.game.staff.find((x) => x.hero)?.name ?? 'Вы';
+          s.chat.msgs.push({ week: s.game.week, author, avatar: '', text, trigger: 'week' });
           s.queuePlayerMessage(text); // SRV-11: FIFO — все вопросы будут отвечены
         }
       }

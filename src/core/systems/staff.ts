@@ -7,7 +7,9 @@ import type { Rng } from '../rng';
 import type { ActionResult, GameState, Staff, StaffHistoryEntry } from '../types';
 import { HIRE_BANDS, HIRE_METHOD_LABELS, unlockedMystery } from '../../shared/hire';
 import { CAREER_LABELS } from '../../shared/careers';
-import { capInit } from '../../shared/train';
+import { capInit, STAT_KEYS } from '../../shared/train';
+import { clampPartnerPct, HERO_SALARY, sanitizeHeroStats, type HeroSetup } from '../../shared/hero';
+import type { CareerId } from '../data/schema';
 
 export function makeStaffFromData(id: string): Staff | null {
   const d = STAFF.find((s) => s.id === id);
@@ -40,6 +42,96 @@ export function pushHistory(s: Staff, week: number, kind: StaffHistoryEntry['kin
   s.history ??= [];
   s.history.push({ week, kind, text });
   if (s.history.length > 60) s.history.splice(0, s.history.length - 60);
+}
+
+// ─── PLAN-48: главный герой (игрок) и партнёр ───
+
+/** id начального пула («Initially available») — из него партнёр (и легаси-пара). */
+export function initialPoolIds(): string[] {
+  return STAFF.filter((d) => d.unlock.includes('Initially available')).map((d) => d.id);
+}
+
+/** ГГ: собрать сотрудника-игрока из настроек новой игры (санитайз статов — в shared/hero). */
+export function makeHeroStaff(setup: HeroSetup): Staff {
+  const stats = sanitizeHeroStats(setup.stats);
+  const careers: Record<CareerId, number> = { coder: 0, writer: 0, designer: 0, sound: 0, director: 0, producer: 0, hw: 0, hacker: 0 };
+  careers[setup.career] = 1;
+  const st: Staff = {
+    id: 'hero',
+    name: setup.name.trim().slice(0, 24) || 'Герой',
+    gender: 'M',
+    salary: HERO_SALARY,
+    hireFee: 0,
+    maxPower: 10,
+    power: 10,
+    stats,
+    careers,
+    activeCareer: setup.career,
+    levelUps: 0,
+    boosterUses: {},
+    avatar: '',
+    homeWeeks: 0,
+    lastRole: null,
+    caps: capInit(stats),
+    history: [],
+    trainCount: {},
+    restDays: 0,
+    hero: true,
+    persona: setup.persona.trim().slice(0, 200) || null,
+    avatarId: setup.avatarId,
+  };
+  pushHistory(st, 1, 'hire', 'Основатель студии — вы здесь с первого дня');
+  return st;
+}
+
+/** Партнёр: сотрудник из начального пула + доля D% (статы +D ко всем; оклад из данных, взнос 0). */
+export function makePartnerStaff(id: string | undefined, pct: unknown): Staff | null {
+  const ids = initialPoolIds();
+  const pid = id && ids.includes(id) ? id : (ids[0] ?? null);
+  if (!pid) return null;
+  const st = makeStaffFromData(pid);
+  if (!st) return null;
+  const D = clampPartnerPct(pct);
+  for (const k of STAT_KEYS) st.stats[k] += D;
+  st.caps = capInit(st.stats);
+  st.hireFee = 0; // со-основатель — без взноса за найм
+  st.partnerPct = D;
+  pushHistory(st, 1, 'hire', D > 0 ? `Соучредитель студии — доля ${D}%` : 'Соучредитель студии');
+  return st;
+}
+
+/** Партнёр в команде (доля есть ровно у одного сотрудника). */
+export function partnerOf(state: GameState): Staff | null {
+  return state.staff.find((s) => typeof s.partnerPct === 'number') ?? null;
+}
+
+/** Общий хвост расставания: убрать из состава и вернуть в пул кандидатов. */
+function leavePartner(state: GameState, p: Staff): void {
+  state.staff.splice(state.staff.indexOf(p), 1);
+  state.hiredIds = state.hiredIds.filter((id) => id !== p.id);
+}
+
+/** PLAN-48: вариант 1 — выкуп доли: D% текущей кассы разом. */
+export function partnerBuyout(state: GameState): ActionResult {
+  const p = partnerOf(state);
+  if (!p) return { ok: false, error: 'Партнёра нет в команде' };
+  const pct = p.partnerPct ?? 0;
+  const cost = Math.round((state.money * pct) / 100);
+  state.money -= cost;
+  leavePartner(state, p);
+  log(state, `Расставание с партнёром ${p.name}: выкуп ${Math.round(cost)}K (${pct}% кассы)`);
+  return { ok: true };
+}
+
+/** PLAN-48: вариант 2 — рента: D/4 % от продаж игр навсегда (при D=20% → 5%). */
+export function partnerRent(state: GameState): ActionResult {
+  const p = partnerOf(state);
+  if (!p) return { ok: false, error: 'Партнёра нет в команде' };
+  const rent = (p.partnerPct ?? 0) / 4;
+  state.partnerRentPct = (state.partnerRentPct ?? 0) + rent;
+  leavePartner(state, p);
+  log(state, `Партнёр ${p.name} ушёл на долю дохода: навсегда ${rent}% от продаж игр`);
+  return { ok: true };
 }
 
 const AVATAR_COUNT = 48; // public/avatars/avatar-01..48.png (tools/make-avatars.ts)
@@ -117,6 +209,9 @@ export function fireStaff(state: GameState, staffId: string): ActionResult {
   const i = state.staff.findIndex((s) => s.id === staffId);
   if (i < 0) return { ok: false, error: 'Нет такого сотрудника' };
   const s = state.staff[i]!;
+  // PLAN-48: ГГ — вечный сотрудник; партнёр — только два варианта расставания (в его окне)
+  if (s.hero) return { ok: false, error: 'Это основатель студии — уволить его нельзя' };
+  if (typeof s.partnerPct === 'number') return { ok: false, error: 'С партнёром можно расстаться только двумя способами: выкуп доли или доля дохода' };
   state.staff.splice(i, 1);
   // аудит 05.09: уволенный возвращается в пул кандидатов (раньше hiredIds.push() делал
   // обратное заявленному — повторный найм был невозможен, плюс копились дубли)

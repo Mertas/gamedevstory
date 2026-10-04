@@ -136,6 +136,6 @@ describe('своя консоль: движок', () => {
     g.consoles['own-console'] = { licensed: true, base: 0, availableAtWeek: 1, removedAtWeek: null };
     migrateSave(g);
     expect(g.consoles['own-console']!.base).toBe(1000);
-    expect(g.saveVersion).toBe(12); // каскад миграций доводит до текущей (v1.40: +годовые квесты)
+    expect(g.saveVersion).toBe(13); // каскад миграций доводит до текущей (v1.45: PLAN-48 ГГ и партнёр)
   });
 });

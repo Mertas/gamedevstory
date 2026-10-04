@@ -5,9 +5,10 @@ import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS, CAREER_ORDER } from '../../careers';
 import { AV, StaffAvatar } from '../../StaffAvatar';
-import { actionApplyCareerManual, actionFire, actionLevelUp, actionRestStaff, actionTrain, actionTrainToMax, useGame, useMeta } from '../../store';
+import { actionApplyCareerManual, actionFire, actionLevelUp, actionPartnerBuyout, actionPartnerRent, actionRestStaff, actionTrain, actionTrainToMax, useGame, useMeta } from '../../store';
 import { useWindows } from '../../wm';
 import { fmtK } from '../../../shared/nums';
+import { fmtPct } from '../../../shared/hero';
 import { dateLabel } from '../../../shared/meta';
 import { capGain, careerChangePreview, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../../shared/train';
 import type { Staff } from '../../../core/types';
@@ -30,6 +31,7 @@ export function StaffWindow({ winId }: { winId: string }) {
   const meta = useMeta();
   const wm = useWindows();
   const [fireArm, setFireArm] = useState(false);
+  const [partnerArm, setPartnerArm] = useState<'buyout' | 'rent' | null>(null); // PLAN-48: два варианта расставания
   const [careerTarget, setCareerTarget] = useState<CareerId | null>(null);
 
   const s = staffFromWinId(game, winId);
@@ -39,7 +41,13 @@ export function StaffWindow({ winId }: { winId: string }) {
   const price = CONFIG.LEVEL_PR[s.activeCareer]?.[lv - 1];
   const salaryNow = s.salary * Math.pow(1.2, s.levelUps);
   const salaryNext = salaryNow * 1.2;
-  const persona = meta.staff?.find((m) => m.id === s.id)?.persona ?? null;
+  const persona = s.persona ?? meta.staff?.find((m) => m.id === s.id)?.persona ?? null; // PLAN-48: у ГГ — свой характер
+  // PLAN-48: роли ГГ и партнёра
+  const isHero = !!s.hero;
+  const isPartner = typeof s.partnerPct === 'number';
+  const partnerPct = isPartner ? (s.partnerPct ?? 0) : 0;
+  const partnerBuyoutCost = Math.round((game.money * partnerPct) / 100);
+  const partnerRentPct = partnerPct / 4;
   const resting = (s.restDays ?? 0) > 0;
   const busy = game.contracts.some((c) => !c.done && c.staffIds.includes(s.id));
   const ag = game.activeGame && game.activeGame.phase !== 'released' ? game.activeGame : null;
@@ -80,10 +88,12 @@ export function StaffWindow({ winId }: { winId: string }) {
           <StaffAvatar staff={s} variant={AV.staffWindow} fallback={<span style={{ fontSize: 64 }}>{s.gender === 'F' ? '👩' : '👨'}</span>} />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 'bold' }}>{s.name}</div>
+          <div style={{ fontWeight: 'bold' }}>{s.name}{isHero ? ' 🛡️' : isPartner ? ` 🤝 ${partnerPct}%` : ''}</div>
           <div className="w95-hint">{CAREER_LABELS[s.activeCareer] ?? s.activeCareer} Lv{lv}{lv >= 5 ? ' (максимум)' : ''} · оклад {fmtK(salaryNow)}K/год{lv < 5 ? ` → после левелапа ${fmtK(salaryNext)}K` : ''}</div>
           <div style={{ marginTop: 2 }}>{status}</div>
           {persona && <div className="w95-hint" style={{ marginTop: 2, fontStyle: 'italic' }}>{persona}</div>}
+          {isHero && <div className="w95-hint" style={{ marginTop: 2 }}>Основатель студии — это вы. Уволить себя нельзя.</div>}
+          {isPartner && <div className="w95-hint" style={{ marginTop: 2 }}>Партнёр: доля {partnerPct}% компании (на старте дала +{partnerPct} ко всем статам).</div>}
         </div>
       </div>
 
@@ -314,10 +324,43 @@ export function StaffWindow({ winId }: { winId: string }) {
         </div>
       </div>
 
-      {/* увольнение */}
-      {game.staff.length > 2 && (
+      {/* увольнение / расставание (PLAN-48: ГГ не увольняется; у партнёра — два варианта) */}
+      {(isHero || isPartner || game.staff.length > 2) && (
         <div className="arc-sec">
-          {!fireArm ? (
+          {isHero ? (
+            <span className="w95-hint">🛡️ Основатель студии — вечный сотрудник: уволить его нельзя.</span>
+          ) : isPartner ? (
+            <>
+              <b>Расставание с партнёром</b>
+              <div className="w95-hint" style={{ marginTop: 2 }}>
+                Уйти можно только двумя способами: выкуп доли разом — или доля от доходов навсегда.
+              </div>
+              {partnerArm === null && (
+                <div className="w95-row" style={{ gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                  <button className="w95-btn" onClick={() => setPartnerArm('buyout')}>
+                    💰 Выкупить долю — {partnerPct}% кассы разом (≈{fmtK(partnerBuyoutCost)}K)
+                  </button>
+                  <button className="w95-btn" onClick={() => setPartnerArm('rent')}>
+                    📉 Отдавать {fmtPct(partnerRentPct)}% дохода от игр — навсегда
+                  </button>
+                </div>
+              )}
+              {partnerArm === 'buyout' && (
+                <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+                  <span>Выплатить {s.name} {partnerPct}% кассы — ≈{fmtK(partnerBuyoutCost)}K разом?</span>
+                  <button className="w95-btn" onClick={() => { wm.close(staffWinId(s.id)); actionPartnerBuyout(); }}>Да, выплатить</button>
+                  <button className="w95-btn" onClick={() => setPartnerArm(null)}>Отмена</button>
+                </span>
+              )}
+              {partnerArm === 'rent' && (
+                <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+                  <span>Отпустить {s.name} на {fmtPct(partnerRentPct)}% дохода от игр — навсегда?</span>
+                  <button className="w95-btn" onClick={() => { wm.close(staffWinId(s.id)); actionPartnerRent(); }}>Да, отпустить</button>
+                  <button className="w95-btn" onClick={() => setPartnerArm(null)}>Отмена</button>
+                </span>
+              )}
+            </>
+          ) : !fireArm ? (
             <button className="w95-btn" onClick={() => setFireArm(true)}>Уволить…</button>
           ) : (
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>

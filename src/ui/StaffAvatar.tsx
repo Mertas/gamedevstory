@@ -21,7 +21,8 @@ export const AV = {
 } as const;
 
 export interface StaffAvatarProps {
-  staff: { id: string; avatar?: string };
+  /** avatarId (PLAN-48) — папка аватарки игрока player-NN; без него — папка staff.id */
+  staff: { id: string; avatar?: string; avatarId?: string };
   /** вариант из LLMPics (AV.*) */
   variant?: string;
   /** фиксированный размер в px; без него — нативный размер файла */
@@ -33,10 +34,11 @@ export interface StaffAvatarProps {
 
 export function StaffAvatar({ staff, variant, size, className, fallback }: StaffAvatarProps) {
   const [stage, setStage] = useState(0);
-  useEffect(() => setStage(0), [staff.id, variant]);
+  const iconId = staff.avatarId ?? staff.id; // PLAN-48: у ГГ иконки лежат в папке player-NN
+  useEffect(() => setStage(0), [iconId, variant]);
   const urls = [
-    variant ? `avatars/${staff.id}/${staff.id}_${variant}.png` : '',
-    `avatars/${staff.id}.png`,
+    variant ? `avatars/${iconId}/${iconId}_${variant}.png` : '',
+    `avatars/${iconId}.png`,
     staff.avatar || '',
   ].filter(Boolean) as string[];
   const src = urls[stage] ?? '';

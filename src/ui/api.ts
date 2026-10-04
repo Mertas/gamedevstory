@@ -109,8 +109,22 @@ export async function apiSaves(): Promise<SaveInfo[]> {
   const d = await call<{ saves: SaveInfo[] }>('/api/saves');
   return d.saves ?? [];
 }
-export const apiCreateSave = (studioName: string, staffIds: string[], difficulty = 'normal') =>
-  call<{ id?: number }>('/api/saves', { studioName, staffIds, difficulty });
+/** PLAN-48: старт новой партии — ГГ (игрок) + партнёр с долей; staffIds — легаси-путь без ГГ. */
+export interface CreateSaveInput {
+  studioName: string;
+  difficulty?: string;
+  staffIds?: string[];
+  hero?: {
+    name: string;
+    avatarId: string;
+    stats: { program: number; scenario: number; graphics: number; sound: number };
+    career: string;
+    persona: string;
+  };
+  partnerId?: string;
+  partnerPct?: number;
+}
+export const apiCreateSave = (opts: CreateSaveInput) => call<{ id?: number }>('/api/saves', opts);
 export const apiLoadSave = (id: number) => call<{ id?: number }>(`/api/saves/${id}/load`, {});
 export const apiDeleteSave = (id: number) => call<Record<string, never>>(`/api/saves/${id}`, undefined, 'DELETE');
 /** PLAN-18+: «Удалить весь прогресс» — все сохранения и достижения аккаунта (необратимо). */
