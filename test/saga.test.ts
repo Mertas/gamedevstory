@@ -294,6 +294,12 @@ it('миграция v15: битая сага у старых сейвов сб�
 });
 
 it('тексты саги: чистота от служебных пометок (курсивы, S-номера, «сага», ❄)', () => {
+  type NodeShape = {
+    text?: string[];
+    inserts?: Array<{ text?: string }>;
+    choices?: Array<{ label?: string; result?: string }>;
+    slots?: Record<string, Array<{ text?: string }>>;
+  };
   const bad: string[] = [];
   const check = (where: string, s: string | undefined | null) => {
     if (!s) return;
@@ -303,11 +309,12 @@ it('тексты саги: чистота от служебных пометок
     if (/сага|саги|сагу|сагой|саге/i.test(txt)) bad.push(`${where}: «сага»`);
     if (/❄|заготовк|Авторская правда/i.test(txt)) bad.push(`${where}: пометка`);
   };
-  for (const [id, n] of Object.entries(SAGA_NODES as Record<string, any>)) {
-    (n.text || []).forEach((t: string, i: number) => check(`${id}.text${i}`, t));
-    (n.inserts || []).forEach((v: any, i: number) => check(`${id}.ins${i}`, v.text));
-    (n.choices || []).forEach((c: any, i: number) => { check(`${id}#${i}.label`, c.label); check(`${id}#${i}.result`, c.result); });
-    for (const [k, arr] of Object.entries(n.slots || {})) (arr as any[]).forEach((v, j) => check(`${id}.slot:${k}[${j}]`, v.text));
+  const nodes = SAGA_NODES as unknown as Record<string, NodeShape>;
+  for (const [id, n] of Object.entries(nodes)) {
+    (n.text || []).forEach((t, i) => check(`${id}.text${i}`, t));
+    (n.inserts || []).forEach((v, i) => check(`${id}.ins${i}`, v.text));
+    (n.choices || []).forEach((c, i) => { check(`${id}#${i}.label`, c.label); check(`${id}#${i}.result`, c.result); });
+    for (const [k, arr] of Object.entries(n.slots || {})) arr.forEach((v, j) => check(`${id}.slot:${k}[${j}]`, v.text));
   }
   expect(bad, bad.join('; ')).toHaveLength(0);
 });
