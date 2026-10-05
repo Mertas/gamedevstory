@@ -31,7 +31,7 @@ for (const n of Object.values(nodes)) {
 
 // ── валидация ──
 const EFFECT_KINDS = new Set(['flag', 'artifact', 'trust', 'noise', 'conscience', 'culture', 'biz', 'money', 'fans']);
-const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
+const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'flagsAll', 'flagsAny', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
 const NODE_KEYS = new Set(['act', 'disp', 'title', 'art', 'emoji', 'accent', 'face', 'prompt', 'text', 'onEnter', 'inserts', 'choices', 'slots', 'stub', 'final']);
 const errs = [];
 const checkEffects = (effs, where) => {
@@ -49,7 +49,7 @@ const checkCond = (c, where) => {
   for (const k of Object.keys(c)) {
     if (!COND_KEYS.has(k)) errs.push(`${where}: неизвестное условие «${k}»`);
     else if (NUMERIC.includes(k) && typeof c[k] !== 'number') errs.push(`${where}: условие «${k}» должно быть числом`);
-    else if (k === 'notFlags' && (!Array.isArray(c[k]) || c[k].some((x) => typeof x !== 'string'))) errs.push(`${where}: условие «notFlags» — массив строк`);
+    else if ((k === 'notFlags' || k === 'flagsAll' || k === 'flagsAny') && (!Array.isArray(c[k]) || c[k].some((x) => typeof x !== 'string'))) errs.push(`${where}: условие «${k}» — массив строк`);
   }
 };
 for (const [id, n] of Object.entries(nodes)) {
@@ -90,6 +90,10 @@ export type SagaCond = {
   notFlag?: string;
   /** ни одного из перечисленных флагов (для «скрыт при А и B») */
   notFlags?: string[];
+  /** все перечисленные флаги должны быть */
+  flagsAll?: string[];
+  /** хотя бы один из перечисленных флагов */
+  flagsAny?: string[];
   /** нужно фанатов ≥ SAGA.FANS_MIN */
   fansMin?: boolean;
   /** профессия героя (HERO_CAREERS) */

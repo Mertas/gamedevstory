@@ -20,7 +20,7 @@ for (const id of ids) {
 // 11.10.2026: родовые пары — @ключ должен быть известной ролью; пара без @ вне реплики — предупреждение
 const ROLE_KEYS = new Set(['Скептик', 'Мечтатель', 'Технарь', 'Юрист', 'Финдир', 'Старожил', 'Герой', 'Партнёр']);
 const HERO_JOBS = new Set(['coder', 'writer', 'designer', 'sound']);
-const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
+const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'flagsAll', 'flagsAny', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
 const PAIR = /\{([^{}\/@]+)\/([^{}@]+?)(?:@([\wА-Яа-яЁё-]+))?\}/g;
 const speakerOf = (line) => { const m = /^\s*\{([^{}]+)\}[^:«„]*:\s*[«„]/.exec(String(line)); return m ? m[1].trim() : null; };
 const gWarn = [];

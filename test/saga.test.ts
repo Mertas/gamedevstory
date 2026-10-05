@@ -200,6 +200,18 @@ it('условия по окружению: касса (деньги), ШУМ и
   expect(sagaCondOk(g, { notFlags: ['правда публична', 'суд с холдингом'] })).toBe(false);
   g.saga!.flags = g.saga!.flags.filter((f) => f !== 'суд с холдингом');
   expect(sagaCondOk(g, { notFlags: ['правда публична', 'суд с холдингом'] })).toBe(true);
+  // flagsAll / flagsAny: «все» / «хотя бы один» (F-путь, слоты архива, холодные ветки)
+  const savedFlags = [...g.saga!.flags];
+  g.saga!.flags = savedFlags.filter((f) => f !== 'кодекс полный' && f !== 'финал-отложен');
+  g.saga!.flags.push('финал-отложен');
+  expect(sagaCondOk(g, { flagsAll: ['финал-отложен', 'кодекс полный'] })).toBe(false);
+  g.saga!.flags.push('кодекс полный');
+  expect(sagaCondOk(g, { flagsAll: ['финал-отложен', 'кодекс полный'] })).toBe(true);
+  g.saga!.flags = g.saga!.flags.filter((f) => f !== 'партнёрство');
+  expect(sagaCondOk(g, { flagsAny: ['права проданы', 'партнёрство'] })).toBe(false);
+  g.saga!.flags.push('партнёрство');
+  expect(sagaCondOk(g, { flagsAny: ['права проданы', 'партнёрство'] })).toBe(true);
+  g.saga!.flags = [...savedFlags];
   // комбинации — логическое И
   g.money = 100;
   g.saga!.scales.noise = 2;
@@ -279,4 +291,23 @@ it('миграция v15: битая сага у старых сейвов сб�
   (g as { saga?: unknown }).saga = { node: 'S1' }; // без flags — мусор
   const m = migrateSave(g);
   expect(m.saga).toBeUndefined();
+});
+
+it('тексты саги: чистота от служебных пометок (курсивы, S-номера, «сага», ❄)', () => {
+  const bad: string[] = [];
+  const check = (where: string, s: string | undefined | null) => {
+    if (!s) return;
+    const txt = s.replace(/\{[^}]*\}/g, ''); // {плейсхолдеры} — легальный синтаксис (роли, слоты)
+    if (/\*\(/.test(txt)) bad.push(`${where}: *(…)`);
+    if (/\b[Ss]\d+[а-я]?/.test(txt)) bad.push(`${where}: S-номер`);
+    if (/сага|саги|сагу|сагой|саге/i.test(txt)) bad.push(`${where}: «сага»`);
+    if (/❄|заготовк|Авторская правда/i.test(txt)) bad.push(`${where}: пометка`);
+  };
+  for (const [id, n] of Object.entries(SAGA_NODES as Record<string, any>)) {
+    (n.text || []).forEach((t: string, i: number) => check(`${id}.text${i}`, t));
+    (n.inserts || []).forEach((v: any, i: number) => check(`${id}.ins${i}`, v.text));
+    (n.choices || []).forEach((c: any, i: number) => { check(`${id}#${i}.label`, c.label); check(`${id}#${i}.result`, c.result); });
+    for (const [k, arr] of Object.entries(n.slots || {})) (arr as any[]).forEach((v, j) => check(`${id}.slot:${k}[${j}]`, v.text));
+  }
+  expect(bad, bad.join('; ')).toHaveLength(0);
 });

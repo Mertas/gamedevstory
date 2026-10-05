@@ -64,11 +64,13 @@ function applyEffects(st, effs) {
 }
 function condOk(cond, st) {
   if (!cond) return true;
-  if (cond.flag) return st.flags.includes(cond.flag);
-  if (cond.notFlag) return !st.flags.includes(cond.notFlag);
-  if (cond.notFlags && cond.notFlags.length) return !cond.notFlags.some((f) => st.flags.includes(f));
-  if (cond.fansMin) return (st.fans || 0) >= (Number(settings.thr.fansMin) || 0);
-  if (cond.heroJob) { const arr = Array.isArray(cond.heroJob) ? cond.heroJob : [cond.heroJob]; return arr.includes((settings && settings.heroJob) || 'coder'); }
+  if (cond.flag && !st.flags.includes(cond.flag)) return false;
+  if (cond.notFlag && st.flags.includes(cond.notFlag)) return false;
+  if (cond.notFlags && cond.notFlags.length && cond.notFlags.some((f) => st.flags.includes(f))) return false;
+  if (cond.flagsAll && cond.flagsAll.length && !cond.flagsAll.every((f) => st.flags.includes(f))) return false;
+  if (cond.flagsAny && cond.flagsAny.length && !cond.flagsAny.some((f) => st.flags.includes(f))) return false;
+  if (cond.fansMin && (st.fans || 0) < (Number(settings.thr.fansMin) || 0)) return false;
+  if (cond.heroJob) { const arr = Array.isArray(cond.heroJob) ? cond.heroJob : [cond.heroJob]; if (!arr.includes((settings && settings.heroJob) || 'coder')) return false; }
   if (cond.moneyMin != null && (st.money || 0) < cond.moneyMin) return false;
   if (cond.moneyMax != null && (st.money || 0) > cond.moneyMax) return false;
   if (cond.noiseMin != null && (st.noise || 0) < cond.noiseMin) return false;

@@ -43,6 +43,8 @@ export function sagaCondOk(src: SagaTextSource, cond?: SagaCond): boolean {
   if (cond.flag && !src.saga?.flags.includes(cond.flag)) return false;
   if (cond.notFlag && src.saga?.flags.includes(cond.notFlag)) return false;
   if (cond.notFlags?.length && cond.notFlags.some((f) => src.saga?.flags.includes(f))) return false;
+  if (cond.flagsAll?.length && !cond.flagsAll.every((f) => src.saga?.flags.includes(f))) return false;
+  if (cond.flagsAny?.length && !cond.flagsAny.some((f) => src.saga?.flags.includes(f))) return false;
   if (cond.fansMin && (src.fans ?? 0) < CONFIG.SAGA.FANS_MIN) return false;
   if (cond.heroJob) {
     const job = heroOf(src)?.activeCareer ?? null;
