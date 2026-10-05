@@ -8,7 +8,7 @@ const CDP = 'http://127.0.0.1:9334';
 const URL = 'http://127.0.0.1:8899/';
 
 let pass = 0, fail = 0;
-const check = (n, ok, x = '') => { ok ? pass++ : fail++; console.log(`${ok ? '✓' : '✗ ПРОВАЛ'} ${n}${x ? ' [' + x + ']' : ''}`); };
+const check = (n, ok, x = '') => { if (ok) pass++; else fail++; console.log(`${ok ? '✓' : '✗ ПРОВАЛ'} ${n}${x ? ' [' + x + ']' : ''}`); };
 
 const list = await (await fetch(CDP + '/json/list')).json();
 let page = list.find((t) => t.type === 'page');

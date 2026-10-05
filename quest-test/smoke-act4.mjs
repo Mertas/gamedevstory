@@ -8,7 +8,7 @@ const CDP = 'http://127.0.0.1:9334';
 const URL = 'http://127.0.0.1:8899/';
 
 let pass = 0, fail = 0;
-const check = (n, ok, x = '') => { ok ? pass++ : fail++; console.log(`${ok ? '✓' : '✗ ПРОВАЛ'} ${n}${x ? ' [' + x + ']' : ''}`); };
+const check = (n, ok, x = '') => { if (ok) pass++; else fail++; console.log(`${ok ? '✓' : '✗ ПРОВАЛ'} ${n}${x ? ' [' + x + ']' : ''}`); };
 
 const list = await (await fetch(CDP + '/json/list')).json();
 let page = list.find((t) => t.type === 'page');
@@ -41,7 +41,6 @@ const card = () => ev(`(() => {
   const labels = [...document.querySelectorAll('#choices .qt-choice')].map((x) => x.querySelector('.lbl').textContent.trim());
   return { title: tb ? tb.textContent : null, text, chips, labels, pending: !!document.querySelector('#btn-next') };
 })()`);
-const hasChoice = (needle) => ev(`[...document.querySelectorAll('#choices .qt-choice')].some((x) => x.querySelector('.lbl').textContent.includes(${JSON.stringify(needle)}))`);
 const clickChoice = (needle) => ev(`(() => {
   const b = [...document.querySelectorAll('#choices .qt-choice')].find((x) => x.querySelector('.lbl').textContent.includes(${JSON.stringify(needle)}));
   if (!b || b.disabled) return false; b.click(); return true;
