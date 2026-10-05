@@ -66,8 +66,15 @@ function condOk(cond, st) {
   if (!cond) return true;
   if (cond.flag) return st.flags.includes(cond.flag);
   if (cond.notFlag) return !st.flags.includes(cond.notFlag);
+  if (cond.notFlags && cond.notFlags.length) return !cond.notFlags.some((f) => st.flags.includes(f));
   if (cond.fansMin) return (st.fans || 0) >= (Number(settings.thr.fansMin) || 0);
   if (cond.heroJob) { const arr = Array.isArray(cond.heroJob) ? cond.heroJob : [cond.heroJob]; return arr.includes((settings && settings.heroJob) || 'coder'); }
+  if (cond.moneyMin != null && (st.money || 0) < cond.moneyMin) return false;
+  if (cond.moneyMax != null && (st.money || 0) > cond.moneyMax) return false;
+  if (cond.noiseMin != null && (st.noise || 0) < cond.noiseMin) return false;
+  if (cond.noiseMax != null && (st.noise || 0) > cond.noiseMax) return false;
+  if (cond.conscienceMin != null && (st.conscience || 0) < cond.conscienceMin) return false;
+  if (cond.conscienceMax != null && (st.conscience || 0) > cond.conscienceMax) return false;
   return true;
 }
 function applyEnterInto(st, n) {

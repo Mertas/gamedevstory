@@ -8,9 +8,11 @@ import type { SagaCond, SagaNode } from './saga-data';
 /** Роли саги, которые берутся из штата (порядок раздачи — как в списке). */
 export const SAGA_STAFF_ROLES = ['Скептик', 'Мечтатель', 'Технарь', 'Юрист', 'Финдир'] as const;
 
-/** Минимальный срез игры, который нужен текстам и условиям: сага, штат, фанаты. */
+/** Минимальный срез игры, который нужен текстам и условиям: сага, штат, фанаты, деньги. */
 export interface SagaTextSource {
   fans: number;
+  /** деньги студии, K (условия «касса тонка/полна»: moneyMax/moneyMin) */
+  money?: number;
   staff: Array<{
     name: string;
     gender: Gender;
@@ -21,6 +23,8 @@ export interface SagaTextSource {
   saga?: {
     flags: string[];
     roles?: Record<string, { name: string; gender: Gender }>;
+    /** скрытые шкалы: noise, conscience, culture, biz */
+    scales?: Record<string, number>;
   };
 }
 
@@ -32,17 +36,26 @@ function partnerOf(src: SagaTextSource) {
   return src.staff.find((s) => typeof s.partnerPct === 'number');
 }
 
-/** Условие варианта/вставки: флаг, отсутствие флага, порог фанатов, профессия героя. */
+/** Условие варианта/вставки: флаг, отсутствие флага, порог фанатов, профессия героя,
+ *  деньги (касса) и скрытые шкалы (ШУМ, СОВЕСТЬ). Все указанные ключи — логическое И. */
 export function sagaCondOk(src: SagaTextSource, cond?: SagaCond): boolean {
   if (!cond) return true;
-  if (cond.flag) return !!src.saga && src.saga.flags.includes(cond.flag);
-  if (cond.notFlag) return !src.saga || !src.saga.flags.includes(cond.notFlag);
-  if (cond.fansMin) return (src.fans ?? 0) >= CONFIG.SAGA.FANS_MIN;
+  if (cond.flag && !src.saga?.flags.includes(cond.flag)) return false;
+  if (cond.notFlag && src.saga?.flags.includes(cond.notFlag)) return false;
+  if (cond.notFlags?.length && cond.notFlags.some((f) => src.saga?.flags.includes(f))) return false;
+  if (cond.fansMin && (src.fans ?? 0) < CONFIG.SAGA.FANS_MIN) return false;
   if (cond.heroJob) {
     const job = heroOf(src)?.activeCareer ?? null;
     const arr = Array.isArray(cond.heroJob) ? cond.heroJob : [cond.heroJob];
-    return job != null && arr.includes(job);
+    if (job == null || !arr.includes(job)) return false;
   }
+  const sc = src.saga?.scales ?? {};
+  if (cond.moneyMin != null && (src.money ?? 0) < cond.moneyMin) return false;
+  if (cond.moneyMax != null && (src.money ?? 0) > cond.moneyMax) return false;
+  if (cond.noiseMin != null && (sc['noise'] ?? 0) < cond.noiseMin) return false;
+  if (cond.noiseMax != null && (sc['noise'] ?? 0) > cond.noiseMax) return false;
+  if (cond.conscienceMin != null && (sc['conscience'] ?? 0) < cond.conscienceMin) return false;
+  if (cond.conscienceMax != null && (sc['conscience'] ?? 0) > cond.conscienceMax) return false;
   return true;
 }
 

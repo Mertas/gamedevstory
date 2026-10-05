@@ -31,7 +31,7 @@ for (const n of Object.values(nodes)) {
 
 // ── валидация ──
 const EFFECT_KINDS = new Set(['flag', 'artifact', 'trust', 'noise', 'conscience', 'culture', 'biz', 'money', 'fans']);
-const COND_KEYS = new Set(['flag', 'notFlag', 'fansMin', 'heroJob']);
+const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
 const NODE_KEYS = new Set(['act', 'disp', 'title', 'art', 'emoji', 'accent', 'face', 'prompt', 'text', 'onEnter', 'inserts', 'choices', 'slots', 'stub', 'final']);
 const errs = [];
 const checkEffects = (effs, where) => {
@@ -45,7 +45,12 @@ const checkEffects = (effs, where) => {
 };
 const checkCond = (c, where) => {
   if (!c) return;
-  for (const k of Object.keys(c)) if (!COND_KEYS.has(k)) errs.push(`${where}: неизвестное условие «${k}»`);
+  const NUMERIC = ['moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax'];
+  for (const k of Object.keys(c)) {
+    if (!COND_KEYS.has(k)) errs.push(`${where}: неизвестное условие «${k}»`);
+    else if (NUMERIC.includes(k) && typeof c[k] !== 'number') errs.push(`${where}: условие «${k}» должно быть числом`);
+    else if (k === 'notFlags' && (!Array.isArray(c[k]) || c[k].some((x) => typeof x !== 'string'))) errs.push(`${where}: условие «notFlags» — массив строк`);
+  }
 };
 for (const [id, n] of Object.entries(nodes)) {
   for (const k of Object.keys(n)) if (!NODE_KEYS.has(k)) errs.push(`узел ${id}: неизвестное поле «${k}»`);
@@ -83,10 +88,21 @@ ${outside.size ? `// За краем среза (Э2): ${[...outside].join(', ')
 export type SagaCond = {
   flag?: string;
   notFlag?: string;
+  /** ни одного из перечисленных флагов (для «скрыт при А и B») */
+  notFlags?: string[];
   /** нужно фанатов ≥ SAGA.FANS_MIN */
   fansMin?: boolean;
   /** профессия героя (HERO_CAREERS) */
   heroJob?: string | string[];
+  /** деньги студии (K): «касса тонка» — moneyMax, «полна» — moneyMin */
+  moneyMin?: number;
+  moneyMax?: number;
+  /** скрытый ШУМ саги: высокий — noiseMin, тихий — noiseMax */
+  noiseMin?: number;
+  noiseMax?: number;
+  /** СОВЕСТЬ: низкая — conscienceMax, высокая — conscienceMin */
+  conscienceMin?: number;
+  conscienceMax?: number;
 };
 
 export type SagaEffect =
@@ -106,7 +122,7 @@ export interface SagaChoice {
 }
 
 export interface SagaInsertManual { mode: 'manual'; label: string; text: string }
-export interface SagaInsertAuto { mode: 'auto'; when?: SagaCond; text: string; effects?: SagaEffect[] }
+export interface SagaInsertAuto { mode: 'auto'; when?: SagaCond; /** редакторская пометка условия (в игре не видна) */ label?: string; text: string; effects?: SagaEffect[] }
 export type SagaInsert = SagaInsertManual | SagaInsertAuto;
 
 export interface SagaNode {

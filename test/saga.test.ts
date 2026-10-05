@@ -7,6 +7,7 @@ import { newGame } from '../src/core/engine';
 import { CONFIG } from '../src/core/config';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { resolveSaga, sagaApplyEffects, sagaCondOk, sagaEpilogFor, sagaResolveParagraph, tickSaga } from '../src/core/systems/saga';
+import { SAGA_NODES } from '../src/shared/saga-data';
 import type { GameRecord, GameState } from '../src/core/types';
 
 function withRelease(seed = 3, releases = 1): GameState {
@@ -171,6 +172,56 @@ it('условие fansMin сверяется с фанатами студии',
   expect(sagaCondOk(g, { fansMin: true })).toBe(false);
   g.fans = CONFIG.SAGA.FANS_MIN;
   expect(sagaCondOk(g, { fansMin: true })).toBe(true);
+});
+
+it('условия по окружению: касса (деньги), ШУМ и СОВЕСТЬ', () => {
+  const g = withRelease();
+  tickSaga(g);
+  // касса: тонка — moneyMax, полна — moneyMin
+  g.money = 100;
+  expect(sagaCondOk(g, { moneyMax: 150 })).toBe(true);
+  expect(sagaCondOk(g, { moneyMin: 500 })).toBe(false);
+  g.money = 600;
+  expect(sagaCondOk(g, { moneyMin: 500 })).toBe(true);
+  expect(sagaCondOk(g, { moneyMax: 150 })).toBe(false);
+  // ШУМ
+  g.saga!.scales.noise = 2;
+  expect(sagaCondOk(g, { noiseMin: 2 })).toBe(true);
+  expect(sagaCondOk(g, { noiseMax: 0 })).toBe(false);
+  g.saga!.scales.noise = 0;
+  expect(sagaCondOk(g, { noiseMax: 0 })).toBe(true);
+  expect(sagaCondOk(g, { noiseMin: 2 })).toBe(false);
+  // СОВЕСТЬ
+  g.saga!.scales.conscience = -2;
+  expect(sagaCondOk(g, { conscienceMax: -2 })).toBe(true);
+  expect(sagaCondOk(g, { conscienceMin: 2 })).toBe(false);
+  // notFlags: ни одного из перечисленных (скрытие выбора, напр. «Издательства» в S19)
+  g.saga!.flags.push('суд с холдингом');
+  expect(sagaCondOk(g, { notFlags: ['правда публична', 'суд с холдингом'] })).toBe(false);
+  g.saga!.flags = g.saga!.flags.filter((f) => f !== 'суд с холдингом');
+  expect(sagaCondOk(g, { notFlags: ['правда публична', 'суд с холдингом'] })).toBe(true);
+  // комбинации — логическое И
+  g.money = 100;
+  g.saga!.scales.noise = 2;
+  expect(sagaCondOk(g, { moneyMax: 150, noiseMin: 2 })).toBe(true);
+  expect(sagaCondOk(g, { moneyMax: 150, noiseMin: 3 })).toBe(false);
+});
+
+it('вставки «по ситуации»: тонкая касса — реплика Скептика, полная — нет', () => {
+  const g = withRelease();
+  tickSaga(g);
+  g.money = 100; // касса тонка
+  const s1 = SAGA_NODES['S1']!;
+  const insertTexts = () =>
+    (s1.inserts ?? [])
+      .map((i) => ({ t: i.text, w: 'when' in i ? (i as { when?: Parameters<typeof sagaCondOk>[1] }).when : undefined }))
+      .filter((x) => sagaCondOk(g, x.w))
+      .map((x) => x.t);
+  expect(insertTexts().some((t) => t.includes('счёт за электричество'))).toBe(true);
+  expect(insertTexts().some((t) => t.includes('департаменте древностей'))).toBe(false);
+  g.money = 600; // касса полна — наоборот
+  expect(insertTexts().some((t) => t.includes('департаменте древностей'))).toBe(true);
+  expect(insertTexts().some((t) => t.includes('счёт за электричество'))).toBe(false);
 });
 
 it('эффекты: деньги/фанаты по тирам, доверие и шкалы копятся', () => {
