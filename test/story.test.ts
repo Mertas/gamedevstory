@@ -436,7 +436,7 @@ it('миграция v10 → v12: каркас story появляется, сл�
   expect(m.story!.arcs).toEqual({});
   expect(m.story!.flags.nextQuestWeek).toBe(m.week + 60);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(15); // v15: PLAN-49 сага «Синяя Комета» (опциональное поле saga)
+  expect(SAVE_VERSION).toBe(16); // v16: PLAN-49 Э3 (числа саги: точки времени)
 });
 
 it('миграция v11 → v12: слот квестов появляется; уже стоявший слот не трогаем', () => {

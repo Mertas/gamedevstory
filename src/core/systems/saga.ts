@@ -6,7 +6,7 @@
 // эпилог — автоматически по флагам (правила 1–7, CONFIG.SAGA.EPILOG); хаб EP со стенда пропускается.
 import { CONFIG } from '../config';
 import { SAGA_NODES, SAGA_START, type SagaChoice, type SagaCond, type SagaEffect, type SagaNode } from '../../shared/saga-data';
-import { SAGA_STAFF_ROLES, sagaCondOk as sagaCondOkOf, sagaResolveText } from '../../shared/saga-text';
+import { SAGA_STAFF_ROLES, sagaCondOk as sagaCondOkOf, sagaHoldDays, sagaIsInterlude, sagaResolveText, sagaTopChapter } from '../../shared/saga-text';
 import { log } from '../log';
 import type { ActionResult, GameState, SagaState, Staff } from '../types';
 import { partnerOf } from './staff';
@@ -102,17 +102,10 @@ function initRoles(state: GameState, s: SagaState): void {
   refillSagaRoles(state, s);
 }
 
-/** «Крупная» глава верхнего уровня (S2, S5…): не под-узел (S1a, S6b) и не интерлюдия. */
-function topChapter(id: string): boolean {
-  return /^S\d+$/.test(id);
-}
-
-/** Пауза перед главой, дней: детерминированно от id — 180..230 (CONFIG.SAGA.HOLD_*).
- *  state.week — счётчик ДНЕЙ игры (инкремент за день, `% 365`), поэтому прибавка в днях. */
-function holdDays(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return CONFIG.SAGA.HOLD_MIN + (Math.abs(h) % CONFIG.SAGA.HOLD_SPAN);
+/** Отметить показ узла: пауза от прошлого показа (для «Проходит N лет» в интерлюдиях, Э3). */
+function markShown(s: SagaState, week: number): void {
+  s.lastGap = Math.max(0, week - (s.lastWeek ?? week));
+  s.lastWeek = week;
 }
 
 /**
@@ -149,8 +142,10 @@ function enterNode(state: GameState, s: SagaState, id: string): void {
   s.node = id;
   s.stage = n.final ? 'final' : 'choice';
   s.chosen = undefined;
-  // пейсер: крупные главы (S2, S5…) показываются не раньше, чем через 180–230 дней
-  s.holdUntil = topChapter(id) && id !== SAGA_START ? state.week + holdDays(id) : undefined;
+  // пейсер: главы (S2, S5…) — 180–230 дней; интерлюдии (i1–i5) — скачок к канонному году (Э3)
+  s.holdUntil = (sagaTopChapter(id) || sagaIsInterlude(id)) && id !== SAGA_START
+    ? state.week + sagaHoldDays(id, state.week)
+    : undefined;
   sagaApplyEffects(state, n.onEnter);
   for (const ins of n.inserts ?? []) {
     if (ins.mode === 'auto' && ins.effects && sagaCondOk(state, ins.when)) sagaApplyEffects(state, ins.effects);
@@ -180,6 +175,9 @@ export function sagaStart(state: GameState): void {
     trust: {},
     scales: {},
     roles: {},
+    startWeek: state.week,
+    lastWeek: state.week,
+    lastGap: 0,
   };
   state.saga = s;
   initRoles(state, s);
@@ -203,6 +201,7 @@ export function tickSaga(state: GameState): void {
     // пейсер: глава «спит» до недели показа — появится сама, когда время придёт
     if (state.week < s.holdUntil) return;
     s.holdUntil = undefined;
+    markShown(s, state.week); // фактический момент показа (числа Э3)
   }
   if (!state.pendingEvent) syncSagaPopup(state, s); // попап потерялся (загрузка сейва)
 }
@@ -229,7 +228,10 @@ function advance(state: GameState, s: SagaState, ch: SagaChoice): void {
     enterNode(state, s, to);
   }
   if (s.holdUntil != null) state.pendingEvent = null; // глава «спит»: попап покажем в свой день
-  else syncSagaPopup(state, s);
+  else {
+    markShown(s, state.week);
+    syncSagaPopup(state, s);
+  }
 }
 
 /** Выбор игрока в главе саги. option — индекс варианта; '' — авто (первый доступный). */

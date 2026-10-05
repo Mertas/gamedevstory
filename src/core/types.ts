@@ -309,6 +309,12 @@ export interface SagaState {
   roles: Record<string, SagaRoleRef>;
   /** пейсер: неделя игры, с которой показывать следующую главу (пауза 180–230 дней) */
   holdUntil?: number;
+  /** PLAN-49 Э3: день игры старта саги — база «эпохи» в числах (1983 + 40 лет к старту) */
+  startWeek?: number;
+  /** Э3: день показа предыдущего узла (для «Проходит N лет» в интерлюдиях) */
+  lastWeek?: number;
+  /** Э3: пауза перед текущим узлом, дней (week − lastWeek на момент показа) */
+  lastGap?: number;
 }
 
 export type PendingEvent =

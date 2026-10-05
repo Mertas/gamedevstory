@@ -136,6 +136,6 @@ describe('своя консоль: движок', () => {
     g.consoles['own-console'] = { licensed: true, base: 0, availableAtWeek: 1, removedAtWeek: null };
     migrateSave(g);
     expect(g.consoles['own-console']!.base).toBe(1000);
-    expect(g.saveVersion).toBe(15); // каскад миграций доводит до текущей (v1.48: пол героя по аватарке)
+    expect(g.saveVersion).toBe(16); // каскад миграций доводит до текущей (v1.53: Э3 точки времени саги)
   });
 });

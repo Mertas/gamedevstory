@@ -4,13 +4,14 @@
 import { CONFIG } from '../core/config';
 import { applyGenderSlots, type Gender } from './gender';
 import type { SagaCond, SagaNode } from './saga-data';
-
 /** Роли саги, которые берутся из штата (порядок раздачи — как в списке). */
 export const SAGA_STAFF_ROLES = ['Скептик', 'Мечтатель', 'Технарь', 'Юрист', 'Финдир'] as const;
 
 /** Минимальный срез игры, который нужен текстам и условиям: сага, штат, фанаты, деньги. */
 export interface SagaTextSource {
   fans: number;
+  /** день игры (для числовых подстановок Э3: «эпоха», «прошло») */
+  week?: number;
   /** деньги студии, K (условия «касса тонка/полна»: moneyMax/moneyMin) */
   money?: number;
   staff: Array<{
@@ -25,6 +26,10 @@ export interface SagaTextSource {
     roles?: Record<string, { name: string; gender: Gender }>;
     /** скрытые шкалы: noise, conscience, culture, biz */
     scales?: Record<string, number>;
+    /** Э3: день старта саги и точка предыдущего показа — для {≈эпоха}/{≈прошло} */
+    startWeek?: number;
+    lastWeek?: number;
+    lastGap?: number;
   };
 }
 
@@ -102,6 +107,19 @@ export function sagaResolveText(text: string, node: SagaNode | undefined, src: S
       t = t.split(token).join(v?.text ?? '…');
     }
   }
+  // Э3 (числа): {≈эпоха} — «коробке/истории» на момент главы (1983 + 40 лет к старту саги);
+  // {≈прошло} — пауза от предыдущего показанного узла («Проходит N лет» в интерлюдиях);
+  // {≈далее} — дней до следующей главы (пейсер) для «пророчеств» (S19/S20b).
+  t = t.replace(/\{≈(эпоха|прошло|далее)\}/g, (_w, key: string) => {
+    if (key === 'эпоха') {
+      const wk = src.week ?? 0;
+      const st = src.saga?.startWeek ?? wk;
+      return ruYears(40 + Math.max(0, Math.round((wk - st) / 365)));
+    }
+    if (key === 'прошло') return ruYears(Math.max(0, Math.round((src.saga?.lastGap ?? 0) / 365)));
+    const nxt = node?.choices?.[0]?.to;
+    return nxt && sagaTopChapter(nxt) ? ruDays(sagaHoldDays(nxt)) : 'несколько дней';
+  });
   const m = /^\s*\{([^{}]+)\}[^:«„]*:\s*[«„]/.exec(t);
   const speakerG = m ? genders[m[1]!.trim()] : undefined;
   t = applyGenderSlots(t, genders, speakerG ?? null);
@@ -110,4 +128,44 @@ export function sagaResolveText(text: string, node: SagaNode | undefined, src: S
     return k in names ? names[k]! : whole;
   });
   return t;
+}
+
+/** «Крупная» глава верхнего уровня (S2, S5…): не под-узел (S1a, S6b). */
+export function sagaTopChapter(id: string): boolean {
+  return /^S\d+$/.test(id);
+}
+
+/** Интерлюдия между актами (i1–i4): большой скачок времени (Э3). */
+export function sagaIsInterlude(id: string): boolean {
+  return /^i\d+$/.test(id);
+}
+
+/** Пауза перед узлом, дней — детерминированно от id (единый источник для движка и текстов).
+ *  Интерлюдии (i1–i5) целятся в канонные годы актов: пауза = цель − текущий день − пауза
+ *  следующей главы (CONFIG.SAGA.HOLD_INT_ACTS): акты встают на 0/6/12/17/22/26 при любом темпе. */
+export function sagaHoldDays(id: string, weekNow = 0): number {
+  const spec = sagaIsInterlude(id) ? CONFIG.SAGA.HOLD_INT_ACTS[id] : undefined;
+  if (spec) return Math.max(180, spec.at * 365 - weekNow - sagaHoldDays(spec.next));
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return CONFIG.SAGA.HOLD_MIN + (Math.abs(h) % CONFIG.SAGA.HOLD_SPAN);
+}
+
+/** Русское склонение с числом: ruPlural(5, 'год', 'года', 'лет') → «5 лет». */
+function ruPlural(n: number, one: string, few: string, many: string): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return `${n} ${one}`;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return `${n} ${few}`;
+  return `${n} ${many}`;
+}
+
+/** «40 лет» / «41 год» — числовые подстановки Э3. */
+export function ruYears(n: number): string {
+  return ruPlural(n, 'год', 'года', 'лет');
+}
+
+/** «196 дней» / «181 день». */
+export function ruDays(n: number): string {
+  return ruPlural(n, 'день', 'дня', 'дней');
 }

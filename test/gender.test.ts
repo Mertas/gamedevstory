@@ -58,5 +58,5 @@ it('migrateSave v13→v14: пол героя выравнивается по а�
   const m = migrateSave(g);
   expect(m.staff.find((s) => s.id === 'hero')!.gender).toBe('F'); // чётная аватарка — девушка
   expect(m.staff.find((s) => s.id === base.id)!.gender).toBe(base.gender);
-  expect(m.saveVersion).toBe(15);
+  expect(m.saveVersion).toBe(16);
 });

@@ -88,15 +88,19 @@ function applyEnterInto(st, n) {
   }
 }
 function resolveText(txt, n, st) {
-  if (!n.slots) return txt;
-  for (const key of Object.keys(n.slots)) {
-    if (!txt.includes('{' + key + '}')) continue;
-    let val = '…';
-    for (const v of n.slots[key]) {
-      if (!v.when || condOk(v.when, st)) { val = v.text; break; }
+  if (n.slots) {
+    for (const key of Object.keys(n.slots)) {
+      if (!txt.includes('{' + key + '}')) continue;
+      let val = '…';
+      for (const v of n.slots[key]) {
+        if (!v.when || condOk(v.when, st)) { val = v.text; break; }
+      }
+      txt = txt.split('{' + key + '}').join(val);
     }
-    txt = txt.split('{' + key + '}').join(val);
   }
+  /* Э3 (зеркало движка): числовые подстановки — стабы для превью стенда */
+  txt = txt.replace(/\{≈(эпоха|прошло|далее)\}/g, (_w, k) =>
+    k === 'эпоха' ? '55 лет' : k === 'прошло' ? '4 года' : '196 дней');
   return txt;
 }
 /* ── родовые пары: {муж/жен@роль}; в реплике «{Роль}: «…»» без @ — род говорящего ── */

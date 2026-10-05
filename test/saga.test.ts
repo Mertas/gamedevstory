@@ -112,6 +112,42 @@ it('пейсер: крупные главы ждут 180–230 дней, под-
   expect(g.pendingEvent).toMatchObject({ type: 'saga', node: 'S2' });
 });
 
+it('ритм Э3: акты встают на канонные годы (0/6/12/17/22/26)', () => {
+  const g = withRelease();
+  const seen: Record<string, number> = {};
+  let guard = 0;
+  while (g.saga?.stage !== 'done' && guard++ < 4000) {
+    g.week += 7;
+    tickSaga(g);
+    const cur = g.saga?.node;
+    if (cur && !(cur in seen) && (g.pendingEvent?.type === 'saga' || g.saga?.stage === 'final')) seen[cur] = g.week;
+    let inner = 0;
+    while (g.pendingEvent?.type === 'saga' && inner++ < 40) {
+      const r = resolveSaga(g, '');
+      if (!r.ok) break;
+    }
+  }
+  const yr = (id: string) => Math.round((seen[id]! / 365) * 2) / 2;
+  expect(yr('S4')).toBe(6);
+  expect(yr('S8')).toBe(12);
+  expect(yr('S13')).toBe(17);
+  expect(yr('S18')).toBe(22);
+  expect(yr('S22')).toBe(26);
+  expect(g.saga!.stage).toBe('done');
+});
+
+it('числа Э3: {≈эпоха}/{≈прошло}/{≈далее} берутся из состояния саги', () => {
+  const g = withRelease();
+  tickSaga(g);
+  g.saga!.startWeek = g.week - 365 * 7; // саге 7 лет
+  g.saga!.lastGap = 365 * 4 + 100; // пауза ≈4 года
+  const out = sagaResolveParagraph(g, 'Проходит {≈прошло}. Коробке {≈эпоха}.');
+  expect(out).toContain('4 года');
+  expect(out).toContain('47 лет');
+  const next = sagaResolveParagraph(g, 'Через {≈далее} — пожар.', SAGA_NODES['S19']);
+  expect(next).toMatch(/^Через \d+ дней — пожар\.$/);
+});
+
 it('роли: увольнение сотрудника — роль переходит живому', () => {
   const g = withRelease();
   tickSaga(g);
@@ -308,7 +344,7 @@ it('миграция v15: сейв без саги грузится, верси�
   delete (g as { saga?: unknown }).saga;
   const m = migrateSave(g);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(15);
+  expect(SAVE_VERSION).toBe(16);
   expect(m.saga).toBeUndefined();
 });
 
@@ -318,6 +354,18 @@ it('миграция v15: битая сага у старых сейвов сб�
   (g as { saga?: unknown }).saga = { node: 'S1' }; // без flags — мусор
   const m = migrateSave(g);
   expect(m.saga).toBeUndefined();
+});
+
+it('миграция v16: саге проставляются опорные точки времени (Э3)', () => {
+  const g = newGame(1);
+  g.saveVersion = 15;
+  g.week = 500;
+  g.saga = { node: 'S1', stage: 'choice', flags: [], artifacts: [], trust: {}, scales: {}, roles: {} };
+  const m = migrateSave(g);
+  expect(m.saveVersion).toBe(16);
+  expect(m.saga!.startWeek).toBe(500);
+  expect(m.saga!.lastWeek).toBe(500);
+  expect(m.saga!.lastGap).toBe(0);
 });
 
 it('тексты саги: чистота от служебных пометок (курсивы, S-номера, «сага», ❄)', () => {
