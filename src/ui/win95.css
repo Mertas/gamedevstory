@@ -584,7 +584,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* PLAN-49: текст главы саги — абзацы, условные вставки, приглашение к выбору */
 .w95-saga-text p { margin: 0 0 7px; }
 .w95-saga-text p:last-child { margin-bottom: 0; }
-.w95-saga-ins-auto { color: #5a6e8a; font-style: italic; }
+/* вставки — часть нарратива: без служебного выделения (юзер, v1.54.0) */
 .w95-saga-inserts { margin-top: 8px; padding: 5px 8px; background: #ececf4; border: 1px solid #c8c8d8; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 11px; }
 .w95-saga-ins-chip { cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 3px; }
 .w95-saga-prompt { margin-top: 8px; font-weight: bold; }

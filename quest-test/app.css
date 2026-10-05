@@ -53,8 +53,7 @@ body.qt-page {
 .qt-text { background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 8px 10px; font-size: 12px; line-height: 1.5; }
 .qt-text p { margin: 0 0 6px; }
 .qt-text p:last-child { margin-bottom: 0; }
-.qt-text .ins-auto { border-left: 3px solid #b08030; padding-left: 7px; color: #223; }
-.qt-text .ins-man { border-left: 3px solid #4f7ab0; padding-left: 7px; color: #223; }
+/* вставки — часть нарратива: без служебных полосок (юзер, v1.54.0) */
 .qt-inserts { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 11px; color: #333; }
 .qt-ins-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); background: #d8d8d8; padding: 1px 6px; cursor: pointer; }
 .qt-ins-chip input { margin: 0; }

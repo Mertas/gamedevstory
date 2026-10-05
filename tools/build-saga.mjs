@@ -32,7 +32,7 @@ for (const n of Object.values(nodes)) {
 // ── валидация ──
 const EFFECT_KINDS = new Set(['flag', 'artifact', 'trust', 'noise', 'conscience', 'culture', 'biz', 'money', 'fans', 'when']);
 const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'flagsAll', 'flagsAny', 'flagsCount', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
-const NODE_KEYS = new Set(['act', 'disp', 'title', 'art', 'emoji', 'accent', 'face', 'prompt', 'text', 'onEnter', 'inserts', 'choices', 'slots', 'stub', 'final']);
+const NODE_KEYS = new Set(['act', 'disp', 'title', 'art', 'emoji', 'accent', 'face', 'prompt', 'text', 'onEnter', 'inserts', 'choices', 'slots', 'stub', 'final', 'hold']);
 const errs = [];
 const checkEffects = (effs, where) => {
   for (const e of effs ?? []) {
@@ -61,6 +61,7 @@ for (const [id, n] of Object.entries(nodes)) {
   for (const k of Object.keys(n)) if (!NODE_KEYS.has(k)) errs.push(`узел ${id}: неизвестное поле «${k}»`);
   if (!n.title) errs.push(`узел ${id}: нет title`);
   if (!Array.isArray(n.text)) errs.push(`узел ${id}: нет text[]`);
+  if (n.hold != null && (!Number.isInteger(n.hold) || n.hold <= 0)) errs.push(`узел ${id}: hold — целое число дней > 0`);
   if (!n.choices?.length && !n.final) errs.push(`узел ${id}: нет choices`);
   n.choices?.forEach((c, i) => {
     checkEffects(c.effects, `${id}#${i} (choice)`);
@@ -156,6 +157,8 @@ export interface SagaNode {
   slots?: Record<string, Array<{ when?: SagaCond; text: string }>>;
   /** финальный узел (эпилог): текст + кнопка «Конец»; завершает сагу */
   final?: boolean;
+  /** пауза перед показом узла, дней: сцены-события «через три недели…» */
+  hold?: number;
 }
 
 export const SAGA_START = ${JSON.stringify(saga.start)};

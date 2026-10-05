@@ -199,7 +199,7 @@ function EventWatcher() {
         const sub = (t: string) => sagaResolveText(t, node, g);
         const title = st.stage === 'final'
           ? `📼 Эпилог · «${sub(node.title)}»`
-          : `📼 ${node.disp ?? st.node} · «${sub(node.title)}»`;
+          : `📼 «${sub(node.title)}»`;
         if (st.stage === 'end') {
           popup({
             title,
@@ -228,11 +228,8 @@ function EventWatcher() {
             autopilotTarget: 'mb-ok',
             art: sagaArt(node),
             body: (
-              <div style={{ lineHeight: 1.45 }}>
-                <div className="w95-hint">После выбора: {chosen ? sub(chosen.label) : ''}</div>
-                {chosen?.result && (
-                  <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{sub(chosen.result)}</div>
-                )}
+              <div style={{ lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
+                {chosen ? sub(chosen.result ?? '') : ''}
               </div>
             ),
             buttons: [{ label: 'Дальше →', onClick: () => actionResolveSaga('') }],

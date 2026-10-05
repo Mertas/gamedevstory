@@ -408,3 +408,49 @@ it('тексты саги: чистота от служебных пометок
   }
   expect(bad, bad.join('; ')).toHaveLength(0);
 });
+
+it('варианты выбора: художественные, без служебных пометок', () => {
+  type NodeShape = { choices?: Array<{ label?: string }> };
+  const bad: string[] = [];
+  const nodes = SAGA_NODES as unknown as Record<string, NodeShape>;
+  for (const [id, n] of Object.entries(nodes)) {
+    (n.choices || []).forEach((c, i) => {
+      const l = c.label ?? '';
+      if (/\(бесплатн|\(неденежн|\(посмертн|\(просьб|\(условие|\(скандал|\(досье|\(реставратор|^[A-F] · |· шаг|под-развилка/.test(l)) bad.push(`${id}#${i}: ${l}`);
+      if (/ \(/.test(l)) bad.push(`${id}#${i}: скобочное пояснение: ${l}`);
+    });
+  }
+  expect(bad, bad.join('; ')).toHaveLength(0);
+});
+
+it('числа саги: [СУММА]/[N]/[≈N] не вернулись (включая «[≈N недель]»)', () => {
+  const all = JSON.stringify(SAGA_NODES);
+  const left = all.match(/\[(?:СУММА|N|≈N)(?:[^а-яёА-ЯЁa-zA-Z]|$)/g);
+  expect(left, `остатки: ${left?.join(' ')}`).toBeNull();
+});
+
+it('сцены-события: hold ждёт N дней до показа (S13b «Стол»)', () => {
+  const g = withRelease();
+  let guard = 0;
+  let shown = false;
+  while (!shown && g.saga?.stage !== 'done' && guard++ < 3000) {
+    g.week += 7;
+    tickSaga(g);
+    let inner = 0;
+    while (g.pendingEvent && inner++ < 60) {
+      if (g.pendingEvent.type === 'saga' && g.pendingEvent.node === 'S13' && g.saga?.stage === 'choice') { shown = true; break; }
+      if (!resolveSaga(g, '').ok) break;
+    }
+  }
+  expect(shown, 'S13 показан').toBe(true);
+  const w = g.week;
+  let r = resolveSaga(g, '');
+  expect(r.ok).toBe(true);
+  while (g.pendingEvent && g.saga?.stage === 'result' && r.ok) r = resolveSaga(g, '');
+  expect(g.saga?.node).toBe('S13b');
+  expect(g.saga?.holdUntil, 'hold = 21 день').toBe(w + 21);
+  g.week = w + 20; tickSaga(g);
+  expect(g.pendingEvent, 'за день до срока — тишина').toBeNull();
+  g.week = w + 21; tickSaga(g);
+  expect(g.pendingEvent).toMatchObject({ type: 'saga', node: 'S13b' });
+});

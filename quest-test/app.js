@@ -251,7 +251,7 @@ function renderCard() {
 
   if (pending) {
     const ch = pending.ch;
-    h += `<div class="qt-result"><div class="hdr">После выбора: ${esc(gresolve(ch.label, null))}</div>`;
+    h += `<div class="qt-result">`;
     h += `<div>${esc(gresolve(ch.result, null))}</div>`;
     if (ch.effects && ch.effects.length) h += `<div class="chips" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px">${ch.effects.map(effChip).join(' ')}</div>`;
     h += `<div class="qt-result-actions"><button class="w95-btn" id="btn-next">Дальше →</button></div></div>`;

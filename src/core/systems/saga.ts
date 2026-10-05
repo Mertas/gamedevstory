@@ -142,10 +142,13 @@ function enterNode(state: GameState, s: SagaState, id: string): void {
   s.node = id;
   s.stage = n.final ? 'final' : 'choice';
   s.chosen = undefined;
-  // пейсер: главы (S2, S5…) — 180–230 дней; интерлюдии (i1–i5) — скачок к канонному году (Э3)
-  s.holdUntil = (sagaTopChapter(id) || sagaIsInterlude(id)) && id !== SAGA_START
-    ? state.week + sagaHoldDays(id, state.week)
-    : undefined;
+  // пейсер: главы (S2, S5…) — 180–230 дней; интерлюдии (i1–i5) — скачок к канонному году (Э3);
+  // сцены-события (hold) — своя пауза в днях
+  s.holdUntil = n.hold != null
+    ? state.week + n.hold
+    : (sagaTopChapter(id) || sagaIsInterlude(id)) && id !== SAGA_START
+      ? state.week + sagaHoldDays(id, state.week)
+      : undefined;
   sagaApplyEffects(state, n.onEnter);
   for (const ins of n.inserts ?? []) {
     if (ins.mode === 'auto' && ins.effects && sagaCondOk(state, ins.when)) sagaApplyEffects(state, ins.effects);
