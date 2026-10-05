@@ -573,10 +573,21 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
   min-height: 0; display: flex; flex-direction: column; max-height: 94vh;
   animation: w95QuestIn .16s ease-out;
 }
-.w95-quest-art { width: 100%; aspect-ratio: 16 / 9; background: #0d1526; overflow: hidden; flex: 0 1 auto; min-height: 140px; }
+.w95-quest-art { width: 100%; aspect-ratio: 16 / 9; background: #0d1526; overflow: hidden; flex: 0 1 auto; min-height: 140px; position: relative; }
 .w95-quest-art img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
 .w95-quest-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
 .w95-quest-fallback span { font-size: 64px; line-height: 1; filter: drop-shadow(0 3px 8px rgba(0,0,0,.55)); }
+/* PLAN-49: жетон лица персонажа поверх арт-баннера главы саги (левый верх) */
+.w95-quest-face { position: absolute; left: 15px; top: 15px; width: 104px; height: 104px; z-index: 3; display: flex; align-items: center; justify-content: center; background: #16233f; border: 2px solid #d8b45a; box-shadow: 0 3px 10px rgba(0,0,0,.55); }
+.w95-quest-face img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
+.w95-quest-face .fem { font-size: 44px; line-height: 1; }
+/* PLAN-49: текст главы саги — абзацы, условные вставки, приглашение к выбору */
+.w95-saga-text p { margin: 0 0 7px; }
+.w95-saga-text p:last-child { margin-bottom: 0; }
+.w95-saga-ins-auto { color: #5a6e8a; font-style: italic; }
+.w95-saga-inserts { margin-top: 8px; padding: 5px 8px; background: #ececf4; border: 1px solid #c8c8d8; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 11px; }
+.w95-saga-ins-chip { cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 3px; }
+.w95-saga-prompt { margin-top: 8px; font-weight: bold; }
 .w95-quest-stripe { height: 4px; flex: 0 0 auto; }
 .w95-quest-text { padding: 13px 16px 2px; font-size: 12px; line-height: 1.5; flex: 0 0 auto; }
 .w95-quest-btns { padding: 12px 16px 14px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; flex: 0 0 auto; }

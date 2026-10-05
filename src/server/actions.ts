@@ -7,7 +7,7 @@ import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
   partnerBuyoutAction, partnerRentAction,
-  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
+  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
 import { consoleDataFor } from '../core/systems/dev';
@@ -264,6 +264,12 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
     case 'resolve_story': {
       // PLAN-44: выбор в сюжетной арке — вариант сверяет движок (список опций в STORY_ARCS)
       s.run(resolveStoryAction(s.game, String(msg.option ?? '')));
+      s.emit(); // SRV-10: на паузе без emit() клиент не видел снятие события
+      return;
+    }
+    case 'resolve_saga': {
+      // PLAN-49: выбор в главе саги — вариант сверяет движок (узлы в SAGA_NODES)
+      s.run(resolveSagaAction(s.game, String(msg.option ?? '')));
       s.emit(); // SRV-10: на паузе без emit() клиент не видел снятие события
       return;
     }

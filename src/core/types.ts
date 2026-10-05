@@ -277,6 +277,40 @@ export interface StoryState {
   flags: Record<string, number>;
 }
 
+/** PLAN-49 (Э1): роль саги, закреплённая за сотрудником (фиксируется при старте саги). */
+export interface SagaRoleRef {
+  staffId: string;
+  name: string;
+  gender: 'M' | 'F';
+}
+
+/**
+ * PLAN-49 (Э1): сага «Синяя Комета» — скрытая главная линия партии.
+ * Главы = узлы SAGA_NODES (src/shared/saga-data.ts); решения — только игрок.
+ * Шкалы (ШУМ/СОВЕСТЬ/доверие) скрыты и живут здесь; в UI — только намёки в текстах.
+ */
+export interface SagaState {
+  /** текущий узел (id из SAGA_NODES) */
+  node: string;
+  /** фаза узла: выбор → «после выбора» (result) → финальный эпилог (final) → завершена (done).
+   *  end — защита от битого перехода (узла нет в данных). */
+  stage: 'choice' | 'result' | 'final' | 'done' | 'end';
+  /** индекс выбранного варианта на фазе result */
+  chosen?: number;
+  /** строковые флаги («без партнёра», «научный путь»…) */
+  flags: string[];
+  /** артефакты на руках («флаер + коробка», «лот №23»…) */
+  artifacts: string[];
+  /** доверие по персонажам (Вера, Мороз, Каспер, Глеб, Ростоцкий, Виталик…) */
+  trust: Record<string, number>;
+  /** скрытые шкалы: noise, conscience, culture, biz */
+  scales: Record<string, number>;
+  /** роли штата: Скептик, Мечтатель, Технарь, Юрист, Финдир (+ Партнёр) */
+  roles: Record<string, SagaRoleRef>;
+  /** пейсер: неделя игры, с которой показывать следующую главу (пауза 180–230 дней) */
+  holdUntil?: number;
+}
+
 export type PendingEvent =
   | { type: 'boost'; staffId: string; cost: number }
   | { type: 'boost_result'; text: string; outcome: 'success' | 'fail' }
@@ -290,6 +324,8 @@ export type PendingEvent =
   | { type: 'minigame'; gameId: string }
   /** PLAN-44: сюжетная линия — ждём выбор игрока (текст шага рендерит UI из STORY_ARCS) */
   | { type: 'story'; arcId: string; step: number }
+  /** PLAN-49: сага «Синяя Комета» — выбор/итог главы/эпилог (детали — в state.saga) */
+  | { type: 'saga'; node: string; stage: 'choice' | 'result' | 'final' | 'end'; chosen?: number }
   | null;
 
 /** PLAN-24: сохраняемый вид рабочего стола (фон + раскладка окон). Игровая логика его не читает. */
@@ -356,6 +392,8 @@ export interface GameState {
   pendingEvent: PendingEvent;
   /** PLAN-44: сюжетные линии (миграция v11; у очень старых сейвов пересоздастся в migrate) */
   story?: StoryState;
+  /** PLAN-49: сага «Синяя Комета» — скрытая главная линия партии */
+  saga?: SagaState;
   /** отложенный попап результата действия (показывается после текущего события) */
   lastPopup: PopupInfo | null;
   log: LogEntry[];

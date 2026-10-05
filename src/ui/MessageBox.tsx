@@ -65,6 +65,7 @@ export function MessageBox() {
                 className="w95-btn"
                 style={{ minWidth: 90, maxWidth: '100%', whiteSpace: 'normal', lineHeight: 1.35 }}
                 data-autopilot={i === 0 ? mb.autopilotTarget : undefined}
+                disabled={b.disabled}
                 onClick={() => { closeMessageBox(); b.onClick(); }}
               >
                 {b.label}
@@ -84,7 +85,9 @@ export function MessageBox() {
 function QuestBox({ mb }: { mb: MessageBoxData }) {
   const art = mb.art!;
   const [imgOk, setImgOk] = useState(true);
+  const [faceOk, setFaceOk] = useState(true);
   useEffect(() => setImgOk(true), [art.src]);
+  useEffect(() => setFaceOk(true), [art.face?.src]);
   const accent = art.accent ?? '#4a6fa5';
   return (
     <div className="w95-quest-overlay">
@@ -101,6 +104,15 @@ function QuestBox({ mb }: { mb: MessageBoxData }) {
               <span>{art.emoji ?? '📜'}</span>
             </div>
           )}
+          {art.face && (
+            <div className="w95-quest-face" title={art.face.title}>
+              {faceOk ? (
+                <img src={art.face.src} alt="" draggable={false} onError={() => setFaceOk(false)} />
+              ) : (
+                <span className="fem">{art.face.emoji ?? '🎭'}</span>
+              )}
+            </div>
+          )}
         </div>
         <div className="w95-quest-stripe" style={{ background: accent }} />
         <div className="w95-quest-text">
@@ -113,6 +125,7 @@ function QuestBox({ mb }: { mb: MessageBoxData }) {
               className="w95-btn"
               style={{ minWidth: 90, maxWidth: '100%', whiteSpace: 'normal', lineHeight: 1.35 }}
               data-autopilot={i === 0 ? mb.autopilotTarget : undefined}
+              disabled={b.disabled}
               onClick={() => { closeMessageBox(); b.onClick(); }}
             >
               {b.label}

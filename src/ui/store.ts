@@ -483,6 +483,11 @@ export function actionResolveGamedex(option: string) {
 export function actionResolveStory(option: string) {
   send({ type: 'resolve_story', option });
 }
+
+/** PLAN-49: глава саги — выбор варианта или «Дальше» после итога. */
+export function actionResolveSaga(option: string) {
+  send({ type: 'resolve_saga', option });
+}
 export function actionTyping() {
   // SER-27: «печатает» для панели разговоров (не действие босса)
   send({ type: 'user_typing' });
@@ -687,7 +692,7 @@ export interface MessageBoxData {
   title: string;
   text?: string;
   body?: React.ReactNode; // произвольное содержимое (вместо/вместе с text)
-  buttons: { label: string; onClick: () => void }[];
+  buttons: { label: string; onClick: () => void; disabled?: boolean }[];
   evKey?: string; // ключ события, чей попап показан (пульс сервера не пересоздаёт открытый)
   autopilotTarget?: string; // цель виртуальной мыши автопилота на первой кнопке (plan/14)
   /** v1.18.1: информационный попап — закрывается кликом по окну (в стиле карточек прессы).

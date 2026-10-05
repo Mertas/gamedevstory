@@ -11,6 +11,8 @@ export interface QuestArt {
   emoji?: string;
   /** фолбэк/акцент: цвет полосы и подсветки (hex) */
   accent?: string;
+  /** PLAN-49: жетон лица персонажа поверх баннера (левый верх) — главы саги */
+  face?: { src: string; emoji?: string; title?: string };
 }
 
 interface ArtTheme { emoji: string; accent: string }
@@ -44,4 +46,27 @@ export function questArt(arcId: string, step: number, gen?: Pick<GenQuestData, '
   const key = gen ? base : `${arcId}-s${step}`;
   const t = THEMES[base] ?? { emoji: '📜', accent: '#4a6fa5' };
   return { src: `quests/${key}.png`, emoji: t.emoji, accent: t.accent };
+}
+
+// PLAN-49: жетоны лиц саги — public/quests/face-*.png (LLMPics: gds-comet-faces)
+const SAGA_FACES: Record<string, { emoji: string; title: string }> = {
+  'face-vera': { emoji: '📚', title: 'Вера Штерн · библиотекарь' },
+  'face-kasper': { emoji: '🏺', title: 'Каспер · цифровой археолог' },
+  'face-gleb': { emoji: '🧥', title: 'Глеб · коллекционер' },
+  'face-vitalik': { emoji: '🧸', title: 'Виталик · барахольщик' },
+  'face-moroz': { emoji: '☕', title: 'Мороз · последний из «Полюса»' },
+  'face-zhanna': { emoji: '🎬', title: 'Жанна · документалистка' },
+  'face-anna': { emoji: '🎹', title: 'Анна Каверина · «К.»' },
+  'face-rostotsky': { emoji: '🦈', title: 'Виктор Ростоцкий · «Пиксель Холдинг»' },
+  'face-arkady': { emoji: '📼', title: 'Аркадий Штерн · 1983' },
+};
+
+/** Арт главы саги: баннер 16:9 + жетон лица персонажа (если у сцены есть хозяин). */
+export function sagaArt(node: { art: string; emoji?: string; accent?: string; face?: string }): QuestArt {
+  const out: QuestArt = { src: `quests/${node.art}.png`, emoji: node.emoji, accent: node.accent };
+  if (node.face) {
+    const fm = SAGA_FACES[node.face];
+    out.face = { src: `quests/${node.face}.png`, emoji: fm?.emoji ?? '🎭', title: fm?.title ?? node.face };
+  }
+  return out;
 }

@@ -1,0 +1,139 @@
+/* QuestTest — локальный стенд. Стили поверх win95.css игры. */
+
+html, body { height: auto; overflow: auto; }
+body.qt-page {
+  background: var(--w95-teal);
+  background-image: radial-gradient(ellipse at 30% 20%, #109090 0%, var(--w95-teal) 55%, #006060 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+.qt-page input, .qt-page textarea, .qt-page button { font-family: var(--w95-font); }
+.qt-page input { user-select: text; }
+
+/* ── Шапка ── */
+.qt-header {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px; margin: 6px 6px 0;
+  background: var(--w95-face);
+  border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light);
+  box-shadow: 2px 2px 0 rgba(0,0,0,.3);
+}
+.qt-title { font-weight: 700; font-size: 12px; }
+.qt-sub { font-weight: 400; color: #333; font-size: 11px; }
+.qt-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.qt-save { font-size: 11px; color: #045; min-width: 96px; }
+
+/* ── Сетка ── */
+.qt-main { display: flex; gap: 8px; padding: 6px; align-items: stretch; height: calc(100vh - 60px); }
+.qt-left { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.qt-card-slot { flex: 1 1 auto; overflow: auto; min-height: 0; }
+.qt-right { width: 352px; flex: none; display: flex; flex-direction: column; gap: 8px; overflow: auto; min-height: 0; }
+
+/* ── Карточка хода (попап) ── */
+.qt-win { background: var(--w95-face); border: 2px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+.qt-titlebar { height: 20px; display: flex; align-items: center; padding: 0 5px; background: linear-gradient(90deg, var(--w95-navy), #1084d0); color: #fff; font-weight: 700; font-size: 11px; }
+.qt-titlebar.stub { background: linear-gradient(90deg, #666, #999); }
+.qt-titlebar .sp { margin-left: auto; font-weight: 400; opacity: .9; font-size: 10px; }
+.qt-badge { display: inline-block; background: #e0a030; color: #000; font-size: 10px; padding: 0 5px; margin-left: 6px; }
+.qt-card-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+
+.qt-banner { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #20242c; border: 1px solid #000; overflow: hidden; }
+.qt-banner img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
+.qt-banner .fallback { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #fff; text-shadow: 1px 1px 0 #000; }
+.qt-banner.noart .fallback { display: flex; }
+.qt-banner .fallback .em { font-size: 64px; line-height: 1; }
+.qt-banner .fallback .key { font-family: Consolas, monospace; font-size: 11px; opacity: .85; }
+/* ── жетон лица персонажа: поверх арта, левый верхний угол (проект gds-comet-faces) ── */
+.qt-banner .qt-face { position: absolute; left: 14px; top: 14px; width: 104px; height: 104px; border: 3px solid #16233f; outline: 2px solid rgba(253, 204, 88, .85); border-radius: 12px; overflow: hidden; z-index: 3; background: linear-gradient(135deg, #16233f, #0d1424); box-shadow: 0 6px 18px rgba(0, 0, 0, .55); }
+.qt-banner .qt-face .fem { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 46px; }
+.qt-banner .qt-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.qt-accent { height: 4px; }
+
+.qt-text { background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 8px 10px; font-size: 12px; line-height: 1.5; }
+.qt-text p { margin: 0 0 6px; }
+.qt-text p:last-child { margin-bottom: 0; }
+.qt-text .ins-auto { border-left: 3px solid #b08030; padding-left: 7px; color: #223; }
+.qt-text .ins-man { border-left: 3px solid #4f7ab0; padding-left: 7px; color: #223; }
+.qt-inserts { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 11px; color: #333; }
+.qt-ins-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); background: #d8d8d8; padding: 1px 6px; cursor: pointer; }
+.qt-ins-chip input { margin: 0; }
+
+.qt-prompt { font-weight: 700; font-size: 11px; }
+.qt-choices { display: flex; flex-direction: column; gap: 6px; }
+.qt-choice { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 5px 8px; white-space: normal; line-height: 1.4; cursor: pointer; }
+.qt-choice .lbl { font-size: 12px; }
+.qt-choice .lbl .req { color: #a03030; font-size: 10px; }
+.qt-choice .chips { display: flex; flex-wrap: wrap; gap: 3px; }
+.qt-choice:disabled { color: #888; cursor: default; }
+
+.chip { display: inline-block; border: 1px solid #999; padding: 0 5px; font-size: 10px; line-height: 16px; background: #e8e8e8; white-space: nowrap; }
+.chip.pos { background: #d9efd4; border-color: #7aa06f; }
+.chip.neg { background: #f2d6d2; border-color: #a0776f; }
+.chip.flag { background: #fdf0c8; border-color: #b09a4f; }
+.chip.art { background: #d3e8f2; border-color: #6f97a0; }
+.chip.note { background: #eee; color: #666; }
+
+.qt-result { background: #fff; border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); padding: 10px; font-size: 12px; line-height: 1.5; }
+.qt-result .hdr { font-weight: 700; margin-bottom: 5px; font-size: 11px; color: #040; }
+.qt-result-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+
+.qt-stub-note { background: #ffeaea; border: 1px dashed #aa5555; color: #822; padding: 6px 8px; font-size: 11px; }
+.qt-loading { padding: 30px; text-align: center; background: var(--w95-face); border: 2px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); }
+
+/* ── Дерево ── */
+.qt-tree { flex: none; background: var(--w95-face); border: 1px solid; border-color: var(--w95-dark) var(--w95-light) var(--w95-light) var(--w95-dark); display: flex; flex-direction: column; height: 300px; }
+.qt-tree-head { padding: 4px 8px; font-weight: 700; font-size: 11px; border-bottom: 1px solid #999; display: flex; gap: 8px; align-items: baseline; }
+.qt-tree-scroll { flex: 1; overflow: auto; }
+.qt-tree-scroll svg { display: block; }
+.tnode rect.box { fill: #c9c9c9; stroke: #888; stroke-width: 1; }
+.tnode text { font-size: 10px; fill: #000; font-family: Tahoma, sans-serif; pointer-events: none; }
+.tnode text.t2 { font-size: 9px; fill: #444; }
+.tnode.visited rect.box { fill: #d6e0ff; stroke: #5a6a9a; }
+.tnode.stub rect.box { fill: #cfcfcf; stroke: #aaa; stroke-dasharray: 3 2; }
+.tnode.stub text { fill: #666; }
+.tnode.current rect.box { fill: var(--w95-navy); stroke: #ffdf70; stroke-width: 2; }
+.tnode.current text { fill: #fff; }
+.tnode.opt rect.box { fill: #ededed; stroke: #999; }
+.tnode.opt text { font-size: 9px; fill: #222; }
+.tnode.opt.visited rect.box { fill: #d6e0ff; stroke: #5a6a9a; }
+.tnode.opt.blocked rect.box { fill: #e6e6e6; stroke: #bbb; stroke-dasharray: 3 2; }
+.tnode.opt.blocked text { fill: #999; }
+.tedge.topt { stroke: #b8b8b8; }
+.tedge.topt.hot { stroke: var(--w95-navy); stroke-width: 2; }
+.tnode rect.hit { fill: transparent; stroke: none; cursor: pointer; }
+.tedge { stroke: #999; stroke-width: 1; fill: none; }
+.tedge.hot { stroke: var(--w95-navy); stroke-width: 2; }
+
+/* ── Правая панель ── */
+.qt-sidewin { position: static; min-width: 0; min-height: 0; }
+.qt-side-body { padding: 6px 8px; font-size: 11px; }
+.qt-scroll { overflow: auto; }
+.qt-sidewin .w95-titlebar { height: 18px; }
+.qt-state .mrow { display: flex; justify-content: space-between; gap: 6px; padding: 1px 0; }
+.qt-state .big { font-weight: 700; font-size: 13px; }
+.qt-state .sec { margin-top: 6px; font-weight: 700; color: #333; }
+.qt-trust, .qt-flags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+
+.qt-hist { display: flex; flex-direction: column; gap: 2px; }
+.qt-hist-item { padding: 2px 5px; cursor: pointer; border: 1px solid transparent; font-size: 11px; display: flex; gap: 6px; align-items: baseline; }
+.qt-hist-item:hover { background: #e6e6e6; border-color: #bbb; }
+.qt-hist-item.current { background: var(--w95-navy); color: #fff; }
+.qt-hist-item .idx { color: #888; min-width: 22px; }
+.qt-hist-item.current .idx { color: #cde; }
+.qt-hist-item .via { color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qt-hist-item.current .via { color: #cde; }
+
+/* ── Настройки ── */
+.qt-set-table { width: 100%; border-collapse: collapse; }
+.qt-set-table td { padding: 1px 2px; font-size: 11px; }
+.qt-set-table input { width: 62px; font-size: 11px; padding: 1px 3px; }
+.qt-set-table input.big { width: 72px; }
+.qt-set-table th { font-size: 10px; color: #333; text-align: center; font-weight: 700; }
+.qt-set-table td.nm { white-space: nowrap; }
+.qt-set-note { color: #555; font-size: 10px; margin-top: 4px; line-height: 1.35; }
+.qt-set-thr { margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+.qt-set-thr input { width: 72px; }
+.qt-set-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; margin-top: 4px; }
+.qt-role { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 11px; }
+.qt-role select { font-family: inherit; font-size: 11px; }

@@ -7,7 +7,7 @@ import { capInit } from '../shared/train';
 import { ownConsoleStartBase } from '../shared/consoles';
 import { avatarGender } from '../shared/hero';
 
-export const SAVE_VERSION = 14; // 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 15; // 15: PLAN-49 сага «Синяя Комета» (опциональное поле saga; старт после первого релиза); 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -91,6 +91,12 @@ export function migrateSave(state: GameState): GameState {
     for (const s of state.staff) {
       if (s.hero && s.avatarId) s.gender = avatarGender(s.avatarId);
     }
+  }
+  if (v < 15) {
+    // PLAN-49: сага «Синяя Комета» — новое опциональное поле saga; в новых партиях его создаёт
+    // движок (старт после первого релиза), старым сейвам заполнять нечего. Защита от мусора:
+    // неполное состояние саги (чужой формат/обрыв) — сбрасываем, сага начнётся заново.
+    if (state.saga && (!state.saga.node || !Array.isArray(state.saga.flags))) state.saga = undefined;
   }
   state.saveVersion = SAVE_VERSION;
   return state;

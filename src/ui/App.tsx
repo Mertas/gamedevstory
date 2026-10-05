@@ -6,7 +6,7 @@ import { MinigameModal } from './MinigameModal';
 import { ActionToast } from './ActionToast';
 import { LevelToast } from './LevelToast';
 import {
-  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, actionResolveStory, clearDismissedEvKey,
+  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, actionResolveSaga, actionResolveStory, clearDismissedEvKey,
   closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, startSession, stopSession,
   useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
@@ -23,8 +23,11 @@ import { PressModal } from './PressModal';
 import { genreById } from '../shared/meta';
 import { fmtK } from '../shared/nums';
 import { STORY_ARCS } from '../shared/storylines';
-import { questArt } from './questArt';
+import { SAGA_NODES } from '../shared/saga-data';
+import { questArt, sagaArt } from './questArt';
 import { applyGenderSlots } from '../shared/gender';
+import { sagaCondOk, sagaResolveText } from '../shared/saga-text';
+import { SagaChapterBody } from './SagaChapterBody';
 
 /** Тело попапа буста (28.09): живой компонент — слайдер, шанс и «Принять» обновляются локально,
  *  обновления состояния не пересоздают попап (из-за этого слайдер «замирал», и приём слал 0 PR). */
@@ -185,6 +188,74 @@ function EventWatcher() {
             onClick: () => { closeMessageBox(); actionResolveStory(o.id); },
           })),
         });
+      }
+    }
+    if (ev.type === 'saga') {
+      // PLAN-49: глава саги «Синяя Комета» — попап-сцена с артом и жетоном лица персонажа
+      const g = snap.game;
+      const st = g?.saga;
+      const node = st ? SAGA_NODES[st.node] : undefined;
+      if (g && st && node) {
+        const sub = (t: string) => sagaResolveText(t, node, g);
+        const title = st.stage === 'final'
+          ? `📼 Эпилог · «${sub(node.title)}»`
+          : `📼 ${node.disp ?? st.node} · «${sub(node.title)}»`;
+        if (st.stage === 'end') {
+          popup({
+            title,
+            autopilotTarget: 'mb-ok',
+            art: sagaArt(node),
+            body: (
+              <div style={{ lineHeight: 1.5 }}>
+                Продолжение следует. Спасибо, что прошли этот путь.
+              </div>
+            ),
+            buttons: [{ label: 'Ок', onClick: () => actionResolveSaga('') }],
+          });
+        } else if (st.stage === 'final') {
+          // PLAN-49 (Э2): эпилог — текст с условными абзацами (авто-вставки), финальная кнопка
+          popup({
+            title,
+            autopilotTarget: 'mb-ok',
+            art: sagaArt(node),
+            body: <SagaChapterBody game={g} node={node} />,
+            buttons: [{ label: 'Конец', onClick: () => actionResolveSaga('') }],
+          });
+        } else if (st.stage === 'result') {
+          const chosen = node.choices[st.chosen ?? 0];
+          popup({
+            title,
+            autopilotTarget: 'mb-ok',
+            art: sagaArt(node),
+            body: (
+              <div style={{ lineHeight: 1.45 }}>
+                <div className="w95-hint">После выбора: {chosen ? sub(chosen.label) : ''}</div>
+                {chosen?.result && (
+                  <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{sub(chosen.result)}</div>
+                )}
+              </div>
+            ),
+            buttons: [{ label: 'Дальше →', onClick: () => actionResolveSaga('') }],
+          });
+        } else {
+          // выбор: недоступные варианты (условия) — серые, как на стенде
+          const req = (c: (typeof node.choices)[number]) =>
+            c.cond?.fansMin ? `нужно фанатов ≥ ${CONFIG.SAGA.FANS_MIN}` : 'условие не выполнено';
+          popup({
+            title,
+            autopilotTarget: 'mb-ok',
+            art: sagaArt(node),
+            body: <SagaChapterBody game={g} node={node} />,
+            buttons: node.choices.map((c, i) => {
+              const ok = sagaCondOk(g, c.cond);
+              return {
+                label: `${i + 1}. ${sub(c.label)}${ok ? '' : ` (${req(c)})`}`,
+                disabled: !ok,
+                onClick: () => actionResolveSaga(String(i)),
+              };
+            }),
+          });
+        }
       }
     }
     if (ev.type === 'disaster') {

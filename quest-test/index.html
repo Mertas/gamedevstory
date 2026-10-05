@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тест саги — Синяя Комета</title>
+<link rel="stylesheet" href="/game/src/ui/win95.css">
+<link rel="stylesheet" href="./app.css">
+</head>
+<body class="qt-page">
+<header class="qt-header">
+  <div class="qt-title">🧪 Тест квеста: «Синяя Комета»
+    <span class="qt-sub" id="hdr-sub">локальный стенд · вся сага: акты I–VI + эпилоги</span>
+  </div>
+  <div class="qt-actions">
+    <button class="w95-btn" id="btn-undo" title="Откатить на шаг назад">↩ Шаг назад</button>
+    <button class="w95-btn" id="btn-reset" title="Начать заново">⟲ Заново</button>
+    <button class="w95-btn" id="btn-save" title="Сохранить числа в settings.json">💾 Сохранить числа</button>
+    <span class="qt-save" id="save-status"></span>
+  </div>
+</header>
+
+<main class="qt-main">
+  <section class="qt-left">
+    <div class="qt-card-slot" id="card"><div class="qt-loading">Загрузка саги…</div></div>
+    <div class="qt-tree">
+      <div class="qt-tree-head">🗺 Дерево вариантов
+        <span class="qt-sub" id="tree-hint">мелкие узлы — варианты выбора · клик по пройденному — откат</span>
+      </div>
+      <div class="qt-tree-scroll" id="tree-scroll"><svg id="tree"></svg></div>
+    </div>
+  </section>
+  <aside class="qt-right">
+    <div class="w95-window qt-sidewin focused">
+      <div class="w95-titlebar"><span class="w95-title">📊 Состояние</span></div>
+      <div class="w95-body"><div class="qt-side-body qt-state" id="state-panel"></div></div>
+    </div>
+    <div class="w95-window qt-sidewin focused">
+      <div class="w95-titlebar"><span class="w95-title">🕘 История</span></div>
+      <div class="w95-body"><div class="qt-side-body qt-scroll" id="history-panel" style="max-height:220px"></div></div>
+    </div>
+    <div class="w95-window qt-sidewin focused">
+      <div class="w95-titlebar"><span class="w95-title">⚙️ Числа (калибровка)</span></div>
+      <div class="w95-body"><div class="qt-side-body" id="settings-panel"></div></div>
+    </div>
+  </aside>
+</main>
+
+<script src="./app.js"></script>
+</body>
+</html>

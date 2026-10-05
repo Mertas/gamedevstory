@@ -27,6 +27,7 @@ import {
 } from './systems/market';
 import { tickFanLetters } from './systems/mail';
 import { resolveStory, tickStory } from './systems/story';
+import { resolveSaga, tickSaga } from './systems/saga';
 import type { HeroSetup } from '../shared/hero';
 
 /** PLAN-18: что игрок выбирает на старте (экран новой игры). */
@@ -364,6 +365,11 @@ export function resolveStoryAction(state: GameState, option: string): ActionResu
   return res;
 }
 
+// PLAN-49: сага «Синяя Комета» — выбор игрока в главе (срезу rng не нужен)
+export function resolveSagaAction(state: GameState, option: string): ActionResult {
+  return resolveSaga(state, option);
+}
+
 // ---- тик ----
 
 export function tick(state: GameState): void {
@@ -404,6 +410,7 @@ export function tick(state: GameState): void {
   tickContracts(state, rng);
   tickOwnConsole(state);
   tickStory(state, rng);
+  tickSaga(state); // PLAN-49: сага «Синяя Комета» — старт/восстановление попапа главы
 
   // 6. конец недели
   state.rngState = rng.state;

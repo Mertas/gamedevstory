@@ -8,6 +8,8 @@ import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/de
 import { BOOSTER_KEY_JOB, boosterPrice } from '../systems/progression';
 import { salaryWithLevels } from '../formulas';
 import { candidateBand } from '../systems/staff';
+import { SAGA_NODES } from '../../shared/saga-data';
+import { sagaCondOk } from '../../shared/saga-text';
 import { unlockedMystery } from '../../shared/hire';
 import { DIRECTION_ORDER } from '../types';
 import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
@@ -15,7 +17,7 @@ import { STORY_ARCS } from '../../shared/storylines';
 import {
   applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, searchAction,
   hireFromSearchAction, levelUpAction,
-  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveStoryAction,
+  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveSagaAction, resolveStoryAction,
   skipMinigame, startProjectAction, trainAction,
 } from '../engine';
 
@@ -76,6 +78,22 @@ export function resolvePendingEvent(state: GameState, stats: PolicyStats, journa
         const opts = state.story?.arcs[ev.arcId]?.gen?.options ?? step?.options ?? [];
         const opt = opts.find((o) => o.cost == null || state.money >= o.cost);
         resolveStoryAction(state, opt?.id ?? '');
+      }
+      // PLAN-49: глава саги — «разумный игрок»: вариант без трат (если есть), иначе первый
+      // доступный. Покупка сувениров в кредит истории не нужна (story-арки — тоже «по деньгам»).
+      if (state.pendingEvent?.type === 'saga') {
+        const s = state.saga;
+        const node = s ? SAGA_NODES[s.node] : undefined;
+        let idx: number | null = null;
+        if (s && node && s.stage === 'choice') {
+          for (let i = 0; i < node.choices.length; i++) {
+            const c = node.choices[i]!;
+            if (!sagaCondOk(state, c.cond)) continue;
+            const costly = (c.effects ?? []).some((e) => e.k === 'money' && e.v < 0);
+            if (!costly) { idx = i; break; }
+          }
+        }
+        resolveSagaAction(state, idx == null ? '' : String(idx));
       }
       // AP-06: продавец — не просто «прогоняем»: пока он в городе, берём бустеры (при деньгах)
       if (state.pendingEvent?.type === 'salesman' || state.salesmanHere) {
