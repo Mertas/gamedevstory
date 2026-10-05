@@ -148,6 +148,21 @@ it('числа Э3: {≈эпоха}/{≈прошло}/{≈далее} берут
   expect(next).toMatch(/^Через \d+ дней — пожар\.$/);
 });
 
+it('тексты: имя Ильи из тетради получает эхо в S17', () => {
+  const s5 = JSON.stringify(SAGA_NODES['S5'] ?? {});
+  const s17 = JSON.stringify(SAGA_NODES['S17'] ?? {});
+  const s19 = JSON.stringify(SAGA_NODES['S19'] ?? {});
+  expect(s5).toContain('Илью');
+  expect(s17).toContain('Илья');
+  expect(s19).toContain('Мороз'); // дальше имя держится: Мороз за столом
+});
+
+it('тексты: флаги акта V «война бумаг» и «раскол» имеют отдачу в S22', () => {
+  const ins22 = JSON.stringify(SAGA_NODES['S22']?.inserts ?? []);
+  expect(ins22).toContain('война бумаг');
+  expect(ins22).toContain('раскол');
+});
+
 it('роли: увольнение сотрудника — роль переходит живому', () => {
   const g = withRelease();
   tickSaga(g);
