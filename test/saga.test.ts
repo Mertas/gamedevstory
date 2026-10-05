@@ -165,6 +165,19 @@ it('резолв текста: {Роль} → имя сотрудника, ро�
   }
 });
 
+it('титул S23: строка «В титрах» появляется в эпилоге по флагу', () => {
+  const g = withRelease();
+  tickSaga(g);
+  const e1 = SAGA_NODES['E1']!;
+  const line = e1.text[e1.text.length - 1]!;
+  g.saga!.flags = g.saga!.flags.filter((f) => !f.startsWith('титул —'));
+  expect(sagaResolveParagraph(g, line, e1).trim()).toBe('');
+  g.saga!.flags.push('титул — все');
+  const out = sagaResolveParagraph(g, line, e1);
+  expect(out).toContain('В титрах');
+  expect(out).not.toContain('{');
+});
+
 it('условие fansMin сверяется с фанатами студии', () => {
   const g = withRelease();
   tickSaga(g);
@@ -211,6 +224,13 @@ it('условия по окружению: касса (деньги), ШУМ и
   expect(sagaCondOk(g, { flagsAny: ['права проданы', 'партнёрство'] })).toBe(false);
   g.saga!.flags.push('партнёрство');
   expect(sagaCondOk(g, { flagsAny: ['права проданы', 'партнёрство'] })).toBe(true);
+  // flagsCount: «не меньше N из списка» (условие «Суда» в S18 — двое союзников)
+  const allies = { flagsCount: { any: ['Каспер в союзниках', 'Жанна знает', 'коробка у вас', 'музей'], min: 2 } };
+  g.saga!.flags = savedFlags.filter((f) => !allies.flagsCount.any.includes(f));
+  g.saga!.flags.push('Каспер в союзниках');
+  expect(sagaCondOk(g, allies)).toBe(false);
+  g.saga!.flags.push('Жанна знает');
+  expect(sagaCondOk(g, allies)).toBe(true);
   g.saga!.flags = [...savedFlags];
   // комбинации — логическое И
   g.money = 100;
@@ -248,6 +268,13 @@ it('эффекты: деньги/фанаты по тирам, доверие и
   expect(g.saga!.trust['Вера']).toBe(0);
   sagaApplyEffects(g, [{ k: 'biz', v: 3 }]);
   expect(g.saga!.scales['biz']).toBe(3);
+  // условные эффекты (when): срабатывают только при выполненном условии (расторжение сделки, S22)
+  const m1 = g.money;
+  sagaApplyEffects(g, [{ k: 'when', cond: { flag: 'сделка с Ростоцким' }, effects: [{ k: 'money', v: -2 }] }]);
+  expect(g.money).toBe(m1);
+  g.saga!.flags.push('сделка с Ростоцким');
+  sagaApplyEffects(g, [{ k: 'when', cond: { flag: 'сделка с Ростоцким' }, effects: [{ k: 'money', v: -2 }] }]);
+  expect(g.money).toBe(m1 - CONFIG.SAGA.MONEY.minus[1]!);
 });
 
 it('эпилог: авто-выбор по правилам 1–7 (совесть, фонд, копия, секрет)', () => {

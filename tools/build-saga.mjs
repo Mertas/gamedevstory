@@ -30,8 +30,8 @@ for (const n of Object.values(nodes)) {
 }
 
 // ── валидация ──
-const EFFECT_KINDS = new Set(['flag', 'artifact', 'trust', 'noise', 'conscience', 'culture', 'biz', 'money', 'fans']);
-const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'flagsAll', 'flagsAny', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
+const EFFECT_KINDS = new Set(['flag', 'artifact', 'trust', 'noise', 'conscience', 'culture', 'biz', 'money', 'fans', 'when']);
+const COND_KEYS = new Set(['flag', 'notFlag', 'notFlags', 'flagsAll', 'flagsAny', 'flagsCount', 'fansMin', 'heroJob', 'moneyMin', 'moneyMax', 'noiseMin', 'noiseMax', 'conscienceMin', 'conscienceMax']);
 const NODE_KEYS = new Set(['act', 'disp', 'title', 'art', 'emoji', 'accent', 'face', 'prompt', 'text', 'onEnter', 'inserts', 'choices', 'slots', 'stub', 'final']);
 const errs = [];
 const checkEffects = (effs, where) => {
@@ -41,6 +41,10 @@ const checkEffects = (effs, where) => {
     if (e.k === 'artifact' && !e.name) errs.push(`${where}: artifact без name`);
     if (e.k === 'trust' && (!e.who || typeof e.v !== 'number')) errs.push(`${where}: trust без who/v`);
     if (['noise', 'conscience', 'culture', 'biz', 'money', 'fans'].includes(e.k) && typeof e.v !== 'number') errs.push(`${where}: ${e.k} без v`);
+    if (e.k === 'when') {
+      if (!e.cond || !Array.isArray(e.effects)) errs.push(`${where}: when-эффект требует { cond, effects[] }`);
+      else { checkCond(e.cond, `${where} when`); checkEffects(e.effects, `${where} when`); }
+    }
   }
 };
 const checkCond = (c, where) => {
@@ -50,6 +54,7 @@ const checkCond = (c, where) => {
     if (!COND_KEYS.has(k)) errs.push(`${where}: неизвестное условие «${k}»`);
     else if (NUMERIC.includes(k) && typeof c[k] !== 'number') errs.push(`${where}: условие «${k}» должно быть числом`);
     else if ((k === 'notFlags' || k === 'flagsAll' || k === 'flagsAny') && (!Array.isArray(c[k]) || c[k].some((x) => typeof x !== 'string'))) errs.push(`${where}: условие «${k}» — массив строк`);
+    else if (k === 'flagsCount' && (!c[k] || !Array.isArray(c[k].any) || c[k].any.some((x) => typeof x !== 'string') || typeof c[k].min !== 'number')) errs.push(`${where}: условие «flagsCount» — { any: string[], min: number }`);
   }
 };
 for (const [id, n] of Object.entries(nodes)) {
@@ -94,6 +99,7 @@ export type SagaCond = {
   flagsAll?: string[];
   /** хотя бы один из перечисленных флагов */
   flagsAny?: string[];
+  flagsCount?: { any: string[]; min: number };
   /** нужно фанатов ≥ SAGA.FANS_MIN */
   fansMin?: boolean;
   /** профессия героя (HERO_CAREERS) */
@@ -114,7 +120,8 @@ export type SagaEffect =
   | { k: 'artifact'; name: string }
   | { k: 'trust'; who: string; v: number }
   | { k: 'noise' | 'conscience' | 'culture' | 'biz'; v: number }
-  | { k: 'money' | 'fans'; v: number; note?: string };
+  | { k: 'money' | 'fans'; v: number; note?: string }
+  | { k: 'when'; cond: SagaCond; effects: SagaEffect[] };
 
 export interface SagaChoice {
   label: string;

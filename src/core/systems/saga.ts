@@ -34,6 +34,10 @@ export function sagaApplyEffects(state: GameState, effs?: SagaEffect[]): void {
   const s = state.saga;
   if (!s || !effs?.length) return;
   for (const e of effs) {
+    if (e.k === 'when') {
+      if (sagaCondOk(state, e.cond)) sagaApplyEffects(state, e.effects);
+      continue;
+    }
     if (e.k === 'flag') {
       if (!s.flags.includes(e.name)) s.flags.push(e.name);
       continue;

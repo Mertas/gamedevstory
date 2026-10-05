@@ -56,6 +56,7 @@ function tierVal(k, v) {
 }
 function applyEffects(st, effs) {
   for (const e of effs || []) {
+    if (e.k === 'when') { if (condOk(e.cond, st)) applyEffects(st, e.effects || []); continue; }
     if (e.k === 'flag') { if (!st.flags.includes(e.name)) st.flags.push(e.name); continue; }
     if (e.k === 'artifact') { if (!st.artifacts.includes(e.name)) st.artifacts.push(e.name); continue; }
     if (e.k === 'trust') { st.trust[e.who] = (st.trust[e.who] || 0) + tierVal('trust', e.v); continue; }
@@ -69,6 +70,7 @@ function condOk(cond, st) {
   if (cond.notFlags && cond.notFlags.length && cond.notFlags.some((f) => st.flags.includes(f))) return false;
   if (cond.flagsAll && cond.flagsAll.length && !cond.flagsAll.every((f) => st.flags.includes(f))) return false;
   if (cond.flagsAny && cond.flagsAny.length && !cond.flagsAny.some((f) => st.flags.includes(f))) return false;
+  if (cond.flagsCount && (cond.flagsCount.any || []).filter((f) => st.flags.includes(f)).length < cond.flagsCount.min) return false;
   if (cond.fansMin && (st.fans || 0) < (Number(settings.thr.fansMin) || 0)) return false;
   if (cond.heroJob) { const arr = Array.isArray(cond.heroJob) ? cond.heroJob : [cond.heroJob]; if (!arr.includes((settings && settings.heroJob) || 'coder')) return false; }
   if (cond.moneyMin != null && (st.money || 0) < cond.moneyMin) return false;
