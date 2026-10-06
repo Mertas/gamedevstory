@@ -166,14 +166,18 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const openWinamp = () => { setWaEverStarted(true); setWaOpen(true); setWaHidden(false); setWaZ(true); };
   // крестик Winamp: полное закрытие (как остальные окна); повторный запуск — по иконке
   const closeWinamp = () => { setWaOpen(false); setWaHidden(false); setWaZ(false); };
+  // v1.54.4: значение иконки может быть аватаркой сотрудника («avatars/…») — отдаём путь как есть
+  const iconSrc = (f: string): string => (f.startsWith('avatars/') ? `/${f}` : `/icons/${f}`);
   // URL иконки приложения: выбранная игроком (localStorage) или дефолтная из кода
   const iconUrlFor = (appId: string): string | null => {
     const f = customIcons[appId] ?? DEFAULT_ICONS[appId];
-    return f ? `/icons/${f}` : null;
+    return f ? iconSrc(f) : null;
   };
   // v1.41: иконка сотрудника (LLMPics, нативная 16px) — для таскбара и заголовка его окна
   // v1.54.1: у ГГ (PLAN-48) папка аватарки — avatarId (player-NN), у обычных сотрудников — свой id
-  const staffIconUrl = (s: { id: string; avatarId?: string }): string => { const i = s.avatarId ?? s.id; return `avatars/${i}/${i}_${AV.taskbar}.png`; };
+  // v1.54.4: variant параметром — пикер «Сменить иконку» берёт тот же файл, что и рабочий стол (AV.desktop)
+  const staffFile = (s: { id: string; avatarId?: string }, variant: string): string => { const i = s.avatarId ?? s.id; return `avatars/${i}/${i}_${variant}.png`; };
+  const staffIconUrl = (s: { id: string; avatarId?: string }): string => staffFile(s, AV.taskbar);
   // Winamp «активен» (держит фокус) — окна игры при этом неактивны (серые заголовки, кнопки выпуклые)
   const winampActive = waOpen && !waHidden && waZ;
   const winampActiveRef = useRef(winampActive);
@@ -282,6 +286,9 @@ export function Desktop({ onExit }: { onExit: () => void }) {
     else if (deskSort === 'kind') arr.sort((a, b) => (a.kind === b.kind ? a.title.localeCompare(b.title, 'ru') : a.kind.localeCompare(b.kind)));
     return arr;
   }, [deskItems, deskSort]);
+  // v1.54.4: если «Сменить иконку» открыт для приложения-сотрудника — в пикере предложить его аватарку
+  const pickItem = pickFor ? sortedIcons.find((x) => x.id === pickFor) : undefined;
+  const pickStaff = pickItem?.staffId ? game.staff.find((s) => s.id === pickItem.staffId) : undefined;
 
   // число строк сетки (высота стола / шаг плитки)
   const rowsCount = () => Math.max(1, Math.floor(((iconsRef.current?.clientHeight ?? 600) - 40) / 82));
@@ -525,7 +532,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             {it.staffId && !customIcons[it.id] ? (
               <StaffAvatar staff={game.staff.find((st) => st.id === it.staffId)!} variant={AV.desktop} fallback={<span style={{ fontSize: 30 }}>👤</span>} />
             ) : customIcons[it.id] ?? it.iconFile ? (
-              <img className="w95-ic" src={`/icons/${customIcons[it.id] ?? it.iconFile}`} alt="" draggable={false} />
+              <img className="w95-ic" src={iconSrc(String(customIcons[it.id] ?? it.iconFile))} alt="" draggable={false} />
             ) : (
               <span style={{ fontSize: 30 }}>{it.icon}</span>
             )}
@@ -668,6 +675,21 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             <b style={{ marginBottom: 6 }}>
               Сменить иконку — {sortedIcons.find((x) => x.id === pickFor)?.title ?? pickFor}
             </b>
+            {/* v1.54.4: у приложения-сотрудника — иконка самого сотрудника (та же, что на рабочем столе) */}
+            {pickStaff && (
+              <div className="w95-row" style={{ alignItems: 'center', gap: 8, marginBottom: 8, alignSelf: 'stretch' }}>
+                <img
+                  src={`/${staffFile(pickStaff, AV.desktop)}`}
+                  alt=""
+                  draggable={false}
+                  className={`w95-pick-ic ${customIcons[pickFor] === staffFile(pickStaff, AV.desktop) ? 'picked' : ''}`}
+                  title="Аватарка сотрудника"
+                  onClick={() => setAppIcon(pickFor, staffFile(pickStaff, AV.desktop))}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+                <span style={{ fontSize: 12 }}>{pickStaff.name}</span>
+              </div>
+            )}
             <div className="w95-modal-grid">
               {W95_ICONS.map((f) => (
                 <img
