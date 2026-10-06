@@ -182,9 +182,9 @@ export function StaffWindow({ winId }: { winId: string }) {
             <tr><th>Тренинг</th><th>Цена</th><th>POWER</th><th>Пр</th><th>Сц</th><th>Гр</th><th>Зв</th><th></th></tr>
           </thead>
           <tbody>
-            {meta.trainings.map((t) => {
+            {meta.trainings.filter((t) => game.officeLevel >= (t.office ?? 1)).map((t) => {
+              // v1.54.5: недоступные из-за офиса тренинги не выводим вовсе (юзер 06.10: «не выводи недоступные из-за офиса»)
               const cost = (t.costWan ?? 0) / 10;
-              const off = game.officeLevel < (t.office ?? 1);
               const cell = (k: StatKey) => {
                 const d = effTrainDelta((t as unknown as Record<StatKey, number>)[k], s.caps[k]);
                 if (d === 0) return <span className="w95-hint">—</span>;
@@ -194,7 +194,7 @@ export function StaffWindow({ winId }: { winId: string }) {
                 <tr key={t.id}>
                   <td>{t.nameRu ?? t.name}</td>
                   <td>{fmtK(cost)}</td>
-                  <td>{off ? `офис ${t.office}` : `−${t.power ?? 0}`}</td>
+                  <td>{`−${t.power ?? 0}`}</td>
                   <td>{cell('program')}</td>
                   <td>{cell('scenario')}</td>
                   <td>{cell('graphics')}</td>
@@ -202,7 +202,7 @@ export function StaffWindow({ winId }: { winId: string }) {
                   <td>
                     <button
                       className="w95-btn"
-                      disabled={off || resting || game.money < cost || s.power < 1}
+                      disabled={resting || game.money < cost || s.power < 1}
                       onClick={() => actionTrain(s.id, t.id)}
                     >
                       Обучить
