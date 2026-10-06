@@ -8,6 +8,7 @@ import { CONFIG } from '../src/core/config';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { resolveSaga, sagaApplyEffects, sagaCondOk, sagaEpilogFor, sagaResolveParagraph, tickSaga } from '../src/core/systems/saga';
 import { SAGA_NODES } from '../src/shared/saga-data';
+import { sagaResolveText } from '../src/shared/saga-text';
 import type { GameRecord, GameState } from '../src/core/types';
 
 function withRelease(seed = 3, releases = 1): GameState {
@@ -461,4 +462,23 @@ it('сцены-события: hold ждёт N дней до показа (S13b 
   expect(g.pendingEvent, 'за день до срока — тишина').toBeNull();
   g.week = w + 21; tickSaga(g);
   expect(g.pendingEvent).toMatchObject({ type: 'saga', node: 'S13b' });
+});
+
+it('S3: подводка «откуда слух» разносится по веткам (v1.54.2)', () => {
+  const g = withRelease();
+  tickSaga(g);
+  const st = g.saga!;
+  const S3 = SAGA_NODES['S3']!;
+  const line = '{s3leak} Модератор присылает приглашение.';
+  st.flags = ['сами вышли в сеть'];
+  expect(sagaResolveText(line, S3, g)).toContain('бросили');
+  st.flags = ['тихая тропа'];
+  expect(sagaResolveText(line, S3, g)).toContain('Глеб');
+  st.flags = ['картридж: подсобка'];
+  expect(sagaResolveText(line, S3, g)).toContain('для своих');
+  st.flags = [];
+  expect(sagaResolveText(line, S3, g)).toContain('все три тысячи');
+  // в самом узле слот стоит вместо безусловной фразы
+  expect(String(S3.text[1])).toContain('{s3leak}');
+  expect(String(S3.text[1])).not.toContain('Слух о вашей находке разносится');
 });
