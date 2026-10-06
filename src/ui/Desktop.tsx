@@ -172,7 +172,8 @@ export function Desktop({ onExit }: { onExit: () => void }) {
     return f ? `/icons/${f}` : null;
   };
   // v1.41: иконка сотрудника (LLMPics, нативная 16px) — для таскбара и заголовка его окна
-  const staffIconUrl = (id: string): string => `avatars/${id}/${id}_${AV.taskbar}.png`;
+  // v1.54.1: у ГГ (PLAN-48) папка аватарки — avatarId (player-NN), у обычных сотрудников — свой id
+  const staffIconUrl = (s: { id: string; avatarId?: string }): string => { const i = s.avatarId ?? s.id; return `avatars/${i}/${i}_${AV.taskbar}.png`; };
   // Winamp «активен» (держит фокус) — окна игры при этом неактивны (серые заголовки, кнопки выпуклые)
   const winampActive = waOpen && !waHidden && waZ;
   const winampActiveRef = useRef(winampActive);
@@ -547,7 +548,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             win={w}
             title={def ? def.title : card ? cardWinTitle(card.name) : staffS!.name}
             icon={def ? def.icon : card ? '🎮' : '👤'}
-            iconUrl={iconUrlFor(w.id) ?? (staffS ? staffIconUrl(staffS.id) : undefined)}
+            iconUrl={iconUrlFor(w.id) ?? (staffS ? staffIconUrl(staffS) : undefined)}
             focused={!winampActive && activeId === w.id}
             component={def ? def.component : card ? cardComponentFor(w.id) : staffComponentFor(w.id)}
           />
@@ -710,7 +711,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           const staffS = def || card ? null : staffFromWinId(game, w.id); // PLAN-41: сотрудник
           if (!def && !card && !staffS) return null;
           const isActive = !winampActive && !w.minimized && activeId === w.id;
-          const taskIcon = iconUrlFor(w.id) ?? (staffS ? staffIconUrl(staffS.id) : null);
+          const taskIcon = iconUrlFor(w.id) ?? (staffS ? staffIconUrl(staffS) : null);
           return (
             <button
               key={w.id}

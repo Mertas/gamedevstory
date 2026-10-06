@@ -78,16 +78,17 @@ export function sagaNameMaps(src: SagaTextSource): {
   for (const role of SAGA_STAFF_ROLES) {
     const r = roles[role];
     names[role] = r?.name ?? 'Сотрудник';
-    if (r) genders[role] = r.gender;
+    // v1.54.1: незанятая роль («Сотрудник») — род по умолчанию мужской; иначе родовые пары
+    // с @роль ({сам/сама@Технарь}) оставались в тексте игрока сырыми (баг: юзер 06.10)
+    genders[role] = r?.gender ?? 'M';
   }
   const hero = heroOf(src);
   names['Герой'] = hero?.name ?? 'Вы';
-  if (hero) genders['Герой'] = hero.gender;
+  genders['Герой'] = hero?.gender ?? 'M';
   const pRef = roles['Партнёр'];
   const pStaff = partnerOf(src);
   names['Партнёр'] = pRef?.name ?? pStaff?.name ?? 'Партнёр';
-  const pg = pRef?.gender ?? pStaff?.gender;
-  if (pg) genders['Партнёр'] = pg;
+  genders['Партнёр'] = pRef?.gender ?? pStaff?.gender ?? 'M';
   return { names, genders };
 }
 
@@ -122,7 +123,8 @@ export function sagaResolveText(text: string, node: SagaNode | undefined, src: S
   });
   const m = /^\s*\{([^{}]+)\}[^:«„]*:\s*[«„]/.exec(t);
   const speakerG = m ? genders[m[1]!.trim()] : undefined;
-  t = applyGenderSlots(t, genders, speakerG ?? null);
+  // v1.54.1: без @-ключа в абзаце без явного говорящего — мужской род по умолчанию (не сырой шаблон)
+  t = applyGenderSlots(t, genders, speakerG ?? 'M');
   t = t.replace(/\{([^{}\/@]+)\}/g, (whole, key: string) => {
     const k = String(key).trim();
     return k in names ? names[k]! : whole;

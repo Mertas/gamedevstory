@@ -208,6 +208,14 @@ it('резолв текста: {Роль} → имя сотрудника, ро�
     expect(res).toContain(tech.gender === 'F' ? 'сама' : 'сам');
     expect(res).toContain(tech.gender === 'F' ? 'сказала' : 'сказал');
   }
+  // v1.54.1: НЕзанятая роль (в партии юзера Технарь пустовал) — не сырой шаблон: «Сотрудник… сам»
+  const g2 = withRelease();
+  tickSaga(g2);
+  g2.saga!.roles = {};
+  const res2 = sagaResolveParagraph(g2, '«Пока пуст», — говорит {Технарь}, и {сам/сама@Технарь} не понимает.');
+  expect(res2).toContain('Сотрудник');
+  expect(res2).toContain('сам не понимает');
+  expect(res2).not.toContain('{');
   // род говорящего без @: «{Мечтатель} (почти шёпотом): „…{сам/сама}…“»
   const dream = g.saga!.roles['Мечтатель'];
   if (dream) {
