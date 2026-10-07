@@ -18,6 +18,7 @@ export const AV = {
   taskbar: '256_d16', // таскбар и заголовок окна сотрудника — 16px
   staffWindow: '1024_d8', // приложение сотрудника — 128px
   newGame: '1024_d8', // выбор основателей в новой игре — 128px
+  newGameBig: '1024_d4', // большая выбранная аватарка в новой игре — 256px (v1.54.8)
 } as const;
 
 export interface StaffAvatarProps {

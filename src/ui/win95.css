@@ -598,8 +598,11 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-hero-ic { width: 36px; height: 36px; padding: 1px; border: 1px solid transparent; background: #d5d5d5; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .w95-hero-ic:hover { background: #e8e8f8; }
 .w95-hero-ic.picked { border: 1px solid #000080; background: #b8c4e8; }
-/* v1.47.1: большая версия выбранной аватарки игрока — под сеткой */
-.w95-hero-big { margin-top: 8px; }
+/* v1.47.1: большая версия выбранной аватарки игрока */
+/* v1.54.8: большая — справа от превьюшек, единый блок с сеткой (ред. владельца) */
+.w95-hero-ava { display: flex; align-items: center; gap: 14px; margin-top: 2px; flex-wrap: wrap; }
+.w95-hero-ava .w95-hero-grid { flex: none; }
+.w95-hero-big { flex: none; }
 .w95-hero-stats { display: flex; flex-direction: column; gap: 3px; margin: 2px 0; }
 .w95-stat-row { display: flex; align-items: center; gap: 5px; }
 .w95-stat-label { width: 52px; flex: none; }

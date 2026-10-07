@@ -69,7 +69,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
   const [heroStats, setHeroStats] = useState<Record<StatKey, number>>({ program: 10, scenario: 10, graphics: 10, sound: 10 });
   const [heroCareer, setHeroCareer] = useState<CareerId>(HERO_CAREERS[0]!);
   const [charIdx, setCharIdx] = useState(0);
-  const [charCustom, setCharCustom] = useState('');
+  const [charCustom, setCharCustom] = useState(HERO_CHARACTERS[0]?.persona ?? ''); // v1.54.8: пример вписан сразу
   // ── PLAN-48: партнёр и доля ──
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [share, setShare] = useState(10);
@@ -162,7 +162,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
         : step === 2
           ? (statsOk ? `Все ${HERO_POINTS} очков распределены ✓.` : `Осталось очков: ${left} из ${HERO_POINTS} (кап — ${HERO_STAT_CAP} на навык).`)
           : step === 3
-            ? <>Характер: <b>{customChar.length > 0 ? 'свой вариант' : char.label}</b>.</>
+            ? <>Характер: <b>{customChar && customChar !== char.persona ? 'свой вариант' : char.label}</b>.</>
             : !nameOk
               ? 'Впишите имя героя (без совпадений с командой).'
               : !statsOk
@@ -228,7 +228,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
             <span className="w95-hint">это вы: вечный сотрудник, уволить себя нельзя</span>
           </div>
           <div className="w95-hero">
-            <div className="w95-form-row">
+            <div className="w95-form-row" style={{ marginBottom: 10 }}>
               <label>Имя</label>
               <input
                 className="w95-input"
@@ -241,24 +241,26 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="w95-form-row">
               <div style={{ flex: 1 }}>
-                <div className="w95-hero-grid">
-                  {PLAYER_AVATARS.map((av) => (
-                    <button
-                      key={av}
-                      className={`w95-hero-ic${heroAvatar === av ? ' picked' : ''}`}
-                      title={av}
-                      onClick={() => setHeroAvatar(av)}
-                    >
-                      <StaffAvatar staff={{ id: av, avatarId: av }} variant="256_d8" fallback={<span style={{ fontSize: 15 }}>👤</span>} />
-                    </button>
-                  ))}
-                </div>
-                <div className="w95-hero-big">
-                  <StaffAvatar
-                    staff={{ id: heroAvatar, avatarId: heroAvatar }}
-                    variant={AV.newGame}
-                    fallback={<span style={{ fontSize: 64 }}>👤</span>}
-                  />
+                <div className="w95-hero-ava">
+                  <div className="w95-hero-grid">
+                    {PLAYER_AVATARS.map((av) => (
+                      <button
+                        key={av}
+                        className={`w95-hero-ic${heroAvatar === av ? ' picked' : ''}`}
+                        title={av}
+                        onClick={() => setHeroAvatar(av)}
+                      >
+                        <StaffAvatar staff={{ id: av, avatarId: av }} variant="256_d8" fallback={<span style={{ fontSize: 15 }}>👤</span>} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="w95-hero-big">
+                    <StaffAvatar
+                      staff={{ id: heroAvatar, avatarId: heroAvatar }}
+                      variant={AV.newGameBig}
+                      fallback={<span style={{ fontSize: 64 }}>👤</span>}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -314,21 +316,27 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
           <div className="w95-hero">
             <div className="w95-form-row" style={{ alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
-                <div className="w95-row" style={{ gap: 6, alignItems: 'baseline' }}>
+                <div className="w95-row" style={{ gap: 6, alignItems: 'baseline', marginBottom: 6 }}>
                   <b style={{ flex: 'none' }}>{char.label}</b>
-                  <button className="w95-btn" style={{ flex: 'none' }} title="Следующий характер" onClick={() => setCharIdx((i) => (i + 1) % HERO_CHARACTERS.length)}>Следующий ▸</button>
+                  <button
+                    className="w95-btn"
+                    style={{ flex: 'none' }}
+                    title="Следующий характер"
+                    onClick={() => { const n = (charIdx + 1) % HERO_CHARACTERS.length; setCharIdx(n); setCharCustom(HERO_CHARACTERS[n]?.persona ?? ''); }}
+                  >
+                    Следующий ▸
+                  </button>
                 </div>
-                <div className="w95-hint" style={{ margin: '3px 0 5px' }}>{char.persona}</div>
+                {/* v1.54.8: пример сразу в textarea — можно тут же править (ред. владельца) */}
                 <textarea
                   className="w95-input"
-                  style={{ width: '100%', minHeight: 72, resize: 'vertical' }}
+                  style={{ width: '100%', minHeight: 84, resize: 'vertical' }}
                   rows={3}
                   maxLength={200}
                   placeholder="…или впишите свой характер"
                   value={charCustom}
                   onChange={(e) => setCharCustom(e.target.value)}
                 />
-                {customChar.length > 0 && <div className="w95-hint" style={{ marginTop: 2 }}>используется свой вариант ({customChar.length}/200)</div>}
               </div>
             </div>
           </div>
@@ -349,7 +357,7 @@ export function NewGameForm({ onClose }: { onClose?: () => void }) {
               <div><b>{heroNameTrim || 'Герой'}</b> · {CAREER_LABELS[heroCareer] ?? heroCareer} Lv1</div>
               <div className="w95-hint">
                 Код {heroStats.program} · Сюжет {heroStats.scenario} · Графика {heroStats.graphics} · Звук {heroStats.sound}
-                {' · '}характер: {customChar.length > 0 ? 'свой вариант' : char.label}
+                {' · '}характер: {customChar && customChar !== char.persona ? 'свой вариант' : char.label}
               </div>
             </div>
           </div>
