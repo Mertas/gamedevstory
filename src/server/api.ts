@@ -358,7 +358,7 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
           return void res.json({ ok: false, error: 'Такое имя уже занято в игре — придумайте другое' });
         }
         const avatarId = String(rawHero.avatarId ?? '');
-        if (!PLAYER_AVATARS.includes(avatarId)) return void res.json({ ok: false, error: 'Аватарка героя: выберите из player-01…player-20' });
+        if (!PLAYER_AVATARS.includes(avatarId)) return void res.json({ ok: false, error: 'Аватарка героя: выберите из player-01…player-60' });
         const career = String(rawHero.career ?? '') as CareerId;
         if (!HERO_CAREERS.includes(career)) return void res.json({ ok: false, error: 'Профессия героя — одна из стартовых: кодер, сценарист, дизайнер, звукорежиссёр' });
         const persona = String(rawHero.persona ?? '').trim().slice(0, 200);

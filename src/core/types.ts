@@ -92,7 +92,7 @@ export interface Staff {
   partnerPct?: number;
   /** характер для LLM-чата: у ГГ — выбранный/свой; у остальных — persona из контентной БД */
   persona?: string | null;
-  /** папка аватарок игрока в LLMPics (player-01..20) вместо staff.id */
+  /** папка аватарок игрока в LLMPics (player-01..60) вместо staff.id */
   avatarId?: string;
 }
 

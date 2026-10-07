@@ -16,8 +16,8 @@ export const PARTNER_MAX_PCT = 20;
 /** Стартовые профессии героя — только четыре (без Режиссёра/Продюсера/Инженера/Хакера). */
 export const HERO_CAREERS: CareerId[] = ['coder', 'writer', 'designer', 'sound'];
 
-/** Аватарки игрока в LLMPics (проект gds-player-avatars): папки player-01..player-20. */
-export const PLAYER_AVATARS: string[] = Array.from({ length: 20 }, (_, i) => `player-${String(i + 1).padStart(2, '0')}`);
+/** Аватарки игрока в LLMPics (проект gds-player-avatars): папки player-01..player-60 (40 новых — 06.10.2026). */
+export const PLAYER_AVATARS: string[] = Array.from({ length: 60 }, (_, i) => `player-${String(i + 1).padStart(2, '0')}`);
 
 /**
  * Пол героя по аватарке (11.10.2026): нечётные player-NN — парни, чётные — девушки.
