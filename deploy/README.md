@@ -8,6 +8,7 @@
 | `nginx-gds.conf` | `/etc/nginx/sites-available/gds` (+ симлинк в `sites-enabled`) |
 | `rollback.sh` | `/srv/gds/rollback.sh` (+ `chmod +x`) |
 | `backup.sh` | `/srv/gds/backup.sh` (+ `chmod +x`), в cron |
+| `deploy-lab.cmd.example` | образец публикации песочницы мини-игр: запускается из каталога песочницы (напр. `E:/MY/gds-minigames`), заливает статику в `/srv/gds/lab` |
 
 ## Первый запуск (один раз, от root)
 
@@ -58,6 +59,15 @@ git push prod master          # гейт-тесты → сборка → пер�
 ```
 
 Откат: `ssh gds@<IP> /srv/gds/rollback.sh`. Логи: `journalctl -u gds -f`.
+
+## Песочница мини-игр (/lab)
+
+Мини-игра на середине разработки — iframe `/lab/…`. Статику nginx отдаёт напрямую из `/srv/gds/lab`
+(`location /lab/` в `nginx-gds.conf`; каталог создать: `mkdir -p /srv/gds/lab`). Обновление песочницы:
+`deploy-lab.cmd` из её каталога (напр. `E:/MY/gds-minigames`) — копия-образец лежит здесь как
+`deploy-lab.cmd.example`; скрипт соберёт `index.html` + `games/*.js`, зальёт на сервер и проверит
+`https://gamedevstory.mertas.space/lab/`. Локальная разработка без nginx: express отдаёт тот же каталог
+через `GDS_LAB_DIR` (см. `.env.example`).
 
 ## HTTPS (домен MERTAS.SPACE)
 

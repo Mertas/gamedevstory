@@ -7,7 +7,7 @@ import { capInit } from '../shared/train';
 import { ownConsoleStartBase } from '../shared/consoles';
 import { avatarGender } from '../shared/hero';
 
-export const SAVE_VERSION = 16; // 16: PLAN-49 Э3 числа саги (startWeek/lastWeek/lastGap — «эпоха» и «прошло» в текстах); 15: PLAN-49 сага «Синяя Комета» (опциональное поле saga; старт после первого релиза); 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 17; // 17: v1.54.9 бустеры-заряды (применение требует неиспользованной покупки, аудит-51); 16: PLAN-49 Э3 числа саги (startWeek/lastWeek/lastGap — «эпоха» и «прошло» в текстах); 15: PLAN-49 сага «Синяя Комета» (опциональное поле saga; старт после первого релиза); 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -106,6 +106,14 @@ export function migrateSave(state: GameState): GameState {
       state.saga.lastWeek = state.saga.lastWeek ?? state.week;
       state.saga.lastGap = state.saga.lastGap ?? 0;
     }
+  }
+  if (v < 17) {
+    // аудит-51: бустеры получили расходник-«заряд» (применение без купленного бустера закрыто).
+    // Старым сейвам выдаём заряд за каждую историческую покупку — раньше они применялись свободно,
+    // так игрок ничего не теряет; дальше заряд тратится по одному на применение.
+    const charges: Record<string, number> = {};
+    for (const [type, n] of Object.entries(state.boosterPurchases ?? {})) charges[type] = n;
+    state.boosterCharges = state.boosterCharges ?? charges;
   }
   state.saveVersion = SAVE_VERSION;
   return state;

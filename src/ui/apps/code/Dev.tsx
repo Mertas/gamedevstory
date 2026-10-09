@@ -225,7 +225,7 @@ export function DevStatus() {
           })}
         </tbody>
       </table>
-      {(Object.keys(game.boosterPurchases).length > 0 || Object.values(game.boosterPurchases).some((n) => n > 0)) && (
+      {Object.values(game.boosterCharges ?? {}).some((n) => n > 0) && (
         <div className="w95-bevel-in" style={{ padding: 6, marginTop: 4 }}>
           <div className="w95-row">
             <b>🧪 Бустеры</b>
@@ -235,7 +235,7 @@ export function DevStatus() {
             </select>
           </div>
           <div className="w95-row" style={{ flexWrap: 'wrap' }}>
-            {(['fun', 'creativity', 'graphics', 'sound'] as const).filter((t) => (game.boosterPurchases[t] ?? 0) > 0).map((t) => (
+            {(['fun', 'creativity', 'graphics', 'sound'] as const).filter((t) => (game.boosterCharges[t] ?? 0) > 0).map((t) => (
               <button
                 key={t}
                 className="w95-btn"

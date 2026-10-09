@@ -368,7 +368,7 @@ it('миграция v15: сейв без саги грузится, верси�
   delete (g as { saga?: unknown }).saga;
   const m = migrateSave(g);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(16);
+  expect(SAVE_VERSION).toBe(17); // v17: бустеры-заряды (аудит-51); v16: PLAN-49 Э3 (числа саги: точки времени)
   expect(m.saga).toBeUndefined();
 });
 
@@ -386,7 +386,7 @@ it('миграция v16: саге проставляются опорные т�
   g.week = 500;
   g.saga = { node: 'S1', stage: 'choice', flags: [], artifacts: [], trust: {}, scales: {}, roles: {} };
   const m = migrateSave(g);
-  expect(m.saveVersion).toBe(16);
+  expect(m.saveVersion).toBe(SAVE_VERSION);
   expect(m.saga!.startWeek).toBe(500);
   expect(m.saga!.lastWeek).toBe(500);
   expect(m.saga!.lastGap).toBe(0);

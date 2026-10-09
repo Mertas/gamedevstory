@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { newGame, releaseAction, startProjectAction } from '../src/core/engine';
 import { consoleDataFor } from '../src/core/systems/dev';
 import { tickOwnConsole } from '../src/core/systems/progression';
-import { migrateSave } from '../src/core/migrate';
+import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { ownConsoleCostMult, ownConsoleMult, ownConsoleStartBase } from '../src/shared/consoles';
 import { allConsoles } from '../src/shared/meta';
 import type { MetaData } from '../src/shared/meta';
@@ -136,6 +136,6 @@ describe('своя консоль: движок', () => {
     g.consoles['own-console'] = { licensed: true, base: 0, availableAtWeek: 1, removedAtWeek: null };
     migrateSave(g);
     expect(g.consoles['own-console']!.base).toBe(1000);
-    expect(g.saveVersion).toBe(16); // каскад миграций доводит до текущей (v1.53: Э3 точки времени саги)
+    expect(g.saveVersion).toBe(SAVE_VERSION); // каскад миграций доводит до текущей (v1.54.9: бустеры-заряды, аудит-51)
   });
 });

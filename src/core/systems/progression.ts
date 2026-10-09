@@ -289,6 +289,8 @@ export function buyBooster(state: GameState, type: string): ActionResult {
   if (state.money < price) return { ok: false, error: `Нужно ${price}K` };
   state.money -= price;
   state.boosterPurchases[type] = (state.boosterPurchases[type] ?? 0) + 1;
+  // аудит-51: покупка даёт заряд применения (расходник); счётчик покупок остаётся для роста цен
+  state.boosterCharges[type] = (state.boosterCharges[type] ?? 0) + 1;
   log(state, `🧪 Куплен бустер ${type} за ${price}K`);
   return { ok: true };
 }
@@ -309,6 +311,11 @@ export function applyBooster(state: GameState, staffId: string, type: string, rn
   if (!s) return { ok: false, error: 'Нет такого сотрудника' };
   const attr = BOOSTER_ATTR[type];
   if (!attr) return { ok: false, error: 'Неизвестный бустер' };
+  // P1 аудита-51: применяется только купленный заряд (один клик — один заряд); счётчик покупок
+  // boosterPurchases остаётся «куплено всего» для кривой цен и не трогается
+  const charge = state.boosterCharges[type] ?? 0;
+  if (charge <= 0) return { ok: false, error: 'Нет купленного бустера этого типа' };
+  state.boosterCharges[type] = charge - 1;
   const uses = s.boosterUses[type] ?? 0;
   // ключевая профессия бустера даёт больше очков (research/02 §11);
   // раньше keyJob вычислялся, но не использовался — все получали «ключевые» 18–22

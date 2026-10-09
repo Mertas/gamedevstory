@@ -174,9 +174,11 @@ describe('M3: продавец и бустеры', () => {
     const gain = g.activeGame!.points.fun;
     expect(gain).toBeGreaterThanOrEqual(18);
     expect(gain).toBeLessThanOrEqual(22);
-    // третье использование — 0
+    // повторная доза слабее (1–5), третья — уже 0 (лимит 2 на сотрудника); каждая доза — своя покупка (P1 аудита-51)
+    expect(buyBooster(g, 'fun').ok).toBe(true);
     applyBooster(g, s.id, 'fun', rng());
     const before = g.activeGame!.points.fun;
+    expect(buyBooster(g, 'fun').ok).toBe(true);
     applyBooster(g, s.id, 'fun', rng());
     expect(g.activeGame!.points.fun).toBe(before);
   });
@@ -191,14 +193,23 @@ describe('M3: продавец и бустеры', () => {
     expect(gain1).toBeGreaterThanOrEqual(8);
     expect(gain1).toBeLessThanOrEqual(11);
     const before2 = g.activeGame!.points.fun;
+    expect(buyBooster(g, 'fun').ok).toBe(true);
     expect(applyBooster(g, s.id, 'fun', rng()).ok).toBe(true);
     const gain2 = g.activeGame!.points.fun - before2;
     expect(gain2).toBeGreaterThanOrEqual(1);
     expect(gain2).toBeLessThanOrEqual(5);
     // третье использование — 0
     const before3 = g.activeGame!.points.fun;
+    expect(buyBooster(g, 'fun').ok).toBe(true);
     applyBooster(g, s.id, 'fun', rng());
     expect(g.activeGame!.points.fun).toBe(before3);
+  });
+
+  it('P1 аудита-51: без покупки бустер не применяется', () => {
+    const g = withActiveGame(gameWithStaff());
+    g.salesmanHere = true;
+    const res = applyBooster(g, g.staff[0]!.id, 'fun', rng());
+    expect(res.ok).toBe(false);
   });
 });
 

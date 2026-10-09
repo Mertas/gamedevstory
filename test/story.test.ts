@@ -6,7 +6,16 @@ import { newGame } from '../src/core/engine';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { createRng, type Rng } from '../src/core/rng';
 import { resolveStory, tickStory } from '../src/core/systems/story';
+import { HERO_CHARACTERS } from '../src/shared/hero';
 import type { GameRecord, GameState } from '../src/core/types';
+
+const HERO = {
+  name: 'Марк',
+  avatarId: 'player-03',
+  stats: { program: 20, scenario: 10, graphics: 5, sound: 5 },
+  career: 'coder' as const,
+  persona: HERO_CHARACTERS[4]!.persona,
+};
 
 function ready(seed = 3, releases = 2, week = 60): GameState {
   const g = newGame(seed);
@@ -126,6 +135,19 @@ it('деньги важны: raise без 200K не проходит, событ
   const res = resolveStory(g, 'raise', createRng(1));
   expect(res.ok).toBe(false);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'offer', step: 1 });
+});
+
+it('P0 аудита-51: «Оффер» не берёт главного героя и партнёра', () => {
+  const g = newGame(1, { hero: HERO, partnerId: 'phil-harmonic', partnerPct: 12 });
+  for (let i = 0; i < 2; i++) g.history.push({} as GameRecord);
+  g.week = 60;
+  g.staff[0]!.careers[g.staff[0]!.activeCareer] = 2; // ГГ Lv2+
+  g.staff[1]!.careers[g.staff[1]!.activeCareer] = 2; // партнёр Lv2+
+  g.story!.flags.nextQuestWeek = 999; // отодвигаем процедурный квест — проверяем именно «Оффер»
+  only(g, 'offer');
+  tickStory(g, R);
+  expect(g.story?.arcs.offer).toBeUndefined();
+  expect(g.pendingEvent).toBeNull();
 });
 
 // ─── Арка «Выгорание» (M2) ───
@@ -436,7 +458,7 @@ it('миграция v10 → v12: каркас story появляется, сл�
   expect(m.story!.arcs).toEqual({});
   expect(m.story!.flags.nextQuestWeek).toBe(m.week + 60);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(16); // v16: PLAN-49 Э3 (числа саги: точки времени)
+  expect(SAVE_VERSION).toBe(17); // v17: бустеры-заряды (аудит-51); v16: PLAN-49 Э3 (числа саги: точки времени)
 });
 
 it('миграция v11 → v12: слот квестов появляется; уже стоявший слот не трогаем', () => {

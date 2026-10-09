@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 import { applyGenderSlots, gform } from '../src/shared/gender';
 import { avatarGender, heroNameIdeasFor, HERO_NAME_IDEAS } from '../src/shared/hero';
 import { newGame } from '../src/core/engine';
-import { migrateSave } from '../src/core/migrate';
+import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 
 it('gform: форма по полу; без слэша и без рода — мужская (поведение легаси-данных)', () => {
   expect(gform('пошёл/пошла', 'M')).toBe('пошёл');
@@ -58,5 +58,5 @@ it('migrateSave v13→v14: пол героя выравнивается по а�
   const m = migrateSave(g);
   expect(m.staff.find((s) => s.id === 'hero')!.gender).toBe('F'); // чётная аватарка — девушка
   expect(m.staff.find((s) => s.id === base.id)!.gender).toBe(base.gender);
-  expect(m.saveVersion).toBe(16);
+  expect(m.saveVersion).toBe(SAVE_VERSION);
 });

@@ -427,7 +427,7 @@ describe('M5: письма фанатов (движок)', () => {
   }
 
   it('высокая оценка → восторженное письмо: +фанаты, заготовка текста есть', () => {
-    const { g } = findLetter(33); // ≥25 — love
+    const { g } = findLetter(85); // ≥75 — love
     const l = g.mail[0]!;
     expect(l.sentiment).toBe('love');
     expect(l.fansDelta).toBeGreaterThanOrEqual(CONFIG.LETTER_LOVE_MIN);
@@ -439,7 +439,7 @@ describe('M5: письма фанатов (движок)', () => {
   });
 
   it('низкая оценка → гневное письмо: −фанаты', () => {
-    const { g } = findLetter(15); // ≤19 — hate
+    const { g } = findLetter(15); // ≤45 — hate
     const l = g.mail[0]!;
     expect(l.sentiment).toBe('hate');
     expect(l.fansDelta).toBeLessThan(0);
@@ -447,7 +447,7 @@ describe('M5: письма фанатов (движок)', () => {
   });
 
   it('средняя оценка → нейтральное письмо без эффекта', () => {
-    const { g } = findLetter(22);
+    const { g } = findLetter(60);
     expect(g.mail[0]!.sentiment).toBe('neutral');
     expect(g.mail[0]!.fansDelta).toBe(0);
     expect(g.fans).toBe(1000);
@@ -630,13 +630,13 @@ describe('M5: 4 тона писем (движок)', () => {
     throw new Error(`письмо не пришло (score ${score})`);
   }
 
-  it('стиль согласован с чувством, жанр заполнен, заготовка по стилю', () => {
-    const love = letterFor(33);
+  it('стиль согласован с чувством (пороги /100), жанр заполнен, заготовка по стилю', () => {
+    const love = letterFor(85);
     expect(['delight', 'nostalgia']).toContain(love.style);
     expect(love.genre).toBeTruthy();
     expect(love.text).toContain('Mail Game');
-    expect(letterFor(15).style).toBe('rant');
-    expect(letterFor(22).style).toBe('ideas');
+    expect(letterFor(30).style).toBe('rant');
+    expect(letterFor(60).style).toBe('ideas');
   });
 });
 

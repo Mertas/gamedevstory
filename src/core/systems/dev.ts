@@ -492,7 +492,10 @@ export function resolveBoost(state: GameState, rng: Rng, accept: boolean, amount
   }
   // аудит 05.09: валидация ДО мутаций — при нехватке PR событие остаётся висеть,
   // boostUsed не выставляется (раньше событие терялось и игра помечалась «бустилась»)
-  const spend = Math.max(1, Math.round(amount ?? ev.cost));
+  // P1 аудита-51: сумма от клиента может прийти нечислом (NaN/Infinity) — проверяем до мутаций
+  const raw = Number(amount ?? ev.cost);
+  if (!Number.isFinite(raw) || raw < 1) return { ok: false, error: 'Некорректная сумма' };
+  const spend = Math.round(raw);
   if (state.research < spend) return { ok: false, error: 'Не хватает PR' };
   state.pendingEvent = null;
   if (!game) return { ok: true };

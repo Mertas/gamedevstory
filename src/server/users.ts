@@ -306,16 +306,19 @@ export class UserService {
     return { ok: true, user: UserService.toUser(u) };
   }
 
-  /** Сид пользователя (Mertas) — создаётся при первом старте, если ещё нет; admin — владелец. */
-  ensureUser(login: string, password: string, email?: string, admin = false): void {
+  /** Сид пользователя (Mertas) — создаётся при первом старте, если ещё нет; admin — владелец.
+   * Возвращает true, если пользователь СОЗДАН этим вызовом (пароль применён), false — уже существовал. */
+  ensureUser(login: string, password: string, email?: string, admin = false): boolean {
     // сид — внутренний: политику длины не применяем (иначе установка «с нуля» осталась бы без владельца)
-    if (!this.userByLogin(login)) {
+    const existed = !!this.userByLogin(login);
+    if (!existed) {
       const { salt, hash } = hashPassword(password);
       this.db.prepare('INSERT INTO users (login, email, pass_hash, salt, created, admin) VALUES (?, ?, ?, ?, ?, ?)')
         .run(login.trim(), email?.trim() || null, hash, salt, Date.now(), admin ? 1 : 0);
     }
     // admin выставляем и существующему пользователю: базы, созданные до появления колонки
     if (admin) this.db.prepare('UPDATE users SET admin = 1 WHERE login = ?').run(login.trim());
+    return !existed;
   }
 
   // ─── инвайты (регистрация только по коду владельца) ───

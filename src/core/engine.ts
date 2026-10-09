@@ -83,6 +83,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     rngState: rng.state,
     salesmanHere: false,
     boosterPurchases: {},
+    boosterCharges: {},
     careerManuals: 0,
     unlockedTrainings: [],
     gamedexHere: false,

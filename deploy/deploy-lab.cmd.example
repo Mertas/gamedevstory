@@ -1,0 +1,42 @@
+@echo off
+rem ============================================================
+rem  Публикация песочницы мини-игр на https://gamedevstory.mertas.space/lab/
+rem  КОПИЯ-ОБРАЗЕЦ (deploy/deploy-lab.cmd.example).
+rem  Рабочая копия живёт в каталоге песочницы (напр. E:\MY\gds-minigames)
+rem  рядом с index.html — запускать оттуда: скрипт берёт index.html
+rem  и games\*.js ИЗ СВОЕГО каталога.
+rem  Uploads to the server (/srv/gds/lab). Run by double-click or
+rem  "deploy-lab.cmd". Pass /y to skip the final pause (for scripting).
+rem ============================================================
+setlocal
+cd /d "%~dp0"
+set STAGE=%TEMP%\gds-lab-stage
+set TARBALL=%TEMP%\gds-lab.tar.gz
+set TAR=%SystemRoot%\System32\tar.exe
+if /i "%~1"=="/y" set NOPAUSE=1
+
+echo [1/4] Building archive...
+rmdir /s /q "%STAGE%" 2>nul
+mkdir "%STAGE%\games" 2>nul
+copy /y index.html "%STAGE%\" >nul || goto fail
+xcopy /y /q games\*.js "%STAGE%\games\" >nul || goto fail
+"%TAR%" -czf "%TARBALL%" -C "%STAGE%" . || goto fail
+
+echo [2/4] Uploading to server...
+ssh gds-vdsina "mkdir -p /srv/gds/lab" || goto fail
+scp -q "%TARBALL%" gds-vdsina:/tmp/gds-lab.tar.gz || goto fail
+
+echo [3/4] Unpacking and checking...
+ssh gds-vdsina "tar -xzf /tmp/gds-lab.tar.gz -C /srv/gds/lab && rm -f /tmp/gds-lab.tar.gz && ls /srv/gds/lab/games | wc -l" || goto fail
+curl -s -o NUL https://gamedevstory.mertas.space/lab/ || goto fail
+
+del "%TARBALL%" 2>nul
+rmdir /s /q "%STAGE%" 2>nul
+echo [4/4] Done: https://gamedevstory.mertas.space/lab/
+if not defined NOPAUSE pause
+exit /b 0
+
+:fail
+echo FAILED: publication did not complete. Check errors above.
+if not defined NOPAUSE pause
+exit /b 1

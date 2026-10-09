@@ -2,6 +2,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { randomBytes } from 'node:crypto';
 import express from 'express';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Request } from 'express';
@@ -54,7 +55,13 @@ if (process.env.PROD === '1' && !process.env.GDS_PEPPER) {
   console.error('[gds] GDS_PEPPER не задан — в проде пароли без перца запрещены');
   process.exit(1);
 }
-users.ensureUser('Mertas', process.env.GDS_OWNER_PASSWORD ?? '123456', undefined, true); // сид-владелец (пароль — только для чистой установки)
+// P0 аудита-51: без GDS_OWNER_PASSWORD сид-владелец больше не получает дефолт «123456» —
+// генерируем случайный пароль и печатаем его один раз при СОЗДАНИИ (чистая установка)
+const ownerPass = process.env.GDS_OWNER_PASSWORD;
+const seedPass = ownerPass || randomBytes(12).toString('base64url');
+if (users.ensureUser('Mertas', seedPass, undefined, true) && !ownerPass) {
+  console.warn(`[gds] GDS_OWNER_PASSWORD не задан: сид-владелец создан со случайным паролем "${seedPass}" — смените его в игре и задайте переменную в .env`);
+}
 const mail = createMailer();
 const registry = new SessionRegistry(users);
 // REST авторизации/сохранений; who(req) — пользователь по cookie сессии (ниже — для WS)

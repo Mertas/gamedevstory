@@ -29,7 +29,6 @@ export function ResearchApp() {
           </div>
         </>
       )}
-      <div className="w95-hint">Технологии и контракты — в разработке (M4).</div>
     </div>
   );
 }

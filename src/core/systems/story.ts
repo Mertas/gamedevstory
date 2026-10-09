@@ -43,21 +43,21 @@ function lvOf(s: Staff): number {
   return Math.max(0, ...Object.values(s.careers ?? {}));
 }
 
-/** Свободные сотрудники (не на контракте, не «дома»), сильнейшие — первыми. */
+/** Свободные сотрудники (не на контракте, не «дома», не ГГ/партнёр), сильнейшие — первыми. */
 function freeSorted(state: GameState): Staff[] {
   const busy = new Set((state.contracts ?? []).filter((c) => !c.done).flatMap((c) => c.staffIds));
   return state.staff
-    .filter((s) => !busy.has(s.id) && s.homeWeeks === 0)
+    .filter((s) => !busy.has(s.id) && s.homeWeeks === 0 && !s.hero && s.partnerPct === undefined)
     .sort((a, b) => sumStats(b) - sumStats(a));
 }
 
-/** Кандидат для «личных» арок: свободен от контрактов, Lv2+, не «дома». */
+/** Кандидат для «личных» арок: свободен от контрактов, Lv2+, не «дома», не ГГ/партнёр (P0 аудита-51). */
 function personCandidate(state: GameState): { id: string; name: string; gender: 'M' | 'F' } | null {
   const busy = new Set((state.contracts ?? []).filter((c) => !c.done).flatMap((c) => c.staffIds));
   let best: { id: string; name: string; gender: 'M' | 'F' } | null = null;
   let bestLv = 1; // берём только Lv2+
   for (const s of state.staff) {
-    if (busy.has(s.id) || s.homeWeeks > 0) continue;
+    if (busy.has(s.id) || s.homeWeeks > 0 || s.hero || s.partnerPct !== undefined) continue;
     const lv = lvOf(s);
     if (lv >= 2 && lv > bestLv) {
       best = { id: s.id, name: s.name, gender: s.gender };
@@ -96,7 +96,10 @@ function pairByLevel(state: GameState): [Staff, Staff] | null {
 }
 
 function removeStaffQuiet(state: GameState, id: string): void {
-  state.staff = state.staff.filter((s) => s.id !== id);
+  const s = state.staff.find((x) => x.id === id);
+  // P0 аудита-51: ГГ и партнёр не покидают студию даже через арки (защита как в fireStaff)
+  if (!s || s.hero || s.partnerPct !== undefined) return;
+  state.staff = state.staff.filter((x) => x.id !== id);
   state.hiredIds = state.hiredIds.filter((x) => x !== id);
 }
 
