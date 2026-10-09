@@ -12,6 +12,7 @@ import { SAGA_NODES } from '../../shared/saga-data';
 import { sagaCondOk } from '../../shared/saga-text';
 import { unlockedMystery } from '../../shared/hire';
 import { DIRECTION_ORDER } from '../types';
+import { hasTraining } from '../../shared/rules';
 import { DIRECTION_AXIS_MAX, topUpDirection } from '../../shared/autopilot';
 import { STORY_ARCS } from '../../shared/storylines';
 import {
@@ -149,7 +150,7 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         const s = [...state.staff].sort((a, b) => b.power - a.power)[0];
         if (s && s.power >= 2 && state.money > 100) {
           // pinball (анлок Mahjong) раз в 12 недель, иначе anime
-          const wantPinball = !state.unlockedTrainings.some((x) => x.includes('pachinko')) && state.week % 84 === 0;
+          const wantPinball = !hasTraining(state.unlockedTrainings, 'pinball') && state.week % 84 === 0;
           const t = TRAININGS.find((x) => x.id === (wantPinball ? 7 : 4));
           if (t) {
             const res = trainAction(state, s.id, t.id);
@@ -411,7 +412,7 @@ export function pickBestCombo(
     if (t.unlockJob && t.unlockLevel) {
       if (!state.staff.some((s) => (s.careers[t.unlockJob as keyof typeof s.careers] ?? 0) >= t.unlockLevel!)) return false;
     }
-    if (t.unlockTraining && !state.unlockedTrainings.some((x) => x.toLowerCase().includes(t.unlockTraining!.toLowerCase()))) {
+    if (!hasTraining(state.unlockedTrainings, t.unlockTraining)) {
       return false;
     }
     return true;
@@ -480,7 +481,7 @@ function candidateFor(state: GameState, genreId: string, typeId: string): ComboC
     if (x.unlockJob && x.unlockLevel) {
       if (!state.staff.some((s) => (s.careers[x.unlockJob as keyof typeof s.careers] ?? 0) >= x.unlockLevel!)) return false;
     }
-    if (x.unlockTraining && !state.unlockedTrainings.some((y) => y.toLowerCase().includes(x.unlockTraining!.toLowerCase()))) return false;
+    if (!hasTraining(state.unlockedTrainings, x.unlockTraining)) return false;
     return true;
   });
   if (!unlockedGenres.some((x) => x.id === genreId) || !unlockedTypes.some((x) => x.id === typeId)) return null;

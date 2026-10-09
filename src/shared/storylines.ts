@@ -23,8 +23,8 @@ export interface StoryStep {
 
 export interface StoryArc {
   id: string;
-  /** через сколько недель после завязки приходит эпилог */
-  epilogueAfterWeeks: number;
+  /** через сколько ДНЕЙ после завязки приходит эпилог (state.week считает дни; аудит-51 P1-1) */
+  epilogueAfterDays: number;
   /** [0] — завязка; дальше — эпилоги (какой именно, выбирает движок по выбору/фактам) */
   steps: StoryStep[];
 }
@@ -33,7 +33,7 @@ export const STORY_ARCS: Record<string, StoryArc> = {
   // Арка «Оффер» (M1, «Личные истории»): сотрудник Lv2+ получает предложение от конкурентов.
   offer: {
     id: 'offer',
-    epilogueAfterWeeks: 8,
+    epilogueAfterDays: 56, // 8 недель (аудит-51 P1-1)
     steps: [
       {
         title: '💼 Предложение от конкурентов',
@@ -65,7 +65,7 @@ export const STORY_ARCS: Record<string, StoryArc> = {
   // «пустить на самотёк» — рулетка 50/50 (сломается / станет крепче).
   burnout: {
     id: 'burnout',
-    epilogueAfterWeeks: 6,
+    epilogueAfterDays: 42, // 6 недель (аудит-51 P1-1)
     steps: [
       {
         title: '🔋 {name} выгорает',
@@ -104,7 +104,7 @@ export const STORY_ARCS: Record<string, StoryArc> = {
   // Сбудется — всплеск преданности; нет — мечта просто подождёт (без штрафов).
   dream: {
     id: 'dream',
-    epilogueAfterWeeks: 180, // v1.40: полгода на разработку игры по запросу
+    epilogueAfterDays: 180, // полгода — уже в днях // v1.40: полгода на разработку игры по запросу
     steps: [
       {
         title: '🌠 Игра мечты',
@@ -144,7 +144,7 @@ export const STORY_ARCS: Record<string, StoryArc> = {
   // разговор — ~60%, «пусть сами» — рулетка 50/50 (+2 обоим / осадок −2 первому).
   rivalry: {
     id: 'rivalry',
-    epilogueAfterWeeks: 6,
+    epilogueAfterDays: 42, // 6 недель (аудит-51 P1-1)
     steps: [
       {
         title: '⚔️ Спор самолюбий',
@@ -175,7 +175,7 @@ export const STORY_ARCS: Record<string, StoryArc> = {
   // «Наставник»: ветеран подтягивает новичка (или новичок сам). Растит младшего.
   mentorship: {
     id: 'mentorship',
-    epilogueAfterWeeks: 6,
+    epilogueAfterDays: 42, // 6 недель (аудит-51 P1-1)
     steps: [
       {
         title: '🧑‍🏫 Наставник',
@@ -206,7 +206,7 @@ export const STORY_ARCS: Record<string, StoryArc> = {
   // рулетка — синтез (+2 обоим) либо холодное перемирие (без эффекта).
   generations: {
     id: 'generations',
-    epilogueAfterWeeks: 5,
+    epilogueAfterDays: 35, // 5 недель (аудит-51 P1-1)
     steps: [
       {
         title: '🕹️ Старые против новых',

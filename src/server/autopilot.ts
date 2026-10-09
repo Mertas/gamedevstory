@@ -16,7 +16,7 @@ import type { ChatState } from '../shared/chat';
 import { buildDecisionPrompt, parseDecision } from './chatgen';
 import type { ChatThread } from './game';
 import type { LlmFn } from './giga';
-import { score100 } from '../shared/rules';
+import { hasTraining, score100 } from '../shared/rules';
 
 /** AP-08: в затишье команда перекидывается репликой не чаще этого интервала (реальное время, мс). */
 const IDLE_CHAT_MS = 90_000;
@@ -40,7 +40,7 @@ export function validateDecision(plan: AutopilotPlan, state: GameState): string 
       return `тип ${plan.typeId} не открыт`;
     }
   }
-  if (type.unlockTraining && !state.unlockedTrainings.some((x) => x.toLowerCase().includes(type.unlockTraining!.toLowerCase()))) {
+  if (!hasTraining(state.unlockedTrainings, type.unlockTraining)) {
     return `тип ${plan.typeId} требует тренинг ${type.unlockTraining}`;
   }
   if (!state.consoles[plan.consoleId]?.licensed) return `консоль ${plan.consoleId} не куплена`;
@@ -101,7 +101,7 @@ export function buildDecisionContext(state: GameState): {
     if (t.unlockJob && t.unlockLevel) {
       if (!state.staff.some((s) => (s.careers[t.unlockJob as keyof typeof s.careers] ?? 0) >= t.unlockLevel!)) return false;
     }
-    if (t.unlockTraining && !state.unlockedTrainings.some((x) => x.toLowerCase().includes(t.unlockTraining!.toLowerCase()))) return false;
+    if (!hasTraining(state.unlockedTrainings, t.unlockTraining)) return false;
     return true;
   });
   const licensed = CONSOLES.filter((c) => state.consoles[c.id]?.licensed && consoleAvailable(state, c.id));

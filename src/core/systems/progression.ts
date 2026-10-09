@@ -5,10 +5,11 @@ import {
   ADS, BOOSTER_PRICES, CONTRACTS, GENRES, TRAININGS, TYPES,
 } from '../data/db';
 import { log } from '../log';
-import type { CareerId } from '../data/schema';
+import { TRAINING_IDS, type CareerId } from '../data/schema';
 import { CAREER_LABELS } from '../../shared/careers';
 import { busyStaffIds, pushHistory } from './staff';
 import { capGain, careerChangePreview, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../shared/train';
+import { hasTraining } from '../../shared/rules';
 import { OWN_CONSOLE_TYPES, OWN_CONSOLE_CPUS, OWN_CONSOLE_MEDIA, ownConsoleDays, ownConsoleStartBase } from '../../shared/consoles';
 import type { Rng } from '../rng';
 import type {
@@ -69,7 +70,7 @@ export function levelUpStaff(state: GameState, staffId: string, _rng: Rng): Acti
     if (g.unlockJob === career && g.unlockLevel === newLv) opened.push(`🎮 жанр «${g.ru ?? g.name}»`);
   }
   for (const t of TYPES) {
-    if (t.unlockJob === career && t.unlockLevel === newLv && !(t.unlockTraining && !state.unlockedTrainings.some((x) => x.toLowerCase().includes(t.unlockTraining!.toLowerCase())))) {
+    if (t.unlockJob === career && t.unlockLevel === newLv && (!t.unlockTraining || hasTraining(state.unlockedTrainings, t.unlockTraining))) {
       opened.push(`📦 тип «${t.nameRu ?? t.name}»`);
     }
   }
@@ -112,7 +113,10 @@ function applyTraining(state: GameState, s: Staff, t: (typeof TRAININGS)[number]
     if (val === before[k]) lines.push(`${STAT_RU[k]}: ${before[k]} (на пороге ${s.caps[k]})`);
     else lines.push(`${STAT_RU[k]}: ${before[k]} → ${val} (${val - (before[k] ?? 0) > 0 ? '+' : ''}${val - (before[k] ?? 0)})${crit ? ' — супер-эффект ×3!' : ''}`);
   }
-  if (!state.unlockedTrainings.includes(t.name)) state.unlockedTrainings.push(t.name);
+  // P1-9 аудита-51: пишем канонический id (trainings.id = порядок TRAINING_IDS), а не имя из БД;
+  // записи-имена старых сейвов продолжают работать через hasTraining
+  const canon = TRAINING_IDS[t.id - 1];
+  if (canon && !state.unlockedTrainings.includes(canon)) state.unlockedTrainings.push(canon);
   // PLAN-41: агрегат по методам (для истории/сводки в окне сотрудника)
   const agg = (s.trainCount ??= {})[String(t.id)] ??= { n: 0, gains: { program: 0, scenario: 0, graphics: 0, sound: 0 } };
   agg.n += 1;

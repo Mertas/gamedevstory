@@ -83,9 +83,9 @@ it('raise: −200K, сотрудник остаётся; эпилог через
   expect(g.money).toBe(m0 - 200);
   expect(g.staff.some((s) => s.id === id)).toBe(true);
   expect(g.story!.arcs.offer!.outcome).toBe('stay');
-  expect(g.story!.arcs.offer!.waitUntil).toBe(68);
+  expect(g.story!.arcs.offer!.waitUntil).toBe(116); // 60 + 8 недель (56 дн.; аудит-51 P1-1)
 
-  g.week = 68;
+  g.week = 116;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'offer', step: 2 });
   const staff = g.staff.find((s) => s.id === id)!;
@@ -107,7 +107,7 @@ it('talk с провалом: сотрудник уходит; эпилог «п
   expect(g.staff.some((s) => s.id === id)).toBe(false);
   expect(g.story!.arcs.offer!.outcome).toBe('left');
 
-  g.week = 68;
+  g.week = 116;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'offer', step: 3 });
   const fans0 = g.fans;
@@ -162,9 +162,9 @@ it('«Выгорание»: с 45-й недели; отпуск −100K → че
   expect(resolveStory(g, 'rest', R).ok).toBe(true);
   expect(g.money).toBe(m0 - 100);
   expect(g.story!.arcs.burnout!.outcome).toBe('rest');
-  expect(g.story!.arcs.burnout!.waitUntil).toBe(56);
+  expect(g.story!.arcs.burnout!.waitUntil).toBe(92); // 50 + 6 недель (42 дн.; аудит-51 P1-1)
 
-  g.week = 56;
+  g.week = 92;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'burnout', step: 2 });
   const staff = g.staff.find((s) => s.id === id)!;
@@ -182,8 +182,8 @@ it('«Выгорание» риск: 50/50 — «сломался» (−3 ста
   only(broken, 'burnout');
   tickStory(broken, R);
   expect(resolveStory(broken, 'risk', R).ok).toBe(true);
-  expect(broken.story!.arcs.burnout!.waitUntil).toBe(54);
-  broken.week = 54;
+  expect(broken.story!.arcs.burnout!.waitUntil).toBe(78); // 50 + 4 недели (28 дн.; аудит-51 P1-1)
+  broken.week = 78;
   tickStory(broken, failRng()); // ролл «сломался»
   expect(broken.pendingEvent).toEqual({ type: 'story', arcId: 'burnout', step: 3 });
   const s1 = broken.staff[0]!;
@@ -196,7 +196,7 @@ it('«Выгорание» риск: 50/50 — «сломался» (−3 ста
   only(coped, 'burnout');
   tickStory(coped, R);
   resolveStory(coped, 'risk', R);
-  coped.week = 54;
+  coped.week = 78; // 50 + 4 недели (28 дн.; аудит-51 P1-1)
   tickStory(coped, luckyRng()); // ролл «вытянул»
   expect(coped.pendingEvent).toEqual({ type: 'story', arcId: 'burnout', step: 4 });
   const s2 = coped.staff[0]!;
@@ -217,7 +217,7 @@ it('«Игра мечты»: обещание → релиз нужного жа
   expect(arc.startWeek).toBe(75);
 
   expect(resolveStory(g, 'promise', R).ok).toBe(true);
-  expect(g.story!.arcs.dream!.waitUntil).toBe(255); // v1.40: полгода (180 недель) на мечту
+  expect(g.story!.arcs.dream!.waitUntil).toBe(255); // v1.40: полгода (180 дней) на мечту
 
   g.history.push({ genreId: arc.genreId, releaseWeek: 200 } as GameRecord);
   g.week = 255;
@@ -273,9 +273,9 @@ it('«Спор самолюбий»: с 25-й недели; код-дуэль �
   const m0 = g.money;
   expect(resolveStory(g, 'contest', R).ok).toBe(true);
   expect(g.money).toBe(m0 - 50);
-  expect(g.story!.arcs.rivalry!.waitUntil).toBe(36);
+  expect(g.story!.arcs.rivalry!.waitUntil).toBe(72); // 30 + 6 недель (42 дн.; аудит-51 P1-1)
 
-  g.week = 36;
+  g.week = 72;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'rivalry', step: 2 });
   const s1 = g.staff.find((s) => s.id === arc.staffId)!;
@@ -294,9 +294,9 @@ it('«Спор самолюбий»: «пусть сами» → через 4 н
   tickStory(g, R);
   const arc = g.story!.arcs.rivalry!;
   expect(resolveStory(g, 'ignore', R).ok).toBe(true);
-  expect(arc.waitUntil).toBe(34);
+  expect(arc.waitUntil).toBe(58); // 30 + 4 недели (28 дн.; аудит-51 P1-1)
 
-  g.week = 34;
+  g.week = 58;
   tickStory(g, failRng()); // ролл «осадок»
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'rivalry', step: 3 });
   const s1 = g.staff.find((s) => s.id === arc.staffId)!;
@@ -317,9 +317,9 @@ it('«Наставник»: с 32-й недели; наставничество 
   expect(arc.staffId2).toBe(g.staff[1]!.id); // слабейший — новичок
 
   expect(resolveStory(g, 'mentor', R).ok).toBe(true);
-  expect(arc.waitUntil).toBe(41);
+  expect(arc.waitUntil).toBe(77); // 35 + 6 недель (42 дн.; аудит-51 P1-1)
 
-  g.week = 41;
+  g.week = 77;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'mentorship', step: 2 });
   const student = g.staff.find((s) => s.id === arc.staffId2)!;
@@ -340,9 +340,9 @@ it('«Наставник»: «не отвлекать ветерана» → н�
   tickStory(g, R);
   const arc = g.story!.arcs.mentorship!;
   expect(resolveStory(g, 'decline', R).ok).toBe(true);
-  expect(arc.waitUntil).toBe(39);
+  expect(arc.waitUntil).toBe(63); // 35 + 4 недели (28 дн.; аудит-51 P1-1)
 
-  g.week = 39;
+  g.week = 63;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'mentorship', step: 3 });
   const student = g.staff.find((s) => s.id === arc.staffId2)!;
@@ -362,9 +362,9 @@ it('«Старые против новых»: поддержка ветеран�
   expect(arc.staffId2).toBe(g.staff[1]!.id); // молодой — Lv1
 
   expect(resolveStory(g, 'veteran', R).ok).toBe(true);
-  expect(arc.waitUntil).toBe(50);
+  expect(arc.waitUntil).toBe(80); // 45 + 5 недель (35 дн.; аудит-51 P1-1)
 
-  g.week = 50;
+  g.week = 80;
   tickStory(g, R);
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'generations', step: 2 });
   const vet = g.staff.find((s) => s.id === arc.staffId)!;
@@ -383,7 +383,7 @@ it('«Старые против новых»: «каждый по-своему»
   tickStory(g, R);
   const arc = g.story!.arcs.generations!;
   expect(resolveStory(g, 'both', R).ok).toBe(true);
-  g.week = 50;
+  g.week = 80; // 45 + 5 недель (35 дн.; аудит-51 P1-1)
   tickStory(g, luckyRng()); // ролл «синтез»
   expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'generations', step: 4 });
   const vet = g.staff.find((s) => s.id === arc.staffId)!;
@@ -403,11 +403,11 @@ it('после авторской арки годовой слот сдвига�
   only(g, 'offer');
   tickStory(g, R);
   expect(resolveStory(g, 'raise', R).ok).toBe(true);
-  g.week = 68;
+  g.week = 116;
   tickStory(g, R);
   expect(resolveStory(g, 'ok', R).ok).toBe(true); // арка закрыта
   expect(g.story!.arcs.offer!.done).toBe(true);
-  expect(g.story!.flags.nextQuestWeek).toBe(68 + 365);
+  expect(g.story!.flags.nextQuestWeek).toBe(116 + 365);
 });
 
 it('процедурный квест: приходит на годовом слоте; «судиться» тратит сумму из params', () => {

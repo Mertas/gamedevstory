@@ -139,9 +139,11 @@ export function fanDecay(state: GameState): void {
 
 // ежегодная церемония наград (M12W3)
 export function awardsCeremony(state: GameState, rng: Rng): void {
-  const yearStart = (state.year - 1) * CONFIG.YEAR_LENGTH + 1;
+  // аудит-51 P1-8: окно участия — от прошлогодней церемонии до сегодняшней (раньше попадали
+  // только игры первых 62 дней года — релиз «второй половины» года не мог выиграть никогда)
+  const thisAwardsWeek = (state.year - 1) * CONFIG.YEAR_LENGTH + CONFIG.AWARDS_DAY;
   const eligible = state.history.filter(
-    (h) => h.releaseWeek >= yearStart && h.score >= CONFIG.HALL_OF_FAME,
+    (h) => h.releaseWeek > thisAwardsWeek - CONFIG.YEAR_LENGTH && h.releaseWeek <= thisAwardsWeek && h.score >= CONFIG.HALL_OF_FAME,
   );
   if (eligible.length === 0) return;
 
@@ -161,20 +163,18 @@ export function awardsCeremony(state: GameState, rng: Rng): void {
   }
 
   // дизайн/музыка
+  // аудит-51 P1-12: лучшая по атрибуту среди eligible без абсолютного порога (150 — из старой
+  // шкалы; после перекалибровки статов он делал эти награды почти недостижимыми)
   const design = [...eligible].sort((a, b) => b.attrs.graphics - a.attrs.graphics)[0]!;
-  if (design.attrs.graphics >= 150) {
-    state.money += CONFIG.PRIZE_DESIGN;
-    state.awards.design += 1;
-    design.awards.push(`Лучший дизайн ${year}`);
-    log(state, `🎨 Лучший дизайн ${year}: «${design.name}» (+${CONFIG.PRIZE_DESIGN}K)`);
-  }
+  state.money += CONFIG.PRIZE_DESIGN;
+  state.awards.design += 1;
+  design.awards.push(`Лучший дизайн ${year}`);
+  log(state, `🎨 Лучший дизайн ${year}: «${design.name}» (+${CONFIG.PRIZE_DESIGN}K)`);
   const music = [...eligible].sort((a, b) => b.attrs.sound - a.attrs.sound)[0]!;
-  if (music.attrs.sound >= 150) {
-    state.money += CONFIG.PRIZE_MUSIC;
-    state.awards.music += 1;
-    music.awards.push(`Лучшая музыка ${year}`);
-    log(state, `🎵 Лучшая музыка ${year}: «${music.name}» (+${CONFIG.PRIZE_MUSIC}K)`);
-  }
+  state.money += CONFIG.PRIZE_MUSIC;
+  state.awards.music += 1;
+  music.awards.push(`Лучшая музыка ${year}`);
+  log(state, `🎵 Лучшая музыка ${year}: «${music.name}» (+${CONFIG.PRIZE_MUSIC}K)`);
 }
 
 // Gamedex (M5, plan/05 §6): выставка 1–7 июля (дни 92–98), офис 2+; приход = пауза (как продавец),

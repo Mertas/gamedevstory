@@ -322,26 +322,26 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     if (ev.step === 1) {
       if (optionId === 'raise') {
         arcState.outcome = 'stay';
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        arcState.waitUntil = state.week + arc.epilogueAfterDays;
         log(state, `💼 ${name}: оклад повышен — остаётся в студии (−${opt.cost}K)`);
       } else if (optionId === 'talk') {
         if (rng.chance(0.6)) {
           arcState.outcome = 'stay';
-          arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+          arcState.waitUntil = state.week + arc.epilogueAfterDays;
           log(state, `💬 ${name} остаётся в студии — разговор по душам помог`);
         } else {
           arcState.outcome = 'left';
-          arcState.waitUntil = state.week + arc.epilogueAfterWeeks; // эпилог «письмо» тоже придёт
+          arcState.waitUntil = state.week + arc.epilogueAfterDays; // эпилог «письмо» тоже придёт
           if (staff) removeStaffQuiet(state, staff.id);
           log(state, `💔 ${name} уходит к конкурентам — договориться не вышло`);
         }
       } else if (optionId === 'letgo') {
         arcState.outcome = 'left';
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        arcState.waitUntil = state.week + arc.epilogueAfterDays;
         if (staff) removeStaffQuiet(state, staff.id);
         log(state, `✈️ ${name} уходит к конкурентам (выкуп контракта +${opt.money ?? 0}K)`);
       }
-      // шаг 1 закрыт; эпилог придёт через epilogueAfterWeeks
+      // шаг 1 закрыт; эпилог придёт через epilogueAfterDays
     } else if (ev.step === 2) {
       if (staff) raiseStat(staff, 5);
       arcState.done = true;
@@ -355,7 +355,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     if (ev.step === 1) {
       if (optionId === 'rest' || optionId === 'bonus') {
         arcState.outcome = optionId;
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks; // забота — 6 недель
+        arcState.waitUntil = state.week + arc.epilogueAfterDays; // забота — 6 недель
         log(
           state,
           optionId === 'rest'
@@ -364,7 +364,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
         );
       } else if (optionId === 'risk') {
         arcState.outcome = 'risk';
-        arcState.waitUntil = state.week + 4; // рулетка — 4 недели
+        arcState.waitUntil = state.week + 28; // рулетка — 4 недели (аудит-51 P1-1)
         log(state, `🎲 ${name}: решили не вмешиваться — как пойдёт`);
       }
     } else if (ev.step === 2) {
@@ -386,7 +386,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
       if (optionId === 'promise') {
         arcState.outcome = 'promise';
         arcState.startWeek = state.week;
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks; // v1.40: на мечту — полгода
+        arcState.waitUntil = state.week + arc.epilogueAfterDays; // v1.40: на мечту — полгода
         log(state, `🌠 Обещали ${name} игру в жанре «${genreName(arcState.genreId)}»`);
       } else if (optionId === 'decline') {
         arcState.outcome = 'declined';
@@ -406,16 +406,16 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     if (ev.step === 1) {
       if (optionId === 'contest') {
         arcState.outcome = 'contest';
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        arcState.waitUntil = state.week + arc.epilogueAfterDays;
         log(state, `⚔️ Код-дуэль: ${name} против ${name2} (−${opt.cost}K)`);
       } else if (optionId === 'talk') {
         arcState.outcome = 'talk';
         arcState.good = rng.chance(0.6);
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        arcState.waitUntil = state.week + arc.epilogueAfterDays;
         log(state, `🗣️ Разговор с ${name} и ${name2} состоялся`);
       } else if (optionId === 'ignore') {
         arcState.outcome = 'ignore';
-        arcState.waitUntil = state.week + 4; // рулетка — 4 недели
+        arcState.waitUntil = state.week + 28; // рулетка — 4 недели (аудит-51 P1-1)
         log(state, `⚔️ Ссора ${name} и ${name2}: решили не вмешиваться`);
       }
     } else if (ev.step === 2) {
@@ -433,11 +433,11 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     if (ev.step === 1) {
       if (optionId === 'mentor') {
         arcState.outcome = 'mentor';
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        arcState.waitUntil = state.week + arc.epilogueAfterDays;
         log(state, `🧑‍🏫 ${name} ${gform('взялся/взялась', g1)} подтянуть ${name2}`);
       } else if (optionId === 'decline') {
         arcState.outcome = 'decline';
-        arcState.waitUntil = state.week + 4;
+        arcState.waitUntil = state.week + 28; // 4 недели (аудит-51 P1-1)
         log(state, `🧑‍🏫 ${name2} разбирается ${gform('сам/сама', g2)}`);
       }
     } else if (ev.step === 2) {
@@ -455,7 +455,7 @@ export function resolveStory(state: GameState, optionId: string, rng: Rng): Acti
     if (ev.step === 1) {
       if (optionId === 'veteran' || optionId === 'young' || optionId === 'both') {
         arcState.outcome = optionId;
-        arcState.waitUntil = state.week + arc.epilogueAfterWeeks;
+        arcState.waitUntil = state.week + arc.epilogueAfterDays;
         log(
           state,
           optionId === 'veteran'

@@ -11,6 +11,38 @@ export function comboGradeFrom(table: Record<string, string>, genreOrder: string
   return idx >= 0 ? (row[idx] ?? 'C') : 'C';
 }
 
+/** P1-9 аудита-51: слова-признаки тренировки в записях unlockedTrainings.
+ *  Новый формат — канонический id ('stroll'); старые сейвы хранят имя из БД («散歩 walk»),
+ *  поэтому матчим и по английским словам имени. Значения — из таблицы trainings (name_en-часть name). */
+const TRAINING_MATCH: Record<string, string[]> = {
+  stroll: ['stroll', 'walk'],
+  reading: ['reading'],
+  movie: ['movie', 'movies'],
+  anime: ['anime'],
+  game: ['game', 'games'],
+  jogging: ['jogging'],
+  pinball: ['pinball', 'pachinko'],
+  meditate: ['meditate', 'meditation'],
+  concert: ['concert', 'live music'],
+  netsurf: ['netsurf', 'surfing'],
+  museum: ['museum'],
+  college: ['college', 'university'],
+  lab: ['lab'],
+  shorttrip: ['shorttrip', 'domestic trip'],
+  longtrip: ['longtrip', 'overseas trip'],
+};
+
+/** Пройден ли тренинг: канонический id или запись-имя из старого сейва («散歩 walk»). */
+export function hasTraining(unlocked: string[] | undefined | null, training: string | null | undefined): boolean {
+  if (!training) return true;
+  const words = TRAINING_MATCH[training] ?? [training.toLowerCase()];
+  return (unlocked ?? []).some((x) => {
+    const lx = String(x).toLowerCase();
+    if (lx === training.toLowerCase()) return true;
+    return words.some((w) => lx.includes(w));
+  });
+}
+
 /** Открыт ли жанр/тип: уровни сотрудников + пройденный тренинг. */
 export function isUnlocked(
   game: GameState,
@@ -22,7 +54,7 @@ export function isUnlocked(
   // PLAN-22: комбо, открытые игроком в аккаунте, доступны в любой партии — независимо от сейва
   if (comboKey && game.openedCombos?.includes(comboKey)) return true;
   if (job && level && !game.staff.some((s) => (s.careers[job as CareerId] ?? 0) >= level)) return false;
-  if (training && !game.unlockedTrainings.some((x) => x.toLowerCase().includes(training.toLowerCase()))) return false;
+  if (training && !hasTraining(game.unlockedTrainings, training)) return false;
   return true;
 }
 

@@ -71,7 +71,7 @@ describe('M3: обучение', () => {
     expect(g.money).toBeLessThan(money0);
     expect(s.power).toBeLessThan(power0);
     expect(s.stats.scenario).toBeGreaterThan(sc0);
-    expect(g.unlockedTrainings.some((t) => t.includes('アニメ'))).toBe(true);
+    expect(g.unlockedTrainings).toContain('anime'); // P1-9: канонический id (аудит-51)
   });
 
   it('типы с тренинг-требованием открываются после обучения', () => {
