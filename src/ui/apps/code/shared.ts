@@ -3,11 +3,11 @@ import type { Mode } from '../../../core/config';
 import type { Role } from '../../../core/types';
 
 export const MODES: { id: Mode; label: string; hint: string }[] = [
-  { id: 'normal', label: 'Обычный', hint: 'стоимость ×1' },
-  { id: 'speed', label: 'Быстрый', hint: '−20% времени, но больше багов' },
-  { id: 'quality', label: 'Качественный', hint: '+30% очков, +30% стоимости' },
-  { id: 'research', label: 'Исследовательский', hint: '+50% PR, +50% стоимости' },
-  { id: 'budget', label: 'Бюджетный', hint: 'стоимость ×2, −15% багов' },
+  { id: 'normal', label: 'Обычный', hint: 'без изменений' },
+  { id: 'speed', label: 'Быстрый', hint: 'время −15%, цена +20%, багов +50%' },
+  { id: 'quality', label: 'Качественный', hint: 'время +15%, цена +30%, багов −30%' },
+  { id: 'research', label: 'Исследовательский', hint: 'PR +50%, цена +50%, время +10%' },
+  { id: 'budget', label: 'Бюджетный', hint: 'цена ×2, очков +62%, время +30%' },
 ];
 
 export const ROLE_LABELS: Record<Role, string> = {

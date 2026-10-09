@@ -92,7 +92,11 @@ export class SessionRegistry implements SessionHooks {
   /** Сделать сохранение текущим: поднять (или переключить) игровую сессию пользователя. */
   load(userId: number, saveId: number): void {
     const cur = this.live.get(userId);
-    if (cur?.saveId === saveId) return;
+    if (cur?.saveId === saveId) {
+      // аудит-51 P2-2: возврат в ту же партию после «Выхода в меню» (там speed=0) — возобновляем тикер
+      if (cur.server.speed === 0) cur.server.speed = 1;
+      return;
+    }
     if (cur) this.dispose(userId);
     // M6: уровень партии из сейва — до старта тикера (CONFIG — общий объект на процесс)
     const row = this.users.getSave(userId, saveId);

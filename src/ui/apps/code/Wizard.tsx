@@ -1,6 +1,6 @@
 // ─── Код: мастер нового проекта — шаги, сюжет, команда (UI-08: вынесено из CodeApp.tsx) ───
 import { useEffect, useMemo, useState } from 'react';
-import type { Mode } from '../../../core/config';
+import { CONFIG, type Mode } from '../../../core/config';
 import { projectCostBreakdown } from '../../../core/formulas';
 import {
   allConsoles, comboGrade, consoleAvailable, genreById, isUnlocked, typeById,
@@ -177,11 +177,11 @@ export function ProjectWizard() {
   const ROLE_ORDER: Role[] = ['proposal', 'program', 'graphics', 'sound', 'debug'];
   // совет подсказки зависит от выбранной роли
   const ROLE_TIPS: Record<Role, string> = {
-    proposal: 'Сценарист отвечает за сюжет: влияет на Сценарий и шансы наград. Без него игра не начнётся.',
-    program: 'Программист — двигатель разработки: без него не растёт Fun (главная оценка игроков).',
-    graphics: 'Дизайнер поднимает Графику — множитель качества и продаж. Назначайте на 2-3-й игре.',
-    sound: 'Звукорежиссёр даёт очки Звука — влияет на награды и атмосферу.',
-    debug: 'Отладчик снижает баги во время разработки — меньше простоев перед релизом.',
+    proposal: 'Сценарист отвечает за сюжет: его Сценарий идёт в очки игры. Без него проект не начнётся.',
+    program: 'Программист: его Программирование идёт в очки игры. Fun растёт сам — усиливают оси «Простота» и «Доступность».',
+    graphics: 'Дизайнер: его Графика идёт в очки игры — качество и продажи.',
+    sound: 'Звукорежиссёр: его Звук идёт в очки игры — атмосфера и награды.',
+    debug: 'Отладка — финальная фаза: после 100% баги чистят все, а сильный Program отладчика помогает больше. В очки разработки роль не вносит.',
   };
 
   const handleStaffClick = (s: { id: string }) => {
@@ -200,6 +200,17 @@ export function ProjectWizard() {
 
   const dirSummary = DIRECTION_AXES.filter((a) => direction[a.id] > 0)
     .map((a) => `${a.label} ${direction[a.id]}`).join(', ') || '—';
+
+  // аудит-51 P1-3: честный срок и множитель очков выбранного режима (speed × time)
+  const modeCfg = CONFIG.MODE[mode];
+  const devDays = Math.round(CONFIG.DEV_DAYS * modeCfg.time);
+  const ptsMult = modeCfg.speed * modeCfg.time;
+  const pluralDays = (n: number): string => {
+    const d = n % 10;
+    const h = n % 100;
+    if (d === 1 && h !== 11) return 'день';
+    return d >= 2 && d <= 4 && (h < 12 || h > 14) ? 'дня' : 'дней';
+  };
 
   const assignedNames = (r: Role) => {
     const id = roles[r];
@@ -411,6 +422,8 @@ export function ProjectWizard() {
                   <tr><td>Игра</td><td><b>{genre?.ru ?? '—'} × {type?.nameRu ?? type?.name ?? '—'}</b></td></tr>
 
                   <tr><td>Режим</td><td>{MODES.find((m) => m.id === mode)?.label}</td></tr>
+                  <tr><td>Срок</td><td>{devDays} {pluralDays(devDays)} <span className="w95-hint">(в «Обычном» — {CONFIG.DEV_DAYS})</span></td></tr>
+                  <tr><td>Множитель очков</td><td>×{ptsMult.toFixed(2)} <span className="w95-hint">(в «Обычном» — ×1.00)</span></td></tr>
                   <tr><td>Направление</td><td>{dirSummary}</td></tr>
                   <tr><td>Ответственные</td><td>
                     Сценарий: {assignedNames('proposal')} · Программирование: {assignedNames('program')} · Графика: {assignedNames('graphics')} · Звук: {assignedNames('sound')} · Отладка: {assignedNames('debug')}

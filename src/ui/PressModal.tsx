@@ -53,7 +53,8 @@ export function PressModal() {
   // Пауза на время показа; после — вернуть прежнюю скорость
   useEffect(() => {
     if (!openKey) return;
-    speedBefore.current = Math.max(1, speed);
+    // аудит-51 P2-1: храним точную скорость (включая ½ и паузу) — не «поднимаем» её до 1
+    speedBefore.current = speed;
     setSpeed(0);
     return () => setSpeed(speedBefore.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
