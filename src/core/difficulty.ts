@@ -80,6 +80,16 @@ export function applyDifficulty(id: DifficultyId): void {
   resetDerived();
 }
 
+/**
+ * аудит-51 СВОД-P1-1: конфиг партии перед операцией её серверной сессии.
+ * CONFIG — один объект на процесс, а операции партий разных уровней чередуются;
+ * каждая точка входа сессии (тик, действие, импорт сейва) вызывает это.
+ * Смена дёшева: применяется только при отличии уровня.
+ */
+export function ensureDifficulty(id: DifficultyId): void {
+  if (current !== id) applyDifficulty(id);
+}
+
 /** Сброс производных кэшей после смены уровня (сейчас кэшей нет — точка расширения на будущее). */
 export function resetDerived(): void {
   /* кэшей нет */

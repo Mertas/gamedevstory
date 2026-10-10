@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
-import { applyDifficulty, currentDifficulty, difficultyConfig, isDifficultyId, type DifficultyId } from '../src/core/difficulty';
+import { applyDifficulty, currentDifficulty, difficultyConfig, ensureDifficulty, isDifficultyId, type DifficultyId } from '../src/core/difficulty';
 import { newGame, tick } from '../src/core/engine';
 
 interface PresetLevel {
@@ -22,6 +22,24 @@ const presets = JSON.parse(readFileSync(new URL('../difficulty/difficulty-preset
 const num = (k: string): number => (CONFIG as unknown as Record<string, number>)[k] ?? NaN;
 // ожидаемое значение уровня — прямо из JSON (единственный источник чисел, обновляет лаборатория)
 const presetVal = (id: string, k: string): number => presets.levels.find((l) => l.id === id)!.fullConfig[k]!;
+
+describe('аудит-51 СВОД-P1-1: ensureDifficulty — точечное переключение уровня (мультисессии)', () => {
+  afterAll(() => applyDifficulty('normal'));
+
+  it('применяет уровень только при смене, повторный вызов безвреден', () => {
+    applyDifficulty('normal');
+    ensureDifficulty('easy');
+    expect(currentDifficulty()).toBe('easy');
+    expect(num('START_MONEY')).toBe(presetVal('easy', 'START_MONEY'));
+    ensureDifficulty('easy'); // тот же уровень — скип
+    expect(num('START_MONEY')).toBe(presetVal('easy', 'START_MONEY'));
+    ensureDifficulty('hard');
+    expect(currentDifficulty()).toBe('hard');
+    expect(num('DEV_COST_SCALE')).toBeCloseTo(presetVal('hard', 'DEV_COST_SCALE'), 5);
+    ensureDifficulty('easy');
+    expect(num('START_MONEY')).toBe(presetVal('easy', 'START_MONEY'));
+  });
+});
 
 describe('M6: уровни сложности — база + перекрытия', () => {
   afterAll(() => {

@@ -2,6 +2,7 @@
 // PLAN-45: серверный пульс убран (лишний полный снапшот каждые 1.5с на паузе) — потерянный
 // попап клиент возвращает сам, локальным таймером (см. store.ts); тикерные эмиты схлопываются.
 import { CONFIG } from '../core/config';
+import { ensureDifficulty, isDifficultyId } from '../core/difficulty';
 import { tick } from '../core/engine';
 import { deliverChat, type ChatState } from '../shared/chat';
 import type { GameState } from '../core/types';
@@ -43,6 +44,8 @@ export class GameTicker {
   private step(): void {
     try {
       const { game, chat } = this.host;
+      // аудит-51 СВОД-P1-1: конфиг ЭТОЙ партии — до любых чтений CONFIG в шаге (сессии чередуются)
+      ensureDifficulty(isDifficultyId(game.difficulty) ? game.difficulty : 'normal');
       // аудит-51 03-P2-3: незатронутый попап Gamedex «уезжает» сам (таймер реального времени — день года не идёт)
       this.host.maybeGamedexTimeout();
       // PLAN-25: попап события и хореография автопилота обязаны жить И на паузе — пауза

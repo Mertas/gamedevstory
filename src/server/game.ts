@@ -5,6 +5,7 @@ import { consoleDataFor } from '../core/systems/dev';
 import { CRITICS, PRESS_FALLBACK_RU } from '../core/data/critics'; // PLAN-30: 10 журналов
 import type { CareerId } from '../core/data/schema';
 import { newGame } from '../core/engine';
+import { ensureDifficulty, isDifficultyId } from '../core/difficulty';
 import { consoleEvents } from '../core/systems/market';
 import { type GameState, type StartProjectInput } from '../core/types';
 import { resetChat, type ChatState } from '../shared/chat';
@@ -483,8 +484,14 @@ export class GameServer {
     }
   }
 
+  /** аудит-51 СВОД-P1-1: перед операцией сессии — конфиг ЭТОЙ партии (CONFIG общий на процесс). */
+  private syncDifficulty(): void {
+    ensureDifficulty(isDifficultyId(this.game.difficulty) ? this.game.difficulty : 'normal');
+  }
+
   /** SRV-22: диспетчер действий клиента — см. server/actions.ts */
   handle(msg: ClientAction): void {
+    this.syncDifficulty();
     dispatchClientAction(this, msg);
   }
 
@@ -681,6 +688,7 @@ export class GameServer {
   }
 
   importSave(raw: string): boolean {
+    this.syncDifficulty(); // СВОД-P1-1: числа импортируемой партии — её уровня
     // аудит-51 P1-4: клиентский ввод — жёсткий лимит размера файла сейва
     if (Buffer.byteLength(raw, 'utf8') > SAVE_IMPORT_MAX_BYTES) {
       console.warn('[gds] импорт сейва отклонён: файл больше', SAVE_IMPORT_MAX_BYTES, 'байт');

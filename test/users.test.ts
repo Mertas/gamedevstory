@@ -10,6 +10,8 @@ import { registerApi } from '../src/server/api';
 import { SessionRegistry } from '../src/server/sessions';
 import { UserService } from '../src/server/users';
 import { SAVE_PAYLOAD_MAX_BYTES } from '../src/server/limits';
+import { CONFIG } from '../src/core/config';
+import { currentDifficulty, DIFFICULTY } from '../src/core/difficulty';
 
 const dirs: string[] = [];
 function tmpDb(): string {
@@ -325,6 +327,45 @@ describe('PLAN-27: партия переживает перезапуск сер
     expect(r2.attach(freshId)).toBeNull();
 
     r2.disposeAll();
+    users.close();
+  });
+});
+
+describe('аудит-51 СВОД-P1-1: две партии разных уровней не перетирают числа', () => {
+  it('каждая операция сессии применяет конфиг своей партии', () => {
+    const users = new UserService(tmpDb());
+    const ra = users.register('Legkiy', '12345678');
+    const rb = users.register('Tyazhkiy', '12345678');
+    const aid = ra.ok ? ra.user.id : 0;
+    const bid = rb.ok ? rb.user.id : 0;
+    const reg = new SessionRegistry(users);
+    reg.create(aid, { studioName: 'Лёгкая', difficulty: 'easy' });
+    reg.create(bid, { studioName: 'Тяжёлая', difficulty: 'hard' });
+    const srvA = reg.server(aid);
+    const srvB = reg.server(bid);
+    expect(srvA).not.toBeNull();
+    expect(srvB).not.toBeNull();
+
+    // стартовые числа партий — из их уровней
+    expect(srvA!.snapshot().game.money).toBe(DIFFICULTY.easy.overrides.START_MONEY);
+    expect(srvB!.snapshot().game.money).toBe(DIFFICULTY.hard.overrides.START_MONEY);
+
+    // CONFIG после созданий — «hard» (последняя загрузка); операция A обязана вернуть ЕЁ числа
+    srvA!.handle({ type: 'set_speed', v: 0 });
+    expect(currentDifficulty()).toBe('easy');
+    expect(CONFIG.START_MONEY).toBe(DIFFICULTY.easy.overrides.START_MONEY);
+
+    // операция B — снова её уровень, чужие числа не залипли
+    srvB!.handle({ type: 'set_speed', v: 0 });
+    expect(currentDifficulty()).toBe('hard');
+    expect(CONFIG.START_MONEY).toBe(DIFFICULTY.hard.overrides.START_MONEY);
+
+    // и обратно: A — easy
+    srvA!.handle({ type: 'set_speed', v: 0 });
+    expect(currentDifficulty()).toBe('easy');
+    expect(CONFIG.START_MONEY).toBe(DIFFICULTY.easy.overrides.START_MONEY);
+
+    reg.disposeAll();
     users.close();
   });
 });
