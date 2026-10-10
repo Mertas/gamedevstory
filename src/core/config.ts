@@ -299,4 +299,6 @@ export const CONFIG = {
     star: { cost: 7000, fame: 100, fans: 2000, label: 'Звезда-гость' },
   } as Record<GamedexOption, { cost: number; fame: number; fans: number; label: string; newsChance?: number; newsFans?: number }>,
   GAMEDEX_REPEAT_MULT: 0.5, // повтор той же опции подряд — публика помнит
+  // аудит-51 03-P2-3: незатронутый попап выставки «уезжает» сам — выставку можно переждать
+  GAMEDEX_AUTO_SKIP_MS: 120_000,
 };

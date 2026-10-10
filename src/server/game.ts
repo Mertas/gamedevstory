@@ -1,5 +1,5 @@
 // Игровая сессия на сервере: состояние + тикер + действия + чат-фазы (GigaChat) + автосейв.
-import { type HireMethodId } from '../core/config';
+import { CONFIG, type HireMethodId } from '../core/config';
 import { COMBO_GRADES, ADS, BOOSTER_PRICES, CONSOLES, CONSUMABLE_PRICES, CONTRACTS, GENRES, GENRE_ORDER, MESSAGES, STAFF, TRAININGS, TYPES, genreById, typeById } from '../core/data/db';
 import { consoleDataFor } from '../core/systems/dev';
 import { CRITICS, PRESS_FALLBACK_RU } from '../core/data/critics'; // PLAN-30: 10 журналов
@@ -383,6 +383,29 @@ export class GameServer {
     this.syncRing.push({ ver: this.syncVer, ops });
     if (this.syncRing.length > RING_SIZE) this.syncRing.shift();
     for (const l of this.syncSinks) l({ full: false });
+  }
+
+  // аудит-51 03-P2-3: выставку можно «переждать» — незатронутый попап Gamedex уезжает сам.
+  // Отсчёт — по реальному времени (игровые дни заморожены попапом); ответ игрока или
+  // автопилота снимает событие, и счётчик сбрасывается на следующем тике.
+  private gamedexSeenAt: number | null = null;
+  maybeGamedexTimeout(): void {
+    if (this.game.pendingEvent?.type !== 'gamedex') {
+      this.gamedexSeenAt = null;
+      return;
+    }
+    const now = Date.now();
+    if (this.gamedexSeenAt === null) {
+      this.gamedexSeenAt = now;
+      return;
+    }
+    if (now - this.gamedexSeenAt < CONFIG.GAMEDEX_AUTO_SKIP_MS) return;
+    this.gamedexSeenAt = null;
+    this.game.pendingEvent = null;
+    this.game.gamedexHere = false;
+    log(this.game, '🎪 Gamedex уехала, не дождавшись вашего стенда. До следующего июля');
+    this.autosave(true);
+    this.emitTick();
   }
 
   /** PLAN-45: эмит тикера — кадры схлопываются окном (на скоростях ≤4× не влияет); действия мгновенны. */

@@ -64,6 +64,22 @@ describe('GameServer: PLAN-39 — закрытие мини-игры через 
   });
 });
 
+describe('GameServer: Gamedex можно переждать (аудит-51 03-P2-3)', () => {
+  it('незатронутый попап уезжает сам после таймаута — партия не стоит вечно', () => {
+    srv = makeServer();
+    const g = srv.snapshot().game;
+    g.pendingEvent = { type: 'gamedex', year: g.year };
+    g.gamedexHere = true;
+    srv.maybeGamedexTimeout(); // первый тик только запоминает момент появления попапа
+    expect(g.pendingEvent).not.toBeNull();
+    vi.setSystemTime(Date.now() + 200_000);
+    srv.maybeGamedexTimeout();
+    expect(g.pendingEvent).toBeNull();
+    expect(g.gamedexHere).toBe(false);
+    expect(g.log.some((l) => l.text.includes('уехала'))).toBe(true);
+  });
+});
+
 describe('GameServer: set_speed (SRV-01)', () => {
   it('отклоняет NaN/огромное/отрицательное, принимает 0..8', () => {
     srv = makeServer();

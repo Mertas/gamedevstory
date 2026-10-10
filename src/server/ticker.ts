@@ -14,6 +14,7 @@ export interface TickerHost {
   speed: number;
   emitTick(): void; // PLAN-45: кадр тика (с окном схлопывания)
   maybeAutopilot(): void;
+  maybeGamedexTimeout(): void; // аудит-51 03-P2-3: выставку можно «переждать»
   maybeTriggerPhases(): void;
   maybeFillMinigame(): void;
   maybeMailLetters(): void;
@@ -42,6 +43,8 @@ export class GameTicker {
   private step(): void {
     try {
       const { game, chat } = this.host;
+      // аудит-51 03-P2-3: незатронутый попап Gamedex «уезжает» сам (таймер реального времени — день года не идёт)
+      this.host.maybeGamedexTimeout();
       // PLAN-25: попап события и хореография автопилота обязаны жить И на паузе — пауза
       // останавливает игровое ВРЕМЯ, а не логику сессии. Иначе игрок, поставивший игру на паузу,
       // навсегда застревал на неразрешённом попапе (автопилот не мог дойти до его резолва).

@@ -38,7 +38,10 @@ function sendSafe(ws0: WebSocket, payload: string): void {
 }
 
 const app = express();
-app.use(express.json({ limit: '8mb' }));
+// аудит-51 02-P2-4: общий лимит тела — небольшой; 8 МБ оставляем только экспорту/импорту сейва
+const jsonSmall = express.json({ limit: '256kb' });
+const jsonBig = express.json({ limit: '8mb' });
+app.use((req, res, next) => (req.path === '/api/save' ? jsonBig : jsonSmall)(req, res, next));
 // за nginx: реальный IP клиента приходит в X-Forwarded-For (нужен для rate-limit)
 app.set('trust proxy', 'loopback');
 
@@ -91,7 +94,8 @@ for (const sig of ['SIGINT', 'SIGTERM'] as const) {
 
 // ─── WebSocket: игра и чат ───
 // PLAN-45: крупные кадры (первый снапшот, meta) — со сжатием; мелкие кадры не трогаем (порог)
-const wss = new WebSocketServer({ server, perMessageDeflate: { threshold: 4096 } });
+// аудит-51 02-P2-4: maxPayload — входящий кадр до 256 КБ (дефолт ws — 100 МиБ, риск OOM)
+const wss = new WebSocketServer({ server, maxPayload: 256 * 1024, clientTracking: true, perMessageDeflate: { threshold: 4096 } });
 // SRV-14: без обработчика 'error' необработанная ошибка сокета роняла процесс
 wss.on('error', (e) => console.error('[gds] wss error:', String(e).slice(0, 300)));
 wss.on('connection', (ws, req) => {
