@@ -5,7 +5,7 @@ import { CONFIG } from '../core/config';
 import { genreById, typeById } from '../core/data/db';
 import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
-  dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
+  dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, introSeenAction, levelUpAction, moveOfficeAction, newGame,
   partnerBuyoutAction, partnerRentAction,
   releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
@@ -276,6 +276,12 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
     case 'resolve_finale': {
       // аудит-51 05-P2-6: «Играть дальше» на экране итогов — снять попап, партия продолжается
       s.run(resolveFinaleAction(s.game));
+      s.emit();
+      return;
+    }
+    case 'intro_done': {
+      // аудит-51 P1-11: игрок закрыл приветствие новой партии — больше не показываем
+      introSeenAction(s.game);
       s.emit();
       return;
     }

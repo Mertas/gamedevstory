@@ -96,6 +96,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     mail: [],
     mailId: 0,
     releasePopupShown: false,
+    introShown: false, // аудит-51 P1-11: новая партия начинается с онбординга
     devContrib: [],
   };
 
@@ -375,6 +376,11 @@ export function resolveSagaAction(state: GameState, option: string): ActionResul
 /** аудит-51 05-P2-6: «Играть дальше» на экране итогов — закрыть попап, остаться в партии. */
 export function resolveFinaleAction(state: GameState): ActionResult {
   return resolveFinale(state);
+}
+
+/** аудит-51 P1-11: приветствие новой партии просмотрено (undefined у старых сейвов не трогаем). */
+export function introSeenAction(state: GameState): void {
+  if (state.introShown === false) state.introShown = true;
 }
 
 // ---- тик ----

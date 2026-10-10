@@ -37,4 +37,9 @@ describe('PLAN-18: стартовая студия (название и пара
     expect(m.studioName).toBe('Game Dev Studio');
     expect(m.saveVersion).toBe(SAVE_VERSION);
   });
+
+  it('аудит-51 P1-11: новая партия начинается с непоказанным онбордингом', () => {
+    expect(newGame(1).introShown).toBe(false);
+    expect(newGame(2, { studioName: 'Тест' }).introShown).toBe(false);
+  });
 });

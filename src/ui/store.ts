@@ -493,6 +493,10 @@ export function actionResolveSaga(option: string) {
 export function actionResolveFinale() {
   send({ type: 'resolve_finale' });
 }
+export function actionIntroDone() {
+  // аудит-51 P1-11: приветствие новой партии просмотрено — сервер запомнит в сейве
+  send({ type: 'intro_done' });
+}
 export function actionTyping() {
   // SER-27: «печатает» для панели разговоров (не действие босса)
   send({ type: 'user_typing' });

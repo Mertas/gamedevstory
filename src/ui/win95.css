@@ -612,3 +612,8 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-stat-bar > div { height: 100%; background: #000080; }
 .w95-partner-share { margin: 4px 0 2px; }
 .w95-range { flex: 1; accent-color: #000080; }
+
+/* аудит-51 P1-12: журнал студии — лента событий (core/log), свежие сверху */
+.w95-journal { height: 100%; overflow-y: auto; padding: 4px 6px; }
+.w95-journal-row { display: flex; gap: 8px; padding: 3px 4px; border-bottom: 1px solid #d8d8d8; line-height: 1.35; }
+.w95-journal-date { color: #000080; white-space: nowrap; }

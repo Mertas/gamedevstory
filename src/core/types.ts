@@ -435,6 +435,7 @@ export interface GameState {
   careerManuals: number; // запас руководств по смене профессии (продавец; применяются в «Найм» → «Профессии»)
   unlockedTrainings: string[]; // тренинги, пройденные хотя бы раз (анлок типов)
   releasePopupShown: boolean; // попап «игра готова» уже показан для текущей игры
+  introShown?: boolean; // аудит-51 P1-11: онбординг новой партии (false = показать; у старых сейвов нет — не показываем)
   devContrib: DevContrib[]; // вклад сотрудников за последний тик (UI-анимация)
 
   // ─── M5: Gamedex ───

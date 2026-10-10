@@ -10,6 +10,7 @@ import { HardwareApp } from './market/Hardware';
 import { HelpApp } from './help/Help';
 import { HireApp } from './hire/HireApp';
 import { InvitesApp } from './invites/Invites';
+import { JournalApp } from './journal/Journal';
 import { MailApp } from './mail/Mail';
 import { MarketingApp } from './market/Marketing';
 import { ResearchApp } from './research/Research';
@@ -34,6 +35,7 @@ export const APP_DEFS: AppDef[] = [
   { id: 'marketing', title: 'Маркетинг', icon: '📣', component: memo(MarketingApp) },
   { id: 'contracts', title: 'Контракты', icon: '📝', component: memo(ContractsApp) },
   { id: 'mail', title: 'Почта', icon: '✉️', component: memo(MailApp) },
+  { id: 'journal', title: 'Журнал', icon: '📔', component: memo(JournalApp) },
   { id: 'help', title: 'Справка', icon: '❓', component: memo(HelpApp) },
   { id: 'settings', title: 'Настройки системы', icon: '⚙️', component: memo(SettingsApp) },
   { id: 'invites', title: 'Инвайты', icon: '🎟️', adminOnly: true, component: memo(InvitesApp) },

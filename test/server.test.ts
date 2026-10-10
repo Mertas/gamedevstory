@@ -527,3 +527,14 @@ describe('PLAN-26: журнал промахов автопилота', () => {
     setAutopilotLogSink(null);
   });
 });
+
+describe('аудит-51 P1-11: онбординг новой партии', () => {
+  it('intro_done отмечает приветствие просмотренным; повтор безвреден', () => {
+    srv = makeServer();
+    expect(srv.snapshot().game.introShown).toBe(false); // новая партия — приветствие ещё не смотрели
+    srv.handle({ type: 'intro_done' });
+    expect(srv.snapshot().game.introShown).toBe(true);
+    srv.handle({ type: 'intro_done' }); // повторный клик/реконнект — не ломает
+    expect(srv.snapshot().game.introShown).toBe(true);
+  });
+});

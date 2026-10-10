@@ -29,6 +29,7 @@ import { applyGenderSlots } from '../shared/gender';
 import { sagaCondOk, sagaResolveText } from '../shared/saga-text';
 import { SagaChapterBody } from './SagaChapterBody';
 import { FinaleReport } from './FinaleReport';
+import { IntroModal } from './IntroModal';
 
 /** Тело попапа буста (28.09): живой компонент — слайдер, шанс и «Принять» обновляются локально,
  *  обновления состояния не пересоздают попап (из-за этого слайдер «замирал», и приём слал 0 PR). */
@@ -412,6 +413,7 @@ export function App() {
       <EventWatcher />
       <Desktop onExit={exitToLauncher} />
       <MessageBox />
+      <IntroModal />
       <MinigameModal />
       <SalesWidget />
       <PressModal />
