@@ -8,6 +8,7 @@ import { GameServer } from '../src/server/game';
 import { setAutopilotLogSink } from '../src/server/actions';
 import type { LlmFn } from '../src/server/giga';
 import { newGame } from '../src/core/engine';
+import { SAVE_IMPORT_MAX_BYTES } from '../src/server/limits';
 import { autopilotProjectInput } from '../src/core/sim/policy';
 import type { AutopilotStep } from '../src/shared/autopilot';
 
@@ -128,6 +129,14 @@ describe('GameServer: importSave (SRV-02)', () => {
     expect(srv.importSave('{"game":{"week":1}}')).toBe(false);
     expect(srv.importSave(JSON.stringify({ game: { ...newGame(1), staff: 'нет' } }))).toBe(false);
     expect(srv.snapshot().game.money).toBe(4242); // живая партия не тронута
+  });
+
+  it('аудит-51 P1-4: файл сейва больше лимита отклоняется, партия не тронута', () => {
+    srv = makeServer();
+    const g = srv.snapshot().game;
+    g.money = 777;
+    expect(srv.importSave('x'.repeat(SAVE_IMPORT_MAX_BYTES + 1))).toBe(false);
+    expect(srv.snapshot().game.money).toBe(777);
   });
 
   it('валидный импорт заменяет партию', () => {

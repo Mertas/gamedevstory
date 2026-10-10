@@ -65,6 +65,10 @@ export default defineConfig({
       'webamp-internal': r('libs/webamp/js/Webamp.ts'),
       'winamp-eqf': r('libs/winamp-eqf/index.ts'),
       'ani-cursor': r('libs/ani-cursor/src/index.ts'),
+      // аудит-51 P1-7: вендоренный webamp берёт из `music-metadata-browser` только типы
+      // (IAudioMetadata/IOptions), а разбор треков уже идёт через `music-metadata`;
+      // старый пакет тянул уязвимую music-metadata@7 — выкинут, импорт ведём на новый пакет.
+      'music-metadata-browser': 'music-metadata',
     },
   },
   server: {

@@ -1,2 +1,5 @@
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - express@5.3.0
+  - nodemailer@10.1.0

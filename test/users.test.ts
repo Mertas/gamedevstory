@@ -9,6 +9,7 @@ import { createHash, randomBytes, scryptSync } from 'node:crypto';
 import { registerApi } from '../src/server/api';
 import { SessionRegistry } from '../src/server/sessions';
 import { UserService } from '../src/server/users';
+import { SAVE_PAYLOAD_MAX_BYTES } from '../src/server/limits';
 
 const dirs: string[] = [];
 function tmpDb(): string {
@@ -328,8 +329,52 @@ describe('PLAN-27: партия переживает перезапуск сер
   });
 });
 
+describe('аудит-51 P1-4: квоты DM и сейвов', () => {
+  it('DM: хранятся только последние 500 сообщений пары', () => {
+    const u = new UserService(tmpDb());
+    const a = u.register('Spam', '12345678');
+    const b = u.register('Mirny', '12345678');
+    const aid = a.ok ? a.user.id : 0;
+    const bid = b.ok ? b.user.id : 0;
+    for (let i = 0; i < 505; i++) u.dmSend(aid, bid, `m${i}`);
+    const kept = u.dmHistory(aid, bid, 1000);
+    expect(kept.length).toBe(500);
+    const texts = kept.map((m) => m.text);
+    expect(texts).toContain('m5'); // самый старый из сохранившихся
+    expect(texts).toContain('m504'); // самый новый
+    expect(texts).not.toContain('m4');
+    expect(texts).not.toContain('m0');
+    u.close();
+  });
+
+  it('DM: счётчик отправленных за минуту работает', () => {
+    const u = new UserService(tmpDb());
+    const a = u.register('Chatty', '12345678');
+    const b = u.register('Tihiy', '12345678');
+    const aid = a.ok ? a.user.id : 0;
+    const bid = b.ok ? b.user.id : 0;
+    u.dmSend(aid, bid, 'раз');
+    u.dmSend(aid, bid, 'два');
+    expect(u.dmRecentCount(aid, 60_000)).toBe(2);
+    expect(u.dmRecentCount(bid, 60_000)).toBe(0);
+    u.close();
+  });
+
+  it('сейвы: payload сверх жёсткого лимита не записывается', () => {
+    const u = new UserService(tmpDb());
+    const a = u.register('Pukhlyak', '12345678');
+    const aid = a.ok ? a.user.id : 0;
+    const id = u.createSave(aid, 'Нормальная', '{}');
+    const fat = 'x'.repeat(SAVE_PAYLOAD_MAX_BYTES + 1);
+    expect(() => u.updateSave(aid, id, fat, 1, 1, 0)).toThrow();
+    expect(() => u.createSave(aid, 'Жирная', fat)).toThrow();
+    expect(u.getSave(aid, id)!.payload).toBe('{}'); // старый payload не пострадал
+    u.close();
+  });
+});
+
 describe('PLAN-34: мировой список всех аккаунтов', () => {
-  it('одна таблица по всем сохранениям: копии по убыванию, студии видны', () => {
+  it('одна таблица по всем сохранениям: копии по убыванию, студии видны', async () => {
     const users = new UserService(tmpDb());
     const a = users.register('Mertas', '12345678');
     const b = users.register('Vtoroy', '12345678');
@@ -338,7 +383,7 @@ describe('PLAN-34: мировой список всех аккаунтов', () 
     const rec = (name: string, units: number) => ({ name, units, revenue: units * 10, releaseWeek: 1 });
     users.createSave(aid, 'Тёплый Ламповый', JSON.stringify({ game: { history: [rec('Хит', 50), rec('Слабая', 5)] }, chat: {} }));
     users.createSave(bid, 'Пиксель', JSON.stringify({ game: { history: [rec('Чужая', 30)] }, chat: {} }));
-    const lb = users.leaderboard();
+    const lb = await users.leaderboard();
     expect(lb.total).toBe(3);
     expect(lb.rows.map((r) => r.name)).toEqual(['Хит', 'Чужая', 'Слабая']);
     expect(lb.rows[0]!.studio).toBe('Тёплый Ламповый');

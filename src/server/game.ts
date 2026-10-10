@@ -16,6 +16,7 @@ import type { AutopilotPlan, AutopilotStep } from '../shared/autopilot';
 import { SaveManager, SAVE_PATH, type PersistAdapter } from './save';
 import { writeAutopilotLog, dispatchClientAction, MAX_SPEED } from './actions';
 import { log } from '../core/log';
+import { SAVE_IMPORT_MAX_BYTES } from './limits';
 import { MINIGAME_ROTATION } from '../shared/minigames';
 import { GameTicker } from './ticker';
 import { ChatOrchestrator } from './chatflow';
@@ -680,6 +681,11 @@ export class GameServer {
   }
 
   importSave(raw: string): boolean {
+    // аудит-51 P1-4: клиентский ввод — жёсткий лимит размера файла сейва
+    if (Buffer.byteLength(raw, 'utf8') > SAVE_IMPORT_MAX_BYTES) {
+      console.warn('[gds] импорт сейва отклонён: файл больше', SAVE_IMPORT_MAX_BYTES, 'байт');
+      return false;
+    }
     const res = this.saves.importPayload(raw);
     if (!res) return false;
     this.game = res.game;

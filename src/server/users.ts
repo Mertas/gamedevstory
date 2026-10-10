@@ -9,6 +9,7 @@ import { createRequire } from 'node:module';
 import type { DatabaseSync as SqliteDatabase } from 'node:sqlite';
 import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import { drawMinigame, type MinigameBag } from '../shared/minigames';
+import { DM_KEEP_PER_PAIR, SAVE_PAYLOAD_MAX_BYTES } from './limits';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const USERS_DB_PATH = path.join(ROOT, 'data', 'users.db');
@@ -438,10 +439,23 @@ export class UserService {
    * PLAN-34: мировой список — все выпущенные игры всех аккаунтов, по проданным копиям.
    * Читает истории из payload'ов сохранений; кэш 60 с (окно продаж спрашивает часто).
    */
-  leaderboard(limit = 500): { rows: LeaderboardRow[]; total: number } {
+  leaderboard(limit = 500): Promise<{ rows: LeaderboardRow[]; total: number }> {
     const now = Date.now();
-    if (this.lbCache && now - this.lbCache.at < 60_000) return this.lbCache.data;
+    if (this.lbCache && now - this.lbCache.at < 60_000) return Promise.resolve(this.lbCache.data);
+    // аудит-51 P1-4: сборка кэша — чанками (event loop не стоит) и один прогон на всех ждущих
+    if (!this.lbPending) {
+      this.lbPending = this.rebuildLeaderboard(limit)
+        .then((data) => { this.lbCache = { at: Date.now(), data }; this.lbPending = null; return data; })
+        .catch((e) => { this.lbPending = null; throw e; });
+    }
+    return this.lbPending;
+  }
+
+  private lbPending: Promise<{ rows: LeaderboardRow[]; total: number }> | null = null;
+
+  private async rebuildLeaderboard(limit: number): Promise<{ rows: LeaderboardRow[]; total: number }> {
     const rows: LeaderboardRow[] = [];
+    let chunk = 0;
     const saves = this.db.prepare('SELECT studio_name AS studio, payload FROM saves').all() as Array<{
       studio: string;
       payload: string;
@@ -463,11 +477,11 @@ export class UserService {
       } catch {
         /* битый payload — пропускаем */
       }
+      chunk += s.payload.length;
+      if (chunk > 2_000_000) { chunk = 0; await new Promise<void>((resolve) => setImmediate(() => resolve())); }
     }
     rows.sort((a, b) => b.units - a.units);
-    const data = { rows: rows.slice(0, limit), total: rows.length };
-    this.lbCache = { at: now, data };
-    return data;
+    return { rows: rows.slice(0, limit), total: rows.length };
   }
 
   private lbCache: { at: number; data: { rows: LeaderboardRow[]; total: number } } | null = null;
@@ -532,6 +546,17 @@ export class UserService {
 
   dmSend(from: number, to: number, text: string): void {
     this.db.prepare('INSERT INTO dm_messages (from_user, to_user, text, created) VALUES (?, ?, ?, ?)').run(from, to, text, Date.now());
+    // аудит-51 P1-4: эвикция — у пары живут только последние DM_KEEP_PER_PAIR сообщений
+    this.db.prepare(
+      `DELETE FROM dm_messages WHERE ((from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?))
+         AND id NOT IN (SELECT id FROM dm_messages WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) ORDER BY id DESC LIMIT ?)`,
+    ).run(from, to, to, from, from, to, to, from, DM_KEEP_PER_PAIR);
+  }
+
+  /** аудит-51 P1-4: сколько сообщений игрок отправил за окно (антиспам на /api/dm). */
+  dmRecentCount(from: number, sinceMs: number): number {
+    const r = this.db.prepare('SELECT COUNT(*) AS n FROM dm_messages WHERE from_user = ? AND created > ?').get(from, Date.now() - sinceMs) as { n: unknown };
+    return Number(r.n);
   }
 
   dmMarkRead(me: number, peer: number): void {
@@ -575,7 +600,15 @@ export class UserService {
     }));
   }
 
+  /** аудит-51 P1-4: жёсткий предел payload'а сейва — страховка от раздувания БД. */
+  private assertSavePayload(payload: string): void {
+    if (Buffer.byteLength(payload, 'utf8') > SAVE_PAYLOAD_MAX_BYTES) {
+      throw new Error(`payload сейва больше лимита (${SAVE_PAYLOAD_MAX_BYTES} байт)`);
+    }
+  }
+
   createSave(userId: number, studioName: string, payload: string, week = 1, year = 1, money = 0, difficulty = 'normal'): number {
+    this.assertSavePayload(payload);
     const now = Date.now();
     const info = this.db.prepare(
       'INSERT INTO saves (user_id, studio_name, created, updated, week, year, money, payload, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -593,6 +626,7 @@ export class UserService {
 
   /** Автосейв: обновляет полезную нагрузку и метаданные (студия/дата/деньги). */
   updateSave(userId: number, saveId: number, payload: string, week: number, year: number, money: number): boolean {
+    this.assertSavePayload(payload);
     const info = this.db.prepare(
       'UPDATE saves SET payload = ?, week = ?, year = ?, money = ?, updated = ? WHERE id = ? AND user_id = ?',
     ).run(payload, week, year, money, Date.now(), saveId, userId);

@@ -1,6 +1,8 @@
 // GigaChat: OAuth-токен (30 мин) + chat/completions; DeepSeek — OpenAI-совместимый фолбэк.
-// Паттерн из LLMKing/src/server/models.ts: самоподписанный TLS Сбера — rejectUnauthorized:false.
+// аудит-51 P1-6: TLS проверяем по-настоящему — цепочку сертификатов Сбера подписывает
+// «Russian Trusted Root CA» (Минцифры), его нет в системном сторе Node — кладём из certs/.
 import * as crypto from 'crypto';
+import * as fs from 'fs';
 import * as https from 'https';
 import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET, GIGACHAT2_CLIENT_ID, GIGACHAT2_CLIENT_SECRET, LLM_TIMEOUT_MS, LLM_TOTAL_MS, gigaReady } from './config';
 
@@ -39,9 +41,24 @@ async function gigaGap(): Promise<void> {
   gigaLastAt = Date.now();
 }
 
+/** аудит-51 P1-6: корневой CA Минцифры для TLS GigaChat (OAuth :9443 и API). */
+export function gigaCa(): Buffer[] | null {
+  try {
+    return [fs.readFileSync(new URL('../../certs/russian_trusted_root_ca.pem', import.meta.url))];
+  } catch (e) {
+    console.warn('[gds] GigaChat: корневой CA не найден (certs/russian_trusted_root_ca.pem) — TLS без проверки цепочки:', String(e).slice(0, 140));
+    return null;
+  }
+}
+const GIGA_CA = gigaCa();
+
 function gigaPost(url: string, headers: Record<string, string>, body: string, timeoutMs = LLM_TIMEOUT_MS): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
-    const req = https.request(url, { method: 'POST', headers, rejectUnauthorized: false }, (res) => {
+    // аудит-51 P1-6: раньше здесь было rejectUnauthorized:false — MITM мог забрать
+    // client_secret и Bearer-токены. Теперь цепочка проверяется по CA Минцифры;
+    // фолбэк без проверки остаётся только если файл сертификата потерян.
+    const tls: https.RequestOptions = GIGA_CA ? { ca: GIGA_CA } : { rejectUnauthorized: false };
+    const req = https.request(url, { method: 'POST', headers, ...tls }, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (c: Buffer) => chunks.push(c));
       res.on('end', () => {

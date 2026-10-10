@@ -1,6 +1,6 @@
 // LLM-08: порядок аккаунтов GigaChat — текущий первым, резерв следом.
 import { describe, expect, it } from 'vitest';
-import { gigaOrder, studioAvoidLine } from '../src/server/giga';
+import { gigaCa, gigaOrder, studioAvoidLine } from '../src/server/giga';
 
 describe('LLM-08: обход аккаунтов GigaChat (резерв при отказе основного)', () => {
   it('текущий идёт первым, остальные следом', () => {
@@ -28,5 +28,13 @@ describe('SER-25: исключения в промпте названий сту
   it('не больше 80 названий', () => {
     const many = Array.from({ length: 120 }, (_, i) => `Студия ${i}`);
     expect(studioAvoidLine(many).match(/«/g)!.length).toBe(80);
+  });
+});
+
+describe('аудит-51 P1-6: TLS GigaChat по корневому CA Минцифры', () => {
+  it('корневой сертификат на месте и читается', () => {
+    const ca = gigaCa();
+    expect(ca).not.toBeNull();
+    expect(ca![0]!.toString('utf8')).toContain('-----BEGIN CERTIFICATE-----');
   });
 });

@@ -3,6 +3,7 @@ import type { Request, Response, Express } from 'express';
 import { STAFF } from '../core/data/db';
 import type { CareerId } from '../core/data/schema';
 import { INVITE_REQUIRED, PASSWORD_RESET } from './config';
+import { DM_MAX_PER_MINUTE, SAVE_MAX_COUNT } from './limits';
 import { generateStudioNames } from './giga';
 import type { Mailer } from './mailer';
 import { RateLimit } from './ratelimit';
@@ -269,6 +270,10 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
       if (!Number.isInteger(peer) || peer <= 0 || peer === u.id) return void res.json({ ok: false, error: 'некорректный собеседник' });
       const text = String((req.body ?? {}).text ?? '').trim().slice(0, 1000);
       if (text.length < 1) return void res.json({ ok: false, error: 'пустое сообщение' });
+      // аудит-51 P1-4: антиспам — не больше DM_MAX_PER_MINUTE сообщений в минуту
+      if (users.dmRecentCount(u.id, 60_000) >= DM_MAX_PER_MINUTE) {
+        return void res.json({ ok: false, error: 'Слишком много сообщений — подождите минуту' });
+      }
       users.dmSend(u.id, peer, text);
       res.json({ ok: true });
     });
@@ -292,8 +297,13 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   });
 
   app.get('/api/leaderboard', (req, res) => {
-    withUser(req, res, () => {
-      res.json({ ok: true, ...users.leaderboard() });
+    void withUser(req, res, async () => {
+      try {
+        res.json({ ok: true, ...(await users.leaderboard()) });
+      } catch (e) {
+        console.warn('[gds] лидерборд: сборка не удалась:', String(e).slice(0, 160));
+        res.json({ ok: false, error: 'Список временно недоступен' });
+      }
     });
   });
 
@@ -346,6 +356,10 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
       };
       const name = String(body.studioName ?? '').trim();
       if (name.length < 1 || name.length > 40) return void res.json({ ok: false, error: 'Название студии: 1–40 символов' });
+      // аудит-51 P1-4: квота на число сохранений аккаунта
+      if (users.listSaves(u.id).length >= SAVE_MAX_COUNT) {
+        return void res.json({ ok: false, error: `Лимит сохранений (${SAVE_MAX_COUNT}) — удалите ненужные, чтобы начать новую` });
+      }
       const difficulty = isDifficultyId(body.difficulty) ? body.difficulty : 'normal';
 
       // PLAN-48: новый старт — главный герой (игрок) + партнёр. Валидируем строго;
