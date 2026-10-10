@@ -5,7 +5,7 @@ import type { Role } from '../../../core/types';
 export const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: 'normal', label: 'Обычный', hint: 'без изменений' },
   { id: 'speed', label: 'Быстрый', hint: 'время −15%, цена +20%, багов +50%' },
-  { id: 'quality', label: 'Качественный', hint: 'время +15%, цена +30%, багов −30%' },
+  { id: 'quality', label: 'Качественный', hint: 'очков +32%, цена +30%, время +15%, багов −30%' },
   { id: 'research', label: 'Исследовательский', hint: 'PR +50%, цена +50%, время +10%' },
   { id: 'budget', label: 'Бюджетный', hint: 'цена ×2, очков +62%, время +30%' },
 ];

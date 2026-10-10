@@ -178,6 +178,19 @@ describe('персонал и время', () => {
     const tired = weeklyPoints([{ stat: 40, power: 1 }], 'normal', 0);
     expect(tired).toBeLessThan(full);
   });
+  it('«Качественный» ощутимо поднимает очки проекта, «Быстрый» — обменивает время на темп (перебаланс 10.10)', () => {
+    const team = [{ stat: 20, power: 8 }, { stat: 20, power: 8 }];
+    const normal = weeklyPoints(team, 'normal', 0);
+    const quality = weeklyPoints(team, 'quality', 0);
+    const speed = weeklyPoints(team, 'speed', 0);
+    expect(quality / normal).toBeCloseTo(CONFIG.MODE.quality.speed);
+    expect(quality).toBeGreaterThan(normal);
+    // суммарный выход очков за проект ∝ speed × time: у качественного не меньше +30%
+    expect(CONFIG.MODE.quality.speed * CONFIG.MODE.quality.time).toBeGreaterThanOrEqual(1.3);
+    // «Быстрый» за тик копит больше (1.15), но проект короче — суммарно чуть меньше обычного
+    expect(speed).toBeGreaterThan(normal);
+    expect(CONFIG.MODE.speed.speed * CONFIG.MODE.speed.time).toBeLessThan(1);
+  });
   it('fanMult: 0 фанатов → 1.0, растёт логарифмически с капом', () => {
     expect(fanMult(0)).toBeCloseTo(1);
     expect(fanMult(9900)).toBeLessThanOrEqual(3.0);

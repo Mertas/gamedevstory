@@ -85,7 +85,9 @@ export const CONFIG = {
   MODE: {
     normal: { cost: 1, speed: 1, bugs: 1, time: 1 },
     speed: { cost: 1.2, speed: 1.15, bugs: 1.5, time: 0.85 },
-    quality: { cost: 1.3, speed: 0.85, bugs: 0.7, time: 1.15 },
+    // качественный (перебаланс 10.10.2026, решение юзера): очки проекта = speed × time = +32% —
+    // плата: +30% цены и +15% времени; бонус: меньше багов. Раньше давал −2% очков (обман текстов).
+    quality: { cost: 1.3, speed: 1.15, bugs: 0.7, time: 1.15 },
     research: { cost: 1.5, speed: 0.9, bugs: 1, time: 1.1 },
     budget: { cost: 2, speed: 1.25, bugs: 0.85, time: 1.3 },
   },
