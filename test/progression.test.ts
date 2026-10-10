@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import {
   applyCareerManual, buyAd, buyBooster, buyCareerManual, levelUpStaff, startOwnConsole, takeContract,
-  trainStaff, applyBooster, tickSalesman,
+  trainStaff, applyBooster, tickSalesman, contractForecast,
 } from '../src/core/systems/progression';
+import type { Staff } from '../src/core/types';
 import { isUnlocked, devTick } from '../src/core/systems/dev';
 import { createRng } from '../src/core/rng';
 import { newGame } from '../src/core/engine';
@@ -318,6 +319,35 @@ describe('M9: контракты — занятость и кулдаун', () =
     expect(a.devContrib.some((c) => c.staffId === a.staff[0]!.id)).toBe(true);
     expect(b.devContrib.some((c) => c.staffId === b.staff[0]!.id)).toBe(false);
     expect(sum(b)).toBeLessThan(sum(a));
+  });
+});
+
+describe('аудит-51: прогноз бригады по контракту (03-P2-4)', () => {
+  const st = (program: number, graphics: number, sound = 0): Staff => ({
+    stats: { program, scenario: 0, graphics, sound },
+  } as unknown as Staff);
+
+  it('недели — по самой медленной оси, вердикт сравнивается со сроком', () => {
+    const team = [st(40, 10), st(30, 0)];
+    // Пр: (40+30)×0.05 = 3.5/нед (40/3.5 ≈ 11.4); Гр: (10+0)×0.05 = 0.5/нед (24/0.5 = 48) — узкая ось — графика
+    const fc = contractForecast({ reqProgram: 40, reqGraphics: 24 }, 20, team);
+    expect(fc.bottleneck).toBe('graphics');
+    expect(fc.need).toBeCloseTo(48, 5);
+    expect(fc.fits).toBe(false);
+    expect(contractForecast({ reqProgram: 40, reqGraphics: 24 }, 50, team).fits).toBe(true);
+  });
+
+  it('ось без притока — заказ не закрыть (need = Infinity)', () => {
+    const fc = contractForecast({ reqSound: 10 }, 99, [st(50, 50)]);
+    expect(Number.isFinite(fc.need)).toBe(false);
+    expect(fc.bottleneck).toBe('sound');
+    expect(fc.fits).toBe(false);
+  });
+
+  it('без требований — вакуумный случай: 0 недель и успевают', () => {
+    const fc = contractForecast({}, 5, [st(1, 1)]);
+    expect(fc.need).toBe(0);
+    expect(fc.fits).toBe(true);
   });
 });
 

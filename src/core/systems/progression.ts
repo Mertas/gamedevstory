@@ -445,6 +445,38 @@ export function takeContract(state: GameState, contractId: number, staffIds: str
   return { ok: true };
 }
 
+/** аудит-51 03-P2-4: прогноз бригады для окна «Контракты» — те же слагаемые, что в tickContracts:
+ *  прогресс/день = Σ статов × CONTRACT_WEEKLY_RATE, считаем от нуля по самой медленной оси.
+ *  need = Infinity — у бригады требуемая ось не растёт вовсе (заказ так не закрыть). */
+export interface ContractForecast {
+  need: number; // недель по самой медленной оси (Infinity — не закрыть)
+  perWeek: number; // прирост узкой оси за неделю
+  req: number; // требование узкой оси
+  bottleneck: 'program' | 'scenario' | 'graphics' | 'sound' | null;
+  fits: boolean; // уложатся ли в срок weeks
+}
+
+export function contractForecast(
+  reqs: { reqProgram?: number | null; reqScenario?: number | null; reqGraphics?: number | null; reqSound?: number | null },
+  weeks: number,
+  team: Staff[],
+): ContractForecast {
+  const axisReq = { program: reqs.reqProgram, scenario: reqs.reqScenario, graphics: reqs.reqGraphics, sound: reqs.reqSound };
+  let need = 0;
+  let perWeek = 0;
+  let req = 0;
+  let bottleneck: ContractForecast['bottleneck'] = null;
+  for (const k of ['program', 'scenario', 'graphics', 'sound'] as const) {
+    const r = axisReq[k] ?? 0;
+    if (!r) continue;
+    const pw = team.reduce((a, s) => a + s.stats[k], 0) * CONFIG.CONTRACT_WEEKLY_RATE * 7;
+    if (pw <= 0) return { need: Infinity, perWeek: 0, req: r, bottleneck: k, fits: false };
+    const w = r / pw;
+    if (w > need) { need = w; perWeek = pw; req = r; bottleneck = k; }
+  }
+  return { need, perWeek, req, bottleneck, fits: need <= weeks + 1e-9 };
+}
+
 export function tickContracts(state: GameState, rng: Rng): void {
   for (const c of state.contracts) {
     if (c.done) continue;
