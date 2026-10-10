@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { actionTakeContract, useGame, useMeta } from '../../store';
 import { fmtInt, fmtK } from '../../../shared/nums';
 import { CONFIG } from '../../../core/config';
-import { contractForecast } from '../../../core/systems/progression';
+import { contractForecast } from '../../../core/formulas';
 
 const AXIS_RU = { program: 'Программирование', scenario: 'Сценарий', graphics: 'Графика', sound: 'Звук' } as const;
 const dec1 = (n: number) => String(Math.round(n * 10) / 10);

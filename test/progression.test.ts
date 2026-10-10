@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import {
   applyCareerManual, buyAd, buyBooster, buyCareerManual, levelUpStaff, startOwnConsole, takeContract,
-  trainStaff, applyBooster, tickSalesman, contractForecast,
+  trainStaff, applyBooster, tickSalesman,
 } from '../src/core/systems/progression';
+import { contractForecast } from '../src/core/formulas';
 import type { Staff } from '../src/core/types';
 import { isUnlocked, devTick } from '../src/core/systems/dev';
 import { createRng } from '../src/core/rng';

@@ -171,6 +171,41 @@ export function hypeMult(fame: number, hype: number): number {
   return Math.min(CONFIG.HYPE_MULT_CAP, CONFIG.HYPE_MULT_BASE + (fame + hype) / 200);
 }
 
+// ---------- контракты (аудит-51 03-P2-4) ----------
+/** Прогноз бригады для окна «Контракты» — те же слагаемые, что в tickContracts (progression):
+ *  прогресс/день = Σ статов × CONTRACT_WEEKLY_RATE; считаем от нуля по самой медленной оси.
+ *  need = Infinity — у бригады требуемая ось не растёт вовсе (заказ так не закрыть).
+ *  Живёт здесь, а не в progression: UI импортирует формулы, и браузерная сборка
+ *  не должна тянуть node-модули из core/systems (db.ts → node:module). */
+export interface ContractForecast {
+  need: number; // недель по самой медленной оси (Infinity — не закрыть)
+  perWeek: number; // прирост узкой оси за неделю
+  req: number; // требование узкой оси
+  bottleneck: 'program' | 'scenario' | 'graphics' | 'sound' | null;
+  fits: boolean; // уложатся ли в срок weeks
+}
+
+export function contractForecast(
+  reqs: { reqProgram?: number | null; reqScenario?: number | null; reqGraphics?: number | null; reqSound?: number | null },
+  weeks: number,
+  team: Array<{ stats: { program: number; scenario: number; graphics: number; sound: number } }>,
+): ContractForecast {
+  const axisReq = { program: reqs.reqProgram, scenario: reqs.reqScenario, graphics: reqs.reqGraphics, sound: reqs.reqSound };
+  let need = 0;
+  let perWeek = 0;
+  let req = 0;
+  let bottleneck: ContractForecast['bottleneck'] = null;
+  for (const k of ['program', 'scenario', 'graphics', 'sound'] as const) {
+    const r = axisReq[k] ?? 0;
+    if (!r) continue;
+    const pw = team.reduce((a, s) => a + s.stats[k], 0) * CONFIG.CONTRACT_WEEKLY_RATE * 7;
+    if (pw <= 0) return { need: Infinity, perWeek: 0, req: r, bottleneck: k, fits: false };
+    const w = r / pw;
+    if (w > need) { need = w; perWeek = pw; req = r; bottleneck = k; }
+  }
+  return { need, perWeek, req, bottleneck, fits: need <= weeks + 1e-9 };
+}
+
 /** PLAN-32: easeOutCubic — база распределения: пик в начале, плавный спад, ранние недели различимы. */
 export function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
