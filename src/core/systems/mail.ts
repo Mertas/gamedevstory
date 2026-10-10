@@ -55,6 +55,36 @@ function fallbackText(rng: Rng, style: FanLetterStyle, gameName: string, score: 
 
 // одно письмо за тик (return после первого сработавшего шанса)
 export function tickFanLetters(state: GameState, rng: Rng): void {
+  // аудит-51 05-P2-6: письмо двадцатилетия — один раз, веха «история продолжается»
+  if (!state.anniversary20 && state.week >= 20 * CONFIG.YEAR_LENGTH) {
+    state.anniversary20 = true;
+    const female = rng.chance(0.5);
+    const names = female ? FAN_NAMES_F : FAN_NAMES_M;
+    const fanName = names[rng.int(0, names.length - 1)]!;
+    state.mailId += 1;
+    state.mail.push({
+      id: state.mailId,
+      week: state.week,
+      year: state.year,
+      gameName: '',
+      score: 0,
+      fanName,
+      gender: female ? 'F' : 'M',
+      sentiment: 'love',
+      fansDelta: 0,
+      kind: 'anniversary',
+      // текст написан заранее (llm: true) — сервер публикует его как есть, без реакции команды
+      text:
+        'Двадцать лет — красивая цифра, и у неё есть секрет: студии столько не живут. ' +
+        'Живыми остаются те, у кого есть история, — а у вас она есть. Я слежу за вами с самых ' +
+        'первых картриджей и никуда не собираюсь: пусть у этой истории будет продолжение. ' +
+        'С двадцатилетием, студия.',
+      llm: true,
+    });
+    if (state.mail.length > CONFIG.LETTER_CAP) state.mail.splice(0, state.mail.length - CONFIG.LETTER_CAP);
+    log(state, `✉️ Письмо двадцатилетия от ${fanName}`);
+    return;
+  }
   for (const game of state.released) {
     if (game.ended || game.releaseWeek === null) continue;
     if (state.week - game.releaseWeek >= CONFIG.LETTER_WINDOW_DAYS) continue;

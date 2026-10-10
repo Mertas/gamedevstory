@@ -49,6 +49,7 @@ export class MailService {
           week: this.h.chatFloor(), author: `${l.fanName} (фанат)`, avatar: '', text: `${emoji} ${l.text}`, trigger: 'week',
         });
         this.h.emit();
+        if (l.kind === 'anniversary') return; // 05-P2-6: письмо двадцатилетия — без реакции команды
         if (this.h.pendingPhases.length > 0) {
           this.h.fanReplyQueued = true; // впереди события — реакция после текущей серии
         } else {

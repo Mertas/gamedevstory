@@ -28,6 +28,7 @@ import {
 import { tickFanLetters } from './systems/mail';
 import { resolveStory, tickStory } from './systems/story';
 import { resolveSaga, tickSaga } from './systems/saga';
+import { resolveFinale, tickFinale } from './systems/finale';
 import type { HeroSetup } from '../shared/hero';
 
 /** PLAN-18: что игрок выбирает на старте (экран новой игры). */
@@ -371,6 +372,11 @@ export function resolveSagaAction(state: GameState, option: string): ActionResul
   return resolveSaga(state, option);
 }
 
+/** аудит-51 05-P2-6: «Играть дальше» на экране итогов — закрыть попап, остаться в партии. */
+export function resolveFinaleAction(state: GameState): ActionResult {
+  return resolveFinale(state);
+}
+
 // ---- тик ----
 
 export function tick(state: GameState): void {
@@ -412,6 +418,7 @@ export function tick(state: GameState): void {
   tickOwnConsole(state);
   tickStory(state, rng);
   tickSaga(state); // PLAN-49: сага «Синяя Комета» — старт/восстановление попапа главы
+  tickFinale(state); // аудит-51 05-P2-6: финал партии — итог после истории, дальше свободная игра
 
   // 6. конец недели
   state.rngState = rng.state;

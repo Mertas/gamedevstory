@@ -54,6 +54,7 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'resolve_minigame'; pct?: number; closed?: boolean } // PLAN-39: результат врезки / досрочное закрытие (макс. штраф)
   | { type: 'resolve_story'; option: string } // PLAN-44: выбор варианта в сюжетной арке
   | { type: 'resolve_saga'; option: string } // PLAN-49: выбор в главе саги «Синяя Комета»
+  | { type: 'resolve_finale' } // аудит-51 05-P2-6: «Играть дальше» на экране итогов партии
   | { type: 'resolve_event' }
   | { type: 'user_typing' } // SER-27: игрок печатает (для панели разговоров)
   | { type: 'generate_story'; genreId: string; typeId: string; reqId?: number }

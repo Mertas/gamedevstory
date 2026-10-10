@@ -7,7 +7,7 @@ import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
   dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, levelUpAction, moveOfficeAction, newGame,
   partnerBuyoutAction, partnerRentAction,
-  releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
+  releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
 import { consoleDataFor } from '../core/systems/dev';
@@ -271,6 +271,12 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       // PLAN-49: выбор в главе саги — вариант сверяет движок (узлы в SAGA_NODES)
       s.run(resolveSagaAction(s.game, String(msg.option ?? '')));
       s.emit(); // SRV-10: на паузе без emit() клиент не видел снятие события
+      return;
+    }
+    case 'resolve_finale': {
+      // аудит-51 05-P2-6: «Играть дальше» на экране итогов — снять попап, партия продолжается
+      s.run(resolveFinaleAction(s.game));
+      s.emit();
       return;
     }
     case 'resolve_event':

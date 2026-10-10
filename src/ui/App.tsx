@@ -6,7 +6,7 @@ import { MinigameModal } from './MinigameModal';
 import { ActionToast } from './ActionToast';
 import { LevelToast } from './LevelToast';
 import {
-  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveGamedex, actionResolveSaga, actionResolveStory, clearDismissedEvKey,
+  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveFinale, actionResolveGamedex, actionResolveSaga, actionResolveStory, clearDismissedEvKey,
   closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, startSession, stopSession,
   useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
@@ -28,6 +28,7 @@ import { questArt, sagaArt } from './questArt';
 import { applyGenderSlots } from '../shared/gender';
 import { sagaCondOk, sagaResolveText } from '../shared/saga-text';
 import { SagaChapterBody } from './SagaChapterBody';
+import { FinaleReport } from './FinaleReport';
 
 /** Тело попапа буста (28.09): живой компонент — слайдер, шанс и «Принять» обновляются локально,
  *  обновления состояния не пересоздают попап (из-за этого слайдер «замирал», и приём слал 0 PR). */
@@ -253,6 +254,18 @@ function EventWatcher() {
             }),
           });
         }
+      }
+    }
+    if (ev.type === 'finale') {
+      // аудит-51 05-P2-6: итог партии после завершения истории — счёт по активам, дальше свободная игра
+      const g = snap.game;
+      if (g) {
+        popup({
+          title: `🎬 Итоги студии — «${g.studioName}»`,
+          autopilotTarget: 'mb-ok',
+          body: <FinaleReport game={g} />,
+          buttons: [{ label: 'Играть дальше', onClick: () => actionResolveFinale() }],
+        });
       }
     }
     if (ev.type === 'disaster') {

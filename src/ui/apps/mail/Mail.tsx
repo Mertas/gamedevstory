@@ -37,7 +37,7 @@ export function MailApp() {
         return (
           <div key={l.id} className="w95-mail-letter">
             <div className="w95-mail-head">
-              {emoji} <b>{l.fanName}</b> — о «{l.gameName}» ({score100(l.score)}/100)
+              {emoji} <b>{l.fanName}</b>{l.kind === 'anniversary' ? ' — двадцатилетие студии' : <> — о «{l.gameName}» ({score100(l.score)}/100)</>}
               <span className="w95-hint"> · {dateLabel(l.week)}{effect}</span>
             </div>
             <div className="w95-mail-text">{l.text || 'Письмо ещё пишется…'}</div>

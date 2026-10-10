@@ -18,7 +18,7 @@ import { STORY_ARCS } from '../../shared/storylines';
 import {
   applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, searchAction,
   hireFromSearchAction, levelUpAction,
-  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveGamedexAction, resolveSagaAction, resolveStoryAction,
+  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveSagaAction, resolveStoryAction,
   skipMinigame, startProjectAction, trainAction,
 } from '../engine';
 
@@ -96,6 +96,8 @@ export function resolvePendingEvent(state: GameState, stats: PolicyStats, journa
         }
         resolveSagaAction(state, idx == null ? '' : String(idx));
       }
+      // 05-P2-6: итог партии — автопилот закрывает («свободная игра» после истории)
+      if (state.pendingEvent?.type === 'finale') resolveFinaleAction(state);
       // AP-06: продавец — не просто «прогоняем»: пока он в городе, берём бустеры (при деньгах)
       if (state.pendingEvent?.type === 'salesman' || state.salesmanHere) {
         buyBoosterForAutopilot(state, journal);

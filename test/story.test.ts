@@ -458,7 +458,7 @@ it('миграция v10 → v12: каркас story появляется, сл�
   expect(m.story!.arcs).toEqual({});
   expect(m.story!.flags.nextQuestWeek).toBe(m.week + 60);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(17); // v17: бустеры-заряды (аудит-51); v16: PLAN-49 Э3 (числа саги: точки времени)
+  expect(SAVE_VERSION).toBe(18); // v18: финал партии и письмо двадцатилетия (аудит-51 05-P2-6); v17: бустеры-заряды; v16: PLAN-49 Э3 (числа саги: точки времени)
 });
 
 it('миграция v11 → v12: слот квестов появляется; уже стоявший слот не трогаем', () => {

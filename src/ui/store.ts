@@ -488,6 +488,11 @@ export function actionResolveStory(option: string) {
 export function actionResolveSaga(option: string) {
   send({ type: 'resolve_saga', option });
 }
+
+/** аудит-51 05-P2-6: итог партии — «Играть дальше» (свободная игра после истории). */
+export function actionResolveFinale() {
+  send({ type: 'resolve_finale' });
+}
 export function actionTyping() {
   // SER-27: «печатает» для панели разговоров (не действие босса)
   send({ type: 'user_typing' });
