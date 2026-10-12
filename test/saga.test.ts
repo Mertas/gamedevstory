@@ -8,6 +8,8 @@ import { CONFIG } from '../src/core/config';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import { resolveSaga, sagaApplyEffects, sagaCondOk, sagaEpilogFor, sagaResolveParagraph, tickSaga } from '../src/core/systems/saga';
 import { SAGA_NODES } from '../src/shared/saga-data';
+import { HERO_CHARACTERS } from '../src/shared/hero';
+import { partnerBuyout } from '../src/core/systems/staff';
 import { sagaResolveText } from '../src/shared/saga-text';
 import type { GameRecord, GameState } from '../src/core/types';
 
@@ -16,6 +18,14 @@ function withRelease(seed = 3, releases = 1): GameState {
   for (let i = 0; i < releases; i++) g.history.push({} as GameRecord);
   return g;
 }
+
+const HERO = {
+  name: 'Марк',
+  avatarId: 'player-03',
+  stats: { program: 20, scenario: 10, graphics: 5, sound: 5 },
+  career: 'coder' as const,
+  persona: HERO_CHARACTERS[4]!.persona,
+};
 
 it('свежая студия без релизов: сага молчит', () => {
   const g = newGame(3);
@@ -39,6 +49,19 @@ it('после первого релиза сага стартует: S1, поп
     expect(g.staff.some((s) => s.id === ref.staffId)).toBe(true);
     expect(ref.name).toBe(g.staff.find((s) => s.id === ref.staffId)!.name);
   }
+});
+
+// аудит-51 05-P2-4: партнёр ушёл после старта саги — флаг и роль догоняют факт
+it('аудит-51 05-P2-4: после выкупа партнёра сага переходит на ветку «без партнёра»', () => {
+  const g = newGame(1, { hero: HERO, partnerId: 'dee-coder', partnerPct: 20 });
+  g.history.push({} as GameRecord);
+  tickSaga(g); // старт саги: роль «Партнёр» закреплена за партнёром
+  expect(g.saga!.roles['Партнёр']?.staffId).toBe('dee-coder');
+  expect(g.saga!.flags).not.toContain('без партнёра');
+  expect(partnerBuyout(g).ok).toBe(true);
+  tickSaga(g);
+  expect(g.saga!.flags).toContain('без партнёра');
+  expect(g.saga!.roles['Партнёр']).toBeUndefined(); // мёртвое имя больше не подставляется
 });
 
 it('попап главы восстанавливается, если потерялся (загрузка сейва)', () => {

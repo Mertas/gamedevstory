@@ -7,6 +7,8 @@ import type { GameState } from '../core/types';
 import type { ChatState } from '../shared/chat';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
+// аудит-51 04-P2-4: файловый путь — тестовый/локальный (server.test передаёт savePath).
+// Боевой автосейв — DbSaveStore в users.db (таблица saves, sessions.ts), а НЕ save.json.
 export const SAVE_PATH = `${ROOT}data/save.json`;
 // аудит 05.09: сейв писался каждый тик неатомарно; теперь — дебаунс по игровым дням
 // + tmp+rename (обрыв процесса не бьёт JSON), битый сейв уходит в .corrupt-бэкап

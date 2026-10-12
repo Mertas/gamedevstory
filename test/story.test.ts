@@ -410,6 +410,15 @@ it('после авторской арки годовой слот сдвига�
   expect(g.story!.flags.nextQuestWeek).toBe(116 + 365);
 });
 
+it('аудит-51 01-P2-4: годовой слот процедурных квестов не блокирует авторские арки', () => {
+  const g = ready(); // 60-я неделя, 2 релиза
+  g.staff[1]!.careers[g.staff[1]!.activeCareer] = 2; // оба Lv2+ — есть кандидат «Оффера»
+  g.story!.flags.nextQuestWeek = 999; // слот процедурного квеста отодвинут далеко вперёд
+  only(g, 'offer');
+  tickStory(g, R);
+  expect(g.pendingEvent).toEqual({ type: 'story', arcId: 'offer', step: 1 }); // арка всё равно пришла
+});
+
 it('процедурный квест: приходит на годовом слоте; «судиться» тратит сумму из params', () => {
   const g = ready();
   noArcs(g);

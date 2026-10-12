@@ -168,8 +168,6 @@ export function tickStory(state: GameState, rng: Rng): void {
   }
   // Есть незакрытая арка — новую не начинаем (одна сюжетная история за раз)
   if (Object.values(st.arcs).some((a) => !a.done)) return;
-  // v1.40: квесты — раз в год (слот ставит newGame/миграция; после завершения — снова +год)
-  if (state.week < (st.flags.nextQuestWeek ?? 0)) return;
 
   // «Спор самолюбий»: 1+ релиз, с 25-й недели — взаимодействие двух сильнейших
   if (!st.arcs.rivalry && state.history.length >= 1 && state.week >= 25) {
@@ -272,6 +270,9 @@ export function tickStory(state: GameState, rng: Rng): void {
   }
   // Все авторские арки исчерпаны/недоступны — процедурный квест (не заканчиваются)
   if (!st.arcs.quest || st.arcs.quest.done) {
+    // аудит-51 01-P2-4: годовой слот — только для процедурных квестов (v1.40); авторские арки
+    // (rivalry/mentorship/burnout/offer/dream) идут по своим неделям и под кулдаун не попадают
+    if (state.week < (st.flags.nextQuestWeek ?? 0)) return;
     const gen = buildGeneratedQuest(state, rng);
     if (gen) {
       st.arcs.quest = { step: 1, done: false, gen };

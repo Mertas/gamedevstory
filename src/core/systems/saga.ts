@@ -102,6 +102,14 @@ function initRoles(state: GameState, s: SagaState): void {
   refillSagaRoles(state, s);
 }
 
+/** аудит-51 05-P2-4: партнёр ушёл после старта саги (выкуп/рента) — роль и флаг догоняют факт;
+ *  иначе сага продолжала бы говорить от лица ушедшего, а ветка «без партнёра» не включалась. */
+function syncPartnerGone(state: GameState, s: SagaState): void {
+  if (partnerOf(state)) return;
+  delete s.roles['Партнёр'];
+  if (!s.flags.includes('без партнёра')) s.flags.push('без партнёра');
+}
+
 /** Отметить показ узла: пауза от прошлого показа (для «Проходит N лет» в интерлюдиях, Э3). */
 function markShown(s: SagaState, week: number): void {
   s.lastGap = Math.max(0, week - (s.lastWeek ?? week));
@@ -200,6 +208,7 @@ export function tickSaga(state: GameState): void {
   }
   if (s.stage === 'end' || s.stage === 'done') return; // линия завершена
   refillSagaRoles(state, s);
+  syncPartnerGone(state, s); // аудит-51 05-P2-4: партнёр мог уйти после старта саги
   if (s.holdUntil != null) {
     // пейсер: глава «спит» до недели показа — появится сама, когда время придёт
     if (state.week < s.holdUntil) return;

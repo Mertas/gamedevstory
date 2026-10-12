@@ -2,7 +2,7 @@
 // Всё управление (закрытие со штрафом, экран итога, «Продолжить») живёт В САМОЙ игре
 // (embed-обвязка песочницы); модалка — только корпус и мост сообщений:
 //   игра → родителю: done{pct,rank} | close | continue;  родитель → игре: result{note}.
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { actionCloseMinigame, actionResolveMinigame, useAutopilot, useGame, useSnapshot } from './store';
 import { sfx } from './sfx';
 import { MINIGAME_DEFS, minigameEmbedUrl, minigameOutcome } from '../shared/minigames';
@@ -26,9 +26,15 @@ export function MinigameModal() {
   const evKey = active ? `${gameId}:${game.week}:${game.studioName}` : '';
   const resRef = useRef<Result | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
+  // аудит-51 хвост P0-3: врезка может не загрузиться (нет /lab, сеть) — из модалки нужен выход,
+  // иначе событие держит партию вечно. Кнопка — всегда; подсказка — если onLoad так и не пришёл.
+  const [frameLoaded, setFrameLoaded] = useState(false);
+  const [frameStale, setFrameStale] = useState(false);
 
   useEffect(() => {
     resRef.current = null;
+    setFrameLoaded(false);
+    setFrameStale(false);
     if (!evKey) return;
     const onMsg = (e: MessageEvent) => {
       const d = e.data as { source?: string; type?: string; pct?: number } | null;
@@ -53,6 +59,13 @@ export function MinigameModal() {
     return () => window.removeEventListener('message', onMsg);
   }, [evKey]);
 
+  // врезка не отозвалась загрузкой за 12 с — показываем подсказку (кнопка выхода есть всегда)
+  useEffect(() => {
+    if (!evKey) return;
+    const t = window.setTimeout(() => setFrameStale(true), 12000);
+    return () => window.clearTimeout(t);
+  }, [evKey]);
+
   // Автопилот игру не играет — сервер закроет событие сам, модалку не показываем.
   if (!active || !gameId || autopilot || snap.sessionLost) return null;
   const def = MINIGAME_DEFS[gameId];
@@ -62,7 +75,7 @@ export function MinigameModal() {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 21000, background: 'rgba(0,0,0,.45)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       }}
     >
       <SonnyMonitor title={title}>
@@ -75,8 +88,27 @@ export function MinigameModal() {
             width: SONNY_SCREEN.w, height: SONNY_SCREEN.h, border: 0, display: 'block',
             background: '#000', borderRadius: 10,
           }}
+          onLoad={() => setFrameLoaded(true)}
+          onError={() => setFrameStale(true)}
         />
       </SonnyMonitor>
+      <div style={{ marginTop: 10, textAlign: 'center' }}>
+        {!frameLoaded && frameStale && (
+          <div style={{ color: '#ffe9a8', fontSize: 12, marginBottom: 4 }}>Похоже, врезка не загрузилась — можно закрыть досрочно.</div>
+        )}
+        <button
+          className="w95-btn"
+          style={{ fontSize: 11, padding: '2px 10px' }}
+          onClick={() => {
+            // аудит-51 хвост P0-3: аварийный выход; уже сыгранный результат важнее штрафа
+            const r = resRef.current;
+            if (r && r.key === evKey && !r.closed) { resRef.current = null; actionResolveMinigame(r.pct); }
+            else actionCloseMinigame();
+          }}
+        >
+          Закрыть досрочно (штраф −2 PR)
+        </button>
+      </div>
     </div>
   );
 }
