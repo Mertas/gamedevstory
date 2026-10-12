@@ -25,12 +25,15 @@ export interface Snapshot {
   accountReleases: number;
   /** PLAN-18: сервер отказал в партии (нужен вход / сохранение не загружено) — вернуться в меню */
   sessionLost: boolean;
+  /** аудит-51 03-P2-7: причина закрытия сокета сервером (WS close reason) — показывается игроку */
+  sessionLostReason: string | null;
 }
 
 let snap: Snapshot = {
   game: null, chat: { msgs: [], queue: [], phases: {} }, speed: 1, connected: false, meta: null, autopilot: false,
   victory: false, accountReleases: 0,
   sessionLost: false,
+  sessionLostReason: null,
 };
 let actionError: string | null = null;
 let actionErrorVer = 0; // SRV-17: версия показа — повторный тот же текст тоже поднимает тост
@@ -176,7 +179,7 @@ export function stopSession(): void {
   socketWanted = false;
   const ws = (globalThis as { __gdsWs?: WebSocket }).__gdsWs;
   try { ws?.close(); } catch { /* noop */ }
-  snap = { ...snap, connected: false, game: null, sessionLost: false };
+  snap = { ...snap, connected: false, game: null, sessionLost: false, sessionLostReason: null };
   emit();
 }
 
@@ -231,7 +234,7 @@ function connect(): void {
         snap = {
           game: d.game, chat: chatSig(nextChat) === chatSig(snap.chat) ? snap.chat : nextChat,
           speed: d.speed ?? snap.speed,
-          connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot), sessionLost: false,
+          connected: true, meta: snap.meta, autopilot: Boolean(d.autopilot), sessionLost: false, sessionLostReason: null,
           victory: Boolean(d.victory), accountReleases: Math.max(0, Math.floor(Number(d.accountReleases) || 0)),
         };
         // SRV-16: автопилот выключен — очередь шагов не доигрываем (мышь не жмёт за игрока)
@@ -260,7 +263,7 @@ function connect(): void {
           ...next,
           // UI-01: неизменный чат сохраняет ссылку — окно чата не ререндерится каждый тик
           chat: chatSig(nextChat) === chatSig(snap.chat) ? snap.chat : nextChat,
-          connected: true, sessionLost: false,
+          connected: true, sessionLost: false, sessionLostReason: null,
         };
         if (!snap.autopilot) autopilotQueue.length = 0; // SRV-16: как в полном снапшоте
         trackLevel(snap.game); // PLAN-22: новый уровень → тост
@@ -297,7 +300,9 @@ function connect(): void {
   };
   ws.onclose = (ev) => {
     const refused = ev?.code === 1008; // PLAN-18: сервер закрыл по политике (нужен вход / нет партии)
-    snap = { ...snap, connected: false, sessionLost: refused };
+    // аудит-51 03-P2-7: причина («нужен вход» / «нет активной партии») доходит до игрока, а не глохнет
+    const lostReason = refused ? String(ev?.reason ?? '').trim() || 'сервер закрыл соединение' : null;
+    snap = { ...snap, connected: false, sessionLost: refused, sessionLostReason: lostReason };
     emit();
     // игрок вышел в начальное меню или сервер отказал — переподключаться не нужно
     if (!socketWanted || refused) return;

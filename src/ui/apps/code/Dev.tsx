@@ -3,6 +3,7 @@
 // (один rAF, пул частиц, размаз по такту, счётчики и полоски мимо React).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { allConsoles, genreById, typeById } from '../../../shared/meta';
+import { fatigueMult } from '../../../core/formulas';
 import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
 import { studioRecords } from '../../../shared/records';
@@ -213,7 +214,11 @@ export function DevStatus() {
                 <td data-staff-id={s.id} style={{ width: '50%' }}>
                   {s.name}{s.homeWeeks > 0 && <span title={`Дома ещё ${s.homeWeeks} нед.`}> 🏠</span>}{(s.restDays ?? 0) > 0 && <span title={`В отпуске ещё ${s.restDays} дн.`}> 🧳</span>}
                   <div className="w95-row" style={{ gap: 4, marginTop: 2 }}>
-                    <div className="w95-staff-power" style={{ width: 80, flex: 'none' }}>
+                    <div
+                      className="w95-staff-power"
+                      style={{ width: 80, flex: 'none' }}
+                      title={`Выработка: ${Math.round(fatigueMult(s.power) * 100)}% (полная — POWER ≥ 5, 70% — 2–4, 40% — меньше 2)`}
+                    >
                       <div style={{ width: `${Math.round(pct * 100)}%`, background: powerColor }} />
                     </div>
                     <span style={{ fontSize: 10, color: '#444' }}>

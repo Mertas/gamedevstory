@@ -63,6 +63,11 @@ export function projectCostBreakdown(
 
 // ---------- 2.2 недельный прогресс ----------
 // contributors: вклад по ролям (program→program, graphics→graphics, sound→sound)
+/** аудит-51 03-P2-6: множитель выработки от POWER — пороги в очках, не в процентах (UI показывает его игроку) */
+export function fatigueMult(power: number): number {
+  return power >= 5 ? 1 : power >= 2 ? 0.7 : 0.4;
+}
+
 export function weeklyPoints(
   contributors: { stat: number; power: number }[],
   mode: Mode,
@@ -70,7 +75,7 @@ export function weeklyPoints(
 ): number {
   let pts = 0;
   for (const c of contributors) {
-    const fatigue = c.power >= 5 ? 1 : c.power >= 2 ? 0.7 : 0.4;
+    const fatigue = fatigueMult(c.power);
     pts += c.stat * CONFIG.DEV_STAT_FACTOR * fatigue;
   }
   pts *= CONFIG.MODE[mode].speed;

@@ -14,7 +14,7 @@ class Sfx {
   private lastDropAt = 0;
   private listeners = new Set<() => void>();
   /** счётчики для живых проверок (не влияют на звук) */
-  readonly stats = { clicks: 0, opens: 0, closes: 0, drops: 0 };
+  readonly stats = { clicks: 0, opens: 0, closes: 0, drops: 0, alerts: 0 };
 
   constructor() {
     let raw: unknown = null;
@@ -185,6 +185,13 @@ class Sfx {
     const f = 340 + Math.random() * 130;
     this.tone(f, 0.055, { gain: 0.16, type: 'sine', slideTo: f * 0.55 });
     this.noise(0.03, 0.05, 1600 + Math.random() * 700);
+  }
+
+  /** событие требует решения игрока (аудит-51 03-P2-8): короткий двухнотный сигнал */
+  alert(): void {
+    this.stats.alerts++;
+    this.tone(988, 0.09, { gain: 0.3 });
+    this.tone(1319, 0.14, { gain: 0.24, delay: 0.1 });
   }
 }
 

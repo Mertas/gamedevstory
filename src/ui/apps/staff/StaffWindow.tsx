@@ -3,6 +3,7 @@
 // обучение (включая авто «до максимума»), отпуск, история профессий/обучения, персона.
 import { useState } from 'react';
 import { CONFIG } from '../../../core/config';
+import { fatigueMult } from '../../../core/formulas';
 import { CAREER_LABELS, CAREER_ORDER } from '../../careers';
 import { AV, StaffAvatar } from '../../StaffAvatar';
 import { actionApplyCareerManual, actionFire, actionLevelUp, actionPartnerBuyout, actionPartnerRent, actionRestStaff, actionTrain, actionTrainToMax, useGame, useMeta } from '../../store';
@@ -103,6 +104,10 @@ export function StaffWindow({ winId }: { winId: string }) {
           <b style={{ flex: 'none' }}>POWER</b>
           <div className="w95-staff-power" style={{ flex: 1, margin: 0 }}><div style={{ width: `${Math.round(powerPct * 100)}%`, background: powerColor }} /></div>
           <span style={{ flex: 'none' }}>{Math.round(s.power)}/{s.maxPower}</span>
+          {/* аудит-51 03-P2-6: выработка — по очкам POWER (пороги 5/2), а не по цвету полоски */}
+          <span style={{ flex: 'none', color: '#404040', fontSize: 11 }} title="Пороги: POWER ≥ 5 — полная выработка, 2–4 — 70%, меньше 2 — 40%">
+            · выработка {Math.round(fatigueMult(s.power) * 100)}%
+          </span>
           <button
             className="w95-btn"
             disabled={resting || s.homeWeeks > 0 || busy || s.power >= s.maxPower}
@@ -112,7 +117,7 @@ export function StaffWindow({ winId }: { winId: string }) {
             🧳 Отправить на отдых ({CONFIG.REST_DAYS} дн.)
           </button>
         </div>
-        <div className="w95-hint" style={{ marginTop: 2 }}>Отпуск: {CONFIG.REST_DAYS} дней без работы (вклада нет), по возвращении POWER полный. Обычно POWER: −1/нед на работе, +3/нед в простое.</div>
+        <div className="w95-hint" style={{ marginTop: 2 }}>Отпуск: {CONFIG.REST_DAYS} дней без работы (вклада нет), по возвращении POWER полный. Обычно POWER: −1/нед на работе, +3/нед в простое. Выработка в проекте: 100% при POWER ≥ 5, 70% при 2–4, 40% при меньшем.</div>
       </div>
 
       {/* статы и пороги */}

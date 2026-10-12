@@ -7,7 +7,7 @@ import { ActionToast } from './ActionToast';
 import { LevelToast } from './LevelToast';
 import {
   actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveFinale, actionResolveGamedex, actionResolveSaga, actionResolveStory, clearDismissedEvKey,
-  closeMessageBox, evDismissed, EV_DISMISS_MS, showMessageBox, startSession, stopSession,
+  closeMessageBox, evDismissed, EV_DISMISS_MS, showClientError, showMessageBox, startSession, stopSession,
   useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
 import { WindowManagerProvider } from './wm';
@@ -90,6 +90,15 @@ function EventWatcher() {
   const snap = useSnapshot();
   const ev = snap.game?.pendingEvent;
   const mb = useMessageBox();
+  // аудит-51 03-P2-8: событие подаёт голос — короткий сигнал и заголовок вкладки (виден из фона)
+  const evAlertKey = ev ? JSON.stringify(ev) : null;
+  useEffect(() => {
+    if (!evAlertKey) return;
+    sfx.alert();
+    const prevTitle = document.title;
+    document.title = '🔔 Ваш ход — Game Dev Story';
+    return () => { document.title = prevTitle; };
+  }, [evAlertKey]);
   useEffect(() => {
     if (!ev) {
       // аудит 05.09: событие снято сервером — закрыть любой оставшийся попап (например,
@@ -375,7 +384,11 @@ export function App() {
 
   // сервер отказал (партия не загружена — например, сервер перезапущен): назад в начальное меню
   useEffect(() => {
-    if (snap.sessionLost && screen === 'game') exitToLauncher();
+    if (snap.sessionLost && screen === 'game') {
+      // аудит-51 03-P2-7: немой выброс в меню заменён объяснением причины
+      showClientError(`Сессия партии закрыта: ${snap.sessionLostReason ?? 'соединение прервано'}`);
+      exitToLauncher();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap.sessionLost, screen]);
 

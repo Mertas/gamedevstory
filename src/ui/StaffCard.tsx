@@ -1,6 +1,7 @@
 // Карточка сотрудника для выбора (обучение, команда проекта).
 // Аватар, имя, профессия+уровень, усталость (POWER-полоска), параметры.
 import type { Staff } from '../core/types';
+import { fatigueMult } from '../core/formulas';
 import { CAREER_LABELS } from './careers';
 import { AV, StaffAvatar } from './StaffAvatar';
 
@@ -25,7 +26,7 @@ export function StaffCard({ st, selected, disabled, note, onClick }: StaffCardPr
       className={`w95-staff-card${selected ? ' selected' : ''}${disabled ? ' disabled' : ''}`}
       data-staff-id={st.id}
       onClick={disabled ? undefined : onClick}
-      title={disabled ? 'Сотрудник вымотался (POWER 0)' : undefined}
+      title={disabled ? 'Сотрудник вымотался (POWER 0)' : `Выработка: ${Math.round(fatigueMult(st.power) * 100)}% (полная — POWER ≥ 5, 70% — 2–4, 40% — меньше 2)`}
     >
       <div className="w95-staff-avatar">
         <StaffAvatar staff={st} variant={AV.training} fallback={<span>👤</span>} />
@@ -35,7 +36,7 @@ export function StaffCard({ st, selected, disabled, note, onClick }: StaffCardPr
       <div className="w95-staff-power">
         <div style={{ width: `${Math.round(pct * 100)}%`, background: powerColor }} />
       </div>
-      <div className="w95-staff-power-label">POWER {st.power}/{st.maxPower}</div>
+      <div className="w95-staff-power-label">POWER {st.power}/{st.maxPower} · выработка {Math.round(fatigueMult(st.power) * 100)}%</div>
       <div className="w95-staff-stats">
         <span>П{st.stats.program}</span>
         <span>С{st.stats.scenario}</span>

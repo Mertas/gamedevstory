@@ -27,7 +27,10 @@ export function HardwareApp() {
             const cs = game.consoles[c.id];
             if (!cs) return null;
             const isOwn = c.id.startsWith('own-');
-            if (cs.removedAtWeek !== null && cs.removedAtWeek <= game.week) return null; // снята — не показываем
+            // аудит-51 03-P2-5: снятую консоль с купленной лицензией не скрываем — иначе игрок
+            // «теряет» платформу (и деньги за лицензию) без единого объяснения
+            const retired = cs.removedAtWeek !== null && cs.removedAtWeek <= game.week;
+            if (retired && !cs.licensed && !isOwn) return null;
 
             // таймер снятия (дата известна заранее; слух в журнале — за 3 недели)
             const removedDay = Array.isArray(c.removed) ? dateToDay(c.removed as [number, number, number]) : null;
@@ -36,7 +39,14 @@ export function HardwareApp() {
             let status = <span className="w95-hint">недоступна</span>;
             let buyDisabled = true;
             let buyTitle = '';
-            if (isOwn) {
+            if (retired && !isOwn) {
+              status = (
+                <>
+                  ❌ снята с производства
+                  <div className="w95-hint">лицензия больше не даёт проектов — новые игры на ней не выпустить</div>
+                </>
+              );
+            } else if (isOwn) {
               status = <span style={{ color: '#008000' }}>✓ ваша консоль</span>;
             } else if (cs.licensed) {
               status = <span style={{ color: '#008000' }}>✓ куплена</span>;
@@ -70,9 +80,10 @@ export function HardwareApp() {
                 <td>{c.company}</td>
                 <td>
                   {status}
-                  {retireIn !== null && !cs.licensed && (
+                  {retireIn !== null && !isOwn && (
                     <div className="w95-hint" style={{ color: retireIn <= 21 ? '#c00000' : undefined }}>
                       {retireIn <= 0 ? 'снятие на этой неделе' : `снятие через ${weeksLeft(retireIn)} нед.`}
+                      {cs.licensed ? ' — успейте выпустить игру' : ''}
                     </div>
                   )}
                 </td>
@@ -97,7 +108,8 @@ export function HardwareApp() {
         </tbody>
       </table>
       <div className="w95-hint">
-        О снятии с производства предупреждают за 3 недели (красным), о новинках — тоже за 3 недели.
+        О снятии с производства предупреждают заранее — в последние 3 недели отсчёт краснеет; о новинках — тоже за 3 недели.
+        После снятия консоль с купленной лицензией остаётся в списке, но новые проекты на ней невозможны.
         База консоли растёт с каждым релизом под неё.
       </div>
       <OwnConsolePanel />
