@@ -12,6 +12,7 @@ import { wtc } from '../../wtc';
 import { DevAnim } from './dev-anim';
 import { ReleasePanel } from './Release';
 import { MODES, ROLE_LABELS } from './shared';
+import { AV, StaffAvatar } from '../../StaffAvatar';
 
 // ─── статус разработки ───
 export function DevStatus() {
@@ -142,7 +143,7 @@ export function DevStatus() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.week, game.devContrib, gKey]);
 
-  // мины багов: летят от кодера к счётчику «Баги» (1 мина = 1 баг)
+  // мины багов: летят из аватарок разработчиков к счётчику «Баги» (1 мина = 1 баг)
   useEffect(() => {
     if (!g) return;
     const bugs = g.bugs ?? 0;
@@ -153,8 +154,10 @@ export function DevStatus() {
     if (bugsAccRef.current < 0.5) return; // мина = 1 баг, дробь копим
     const n = Math.floor(bugsAccRef.current);
     bugsAccRef.current -= n;
-    engineRef.current?.spawnMines(n);
-  }, [g, bugsDep, weekStartedDep]);
+    // кто мог «родить» баг: активные сотрудники (не дома и не в отпуске) — мины летят из их аватарок
+    const ids = game.staff.filter((s) => s.homeWeeks === 0 && (s.restDays ?? 0) === 0).map((s) => s.id);
+    engineRef.current?.spawnMines(n, ids);
+  }, [g, bugsDep, weekStartedDep, game.staff]);
 
   if (!g) return null;
   const genre = genreById(meta, g.genreId);
@@ -218,6 +221,10 @@ export function DevStatus() {
                       {g.contribTotal ? ` · вклад: ${Math.round(g.contribTotal[s.id] ?? 0)}` : ''}
                     </span>
                   </div>
+                </td>
+                {/* фича (юзер, 13.10): узкая колонка с аватаркой — источник иконок вклада и мин багов */}
+                <td data-staff-avatar={s.id} style={{ width: 36, textAlign: 'center', verticalAlign: 'middle' }}>
+                  <StaffAvatar staff={s} variant={AV.desktop} />
                 </td>
                 <td>{role ? <b>{ROLE_LABELS[role]}</b> : <span className="w95-hint">—</span>}</td>
               </tr>

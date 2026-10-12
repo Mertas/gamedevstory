@@ -175,7 +175,7 @@ export class DevAnim {
   private tickSec = 1;
 
   // геометрия (кэш на такт)
-  private srcPos = new Map<string, { x: number; y: number }>();
+  private srcPos = new Map<string, { x0: number; y0: number; w: number; h: number }>();
   private barEdge: Record<AnimAttr, { x: number; y: number }> = {
     fun: { x: 0, y: 0 }, creativity: { x: 0, y: 0 }, graphics: { x: 0, y: 0 }, sound: { x: 0, y: 0 },
   };
@@ -371,38 +371,44 @@ export class DevAnim {
     }
   }
 
-  /** Мины багов: от первого сотрудника к счётчику «Баги» (1 мина = 1 баг). */
-  spawnMines(n: number): void {
+  /** Мины багов: из аватарок разработчиков к счётчику «Баги» (1 мина = 1 баг).
+   *  staffIds — кто мог «родить» баги (активные сотрудники); пусто/не нашлись — первый, как раньше. */
+  spawnMines(n: number, staffIds: string[] = []): void {
     this.wake();
     if (this.fx === 'min') return; // «минимум»: мины не летят (счётчик багов ведёт React)
     const root = this.root;
-    const fromEl = root.querySelector<HTMLElement>('[data-staff-id]');
     const toEl = root.querySelector<HTMLElement>('[data-bugs]');
-    if (!fromEl || !toEl) return;
+    if (!toEl) return;
     const rr = root.getBoundingClientRect();
     const sx = root.scrollLeft;
     const sy = root.scrollTop;
-    const fr = fromEl.getBoundingClientRect();
+    const boxOf = (el: HTMLElement): { x0: number; y0: number; w: number; h: number } => {
+      const r = el.getBoundingClientRect();
+      return { x0: r.left - rr.left + sx, y0: r.top - rr.top + sy, w: r.width, h: r.height };
+    };
+    const pool = [...root.querySelectorAll<HTMLElement>('[data-staff-avatar]')]
+      .filter((el) => staffIds.includes(el.dataset.staffAvatar ?? ''));
+    const fallbackEl = root.querySelector<HTMLElement>('[data-staff-id]');
+    if (pool.length === 0 && !fallbackEl) return;
     const tr = toEl.getBoundingClientRect();
-    const startX = fr.right - rr.left + sx + 4;
-    const startY = fr.top - rr.top + sy + fr.height / 2;
     const targetX = tr.left - rr.left + sx + 2;
     const targetY = tr.top - rr.top + sy + tr.height / 2;
     const now = performance.now() / 1000;
-    const step = Math.max(3, Math.min(13, 70 / Math.max(1, n)));
     for (let k = 0; k < n; k++) {
       if (this.chips.length >= MAX_ALIVE) break;
+      const el = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)]! : fallbackEl!;
+      const from = this.srcPoint(boxOf(el));
       const chip = this.pool.pop() ?? ({} as Chip);
       chip.kind = 'mine';
       chip.attr = 'fun';
       chip.weight = 0;
       chip.heavy = 0;
-      chip.x0 = startX + k * step;
-      chip.y0 = startY;
+      chip.x0 = from.x;
+      chip.y0 = from.y;
       chip.x1 = targetX;
       chip.y1 = targetY;
-      chip.cx1 = chip.x0 + (targetX - chip.x0) * 0.3;
-      chip.cy1 = startY - 30 - Math.random() * 20;
+      chip.cx1 = from.x + (targetX - from.x) * 0.3;
+      chip.cy1 = from.y - 30 - Math.random() * 20;
       chip.cx2 = targetX - 30;
       chip.cy2 = targetY - 16;
       chip.t0 = now + k * 0.1 + Math.random() * 0.04;
@@ -438,12 +444,18 @@ export class DevAnim {
     const sx = root.scrollLeft;
     const sy = root.scrollTop;
     this.srcPos.clear();
-    for (const el of root.querySelectorAll<HTMLElement>('[data-staff-id]')) {
-      const id = el.dataset.staffId;
-      if (!id) continue;
-      const r = el.getBoundingClientRect();
-      this.srcPos.set(id, { x: r.right - rr.left + sx + 4, y: r.top - rr.top + sy + r.height / 2 });
-    }
+    // Фича (юзер, 13.10): источник иконок вклада — аватарка сотрудника (узкая колонка таблицы);
+    // если её нет — старый ориентир (правый край ячейки имени). Храним бокс: старт — случайная точка.
+    const addSrc = (sel: string, attr: 'staffAvatar' | 'staffId'): void => {
+      for (const el of root.querySelectorAll<HTMLElement>(sel)) {
+        const id = el.dataset[attr];
+        if (!id || this.srcPos.has(id)) continue;
+        const r = el.getBoundingClientRect();
+        this.srcPos.set(id, { x0: r.left - rr.left + sx, y0: r.top - rr.top + sy, w: r.width, h: r.height });
+      }
+    };
+    addSrc('[data-staff-avatar]', 'staffAvatar');
+    addSrc('[data-staff-id]', 'staffId');
     for (const a of ANIM_ATTRS) {
       const bar = root.querySelector<HTMLElement>(`[data-attr="${a}"] .dev-bar`);
       const fill = bar?.querySelector<HTMLElement>(':scope > div') ?? null;
@@ -481,8 +493,18 @@ export class DevAnim {
     return [x, y];
   }
 
+  /** Случайная точка старта внутри бокса источника (аватарка — «летит из любого места иконки»). */
+  private srcPoint(b: { x0: number; y0: number; w: number; h: number }): { x: number; y: number } {
+    const pad = Math.max(0, Math.min(6, Math.floor(Math.min(b.w, b.h) / 4)));
+    return {
+      x: b.x0 + pad + Math.random() * Math.max(1, b.w - pad * 2),
+      y: b.y0 + pad + Math.random() * Math.max(1, b.h - pad * 2),
+    };
+  }
+
   private launch(p: Pending, now: number): void {
-    const from = this.srcPos.get(p.staffId);
+    const box = this.srcPos.get(p.staffId);
+    const from = box ? this.srcPoint(box) : null;
     const to = this.barEdge[p.attr];
     if (!from || !this.w || this.chips.length >= MAX_ALIVE || this.fx === 'min') {
       // источника нет / перегруз / режим «минимум»: зачисляем мгновенно — счётчик честный
