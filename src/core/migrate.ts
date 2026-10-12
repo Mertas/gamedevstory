@@ -6,6 +6,7 @@ import { staffNameRu } from './data/staff-ru';
 import { capInit } from '../shared/train';
 import { ownConsoleStartBase } from '../shared/consoles';
 import { avatarGender } from '../shared/hero';
+import { CONSOLES } from './data/db';
 
 export const SAVE_VERSION = 18; // 18: аудит-51 05-P2-6 финал партии (finale; ставит тик) и письмо двадцатилетия (anniversary20); 17: v1.54.9 бустеры-заряды (применение требует неиспользованной покупки, аудит-51); 16: PLAN-49 Э3 числа саги (startWeek/lastWeek/lastGap — «эпоха» и «прошло» в текстах); 15: PLAN-49 сага «Синяя Комета» (опциональное поле saga; старт после первого релиза); 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
@@ -71,6 +72,19 @@ export function migrateSave(state: GameState): GameState {
   // v1.43: продавец — тост-заметка без паузы; висящий salesman-попап снимаем всегда —
   // в новых клиентах его нет, иначе игра встала бы навсегда
   if (state.pendingEvent?.type === 'salesman') state.pendingEvent = null;
+
+  // аудит-51 01-P2-7: консоли, добавленные в данные ПОСЛЕ старта партии, у старых сейвов
+  // отсутствуют в state.consoles — движок молча их не видит. Repair не зависит от версии:
+  // доводим сейв до полного списка CONSOLES (существующие записи не трогаем).
+  state.consoles ??= {};
+  for (const c of CONSOLES) {
+    state.consoles[c.id] ??= {
+      licensed: c.licenseCost === 0,
+      base: c.installBase,
+      availableAtWeek: null,
+      removedAtWeek: null,
+    };
+  }
 
   if (v < 11) {
     // PLAN-44: сюжетные линии — каркас состояния (старые сейвы без арок)

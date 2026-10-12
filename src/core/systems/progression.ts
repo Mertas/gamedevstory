@@ -448,7 +448,10 @@ export function takeContract(state: GameState, contractId: number, staffIds: str
 export function tickContracts(state: GameState, rng: Rng): void {
   for (const c of state.contracts) {
     if (c.done) continue;
-    const team = c.staffIds.map((id) => staffOf(state, id)).filter(Boolean) as Staff[];
+    // аудит-51 01-P2-6: отпуск/дом не работают над контрактом (как и над проектом в devTick)
+    const team = c.staffIds
+      .map((id) => staffOf(state, id))
+      .filter((s): s is Staff => !!s && s.homeWeeks === 0 && (s.restDays ?? 0) === 0);
     const sum = (k: 'program' | 'scenario' | 'graphics' | 'sound') => team.reduce((a, s) => a + s.stats[k], 0);
     c.progress.program += sum('program') * CONFIG.CONTRACT_WEEKLY_RATE;
     c.progress.scenario += sum('scenario') * CONFIG.CONTRACT_WEEKLY_RATE;

@@ -306,7 +306,8 @@ export function debugTick(state: GameState, rng: Rng): void {
   const assigned = new Set(game.assignments.debug ?? []);
   const busy = busyStaffIds(state); // M9: занятые на контрактах не отлаживают
   const debuggers = state.staff
-    .filter((s) => s.homeWeeks === 0 && !busy.has(s.id))
+    // аудит-51 01-P2-5: отпуск/дом отладкой не занимаются (та же проверка, что в devTick)
+    .filter((s) => s.homeWeeks === 0 && (s.restDays ?? 0) === 0 && !busy.has(s.id))
     .map((s) => ({ program: s.stats.program, weight: assigned.has(s.id) ? 1 : 0.7 }));
   const rate = debugRate(debuggers);
   // AP-13: копим дробную часть скорости между днями. Без этого команда со слабым Program

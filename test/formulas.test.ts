@@ -9,6 +9,7 @@ import { createRng, type Rng } from '../src/core/rng';
 import { CONFIG } from '../src/core/config';
 import { comboGrade } from '../src/core/systems/dev';
 import { CRITICS } from '../src/core/data/critics'; // PLAN-30: 10 журналов
+import { dateToDay } from '../src/shared/consoles'; // аудит-51 01-P2-1: сверка праздников с календарём
 
 const CRITIC_WEIGHTS = CRITICS.map((c) => c.weights);
 
@@ -122,8 +123,10 @@ describe('баги', () => {
   it('комбо F добавляет баги', () => {
     expect(totalBugs(1000, 'normal', 'F')).toBe(totalBugs(1000, 'normal', 'C') + 10);
   });
-  it('скорость отладки = Σ Program × DEBUG_RATE (в день)', () => {
+  it('скорость отладки = Σ (Program × вес) × DEBUG_RATE — аудит-51 01-P2-5', () => {
     expect(debugRate([{ program: 40 }, { program: 60 }])).toBeCloseTo(100 * CONFIG.DEBUG_RATE);
+    // назначенные в debug-роль (weight 1) эффективнее прочих (0.7)
+    expect(debugRate([{ program: 100, weight: 1 }, { program: 100, weight: 0.7 }])).toBeCloseTo(170 * CONFIG.DEBUG_RATE);
   });
 });
 
@@ -138,14 +141,15 @@ describe('продажи', () => {
     expect(plan.totalUnits).toBeLessThan(25);
     expect(plan.totalRevenue).toBeGreaterThan(200);
   });
-  it('PLAN-32: неделя с 1 мая (день года 30) продаёт в 1.5–2 раза сильнее', () => {
-    // релиз 24: 1 мая попадает в первую неделю (дни 24…30)
+  it('PLAN-32: неделя, задевшая 1 мая (день года 31), продаёт в 1.5–2 раза сильнее', () => {
+    // аудит-51 01-P2-1: 1 мая = день 31 (1 апреля = 1). Неделя релиза 25…31 — праздничная,
+    // следующая 32…38 — обычная (9 мая = 39 в неё не попадает, недели различаются)
     const plan = salesPlan({
       installBase: 1000, score: 20, combo: 'C', pop: 'B',
-      fans: 0, fame: 10, hype: 10, sequel: false, consoleMult: 1, releaseWeek: 24,
+      fans: 0, fame: 10, hype: 10, sequel: false, consoleMult: 1, releaseWeek: 25,
     });
     const wk = (n: number) => plan.weeks.slice(n * 7, n * 7 + 7).reduce((a, w) => a + (w.unitsF ?? w.units), 0);
-    expect(weekFactor(24, 0).high).toBe(true);
+    expect(weekFactor(25, 0).high).toBe(true);
     // у праздничной недели надбавка ×1.5+ сверх базы, у соседней — разброс максимум +15%
     expect(wk(0)).toBeGreaterThan(wk(1) * 1.2);
   });
@@ -254,6 +258,19 @@ describe('PLAN-32: распределение продаж (обратный eas
       }
     }
     expect(Array.from({ length: 24 }, (_, w) => weekFactor(1, w).high).some(Boolean)).toBe(true);
+  });
+
+  it('аудит-51 01-P2-1: дни праздников в CONFIG сходятся с календарём dateToDay', () => {
+    const doys = [
+      dateToDay([1, 2, 1]), // 1 мая
+      dateToDay([1, 2, 9]), // 9 мая
+      dateToDay([1, 3, 12]), // 12 июня
+      dateToDay([1, 8, 4]), // 4 ноября
+      dateToDay([1, 11, 23]), // 23 февраля
+      dateToDay([1, 12, 8]), // 8 марта
+    ];
+    expect([...CONFIG.HOLIDAY_DOY].sort((a, b) => a - b)).toEqual([...doys].sort((a, b) => a - b));
+    expect(CONFIG.HOLIDAY_RANGES).toEqual([[dateToDay([1, 10, 1]), dateToDay([1, 10, 8])]]); // 1–8 января
   });
 
   it('сумма за жизнь держится в прежних пределах (разброс нормирован, праздники — сверху)', () => {

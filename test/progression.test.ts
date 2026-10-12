@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/core/config';
 import {
   applyCareerManual, buyAd, buyBooster, buyCareerManual, levelUpStaff, startOwnConsole, takeContract,
-  trainStaff, applyBooster, tickSalesman,
+  trainStaff, applyBooster, tickSalesman, tickContracts,
 } from '../src/core/systems/progression';
 import { contractForecast } from '../src/core/formulas';
 import type { Staff } from '../src/core/types';
@@ -295,6 +295,20 @@ describe('M9: контракты — занятость и кулдаун', () =
     if (!again.ok) expect(again.error).toContain('нед.');
     g.week += CONFIG.CONTRACT_COOLDOWN_WEEKS * 7;
     expect(takeContract(g, 1, [g.staff[1]!.id], rng()).ok).toBe(true);
+  });
+
+  it('аудит-51 01-P2-6: отдыхающий не двигает прогресс контракта', () => {
+    const g = gameWithStaff();
+    const s = g.staff[0]!;
+    expect(takeContract(g, 1, [s.id], rng()).ok).toBe(true);
+    const cs = g.contracts[0]!;
+    const before = cs.progress.program;
+    s.restDays = 3; // сотрудник в отпуске
+    tickContracts(g, rng());
+    expect(cs.progress.program).toBe(before);
+    s.restDays = 0;
+    tickContracts(g, rng());
+    expect(cs.progress.program).toBeGreaterThan(before);
   });
 
   it('занятого на контракте нельзя назначить на второй', () => {

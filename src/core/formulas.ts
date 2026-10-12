@@ -112,8 +112,9 @@ export function totalBugs(costK: number, mode: Mode, combo: ComboGrade): number 
   return Math.max(0, Math.round(fromCost + comboBonus));
 }
 
-export function debugRate(debuggers: { program: number }[]): number {
-  return debuggers.reduce((a, d) => a + d.program, 0) * CONFIG.DEBUG_RATE;
+// аудит-51 01-P2-5: вес роли учитывается — назначенные в debug (1) отлаживают сильнее прочих (0.7)
+export function debugRate(debuggers: { program: number; weight?: number }[]): number {
+  return debuggers.reduce((a, d) => a + d.program * (d.weight ?? 1), 0) * CONFIG.DEBUG_RATE;
 }
 
 // ---------- рецензии (09 §4) ----------

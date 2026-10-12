@@ -142,39 +142,55 @@ export function awardsCeremony(state: GameState, rng: Rng): void {
   // аудит-51 P1-8: окно участия — от прошлогодней церемонии до сегодняшней (раньше попадали
   // только игры первых 62 дней года — релиз «второй половины» года не мог выиграть никогда)
   const thisAwardsWeek = (state.year - 1) * CONFIG.YEAR_LENGTH + CONFIG.AWARDS_DAY;
-  const eligible = state.history.filter(
-    (h) => h.releaseWeek > thisAwardsWeek - CONFIG.YEAR_LENGTH && h.releaseWeek <= thisAwardsWeek && h.score >= CONFIG.HALL_OF_FAME,
+  const yearGames = state.history.filter(
+    (h) => h.releaseWeek > thisAwardsWeek - CONFIG.YEAR_LENGTH && h.releaseWeek <= thisAwardsWeek,
   );
-  if (eligible.length === 0) return;
+  if (yearGames.length === 0) return;
 
-  const winner = [...eligible].sort((a, b) => b.score - a.score)[0]!;
+  // зал славы: оценка ≥ HALL_OF_FAME (антипремия ниже смотрит на ВСЕ игры года)
+  const eligible = yearGames.filter((h) => h.score >= CONFIG.HALL_OF_FAME);
   const year = state.year;
 
-  if (winner.score >= CONFIG.GRAND_PRIZE_SCORE && rng.chance(0.7)) {
-    state.money += CONFIG.PRIZE_GRAND;
-    state.awards.grand += 1;
-    winner.awards.push(`Гран-при ${year}`);
-    log(state, `🏆 ГРАН-ПРИ ${year}: «${winner.name}» (+${CONFIG.PRIZE_GRAND}K)!`);
-  } else if (winner.score >= CONFIG.HALL_OF_FAME && rng.chance(0.4)) {
-    state.money += CONFIG.PRIZE_RUNNER_UP;
-    state.awards.runnerUp += 1;
-    winner.awards.push(`Второе место ${year}`);
-    log(state, `🥈 Второе место ${year}: «${winner.name}» (+${CONFIG.PRIZE_RUNNER_UP}K)`);
+  if (eligible.length > 0) {
+    const winner = [...eligible].sort((a, b) => b.score - a.score)[0]!;
+
+    if (winner.score >= CONFIG.GRAND_PRIZE_SCORE && rng.chance(0.7)) {
+      state.money += CONFIG.PRIZE_GRAND;
+      state.awards.grand += 1;
+      winner.awards.push(`Гран-при ${year}`);
+      log(state, `🏆 ГРАН-ПРИ ${year}: «${winner.name}» (+${CONFIG.PRIZE_GRAND}K)!`);
+    } else if (winner.score >= CONFIG.HALL_OF_FAME && rng.chance(0.4)) {
+      state.money += CONFIG.PRIZE_RUNNER_UP;
+      state.awards.runnerUp += 1;
+      winner.awards.push(`Второе место ${year}`);
+      log(state, `🥈 Второе место ${year}: «${winner.name}» (+${CONFIG.PRIZE_RUNNER_UP}K)`);
+    }
+
+    // дизайн/музыка
+    // аудит-51 P1-12: лучшая по атрибуту среди eligible без абсолютного порога (150 — из старой
+    // шкалы; после перекалибровки статов он делал эти награды почти недостижимыми)
+    const design = [...eligible].sort((a, b) => b.attrs.graphics - a.attrs.graphics)[0]!;
+    state.money += CONFIG.PRIZE_DESIGN;
+    state.awards.design += 1;
+    design.awards.push(`Лучший дизайн ${year}`);
+    log(state, `🎨 Лучший дизайн ${year}: «${design.name}» (+${CONFIG.PRIZE_DESIGN}K)`);
+    const music = [...eligible].sort((a, b) => b.attrs.sound - a.attrs.sound)[0]!;
+    state.money += CONFIG.PRIZE_MUSIC;
+    state.awards.music += 1;
+    music.awards.push(`Лучшая музыка ${year}`);
+    log(state, `🎵 Лучшая музыка ${year}: «${music.name}» (+${CONFIG.PRIZE_MUSIC}K)`);
   }
 
-  // дизайн/музыка
-  // аудит-51 P1-12: лучшая по атрибуту среди eligible без абсолютного порога (150 — из старой
-  // шкалы; после перекалибровки статов он делал эти награды почти недостижимыми)
-  const design = [...eligible].sort((a, b) => b.attrs.graphics - a.attrs.graphics)[0]!;
-  state.money += CONFIG.PRIZE_DESIGN;
-  state.awards.design += 1;
-  design.awards.push(`Лучший дизайн ${year}`);
-  log(state, `🎨 Лучший дизайн ${year}: «${design.name}» (+${CONFIG.PRIZE_DESIGN}K)`);
-  const music = [...eligible].sort((a, b) => b.attrs.sound - a.attrs.sound)[0]!;
-  state.money += CONFIG.PRIZE_MUSIC;
-  state.awards.music += 1;
-  music.awards.push(`Лучшая музыка ${year}`);
-  log(state, `🎵 Лучшая музыка ${year}: «${music.name}» (+${CONFIG.PRIZE_MUSIC}K)`);
+  // аудит-51 01-P2-3 / 05-P3-5: антипремия «Худшая игра года» — релиз с кучей багов (порог 50+,
+  // plan/03:58: «50–60 багов на релизе → −$300K»). Смотрит на все игры года, не только зал славы;
+  // в год без грязных релизов не выдаётся.
+  const worst = [...yearGames].sort((a, b) => b.bugs - a.bugs)[0]!;
+  if (worst.bugs >= CONFIG.WORST_BUGS_MIN) {
+    state.money -= CONFIG.PRIZE_WORST;
+    state.awards.worst += 1;
+    worst.awards.push(`Худшая игра ${year}`);
+    log(state, `💩 Худшая игра ${year}: «${worst.name}» (${worst.bugs} багов на релизе, −${CONFIG.PRIZE_WORST}K)`);
+  }
 }
 
 // Gamedex (M5, plan/05 §6): выставка 1–7 июля (дни 92–98), офис 2+; приход = пауза (как продавец),
