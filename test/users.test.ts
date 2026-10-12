@@ -7,8 +7,9 @@ import express from 'express';
 import { createRequire } from 'node:module';
 import { createHash, randomBytes, scryptSync } from 'node:crypto';
 import { registerApi } from '../src/server/api';
+import { PASSWORD_RESET } from '../src/server/config';
 import { SessionRegistry } from '../src/server/sessions';
-import { UserService } from '../src/server/users';
+import { UserService, isValidEmail } from '../src/server/users';
 import { SAVE_PAYLOAD_MAX_BYTES } from '../src/server/limits';
 import { CONFIG } from '../src/core/config';
 import { currentDifficulty, DIFFICULTY } from '../src/core/difficulty';
@@ -35,6 +36,33 @@ describe('PLAN-18: пользователи (SQLite)', () => {
     expect(u.userByToken(token)?.login).toBe('Mertas');
     u.logout(token);
     expect(u.userByToken(token)).toBeNull();
+    u.close();
+  });
+
+  it('аудит-51 02-P2-9: email валидируется при регистрации', () => {
+    const u = new UserService(tmpDb());
+    expect(isValidEmail('user@example.com')).toBe(true);
+    expect(isValidEmail('bad@@mail')).toBe(false);
+    expect(isValidEmail('a@b')).toBe(false);
+    expect(u.register('Mail1', '12345678', 'bad@@mail').ok).toBe(false);
+    expect(u.register('Mail2', '12345678', 'user@example.com').ok).toBe(true);
+    u.close();
+  });
+
+  it('аудит-51 02-P2-1/2: код сброса подтверждается и аннулируется dropReset', () => {
+    const u = new UserService(tmpDb());
+    u.register('Reset1', '12345678');
+    const r = u.startReset('Reset1');
+    expect(r.ok).toBe(true);
+    const code = r.ok ? r.code : '';
+    if (r.ok) expect(r.to).toBe('Reset1'); // без email письмо уходит «по логину»
+    const wrong = code === '000001' ? '000002' : '000001';
+    expect(u.confirmReset('Reset1', wrong, 'newpass99').ok).toBe(false);
+    expect(u.confirmReset('Reset1', code, 'newpass99').ok).toBe(true);
+    expect(u.login('Reset1', 'newpass99').ok).toBe(true);
+    const r2 = u.startReset('Reset1');
+    u.dropReset('Reset1');
+    expect(u.confirmReset('Reset1', r2.ok ? r2.code : '', 'thirdpass99').ok).toBe(false);
     u.close();
   });
 
@@ -521,6 +549,35 @@ describe('PLAN-18+: «Удалить весь прогресс» — все се
       expect(savesB.length).toBe(1);
       expect(savesB[0]!.studioName).toBe('Сосед');
       expect(registry.server(userB.id)).not.toBeNull();
+    } finally {
+      registry.disposeAll();
+      srv.close();
+      users.close();
+    }
+  });
+});
+
+// аудит-51 02-P2-2: нейтральность reset-request (не раскрывает существование логина)
+describe('аудит-51 02: сброс пароля через API', () => {
+  it.skipIf(!PASSWORD_RESET)('ответ на известный и неизвестный логин неотличим (ok:true)', async () => {
+    const users = new UserService(tmpDb());
+    users.register('Known', '12345678');
+    const registry = new SessionRegistry(users);
+    const app = express();
+    app.use(express.json());
+    registerApi(app, { users, mail: { send: async () => 'dev' as const }, sessions: registry });
+    const srv = app.listen(0);
+    try {
+      const base = `http://127.0.0.1:${(srv.address() as { port: number }).port}`;
+      const post = (login: string) => fetch(`${base}/api/auth/reset-request`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ login }),
+      });
+      const known = (await (await post('Known')).json()) as { ok: boolean; devCode?: string };
+      const unknown = (await (await post('NoSuchUser_zzz')).json()) as { ok: boolean; devCode?: string };
+      expect(known.ok).toBe(true);
+      expect(unknown.ok).toBe(true); // снаружи неотличимо
+      expect(known.devCode).toBeTruthy(); // известному в dev-режиме приходит код
+      expect(unknown.devCode).toBeUndefined(); // неизвестному — ничего
     } finally {
       registry.disposeAll();
       srv.close();

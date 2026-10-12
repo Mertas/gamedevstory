@@ -1,13 +1,13 @@
 // PLAN-18/21: пользователи, сессии, сброс пароля и сохранения — в SQLite (data/users.db).
 // В базе нет ни паролей, ни токенов в открытом виде:
 //   pass_hash = "s2$N$r$p$<hex>" (scrypt + уникальная соль + перец сервера из GDS_PEPPER),
-//   сессии  — sha256(токен), коды сброса — sha256(логин:код).
+//   сессии  — sha256(токен), коды сброса — HMAC-SHA256(перец, логин:код).
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'node:module';
 import type { DatabaseSync as SqliteDatabase } from 'node:sqlite';
-import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import { drawMinigame, type MinigameBag } from '../shared/minigames';
 import { DM_KEEP_PER_PAIR, SAVE_PAYLOAD_MAX_BYTES } from './limits';
 
@@ -29,6 +29,16 @@ const LEGACY_SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 128 * 1024 * 1024 } as con
 const KEYLEN = 64;
 /** Перец: секрет сервера, которого нет в базе. Утечка одного файла БД не даёт перебирать пароли. */
 const pepper = (): string => process.env.GDS_PEPPER ?? '';
+
+/** аудит-51 02-P2-1: код сброса хранится HMAC с перцем сервера — утечка базы не даёт офлайн-перебора. */
+const resetCodeHash = (login: string, code: string): string =>
+  createHmac('sha256', pepper()).update(`${login}:${code}`).digest('hex');
+
+/** аудит-51 02-P2-9: строгий email — значение уходит в SMTP-парсер nodemailer и в письма. */
+export function isValidEmail(s: string): boolean {
+  if (!s || s.length > 254) return false;
+  return /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(s);
+}
 
 export interface UserRow {
   id: number;
@@ -91,6 +101,11 @@ function verifyPassword(pass: string, salt: string, stored: string): boolean {
   const want = Buffer.from(q.hex, 'hex');
   return got.length === want.length && timingSafeEqual(got, want);
 }
+
+// аудит-51 02-P2-2: фиктивные соль/хэш — выравнивают время ответа входа для несуществующих логинов
+const DUMMY = hashPassword('timing-equalizer');
+const DUMMY_SALT = DUMMY.salt;
+const DUMMY_HASH = DUMMY.hash;
 
 /** Пересчитать хэш при успешном входе: легаси-схема или слабые параметры. */
 function needsRehash(stored: string): boolean {
@@ -201,10 +216,13 @@ export class UserService {
     if (!/^[a-zA-Z0-9_.-]{3,24}$/.test(name)) return { ok: false, error: 'Логин: 3–24 символа (латиница, цифры, _ . -)' };
     if (password.length < MIN_PASSWORD) return { ok: false, error: `Пароль — не короче ${MIN_PASSWORD} символов` };
     if (this.userByLogin(name)) return { ok: false, error: 'Такой логин уже занят' };
+    // аудит-51 02-P2-9: адрес принимаем только в строгом формате (дальше — SMTP-парсер/SendPulse)
+    const em = (email ?? '').trim();
+    if (em && !isValidEmail(em)) return { ok: false, error: 'Некорректный email' };
     const { salt, hash } = hashPassword(password);
     const created = Date.now();
     this.db.prepare('INSERT INTO users (login, email, pass_hash, salt, created, admin) VALUES (?, ?, ?, ?, ?, 0)')
-      .run(name, email?.trim() || null, hash, salt, created);
+      .run(name, em || null, hash, salt, created);
     const u = this.userByLogin(name)!;
     return { ok: true, user: UserService.toUser(u) };
   }
@@ -212,7 +230,12 @@ export class UserService {
   /** Вход: проверка пароля + выдача токена сессии. */
   login(login: string, password: string): Res<{ user: UserRow; token: string }> {
     const u = this.userByLogin(login.trim());
-    if (!u || !verifyPassword(password, u.salt, u.pass_hash)) return { ok: false, error: 'Неверный логин или пароль' };
+    if (!u) {
+      // аудит-51 02-P2-2: фиктивная проверка пароля — время ответа не выдаёт существование логина
+      verifyPassword(password, DUMMY_SALT, DUMMY_HASH);
+      return { ok: false, error: 'Неверный логин или пароль' };
+    }
+    if (!verifyPassword(password, u.salt, u.pass_hash)) return { ok: false, error: 'Неверный логин или пароль' };
     // старый хэш (без перца/слабые параметры) молча апгрейдим, пока пароль под рукой
     if (needsRehash(u.pass_hash)) {
       const fresh = hashPassword(password);
@@ -282,14 +305,15 @@ export class UserService {
     return true;
   }
 
-  /** Код восстановления: 6 цифр; хранится хэшем, живёт 15 минут. */
+  /** Код восстановления: 6 цифр; хранится HMAC-хэшем, живёт 15 минут. */
   startReset(login: string): Res<{ login: string; code: string; to: string }> {
     const u = this.userByLogin(login.trim());
     if (!u) return { ok: false, error: 'Пользователь не найден' };
     const code = String(randomInt(100000, 999999));
     this.db.prepare('INSERT OR REPLACE INTO resets (login, code_hash, expires) VALUES (?, ?, ?)')
-      .run(u.login, sha256(`${u.login}:${code}`), Date.now() + RESET_MS);
-    return { ok: true, login: u.login, code, to: u.email ?? u.login };
+      .run(u.login, resetCodeHash(u.login, code), Date.now() + RESET_MS);
+    // аудит-51 02-P2-9: на почту — только валидный email; иначе письмо уходит «по логину»
+    return { ok: true, login: u.login, code, to: u.email && isValidEmail(u.email) ? u.email : u.login };
   }
 
   confirmReset(login: string, code: string, password: string): Res<{ user: UserRow }> {
@@ -297,7 +321,7 @@ export class UserService {
     if (password.length < MIN_PASSWORD) return { ok: false, error: `Пароль — не короче ${MIN_PASSWORD} символов` };
     const row = this.db.prepare('SELECT code_hash, expires FROM resets WHERE login = ?').get(name) as { code_hash: string; expires: number } | undefined;
     if (!row || row.expires < Date.now()) return { ok: false, error: 'Код истёк — запросите новый' };
-    if (row.code_hash !== sha256(`${name}:${code.trim()}`)) return { ok: false, error: 'Неверный код' };
+    if (row.code_hash !== resetCodeHash(name, code.trim())) return { ok: false, error: 'Неверный код' };
     const u = this.userByLogin(name);
     if (!u) return { ok: false, error: 'Пользователь не найден' };
     const { salt, hash } = hashPassword(password);
@@ -305,6 +329,11 @@ export class UserService {
     this.db.prepare('DELETE FROM resets WHERE login = ?').run(name);
     this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id); // старые сессии — вон
     return { ok: true, user: UserService.toUser(u) };
+  }
+
+  /** аудит-51 02-P2-1: аннулировать активный код сброса (инвалидация после исчерпания попыток). */
+  dropReset(login: string): void {
+    this.db.prepare('DELETE FROM resets WHERE login = ?').run(login.trim());
   }
 
   /** Сид пользователя (Mertas) — создаётся при первом старте, если ещё нет; admin — владелец.

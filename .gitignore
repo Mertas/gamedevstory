@@ -23,3 +23,7 @@ music/
 .DS_Store
 Thumbs.db
 .dsh-shots/
+
+# аудит-51 02-P2-6: закрытые ключи не попадают в git
+*.key
+gds_key*

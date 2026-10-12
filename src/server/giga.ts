@@ -237,7 +237,9 @@ export async function generateStory(genreRu: string, typeRu: string): Promise<{ 
 
 /** SER-25: хвост промпта с исключениями — занятые и уже показанные названия (до 80, без дублей). */
 export function studioAvoidLine(exclude: string[]): string {
-  const avoid = [...new Set(exclude.map((s) => s.trim()).filter(Boolean))].slice(0, 80);
+  // аудит-51 02-P2-11: защита в глубину — данные клиента ≤40 символов и без управляющих знаков
+  const clean = exclude.map((s) => s.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 40)).filter(Boolean);
+  const avoid = [...new Set(clean)].slice(0, 80);
   if (avoid.length === 0) return '';
   return ` Не предлагай и не перефразируй эти названия — они уже есть: ${avoid.map((s) => `«${s}»`).join(', ')}.`;
 }

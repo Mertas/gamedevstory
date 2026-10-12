@@ -38,6 +38,16 @@ function sendSafe(ws0: WebSocket, payload: string): void {
 }
 
 const app = express();
+// аудит-51 02-P2-5: базовые security-заголовки. CSP — отдельной задачей (без отладки можно сломать UI);
+// HSTS — только когда запрос реально пришёл по https (за nginx смотрим X-Forwarded-Proto).
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // мини-игра живёт в iframe того же origin
+  res.setHeader('Referrer-Policy', 'same-origin');
+  const proto = String(req.headers['x-forwarded-proto'] ?? req.protocol);
+  if (proto === 'https') res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  next();
+});
 // аудит-51 02-P2-4: общий лимит тела — небольшой; 8 МБ оставляем только экспорту/импорту сейва
 const jsonSmall = express.json({ limit: '256kb' });
 const jsonBig = express.json({ limit: '8mb' });

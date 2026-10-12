@@ -105,6 +105,9 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   // защита от перебора: вход/сброс — 8 попыток за 10 минут, регистрация — 5 в час (на IP)
   const loginLimit = new RateLimit(8, 10 * 60 * 1000);
   const registerLimit = new RateLimit(5, 60 * 60 * 1000);
+  // аудит-51 02-P2-1: подтверждение кода сброса — окно на пару (IP, логин) и на логин целиком
+  const resetConfirmLimit = new RateLimit(8, 15 * 60 * 1000);
+  const resetConfirmLimitUser = new RateLimit(12, 15 * 60 * 1000);
 
   const features = { passwordReset: PASSWORD_RESET, inviteRequired: INVITE_REQUIRED };
 
@@ -169,11 +172,14 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
       return void res.json({ ok: false, error: 'Слишком много запросов — подождите 10 минут' });
     }
     const r = users.startReset(name);
-    if (!r.ok) return void res.json(r);
+    if (!r.ok) {
+      // аудит-51 02-P2-2: существование логина не раскрываем — ответ неотличим от успешного
+      return void res.json({ ok: true, message: 'Если такой логин зарегистрирован — код отправлен' });
+    }
     try {
       const mode = await mail.send(r.to, 'Восстановление пароля — Game Dev Studio',
         `Код восстановления: ${r.code}\nКод действует 15 минут.`);
-      res.json({ ok: true, ...(mode === 'dev' ? { devCode: r.code } : {}) });
+      res.json({ ok: true, message: 'Если такой логин зарегистрирован — код отправлен', ...(mode === 'dev' ? { devCode: r.code } : {}) });
     } catch (e) {
       res.json({ ok: false, error: e instanceof Error ? e.message : 'Не удалось отправить письмо' });
     }
@@ -184,8 +190,18 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
       return void res.json({ ok: false, error: 'Восстановление пароля на этом сервере недоступно — напишите владельцу студии' });
     }
     const { login, code, password } = (req.body ?? {}) as { login?: string; code?: string; password?: string };
+    // аудит-51 02-P2-1: свой лимит попыток; после его исчерпания активный код аннулируется
+    const rcName = String(login ?? '').trim().toLowerCase();
+    const okPair = resetConfirmLimit.allow(`rc:${ipOf(req)}:${rcName}`);
+    const okUser = resetConfirmLimitUser.allow(`rcu:${rcName}`);
+    if (!okPair || !okUser) {
+      users.dropReset(rcName);
+      return void res.json({ ok: false, error: 'Слишком много попыток — код аннулирован, запросите новый' });
+    }
     const r = users.confirmReset(String(login ?? ''), String(code ?? ''), String(password ?? ''));
     if (!r.ok) return void res.json(r);
+    resetConfirmLimit.reset(`rc:${ipOf(req)}:${rcName}`);
+    resetConfirmLimitUser.reset(`rcu:${rcName}`);
     const s = users.login(r.user.login, String(password ?? ''));
     if (!s.ok) return void res.json(s);
     setSession(res, s.token, isSecure(req));
@@ -313,7 +329,10 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     void withUser(req, res, async () => {
       try {
         // занятые (из сейвов) + уже показанные в форме (skip) — оба списка уходят в промпт
-        const skip = String(req.query.skip ?? '').split('|').map((s) => s.trim()).filter(Boolean).slice(-80);
+        // аудит-51 02-P2-11: строки клиента идут в промпт LLM — режем длину и управляющие символы
+        const skip = String(req.query.skip ?? '').split('|')
+          .map((s) => s.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40))
+          .filter(Boolean).slice(-80);
         const saved = users.studioNames().map((n) => n.trim()).filter(Boolean);
         const taken = new Set([...saved, ...skip].map((n) => n.toLowerCase()));
         const avoid = [...saved, ...skip];
