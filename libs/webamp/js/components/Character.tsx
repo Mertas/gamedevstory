@@ -1,5 +1,5 @@
 import * as React from "react";
-import deburr from "lodash/deburr";
+import { deburr } from "../deburr";
 
 interface Props extends React.HTMLAttributes<HTMLSpanElement> {
   children: string | number;

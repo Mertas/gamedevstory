@@ -15,7 +15,7 @@ import { EqualizerState } from "./reducers/equalizer";
 import { NetworkState } from "./reducers/network";
 import { MilkdropState } from "./reducers/milkdrop";
 import { TracksState } from "./reducers/tracks";
-import { IAudioMetadata, IOptions } from "music-metadata-browser";
+import type { IAudioMetadata, IOptions } from "music-metadata";
 import { Store as ReduxStore } from "redux";
 
 // Avoid warnings from Webpack: https://github.com/webpack/webpack/issues/7378
