@@ -8,7 +8,7 @@ import { newGame } from '../core/engine';
 import { ensureDifficulty, isDifficultyId } from '../core/difficulty';
 import { consoleEvents } from '../core/systems/market';
 import { type GameState, type StartProjectInput } from '../core/types';
-import { resetChat, type ChatState } from '../shared/chat';
+import { chatSystem, resetChat, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 
 import { generateStory, generateWithFallback, type LlmFn, type LlmMessage } from './giga';
@@ -229,6 +229,10 @@ export class GameServer {
     const loaded = this.saves.read();
     this.game = loaded?.game ?? newGame(Math.floor(Math.random() * 99991) + 1);
     this.chat = loaded?.chat ?? resetChat();
+    // аудит-51 01-P2-11: невалидный сейв не подменяется молча — игрок видит причину в чате
+    if (!loaded && this.saves.lastReadCorrupt) {
+      chatSystem(this.game, this.chat, '⚠️ Прежнее сохранение не удалось прочитать — начата новая партия. Копия старого сейва сохранена на сервере.');
+    }
     // BUG-01: догон консольных событий, пропущенных к текущему дню (старый сейв/пауза)
     if (loaded) consoleEvents(this.game);
     // PLAN-22: набор аккаунта — источник правды по доступности комбо (сейв мог отстать)

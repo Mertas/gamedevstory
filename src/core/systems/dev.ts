@@ -6,7 +6,7 @@ import type { ConsoleData } from '../data/schema';
 import { log } from '../log';
 import {
   debugRate, distributePoints, judgeScore, projectCost, reviewTotal, spreadScores,
-  salesPlan, totalBugs, weeklyPoints,
+  salesPlan, weeklyPoints,
 } from '../formulas';
 import type { Rng } from '../rng';
 import type {
@@ -233,10 +233,13 @@ export function devTick(state: GameState, rng: Rng): void {
     game.contribTotal[c.staffId] = (game.contribTotal[c.staffId] ?? 0) + c.amount;
   }
 
-  // баги пропорционально прогрессу
-  const total = totalBugs(game.totalCost, game.mode, game.comboGrade);
-  game.bugs += (total * daily) / game.totalCost;
-    game.bugsTotal = (game.bugsTotal ?? 0) + (total * daily) / game.totalCost; // PLAN-30: всего за разработку
+  // аудит-51 01-P2-12: баги копятся от очков разработки (BUGS_PER_COST — «баги за очко работы»,
+  // так их мерила лаборатория), а F-комбо даёт фиксированный штраф за проект (накопительно, не через цену)
+  const expectedDays = CONFIG.DEV_DAYS * CONFIG.MODE[game.mode].time;
+  const bugsPerDay = CONFIG.BUGS_PER_COST * CONFIG.MODE[game.mode].bugs * daily
+    + (game.comboGrade === 'F' ? CONFIG.BUGS_F_COMBO / expectedDays : 0);
+  game.bugs += bugsPerDay;
+  game.bugsTotal = (game.bugsTotal ?? 0) + bugsPerDay; // PLAN-30: всего за разработку
 
   // исследования
   const researchMult = game.mode === 'research' ? CONFIG.RESEARCH_MODE_MULT : 1;

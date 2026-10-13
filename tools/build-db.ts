@@ -5,7 +5,7 @@
 //          contracts, trainings, ads, hire_methods, offices,
 //          item_boosters, item_consumables
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -451,8 +451,11 @@ if (boosters.length !== 18) throw new Error(`boosters: ${boosters.length}`);
 // ---------------- создание БД ----------------
 
 mkdirSync(`${ROOT}data`, { recursive: true });
-rmSync(DB_PATH, { force: true }); // всегда пересоздаём с нуля
-const db = new DatabaseSync(DB_PATH);
+// аудит-51 04-P2-3: сборка идёт во временный файл, рабочая БД подменяется только после проверки
+// полноты — упавшая сборка (кривой research/*.md и т.п.) больше не оставляет проект без БД
+const TMP_DB = `${DB_PATH}.tmp`;
+rmSync(TMP_DB, { force: true });
+const db = new DatabaseSync(TMP_DB);
 db.exec(`
 PRAGMA journal_mode = OFF;
 PRAGMA user_version = 1;
@@ -572,4 +575,19 @@ console.log(`OK: genres=${genres.length} types=${types.length} combos=${combos.l
 
 db.exec(`PRAGMA user_version = 1;`);
 db.close();
+
+// аудит-51 04-P2-3: контроль полноты перед подменой рабочей БД (иначе — понятная ошибка и старая БД цела)
+const check = new DatabaseSync(TMP_DB, { readOnly: true });
+const tables = (check.prepare(
+  `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`,
+).all() as { name: string }[]).map((r) => r.name);
+const expectedTables = ['ads', 'combos', 'consoles', 'contracts', 'genres', 'hire_methods', 'item_boosters', 'item_consumables', 'offices', 'personalities', 'review_messages', 'staff', 'trainings', 'types'];
+const missing = expectedTables.filter((t) => !tables.includes(t));
+const vv = (check.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+const typeCount = (check.prepare('SELECT COUNT(*) AS n FROM types').get() as { n: number }).n;
+check.close();
+if (missing.length) throw new Error(`сборка неполна — нет таблиц: ${missing.join(', ')} (рабочая БД не тронута)`);
+if (vv !== 1) throw new Error(`user_version=${vv}, ожидается 1 (рабочая БД не тронута)`);
+if (typeCount < 79) throw new Error(`types=${typeCount} < 79 (рабочая БД не тронута)`);
+renameSync(TMP_DB, DB_PATH);
 console.log(`DB: ${DB_PATH}`);

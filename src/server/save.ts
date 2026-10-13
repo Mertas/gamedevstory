@@ -23,6 +23,8 @@ export interface LoadedSave {
 /** Контракт хранилища партии: файл (SaveManager) или запись в БД (DbSaveStore, sessions.ts). */
 export interface PersistAdapter {
   read(): LoadedSave | null;
+  /** аудит-51 01-P2-11: read() нашёл сейв, но он невалиден — запущена новая партия (копия сохранена) */
+  lastReadCorrupt?: boolean;
   autosave(game: GameState, chat: ChatState, force?: boolean): void;
   exportPayload(game: GameState, chat: ChatState): string;
   importPayload(raw: string): LoadedSave | null;
@@ -52,11 +54,14 @@ export function parseSavePayload(raw: string): LoadedSave | null {
  *  аудит-51 04-P2-4: судьба решена — оставляем для тестов и локальных прогонов, README поправлен. */
 export class SaveManager {
   private lastSaveDay = 0;
+  /** аудит-51 01-P2-11: был сейв, но не прочитался (пробрасывается в GameServer для уведомления игрока) */
+  lastReadCorrupt = false;
 
   constructor(private readonly path: string) {}
 
   /** Читает сейв; null — файла нет/битый (битый уходит в .corrupt-бэкап, молча не стирается). */
   read(): LoadedSave | null {
+    this.lastReadCorrupt = false;
     try {
       const loaded = parseSavePayload(fs.readFileSync(this.path, 'utf8'));
       if (loaded) {
@@ -101,6 +106,7 @@ export class SaveManager {
 
   /** Копия повреждённого сейва — «улика» рядом с файлом. */
   private backup(why: string): void {
+    this.lastReadCorrupt = true;
     try {
       fs.copyFileSync(this.path, `${this.path}.corrupt-${Date.now()}`);
       console.error('[gds] сейв повреждён — бэкап в data/save.json.corrupt-*; начата новая игра:', why);

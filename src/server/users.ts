@@ -130,10 +130,12 @@ export interface LeaderboardRow {
 
 export class UserService {
   private readonly db: SqliteDatabase;
+  private readonly dbFile: string;
 
   constructor(dbPath?: string) {
     // GDS_USERS_DB: прогоны/тесты работают на своей базе и не трогают живую
     const file = dbPath ?? process.env.GDS_USERS_DB ?? USERS_DB_PATH;
+    this.dbFile = file;
     fs.mkdirSync(path.dirname(file), { recursive: true });
     this.db = new DatabaseSync(file);
     this.db.exec('PRAGMA journal_mode = WAL');
@@ -674,6 +676,15 @@ export class UserService {
        FROM saves WHERE id = ? AND user_id = ?`,
     ).get(saveId, userId) as (SaveMeta & { payload: string }) | undefined;
     return row ?? null;
+  }
+
+  /** аудит-51 01-P2-11: файловая копия нечитаемого payload сейва (рядом с users.db, папка corrupt/). */
+  backupSavePayload(userId: number, saveId: number, payload: string): string {
+    const dir = path.join(path.dirname(this.dbFile), 'corrupt');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `save-u${userId}-s${saveId}-${Date.now()}.json`);
+    fs.writeFileSync(file, payload);
+    return file;
   }
 
   /** Автосейв: обновляет полезную нагрузку и метаданные (студия/дата/деньги). */

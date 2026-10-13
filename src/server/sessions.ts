@@ -13,6 +13,8 @@ import { accountTotalsFromGames } from '../shared/minigames';
 /** Полезная нагрузка сейва в БД: автосейв с тем же дебаунсом (10 игровых дней), что у файлового. */
 export class DbSaveStore implements PersistAdapter {
   private lastDay = 0;
+  /** аудит-51 01-P2-11: был payload, но не разобрался (копия сохранена, игрок будет уведомлён) */
+  lastReadCorrupt = false;
 
   constructor(
     private readonly users: UserService,
@@ -24,8 +26,19 @@ export class DbSaveStore implements PersistAdapter {
     const row = this.users.getSave(this.userId, this.saveId);
     if (!row) return null;
     const loaded = parseSavePayload(row.payload);
-    if (loaded) this.lastDay = loaded.game.week;
-    return loaded;
+    if (loaded) {
+      this.lastDay = loaded.game.week;
+      return loaded;
+    }
+    // аудит-51 01-P2-11: битый payload не затирается молча следующим автосейвом — копия рядом с users.db
+    this.lastReadCorrupt = true;
+    try {
+      const p = this.users.backupSavePayload(this.userId, this.saveId, row.payload);
+      console.error(`[gds] сейв #${this.saveId} пользователя #${this.userId} не разобран — копия: ${p}`);
+    } catch (e) {
+      console.error('[gds] копия битого сейва не удалась:', String(e).slice(0, 200));
+    }
+    return null;
   }
 
   autosave(game: GameState, chat: ChatState, force = false): void {

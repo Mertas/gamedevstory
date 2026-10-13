@@ -1,7 +1,7 @@
 {
   "name": "gamedev-story-clone",
   "private": true,
-  "version": "1.54.28",
+  "version": "1.54.29",
   "type": "module",
   "engines": {
     "node": ">=22.13"
@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "play": "tsx scripts/playthrough.ts",
     "db:build": "tsx tools/build-db.ts",
+    "saga:build": "node tools/build-saga.mjs",
     "avatars": "tsx tools/make-avatars.ts",
     "dev": "vite",
     "server": "tsx src/server/server.ts",

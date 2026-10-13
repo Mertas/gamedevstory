@@ -163,7 +163,8 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 }
 
 /* ─── M1 (plan/31): canvas-анимация вклада разработки ─── */
-.dev-anim-canvas { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 60; }
+/* аудит-51 04-P2-6: inset:0 (эквивалент left/top; при заданных JS-стилях width/height — запасной размер) */
+.dev-anim-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 60; }
 .dev-num { font-variant-numeric: tabular-nums; }
 .dev-bar { position: relative; }
 .dev-bar > div { transition: none; animation: dev-stripe 7s linear infinite; }

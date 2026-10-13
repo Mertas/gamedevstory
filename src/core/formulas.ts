@@ -111,6 +111,7 @@ export function distributePoints(
 }
 
 // ---------- баги ----------
+/** Справочная оценка суммарных багов за проект по калибровке (от стоимости). Фактические баги в партии копятся от очков — systems/dev.ts (аудит-51 01-P2-12). */
 export function totalBugs(costK: number, mode: Mode, combo: ComboGrade): number {
   const fromCost = costK * CONFIG.BUGS_PER_COST * CONFIG.MODE[mode].bugs;
   const comboBonus = combo === 'F' ? CONFIG.BUGS_F_COMBO : 0;

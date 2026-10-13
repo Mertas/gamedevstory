@@ -151,6 +151,8 @@ export class DevAnim {
   onLand?: (attr: AnimAttr) => void;
   private lastWorkAt = 0;
   private last = 0;
+  /** аудит-51 04-P2-6: мгновенный пересчёт геометрии при смене размеров окна (rAF может спать в простое) */
+  private ro: ResizeObserver | null = null;
   private dpr = 1;
   private w = 0;
   private h = 0;
@@ -233,6 +235,9 @@ export class DevAnim {
     this.last = performance.now() / 1000;
     this.lastWorkAt = this.last;
     this.measure();
+    // аудит-51 04-P2-6: ResizeObserver — размер канваса подгоняется сразу, а не только на такте
+    this.ro = new ResizeObserver(() => this.syncSize());
+    this.ro.observe(root);
     document.addEventListener('visibilitychange', this.onVisibility);
     // M3-каркас: любой ввод мгновенно будит тихий режим (латентность 0)
     for (const ev of ['pointerenter', 'pointerdown', 'focusin', 'keydown', 'scroll'] as const) {
@@ -246,6 +251,10 @@ export class DevAnim {
 
   destroy(): void {
     this.dead = true;
+    if (this.ro) {
+      this.ro.disconnect();
+      this.ro = null;
+    }
     if (this.hbOff) {
       this.hbOff();
       this.hbOff = null;
@@ -425,20 +434,28 @@ export class DevAnim {
     return base * k;
   }
 
-  /** Замер геометрии на такт: размер канваса, источники (сотрудники), цели (кромки баров). */
-  private measure(): void {
+  /** аудит-51 04-P2-6: размеры канваса — отдельно от замера сцен: зовётся каждый такт и ResizeObserver’ом.
+   *  DPR перечитывается на каждом замере (переезд окна на другой монитор, zoom страницы).
+   *  Канвас по-прежнему покрывает ВЕСЬ контент (scrollHeight): частицы летят к барам за пределами видимой области. */
+  private syncSize(): void {
     const root = this.root;
     const w = root.clientWidth;
     const h = Math.max(root.clientHeight, root.scrollHeight);
-    if (w !== this.w || h !== this.h) {
-      this.w = w;
-      this.h = h;
-      this.dpr = Math.min(2, window.devicePixelRatio || 1);
-      this.canvas.width = Math.round(w * this.dpr);
-      this.canvas.height = Math.round(h * this.dpr);
-      this.canvas.style.width = `${w}px`;
-      this.canvas.style.height = `${h}px`;
-    }
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (w === this.w && h === this.h && dpr === this.dpr) return;
+    this.w = w;
+    this.h = h;
+    this.dpr = dpr;
+    this.canvas.width = Math.round(w * dpr);
+    this.canvas.height = Math.round(h * dpr);
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+  }
+
+  /** Замер геометрии на такт: размер канваса, источники (сотрудники), цели (кромки баров). */
+  private measure(): void {
+    this.syncSize();
+    const root = this.root;
     this.font = getComputedStyle(root).fontFamily || 'Tahoma';
     const rr = root.getBoundingClientRect();
     const sx = root.scrollLeft;

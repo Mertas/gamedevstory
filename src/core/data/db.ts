@@ -12,7 +12,29 @@ const require = createRequire(import.meta.url);
 const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite');
 
 const DB_PATH = fileURLToPath(new URL('../../../data/gamedev.db', import.meta.url));
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const SCHEMA_VERSION = 1;
+
+// аудит-51 04-P2-3: внятные ошибки вместо сырого SQLite — что именно не так и как починить.
+// (Без собранной БД падал весь vitest и сервер сообщал «unable to open database file».)
+function openDb(): InstanceType<typeof DatabaseSync> {
+  let d: InstanceType<typeof DatabaseSync>;
+  try {
+    d = new DatabaseSync(DB_PATH, { readOnly: true });
+  } catch (e) {
+    throw new Error(
+      `Контентная БД не найдена или не читается: ${DB_PATH}\n` +
+      `Соберите её из research/*.md: pnpm db:build (причина: ${String(e).slice(0, 140)})`,
+    );
+  }
+  const vv = (d.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0;
+  if (vv !== SCHEMA_VERSION) {
+    d.close();
+    throw new Error(`Контентная БД устарела (user_version=${vv}, ожидается ${SCHEMA_VERSION}). Пересоберите: pnpm db:build`);
+  }
+  return d;
+}
+
+const db = openDb();
 
 type Row = Record<string, unknown>;
 
