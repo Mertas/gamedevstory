@@ -13,7 +13,7 @@ export function ResearchApp() {
         <tbody>
           {meta.genres.map((g) => (
             <tr key={g.id}>
-              <td>{g.name}</td>
+              <td>{g.ru ?? g.name}</td>
               <td>{'★'.repeat(game.genreLevels[g.id] ?? 0)}<span className="w95-hint">{(game.genreLevels[g.id] ?? 0)}/5</span></td>
             </tr>
           ))}
@@ -24,7 +24,7 @@ export function ResearchApp() {
           <b>Уровни типов</b>
           <div className="w95-list" style={{ maxHeight: 140 }}>
             {leveledTypes.map((t) => (
-              <div key={t.id} className="w95-li">{t.name}: {'★'.repeat(game.typeLevels[t.id] ?? 0)}</div>
+              <div key={t.id} className="w95-li">{t.nameRu ?? t.name}: {'★'.repeat(game.typeLevels[t.id] ?? 0)}</div>
             ))}
           </div>
         </>

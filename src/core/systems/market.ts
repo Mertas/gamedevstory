@@ -20,7 +20,7 @@ export function dailySales(state: GameState): void {
         rec.paidUnits = Math.round(game.paidUnits ?? 0);
         rec.paidRevenue = Math.round(game.paidRevenue ?? 0);
       }
-      log(state, `«${game.name}» снята с продаж (итого ${formatUnits(game.totalUnits)}, ${Math.round(game.totalRevenue)}K)`);
+      log(state, `«${game.name}» снята с продаж (итого ${formatUnits(Math.round(game.paidUnits ?? game.totalUnits))}, ${Math.round(game.paidRevenue ?? game.totalRevenue)}K)`); // аудит-51 01-P3-7: факт, как в окне «Продажи»
       continue;
     }
     // медиа-события (статья/TV/баг) умножают остаток продаж игры

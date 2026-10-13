@@ -198,10 +198,15 @@ function EventWatcher() {
           ),
           buttons: opts.map((o) => {
             const poor = o.cost != null && money < o.cost;
+            // аудит-51 05-P3-4: подсказка варианта (цена/риск выбора) — в подсказке кнопки
+            const tip = [
+              'hint' in o && o.hint ? sub(o.hint) : '',
+              poor ? `Не хватает денег: нужно ${fmtK(o.cost ?? 0)}, есть ${fmtK(money)}` : '',
+            ].filter(Boolean).join(' · ') || undefined;
             return {
               label: sub(o.label) + (poor ? ` (нужно ${fmtK(o.cost ?? 0)})` : ''),
               disabled: poor,
-              title: poor ? `Не хватает денег: нужно ${fmtK(o.cost ?? 0)}, есть ${fmtK(money)}` : undefined,
+              title: tip,
               onClick: () => { closeMessageBox(); actionResolveStory(o.id); },
             };
           }),

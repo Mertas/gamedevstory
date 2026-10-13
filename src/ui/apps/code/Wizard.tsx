@@ -5,6 +5,7 @@ import { projectCostBreakdown } from '../../../core/formulas';
 import {
   allConsoles, comboGrade, consoleAvailable, genreById, isUnlocked, typeById,
 } from '../../../shared/meta';
+import { consoleRu } from '../../../shared/consoles';
 import { DIRECTION_LABELS, DIRECTION_ORDER } from '../../../core/types';
 import type { DirectionAxis, Role } from '../../../core/types';
 import { StaffCard } from '../../StaffCard';
@@ -258,7 +259,7 @@ export function ProjectWizard() {
                   <div key={c.id} className="w95-li" style={{ padding: '2px 4px' }} onClick={() => setConsoleId(c.id)} data-autopilot={`wiz-console-${c.id}`}>
                     <label className="w95-row">
                       <input type="radio" checked={consoleId === c.id} onChange={() => setConsoleId(c.id)} />
-                      <b>{c.name}</b>
+                      <b>{consoleRu(c.id, c.name)}</b>
                       <span className="w95-hint">база: {fmtK(c.installBase)} · множитель ×{c.costMult}</span>
                     </label>
                   </div>

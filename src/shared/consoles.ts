@@ -15,6 +15,39 @@ export const EVENT_CONSOLE_REQ: Record<string, { grand: number; units?: number }
   gamejohn: { grand: CONFIG.GRAND_CONSOLE_GAMEJOHN, units: CONFIG.GAMEJOHN_UNITS_K },
 };
 
+// ─── аудит-51 05-P3-1: локализация имён консолей (plan/11 §2 — пародийные клоны) ───
+export const CONSOLE_RU: Record<string, string> = {
+  'pc-game': 'ПК',
+  'microx-sx': 'Микрокс-СХ',
+  exodus: 'МегаВолна',
+  ies: 'Фамикон-8',
+  'game-kid': 'Карманник',
+  'play-gear': 'Карманник-Цвет',
+  'pcc-fqx': 'ПК-Эф',
+  neongeon: 'НеоНеон',
+  'game-swan': 'Лебедь-1',
+  'super-ies': 'СуперТендо',
+  'virtual-kid': 'Виртуал-очки',
+  playstatus: 'ПлейСтейд',
+  playdion: 'ПлейДиск',
+  uranus: 'Сатурн-2',
+  'game-box': 'КубоБокс',
+  'mini-status': 'МиниПлей',
+  'intendro-dm': 'Тендо-ДС',
+  'playstatus-2': 'ПлейСтейд-2',
+  'microx-480': 'Микрокс-480',
+  whoops: 'Вжух',
+  'harpo-drive': 'ХарпоДрайв',
+  'play-popo-x': 'ПлейПопо-Икс',
+  'jupiter-512': 'Марсоход-512',
+  gamejohn: 'ТронЗов',
+};
+
+/** Имя консоли по-русски; неизвестный id — запасное имя (как в контенте). */
+export function consoleRu(id: string, fallback: string): string {
+  return CONSOLE_RU[id] ?? fallback;
+}
+
 // ─── своя консоль: компоненты — единый источник для движка (списание) и формы (смета) ───
 export const OWN_CONSOLE_TYPES = [
   { id: 'console', label: 'Стационарная', cost: 6000 },

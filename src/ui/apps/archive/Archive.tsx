@@ -6,6 +6,7 @@ import { useGame, useMeta } from '../../store';
 import { useWindows } from '../../wm';
 import { score100 } from '../../../shared/rules';
 import { fmtK } from '../../../shared/nums';
+import { consoleRu } from '../../../shared/consoles';
 import { fmtCopies } from '../../../shared/sales-stats';
 import { cardWinId } from './GameCardWindow';
 import {
@@ -34,7 +35,7 @@ export function ArchiveApp() {
   const cons = useMemo(() => allConsoles(meta, game), [meta, game]);
   const genreName = (id: string) => meta.genres.find((g) => g.id === id)?.ru ?? id;
   const typeName = (id: string) => meta.types.find((t) => t.id === id)?.nameRu ?? id;
-  const consoleName = (id: string) => cons.find((c) => c.id === id)?.name ?? id;
+  const consoleName = (id: string) => consoleRu(id, cons.find((c) => c.id === id)?.name ?? id);
 
   // клик по заголовку — сортировка; шеврон ▼/▲ у активной колонки
   const th = (label: string, key: ArchiveSortKey) => (
@@ -76,7 +77,7 @@ export function ArchiveApp() {
         </select>
         <select className="w95-input" value={f.consoleId} onChange={(e) => setF({ ...f, consoleId: e.target.value })}>
           <option value="">Платформа: все</option>
-          {cons.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {cons.map((c) => <option key={c.id} value={c.id}>{consoleRu(c.id, c.name)}</option>)}
         </select>
         <label className="w95-row" style={{ gap: 4 }}>
           <input type="checkbox" checked={f.awardsOnly} onChange={(e) => setF({ ...f, awardsOnly: e.target.checked })} />

@@ -461,6 +461,20 @@ describe('PLAN-34: мировой список всех аккаунтов', () 
     users.updateSave(aid, users.listSaves(aid)[0]!.id, JSON.stringify({ game: { history: [{ ...rec('Слабая', 5), paidUnits: 99 }] }, chat: {} }), 1, 1, 0);
     users.close();
   });
+
+  it('аудит-51 02-P3-6: партия из импортированного файла не попадает в рейтинг', async () => {
+    const users = new UserService(tmpDb());
+    const a = users.register('Importer', '12345678');
+    const aid = a.ok ? a.user.id : 0;
+    const rec = (name: string, units: number) => ({ name, units, revenue: units * 10, releaseWeek: 1 });
+    users.createSave(aid, 'Обычная', JSON.stringify({ game: { history: [rec('Своя', 50)] }, chat: {} }));
+    const imported = users.createSave(aid, 'Импорт', JSON.stringify({ game: { history: [rec('Краденая', 500)] }, chat: {} }));
+    users.markSaveImported(aid, imported);
+    const lb = await users.leaderboard();
+    expect(lb.total).toBe(1);
+    expect(lb.rows.map((r) => r.name)).toEqual(['Своя']);
+    users.close();
+  });
 });
 
 describe('PLAN-18+: «Удалить весь прогресс» — все сейвы и достижения аккаунта', () => {

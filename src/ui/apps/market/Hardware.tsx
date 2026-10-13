@@ -2,7 +2,7 @@
 import { actionBuyLicense, useGame, useMeta } from '../../store';
 import { OwnConsolePanel } from './OwnConsole';
 import { fmtK } from '../../../shared/nums';
-import { dateToDay, EVENT_CONSOLE_REQ } from '../../../shared/consoles';
+import { consoleRu, dateToDay, EVENT_CONSOLE_REQ } from '../../../shared/consoles';
 import { allConsoles, dateLabel } from '../../../shared/meta';
 
 /** копии: units в тысячах → «6.1M» / «74K» (как в окне продаж) */
@@ -76,7 +76,7 @@ export function HardwareApp() {
 
             return (
               <tr key={c.id}>
-                <td><b>{c.name}</b> <span className="w95-hint">×{c.costMult}</span></td>
+                <td><b>{consoleRu(c.id, c.name)}</b> <span className="w95-hint">×{c.costMult}</span></td>
                 <td>{c.company}</td>
                 <td>
                   {status}

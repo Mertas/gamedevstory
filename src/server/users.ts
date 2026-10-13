@@ -200,6 +200,8 @@ export class UserService {
     const saveCols = (this.db.prepare('PRAGMA table_info(saves)').all() as Array<Record<string, unknown>>)
       .map((c) => String(c.name));
     if (!saveCols.includes('difficulty')) this.db.exec("ALTER TABLE saves ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'normal'");
+    // аудит-51 02-P3-6: признак «партия импортирована файлом» — такие не идут в мировой рейтинг
+    if (!saveCols.includes('imported')) this.db.exec('ALTER TABLE saves ADD COLUMN imported INTEGER NOT NULL DEFAULT 0');
     this.db.exec('PRAGMA journal_mode = WAL');
   }
 
@@ -489,6 +491,11 @@ export class UserService {
 
   // ─── сохранения ───
 
+  /** аудит-51 02-P3-6: партия с импортированным происхождением не участвует в мировом рейтинге. */
+  markSaveImported(userId: number, saveId: number): void {
+    this.db.prepare('UPDATE saves SET imported = 1 WHERE id = ? AND user_id = ?').run(saveId, userId);
+  }
+
   /**
    * PLAN-34: мировой список — все выпущенные игры всех аккаунтов, по проданным копиям.
    * Читает истории из payload'ов сохранений; кэш 60 с (окно продаж спрашивает часто).
@@ -510,7 +517,7 @@ export class UserService {
   private async rebuildLeaderboard(limit: number): Promise<{ rows: LeaderboardRow[]; total: number }> {
     const rows: LeaderboardRow[] = [];
     let chunk = 0;
-    const saves = this.db.prepare('SELECT studio_name AS studio, payload FROM saves').all() as Array<{
+    const saves = this.db.prepare('SELECT studio_name AS studio, payload FROM saves WHERE imported = 0').all() as Array<{
       studio: string;
       payload: string;
     }>;

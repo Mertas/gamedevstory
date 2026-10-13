@@ -234,7 +234,7 @@ export function paySalaries(state: GameState): void {
   } else if (!state.emergencyFundUsed) {
     state.emergencyFundUsed = true;
     state.money += CONFIG.EMERGENCY_FUND - total;
-    log(state, `Не хватило на зарплаты (${Math.round(total)}K)! Использован резервный фонд $150K`);
+    log(state, `Не хватило на зарплаты (${Math.round(total)}K)! Использован резервный фонд ${CONFIG.EMERGENCY_FUND}K`); // аудит-51 01-P3-2: размер фонда — из CONFIG
     if (state.money < 0) bankrupt(state);
   } else {
     log(state, `Не хватило на зарплаты (${Math.round(total)}K) — банкротство!`);

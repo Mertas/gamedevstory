@@ -3,6 +3,7 @@
 // (один rAF, пул частиц, размаз по такту, счётчики и полоски мимо React).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { allConsoles, genreById, typeById } from '../../../shared/meta';
+import { consoleRu } from '../../../shared/consoles';
 import { fatigueMult } from '../../../core/formulas';
 import type { Role } from '../../../core/types';
 import { actionUseBooster, useGame, useMeta, useSpeed } from '../../store';
@@ -180,7 +181,7 @@ export function DevStatus() {
       <canvas ref={canvasRef} className="dev-anim-canvas" aria-hidden="true" />
       <div className="w95-row" style={{ justifyContent: 'space-between' }}>
         <b>{genre?.ru ?? genre?.name} × {type?.nameRu ?? type?.name}</b>
-        <span>{consoleData?.name} · {MODES.find((m) => m.id === g.mode)?.label} · комбо {g.comboGrade}</span>
+        <span>{consoleData ? consoleRu(consoleData.id, consoleData.name) : ''} · {MODES.find((m) => m.id === g.mode)?.label} · комбо {g.comboGrade}</span>
       </div>
       <div>
         <div className="w95-row" style={{ justifyContent: 'space-between' }}>

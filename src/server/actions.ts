@@ -2,6 +2,7 @@
 // Вынесено из game.ts; GameServer.handle() делегирует сюда.
 // SessionHost — контракт сессии: публичные «внутренности» GameServer (намеренно, ради этого модуля).
 import { CONFIG } from '../core/config';
+import { applyDifficulty, isDifficultyId } from '../core/difficulty';
 import { genreById, typeById } from '../core/data/db';
 import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
@@ -135,7 +136,11 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       return;
     }
     case 'new_game': {
+      // аудит-51 01-P3-6: как в sessions.create/load — уровень применяется до newGame и пишется в партию
+      const diff = isDifficultyId(s.game.difficulty) ? s.game.difficulty : 'normal';
+      applyDifficulty(diff);
       s.game = newGame(Math.floor(Math.random() * 99991) + 1);
+      s.game.difficulty = diff;
       s.chat = resetChat();
       s.resetSession(); // SRV-09: ответы старой партии не должны прилетать в новую
       s.mailShownId = 0;

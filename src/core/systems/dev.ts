@@ -380,7 +380,7 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   const genre = genreById(game.genreId);
   const type = typeById(game.typeId);
 
-  game.name = game.name || generateName(genre.name, type.name, rng);
+  game.name = game.name || generateName(genre.ru ?? genre.name, type.nameRu ?? type.name, rng); // аудит-51 05-P3-2: имена — по-русски
   game.score = total;
   game.judgeScores = scores;
   game.reviewMessages = scores.map((s) => pickMessage(s, rng));
@@ -553,11 +553,12 @@ function bestAttr(st: Staff): keyof Stats {
   return 'sound';
 }
 
-const NAME_SUFFIXES = ['Story', 'Tales', 'Quest', 'World', 'Heroes', 'Rush', 'Chronicles', 'Simulator', 'Adventure', 'Masters'];
+// аудит-51 05-P3-2: русские шаблоны (plan/11 §6): «[Жанр]-[Суффикс]: [Тип]»
+const NAME_SUFFIXES_RU = ['Сага', 'Сказания', 'Поход', 'Мир', 'Герои', 'Рывок', 'Хроники', 'Симулятор', 'Приключение', 'Мастера'];
 
-function generateName(genreName: string, typeName: string, rng: Rng): string {
-  const suffix = NAME_SUFFIXES[rng.int(0, NAME_SUFFIXES.length - 1)]!;
-  return `${typeName} ${suffix}: ${genreName}`;
+function generateName(genreRu: string, typeRu: string, rng: Rng): string {
+  const suffix = NAME_SUFFIXES_RU[rng.int(0, NAME_SUFFIXES_RU.length - 1)]!;
+  return `${genreRu}-${suffix}: ${typeRu}`;
 }
 
 function pickMessage(score: number, rng: Rng): string {

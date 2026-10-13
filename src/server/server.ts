@@ -245,6 +245,12 @@ app.post('/api/save', (req, res) => {
   const game = activeGame(req);
   if (!game) return void res.status(401).json({ ok: false, error: 'Нужен вход и активная партия' });
   const ok = game.importSave(typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+  // аудит-51 02-P3-6: импортированная партия помечается и не участвует в мировом рейтинге
+  if (ok) {
+    const u = who(req);
+    const saveId = u ? registry.activeSaveId(u.id) : null;
+    if (u && saveId != null) users.markSaveImported(u.id, saveId);
+  }
   res.json({ ok });
 });
 

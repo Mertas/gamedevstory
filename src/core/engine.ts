@@ -151,10 +151,12 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     };
   }
 
-  log(state, 'Компания основана. Денег: 500K. Персонал: 2. Удачи!');
+  log(state, `Компания основана. Денег: ${Math.round(state.money)}K. Персонал: ${state.staff.length}. Удачи!`); // аудит-51 01-P3-1: числа из состояния, а не литералы
   // BUG-01: консоли, вышедшие к первому дню (PC, Microx SX), доступны сразу —
   // раньше их «выдавал» только первый тик, и на паузе форма новой игры была пуста
   consoleEvents(state);
+  // аудит-51 01-P3-3: rng-состояние фиксируем после всех стартовых бросков (аватарки, консоли)
+  state.rngState = rng.state;
   return state;
 }
 

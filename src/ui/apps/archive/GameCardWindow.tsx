@@ -4,6 +4,7 @@
 import { useMemo } from 'react';
 import { CONFIG } from '../../../core/config';
 import { allConsoles, dateLabel } from '../../../shared/meta';
+import { consoleRu } from '../../../shared/consoles';
 import { useGame, useMeta } from '../../store';
 import { pressVerdict } from '../../../shared/rules';
 import { fmtK } from '../../../shared/nums';
@@ -46,7 +47,7 @@ export function GameCardWindow({ winId }: { winId: string }) {
   const planRevenue = curve.reduce((a, d) => a + d.revenue, 0);
   const genreName = meta.genres.find((g) => g.id === h.genreId)?.ru ?? h.genreId;
   const typeName = meta.types.find((t) => t.id === h.typeId)?.nameRu ?? h.typeId;
-  const consoleName = cons.find((c) => c.id === h.consoleId)?.name ?? h.consoleId;
+  const consoleName = consoleRu(h.consoleId, cons.find((c) => c.id === h.consoleId)?.name ?? h.consoleId);
   const factUnits = h.paidUnits ?? h.units;
   const factRev = h.paidRevenue ?? h.revenue;
   const criticRows = h.judgeScores ?? [];
