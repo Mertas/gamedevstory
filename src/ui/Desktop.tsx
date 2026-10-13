@@ -496,6 +496,20 @@ export function Desktop({ onExit }: { onExit: () => void }) {
     lastCount.current = chat.msgs.length;
   }, [chat.msgs.length, wm, wins]);
 
+  // аудит-51 03-P2-11: клавиатура — Enter/Space на пункте меню (w95-mi) работают как клик
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && el.classList.contains('w95-mi')) {
+        e.preventDefault();
+        el.click();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, []);
+
   const typing = typingName(game, chat);
 
   const wp = wallpaperById(wallpaper);
@@ -521,6 +535,17 @@ export function Desktop({ onExit }: { onExit: () => void }) {
             data-desk-id={it.id}
             className={`w95-d-icon ${selIds.includes(it.id) ? 'selected' : ''}`}
             style={iconStyle(it)}
+            tabIndex={0}
+            role="button"
+            aria-label={`${it.title} — открыть`}
+            onKeyDown={(e) => {
+              // аудит-51 03-P2-11: Enter/Space запускают приложение, как двойной клик
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSelIds([]);
+                it.open();
+              }
+            }}
             onDoubleClick={() => {
               // запуск приложения: выделение иконки снимается — фокус уходит окну
               setSelIds([]);
@@ -564,44 +589,44 @@ export function Desktop({ onExit }: { onExit: () => void }) {
 
       {ctxMenu && ('app' in ctxMenu ? (
         <div className="w95-menu" style={{ left: ctxMenu.x, top: ctxMenu.y - 8 }}>
-          <div className="w95-mi" onClick={() => {
+          <div className="w95-mi" tabIndex={0} onClick={() => {
             const it = sortedIcons.find((x) => x.id === ctxMenu.app);
             setCtxMenu(null);
             if (it) { setSelIds([]); it.open(); }
           }}>
             <span style={{ width: 16 }}>{''}</span>Открыть
           </div>
-          <div className="w95-mi" onClick={() => { setPickFor(ctxMenu.app ?? null); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setPickFor(ctxMenu.app ?? null); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{''}</span>Сменить иконку…
           </div>
         </div>
       ) : (
         <div className="w95-menu" style={{ left: ctxMenu.x, top: ctxMenu.y - 8 }}>
-          <div className="w95-mi" onClick={() => { realign(); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { realign(); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{''}</span>Упорядочить иконки
           </div>
-          <div className="w95-mi" onClick={() => { setDeskSnap(!snapOn); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setDeskSnap(!snapOn); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{snapOn ? '✓' : ''}</span>Выровнять по сетке
           </div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" onClick={() => { setDeskSort('name'); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setDeskSort('name'); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{deskSort === 'name' ? '✓' : ''}</span>Сортировать по имени
           </div>
-          <div className="w95-mi" onClick={() => { setDeskSort('kind'); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setDeskSort('kind'); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{deskSort === 'kind' ? '✓' : ''}</span>Сортировать по типу
           </div>
-          <div className="w95-mi" onClick={() => { setDeskSort('default'); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setDeskSort('default'); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{deskSort === 'default' ? '✓' : ''}</span>Сортировать по порядку
           </div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" onClick={() => { setBgPick(true); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setBgPick(true); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{wp ? '✓' : ''}</span>Сменить фон…
           </div>
-          <div className="w95-mi" onClick={() => { setFxPick(true); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setFxPick(true); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{''}</span>Эффекты экрана…
           </div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" onClick={() => { wm.open('settings'); setCtxMenu(null); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { wm.open('settings'); setCtxMenu(null); }}>
             <span style={{ width: 16 }}>{''}</span>Настройки системы…
           </div>
         </div>
@@ -815,20 +840,20 @@ export function Desktop({ onExit }: { onExit: () => void }) {
       {startOpen && (
         <div className="w95-menu w95-start-menu" style={{ left: 2, bottom: 32 }} onMouseDown={(e) => e.stopPropagation()}>
           {apps.map((a) => (
-            <div key={a.id} className="w95-mi" onClick={() => { wm.open(a.id); setStartOpen(false); }}>
+            <div key={a.id} className="w95-mi" tabIndex={0} onClick={() => { wm.open(a.id); setStartOpen(false); }}>
               <span style={{ width: 18, textAlign: 'center' }}>{a.icon}</span> {a.title}
             </div>
           ))}
-          <div className="w95-mi" onClick={() => { openWinamp(); setStartOpen(false); }}>
+          <div className="w95-mi" tabIndex={0} onClick={() => { openWinamp(); setStartOpen(false); }}>
             <span style={{ width: 18, textAlign: 'center' }}>🎵</span> Winamp
           </div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" onClick={() => { saveToFile(); setStartOpen(false); }}>💾 Сохранить игру…</div>
-          <div className="w95-mi" onClick={() => { fileRef.current?.click(); setStartOpen(false); }}>📂 Загрузить игру…</div>
+          <div className="w95-mi" tabIndex={0} onClick={() => { saveToFile(); setStartOpen(false); }}>💾 Сохранить игру…</div>
+          <div className="w95-mi" tabIndex={0} onClick={() => { fileRef.current?.click(); setStartOpen(false); }}>📂 Загрузить игру…</div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" onClick={() => { setNewGameOpen(true); setStartOpen(false); }}>🆕 Новая игра…</div>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setNewGameOpen(true); setStartOpen(false); }}>🆕 Новая игра…</div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" onClick={() => { setSpeed(0); setStartOpen(false); onExit(); }}>🚪 Выход в начальное меню</div>
+          <div className="w95-mi" tabIndex={0} onClick={() => { setSpeed(0); setStartOpen(false); onExit(); }}>🚪 Выход в начальное меню</div>
         </div>
       )}
 

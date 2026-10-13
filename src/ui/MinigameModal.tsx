@@ -6,13 +6,25 @@ import { useEffect, useRef, useState } from 'react';
 import { actionCloseMinigame, actionResolveMinigame, useAutopilot, useGame, useSnapshot } from './store';
 import { sfx } from './sfx';
 import { MINIGAME_DEFS, minigameEmbedUrl, minigameOutcome } from '../shared/minigames';
-import { SONNY_SCREEN, SonnyMonitor } from './SonnyMonitor';
+import { SONNY_SCREEN, SONNY_SIZE, SonnyMonitor } from './SonnyMonitor';
 
 /** Итог показа: 'done' (сыграна, ждём «Продолжить») или 'close' (закрыта досрочно). */
 interface Result {
   key: string;
   pct: number;
   closed: boolean;
+}
+
+/** аудит-51 03-P2-10: на маленьких экранах монитор вписывается в вьюпорт (масштаб ≤ 1). */
+function useViewportScale(w: number, h: number, margin = 16): number {
+  const [k, setK] = useState(1);
+  useEffect(() => {
+    const calc = () => setK(Math.min(1, (window.innerWidth - margin) / w, (window.innerHeight - margin) / h));
+    calc();
+    window.addEventListener('resize', calc);
+    return () => window.removeEventListener('resize', calc);
+  }, [w, h, margin]);
+  return k;
 }
 
 export function MinigameModal() {
@@ -67,6 +79,7 @@ export function MinigameModal() {
   }, [evKey]);
 
   // Автопилот игру не играет — сервер закроет событие сам, модалку не показываем.
+  const sScale = useViewportScale(SONNY_SIZE.w, SONNY_SIZE.h);
   if (!active || !gameId || autopilot || snap.sessionLost) return null;
   const def = MINIGAME_DEFS[gameId];
   const title = def?.title ?? gameId;
@@ -78,8 +91,11 @@ export function MinigameModal() {
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       }}
     >
-      <SonnyMonitor title={title}>
-        <iframe
+      {/* аудит-51 03-P2-10: на маленьких экранах монитор масштабируется под вьюпорт */}
+      <div style={{ width: SONNY_SIZE.w * sScale, height: SONNY_SIZE.h * sScale, flex: 'none' }}>
+        <div style={{ transform: `scale(${sScale})`, transformOrigin: 'top left', width: SONNY_SIZE.w, height: SONNY_SIZE.h }}>
+          <SonnyMonitor title={title}>
+            <iframe
           ref={frameRef}
           title={`Мини-игра «${title}»`}
           src={minigameEmbedUrl('/lab/', gameId, sfx.soundLevel !== 'off')}
@@ -91,7 +107,9 @@ export function MinigameModal() {
           onLoad={() => setFrameLoaded(true)}
           onError={() => setFrameStale(true)}
         />
-      </SonnyMonitor>
+          </SonnyMonitor>
+        </div>
+      </div>
       <div style={{ marginTop: 10, textAlign: 'center' }}>
         {!frameLoaded && frameStale && (
           <div style={{ color: '#ffe9a8', fontSize: 12, marginBottom: 4 }}>Похоже, врезка не загрузилась — можно закрыть досрочно.</div>

@@ -91,9 +91,9 @@ export function StartScreen({ me }: { me: MeInfo }) {
 
   return (
     <div className="w95-desktop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="w95-window focused" style={{ position: 'relative', width: creating ? 700 : 620, zIndex: 10 }}>
+      <div className="w95-window focused" style={{ position: 'relative', width: creating ? 700 : 620, maxWidth: 'calc(100vw - 16px)', maxHeight: 'calc(100vh - 16px)', zIndex: 10 }}>
         <div className="w95-title">🖥️ Студия игрока {me.login}</div>
-        <div className="w95-body" style={{ padding: 12 }}>
+        <div className="w95-body" style={{ padding: 12, overflowY: 'auto' }}>
           {creating ? (
             <NewGameForm onClose={() => { setCreating(false); refresh(); }} />
           ) : (

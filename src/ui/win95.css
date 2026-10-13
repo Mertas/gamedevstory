@@ -109,7 +109,7 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-window:not(.focused) .w95-titlebar { background: linear-gradient(90deg, var(--w95-dark), #a0a0a0); }
 .w95-title { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: 2px; }
 .w95-tbtn { width: 16px; height: 14px; padding: 0; display: flex; align-items: center; justify-content: center; }
-.w95-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.w95-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; user-select: text; } /* аудит-51 03-P2-11: в окнах текст можно выделять и копировать */
 /* зоны ресайза: все края и углы (единый механизм Window95) */
 .w95-rs { position: absolute; z-index: 6; }
 .w95-rs-n { top: -5px; left: 10px; right: 10px; height: 7px; cursor: n-resize; }
@@ -148,6 +148,9 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 /* ── Меню ── */
 .w95-menu { position: absolute; z-index: 9500; min-width: 180px; background: var(--w95-face); border: 1px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); box-shadow: 2px 2px 0 rgba(0,0,0,.4); padding: 2px; }
 .w95-menu .w95-mi { display: flex; align-items: center; gap: 8px; padding: 4px 18px 4px 6px; }
+/* аудит-51 03-P2-11: видимый клавиатурный фокус (Tab) на пунктах меню и иконках */
+.w95-mi:focus-visible { outline: 1px dotted #000; outline-offset: -1px; }
+.w95-d-icon:focus-visible { outline: 1px dotted #ffff80; outline-offset: -1px; }
 .w95-menu .w95-mi:hover { background: var(--w95-navy); color: #fff; }
 .w95-menu .w95-mi.sep { border-top: 1px solid var(--w95-dark); margin: 3px 2px; padding: 0; }
 
