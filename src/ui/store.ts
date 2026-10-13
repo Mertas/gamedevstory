@@ -296,7 +296,11 @@ function connect(): void {
         } as { ok: boolean; title?: string; plot?: string; error?: string };
         emit();
       }
-    } catch { /* игнор */ }
+    } catch (e) {
+      // аудит-51 04-P2-9: битый кадр не глушим — лог + полная пересинхронизация состояния
+      console.warn('[gds] сообщение сокета не разобрано:', e);
+      try { send({ type: 'get_state' }); } catch { /* сокет уже закрыт */ }
+    }
   };
   ws.onclose = (ev) => {
     const refused = ev?.code === 1008; // PLAN-18: сервер закрыл по политике (нужен вход / нет партии)

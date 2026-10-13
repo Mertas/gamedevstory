@@ -48,6 +48,8 @@ export function parseSavePayload(raw: string): LoadedSave | null {
   }
 }
 
+/** Тестовый/локальный адаптер файла save.json. В проде автосейв идёт в users.db (DbSaveStore).
+ *  аудит-51 04-P2-4: судьба решена — оставляем для тестов и локальных прогонов, README поправлен. */
 export class SaveManager {
   private lastSaveDay = 0;
 

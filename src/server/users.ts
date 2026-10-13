@@ -321,7 +321,10 @@ export class UserService {
     if (password.length < MIN_PASSWORD) return { ok: false, error: `Пароль — не короче ${MIN_PASSWORD} символов` };
     const row = this.db.prepare('SELECT code_hash, expires FROM resets WHERE login = ?').get(name) as { code_hash: string; expires: number } | undefined;
     if (!row || row.expires < Date.now()) return { ok: false, error: 'Код истёк — запросите новый' };
-    if (row.code_hash !== resetCodeHash(name, code.trim())) return { ok: false, error: 'Неверный код' };
+    // аудит-51 04-P2-1: сравнение кодов — константное по времени (без раннего выхода по байтам)
+    const got = Buffer.from(resetCodeHash(name, code.trim()), 'hex');
+    const want = Buffer.from(row.code_hash, 'hex');
+    if (got.length !== want.length || !timingSafeEqual(got, want)) return { ok: false, error: 'Неверный код' };
     const u = this.userByLogin(name);
     if (!u) return { ok: false, error: 'Пользователь не найден' };
     const { salt, hash } = hashPassword(password);

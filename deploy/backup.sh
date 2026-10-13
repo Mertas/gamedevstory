@@ -21,6 +21,8 @@ fi
 [ -f "$DATA/gamedev.db" ] && cp "$DATA/gamedev.db" "$TMP/"
 [ -f "$DATA/music-meta.sqlite" ] && cp "$DATA/music-meta.sqlite" "$TMP/"
 [ -d "$DATA/mail-out" ] && cp -r "$DATA/mail-out" "$TMP/"
+# аудит-51 04-P2-8: секреты (.env: GDS_PEPPER, ключи LLM/почты) — иначе бэкап невосстановим
+[ -f "$BASE/shared/.env" ] && cp "$BASE/shared/.env" "$TMP/env.backup"
 
 tar -czf "$OUT/gds-$STAMP.tar.gz" -C "$TMP" .
 echo "[backup] $STAMP: $(du -h "$OUT/gds-$STAMP.tar.gz" | cut -f1)"

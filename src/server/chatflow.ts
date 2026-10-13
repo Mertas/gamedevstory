@@ -57,7 +57,8 @@ export class ChatOrchestrator {
 
   /** SRV-22: реплика игрока — в очередь FIFO, если команда ещё отвечает (вызывает диспетчер). */
   queuePlayerMessage(text: string): void {
-    if (this.h.chatThread) this.h.pendingPlayers.push(text); // SRV-11: FIFO — все вопросы будут отвечены
+    // аудит-51 04-P2-7: лимит очереди вопросов (как у сцен: < 5) — переполненную очередь не растим
+    if (this.h.chatThread) { if (this.h.pendingPlayers.length < 5) this.h.pendingPlayers.push(text); }
     else this.startPlayerThread(text);
   }
 

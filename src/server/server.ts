@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto';
 import express from 'express';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Request } from 'express';
-import { PORT, HOST, gigaReady } from './config';
+import { PORT, HOST, PROD, gigaReady } from './config';
 import { type ClientAction } from './game';
 import { llmStatus } from './giga';
 import { gameVersion, buildId } from './version';
@@ -64,7 +64,8 @@ const users = new UserService();
 // PLAN-26: журнал промахов автопилота пишем в ту же базу (users.db), читаем sqlite-запросом
 setAutopilotLogSink((entry) => users.logAutopilot({ serverBuild: buildId(), ...entry }));
 // прод без перца = пароли, которые можно перебирать по одной базе: не стартуем
-if (process.env.PROD === '1' && !process.env.GDS_PEPPER) {
+// аудит-51 04-P2-2: гейт по PROD из config (учитывает и NODE_ENV=production), а не по сырому process.env.PROD
+if (PROD && !process.env.GDS_PEPPER) {
   console.error('[gds] GDS_PEPPER не задан — в проде пароли без перца запрещены');
   process.exit(1);
 }
