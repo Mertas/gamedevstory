@@ -38,7 +38,7 @@ export function SearchTab() {
                 type="radio" checked={method === m} onChange={() => setMethod(m)}
                 disabled={game.officeLevel < CONFIG.HIRE_METHODS[m].office}
               />
-              {HIRE_METHOD_LABELS[m]} (${CONFIG.HIRE_METHODS[m].cost}K)
+              {HIRE_METHOD_LABELS[m]} ({CONFIG.HIRE_METHODS[m].cost}K)
               {game.officeLevel < CONFIG.HIRE_METHODS[m].office && <span className="w95-hint">(нужен офис {CONFIG.HIRE_METHODS[m].office})</span>}
             </label>
           </div>

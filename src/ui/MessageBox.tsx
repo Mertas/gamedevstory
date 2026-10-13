@@ -66,6 +66,7 @@ export function MessageBox() {
                 style={{ minWidth: 90, maxWidth: '100%', whiteSpace: 'normal', lineHeight: 1.35 }}
                 data-autopilot={i === 0 ? mb.autopilotTarget : undefined}
                 disabled={b.disabled}
+                title={b.title}
                 onClick={() => { closeMessageBox(); b.onClick(); }}
               >
                 {b.label}

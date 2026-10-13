@@ -6,6 +6,7 @@ import { useGame, useMeta } from '../../store';
 import { useWindows } from '../../wm';
 import { score100 } from '../../../shared/rules';
 import { fmtK } from '../../../shared/nums';
+import { fmtCopies } from '../../../shared/sales-stats';
 import { cardWinId } from './GameCardWindow';
 import {
   ARCHIVE_PAGE, DEFAULT_SORT, EMPTY_FILTER, filterHistory, nextSort, sortHistory,
@@ -51,7 +52,7 @@ export function ArchiveApp() {
     <div className="w95-panel" style={{ overflowY: 'auto', height: '100%' }}>
       <div className="w95-legend">
         <span>Игр: <b>{game.history.length}</b></span>
-        <span>Продано: <b>{fmtK(totalUnits)}</b></span>
+        <span>Продано: <b>{fmtCopies(totalUnits)}</b></span>
         <span>Доход: <b>{fmtK(totalRev)}</b></span>
         <span>Рекорд: <b>{score100(Math.max(0, ...game.history.map((h) => h.score)))}/100</b></span>
         <span>Показано: <b>{shown.length}</b> из {rows.length}</span>
@@ -108,7 +109,7 @@ export function ArchiveApp() {
               <td>{genreName(h.genreId)} × {typeName(h.typeId)}</td>
               <td>{consoleName(h.consoleId)}</td>
               <td><b>{h.score}</b>{h.score >= CONFIG.HALL_OF_FAME ? ' 🏆' : ''}{(h.awards?.length ?? 0) > 0 ? ' 🎖' : ''}</td>
-              <td>{fmtK(h.paidUnits ?? h.units)}</td>
+              <td>{fmtCopies(h.paidUnits ?? h.units)}</td>
               <td>{fmtK(h.paidRevenue ?? h.revenue)}</td>
             </tr>
           ))}

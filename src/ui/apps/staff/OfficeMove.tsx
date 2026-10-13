@@ -32,7 +32,7 @@ export function OfficeMove() {
   const ready = readyYear && readyMoney;
   const lacks = [
     !readyYear ? `7-й год (осталось ${7 - game.year} г.)` : null,
-    !readyMoney ? `{fmtK(3500)} на счету (есть ${fmtK(game.money)})` : null,
+    !readyMoney ? `${fmtK(3500)} на счету (есть ${fmtK(game.money)})` : null,
   ].filter(Boolean) as string[];
   return (
     <div className="w95-row">

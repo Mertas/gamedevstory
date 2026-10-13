@@ -7,7 +7,7 @@ export function ResearchApp() {
   const leveledTypes = meta.types.filter((t) => (game.typeLevels[t.id] ?? 0) > 0);
   return (
     <div className="w95-panel" style={{ overflowY: 'auto', height: '100%' }}>
-      <div className="w95-row">🔬 Исследовательские данные: <b>{Math.round(game.research)}</b></div>
+      <div className="w95-row">🔬 PR (очки исследований): <b>{Math.round(game.research)}</b></div>
       <b>Уровни жанров</b>
       <table className="w95-table">
         <tbody>

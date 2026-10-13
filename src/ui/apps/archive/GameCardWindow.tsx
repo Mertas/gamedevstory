@@ -89,7 +89,7 @@ export function GameCardWindow({ winId }: { winId: string }) {
               <SalesChart sales={curve} scale={scaleW1} planRevenue={planRevenue} money={factRev} />
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <span>Копии: <b>{fmtCopies(factUnits)}</b>{h.paidUnits !== undefined && <> <span className="w95-hint">(план {fmtK(h.units)})</span></>}</span>
+              <span>Копии: <b>{fmtCopies(factUnits)}</b>{h.paidUnits !== undefined && <> <span className="w95-hint">(план {fmtCopies(h.units)})</span></>}</span>
               <span>Доход: <b>{fmtK(factRev)}</b></span>
               <span>Место в студии: <b>#{rank}</b> из {game.history.length}</span>
             </div>

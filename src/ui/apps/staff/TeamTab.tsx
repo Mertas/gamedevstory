@@ -23,7 +23,8 @@ export function TeamTab() {
             const lv = st.careers[st.activeCareer] ?? 0;
             const price = CONFIG.LEVEL_PR[st.activeCareer]?.[lv - 1];
             return (
-              <tr key={st.id}>
+              // аудит-51 03-P3-7в: клик по строке открывает окно сотрудника (как иконка на столе)
+              <tr key={st.id} style={{ cursor: 'pointer' }} title="Открыть окно сотрудника" onClick={() => wm.open(staffWinId(st.id))}>
                 <td>
                   <span className="w95-row">
                     <StaffAvatar staff={st} variant={AV.hireTeam} />

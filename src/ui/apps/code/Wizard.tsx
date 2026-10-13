@@ -107,6 +107,12 @@ export function ProjectWizard() {
     [game, meta, genreId, opened, openedTypes, genreRuleOk],
   );
 
+  // аудит-51 03-P3-10: смена жанра не должна оставлять тип из старого списка —
+  // иначе «Итог» покажет пару, а сервер отклонит старт
+  useEffect(() => {
+    if (typeId && !types.some((t) => t.id === typeId)) setTypeId(null);
+  }, [types, typeId]);
+
   const spent = Object.values(direction).reduce((a, b) => a + b, 0);
   const dirLeft = game.directionPoints - spent;
 

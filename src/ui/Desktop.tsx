@@ -10,6 +10,7 @@ import { AV, StaffAvatar } from './StaffAvatar';
 import { WebampLayer } from './WebampLayer';
 import {
   actionSetAutopilot, actionSetUi, actionTakeControl, exportSave, importSave, setSpeed, showClientError,
+  showMessageBox, showSysNotice,
   useAccountReleases, useAutopilot, useChat, useGame, useGameSelector, useMeta, useSnapshot, useSpeed, useVictory,
 } from './store';
 import { NewGameForm } from './NewGameForm';
@@ -107,6 +108,16 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const [newGameOpen, setNewGameOpen] = useState(false); // PLAN-18: новая игра — выбор студии и пары
   const startOpenRef = useRef(startOpen);
   startOpenRef.current = startOpen;
+  // аудит-51 03-P3-12: открытие новой скорости — награда за релизы; показываем системной заметкой
+  const speedsCount = speedOptions(accountReleases).length;
+  const prevSpeedsCount = useRef(speedsCount);
+  useEffect(() => {
+    if (speedsCount > prevSpeedsCount.current) {
+      const opened = speedOptions(accountReleases).slice(prevSpeedsCount.current).map((v) => `${v}×`).join(' и ');
+      showSysNotice({ title: 'Новая скорость', icon: '⏩', head: opened, text: 'Награда за релизы аккаунта — кнопки уже в трее.' });
+    }
+    prevSpeedsCount.current = speedsCount;
+  }, [speedsCount, accountReleases]);
   const fileRef = useRef<HTMLInputElement>(null);
   // Winamp (Webamp) — не wm-окно: свой слой; waHidden = свёрнут в трей; waZ — слой поверх окон или в фоне
   const [waOpen, setWaOpen] = useState(false);
@@ -821,7 +832,12 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           <span className="w95-tray-money" style={{ fontWeight: 'bold', marginRight: 6 }}>💰 {fmtK(game.money)}</span>
           <div className="w95-speed">
             {speedOptions(accountReleases).map((v) => (
-              <button key={v} className={`w95-btn ${speed === v ? 'on pressed' : ''}`} onClick={() => setSpeed(v)}>
+              <button
+                key={v}
+                className={`w95-btn ${speed === v ? 'on pressed' : ''}`}
+                title={v === 0 ? 'Пауза' : v === 0.5 ? 'Половина скорости' : v === 1 ? 'Обычная скорость' : v === 2 ? '2× — открыто за 100 релизов' : `${v}× — открыто за 500 релизов`}
+                onClick={() => setSpeed(v)}
+              >
                 {v === 0 ? '⏸' : v === 0.5 ? '½' : `${v}×`}
               </button>
             ))}
@@ -853,7 +869,18 @@ export function Desktop({ onExit }: { onExit: () => void }) {
           <div className="w95-mi" tabIndex={0} onClick={() => { saveToFile(); setStartOpen(false); }}>💾 Сохранить игру…</div>
           <div className="w95-mi" tabIndex={0} onClick={() => { fileRef.current?.click(); setStartOpen(false); }}>📂 Загрузить игру…</div>
           <div className="w95-mi sep" />
-          <div className="w95-mi" tabIndex={0} onClick={() => { setNewGameOpen(true); setStartOpen(false); }}>🆕 Новая игра…</div>
+          <div className="w95-mi" tabIndex={0} onClick={() => {
+            setStartOpen(false);
+            // аудит-51 03-P3-13: уход из партии — только с подтверждением
+            showMessageBox({
+              title: '🆕 Новая игра',
+              text: 'Начать новую партию? Текущая сохранится и останется в списке сохранений.',
+              buttons: [
+                { label: 'Начать новую', onClick: () => setNewGameOpen(true) },
+                { label: 'Отмена', onClick: () => undefined },
+              ],
+            });
+          }}>🆕 Новая игра…</div>
           <div className="w95-mi sep" />
           <div className="w95-mi" tabIndex={0} onClick={() => { setSpeed(0); setStartOpen(false); onExit(); }}>🚪 Выход в начальное меню</div>
         </div>

@@ -4,6 +4,7 @@ import { actionTakeContract, useGame, useMeta } from '../../store';
 import { fmtInt, fmtK } from '../../../shared/nums';
 import { CONFIG } from '../../../core/config';
 import { contractForecast } from '../../../core/formulas';
+import { dateLabel } from '../../../shared/meta';
 
 const AXIS_RU = { program: 'Программирование', scenario: 'Сценарий', graphics: 'Графика', sound: 'Звук' } as const;
 const dec1 = (n: number) => String(Math.round(n * 10) / 10);
@@ -45,7 +46,7 @@ export function ContractsApp() {
       )}
       {game.contracts.filter((c) => !c.done).map((c) => (
         <div key={c.id} className="w95-bevel-in" style={{ padding: 4, marginBottom: 4 }}>
-          <b>{meta.contracts.find((m) => m.id === c.id)?.nameRu ?? c.name}</b> — дедлайн: день {c.deadline}
+          <b>{meta.contracts.find((m) => m.id === c.id)?.nameRu ?? c.name}</b> — дедлайн: {dateLabel(c.deadline)}
           <div className="w95-hint">
             П: {Math.round(c.progress.program)} · С: {Math.round(c.progress.scenario)} · Г: {Math.round(c.progress.graphics)} · З: {Math.round(c.progress.sound)}
           </div>
@@ -63,7 +64,7 @@ export function ContractsApp() {
             return (
               <tr key={c.id}>
                 <td>{c.nameRu ?? c.name}</td>
-                <td>{Math.round((c.weeks ?? 0) * 7)} дн.</td>
+                <td>{c.weeks} нед. ({(c.weeks ?? 0) * 7} дн.)</td>
                 <td className="w95-hint">
                   П{c.reqProgram ?? '—'} С{c.reqScenario ?? '—'} Г{c.reqGraphics ?? '—'} З{c.reqSound ?? '—'}
                 </td>

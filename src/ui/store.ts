@@ -37,6 +37,8 @@ let snap: Snapshot = {
 };
 let actionError: string | null = null;
 let actionErrorVer = 0; // SRV-17: версия показа — повторный тот же текст тоже поднимает тост
+// аудит-51 03-P3-14: история последних ошибок (до 5) — тост помнит предыдущую
+let actionErrorHistory: string[] = [];
 const listeners = new Set<() => void>();
 
 function emit(): void {
@@ -159,6 +161,7 @@ function actionsWord(n: number): string {
 function raiseError(text: string): void {
   actionError = text;
   actionErrorVer++;
+  actionErrorHistory = [...actionErrorHistory.filter((t) => t !== text), text].slice(-5);
   emit();
 }
 
@@ -367,6 +370,12 @@ export function useActionError(): string | null {
 export function useActionErrorVer(): number {
   useSyncExternalStore(subscribe, () => actionErrorVer);
   return actionErrorVer;
+}
+
+/** аудит-51 03-P3-14: история последних ошибок (новые в конце) — тост показывает «Ранее: …» */
+export function useActionErrorHistory(): string[] {
+  useSyncExternalStore(subscribe, () => actionErrorHistory);
+  return actionErrorHistory;
 }
 
 /** показать ошибку клиента в общем канале (тост): сетевые сбои, потерянные действия */
@@ -710,7 +719,7 @@ export interface MessageBoxData {
   title: string;
   text?: string;
   body?: React.ReactNode; // произвольное содержимое (вместо/вместе с text)
-  buttons: { label: string; onClick: () => void; disabled?: boolean }[];
+  buttons: { label: string; onClick: () => void; disabled?: boolean; title?: string }[];
   evKey?: string; // ключ события, чей попап показан (пульс сервера не пересоздаёт открытый)
   autopilotTarget?: string; // цель виртуальной мыши автопилота на первой кнопке (plan/14)
   /** v1.18.1: информационный попап — закрывается кликом по окну (в стиле карточек прессы).

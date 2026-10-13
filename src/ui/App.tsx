@@ -27,6 +27,7 @@ import { SAGA_NODES } from '../shared/saga-data';
 import { questArt, sagaArt } from './questArt';
 import { applyGenderSlots } from '../shared/gender';
 import { sagaCondOk, sagaResolveText } from '../shared/saga-text';
+import { CAREER_LABELS } from '../shared/careers';
 import { SagaChapterBody } from './SagaChapterBody';
 import { FinaleReport } from './FinaleReport';
 import { IntroModal } from './IntroModal';
@@ -52,7 +53,7 @@ function BoostOfferBody({ proposalStaffId, baseCost }: { proposalStaffId: string
     return (
       <div>
         💡 {staff?.name ?? 'Сотрудник'} предлагает улучшить игру (база {baseCost} PR), но в казне
-        исследований не хватает: есть {research}. Откажитесь — случай вернётся в другой разработке.
+        исследований не хватает: есть {research} PR. Откажитесь — случай вернётся в другой разработке.
       </div>
     );
   }
@@ -148,7 +149,7 @@ function EventWatcher() {
               {opts.map(([id, o]) =>
                 money >= o.cost ? (
                   <button key={id} className="w95-btn" style={{ textAlign: 'left' }} onClick={() => { closeMessageBox(); actionResolveGamedex(id); }}>
-                    {o.label} — {o.cost}K&nbsp;&nbsp;(известность +{o.fame}, фанаты +{o.fans})
+                    {o.label} — {fmtK(o.cost)}&nbsp;&nbsp;(известность +{o.fame}, фанаты +{o.fans})
                   </button>
                 ) : (
                   <div key={id} style={{ color: 'GrayText', fontSize: 12 }}>
@@ -185,7 +186,8 @@ function EventWatcher() {
             { name: g1, name2: g2 },
           );
         const money = snap.game?.money ?? 0;
-        const opts = content.options.filter((o) => o.cost == null || money >= o.cost);
+        // аудит-51 03-P3-9: неоплаченные варианты не исчезают — показываются неактивными с ценой
+        const opts = content.options;
         popup({
           title: sub(content.title),
           autopilotTarget: 'mb-ok',
@@ -194,10 +196,15 @@ function EventWatcher() {
           body: (
             <div style={{ lineHeight: 1.45 }}>{sub(content.text)}</div>
           ),
-          buttons: opts.map((o) => ({
-            label: sub(o.label),
-            onClick: () => { closeMessageBox(); actionResolveStory(o.id); },
-          })),
+          buttons: opts.map((o) => {
+            const poor = o.cost != null && money < o.cost;
+            return {
+              label: sub(o.label) + (poor ? ` (нужно ${fmtK(o.cost ?? 0)})` : ''),
+              disabled: poor,
+              title: poor ? `Не хватает денег: нужно ${fmtK(o.cost ?? 0)}, есть ${fmtK(money)}` : undefined,
+              onClick: () => { closeMessageBox(); actionResolveStory(o.id); },
+            };
+          }),
         });
       }
     }
@@ -247,8 +254,23 @@ function EventWatcher() {
           });
         } else {
           // выбор: недоступные варианты (условия) — серые, как на стенде
-          const req = (c: (typeof node.choices)[number]) =>
-            c.cond?.fansMin ? `нужно фанатов ≥ ${CONFIG.SAGA.FANS_MIN}` : 'условие не выполнено';
+          // аудит-51 03-P3-9: причина отказа — из конкретного условия варианта, а не «условие не выполнено»
+          const req = (c: (typeof node.choices)[number]) => {
+            const cd = c.cond;
+            if (!cd) return 'условие не выполнено';
+            if (cd.moneyMin != null) return `нужно ≥ ${fmtK(cd.moneyMin)} в кассе`;
+            if (cd.moneyMax != null) return 'касса слишком велика для этого хода';
+            if (cd.fansMin) return `нужно фанатов ≥ ${CONFIG.SAGA.FANS_MIN}`;
+            if (cd.heroJob) {
+              const arr = Array.isArray(cd.heroJob) ? cd.heroJob : [cd.heroJob];
+              return `герой — ${arr.map((j) => CAREER_LABELS[j] ?? j).join(' или ')}`;
+            }
+            if (cd.noiseMin != null) return 'ШУМ ниже нужного';
+            if (cd.noiseMax != null) return 'ШУМ выше нужного';
+            if (cd.conscienceMin != null) return 'СОВЕСТЬ ниже нужной';
+            if (cd.conscienceMax != null) return 'СОВЕСТЬ выше нужной';
+            return 'нужен другой ход истории';
+          };
           popup({
             title,
             autopilotTarget: 'mb-ok',
@@ -259,6 +281,7 @@ function EventWatcher() {
               return {
                 label: `${i + 1}. ${sub(c.label)}${ok ? '' : ` (${req(c)})`}`,
                 disabled: !ok,
+                title: ok ? undefined : req(c),
                 onClick: () => actionResolveSaga(String(i)),
               };
             }),
