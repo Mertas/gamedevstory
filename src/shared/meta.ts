@@ -2,7 +2,8 @@
 import type { CareerId } from '../core/data/schema';
 import type { ConsoleState } from '../core/types';
 import { comboGradeFrom } from './rules';
-import { ownConsoleMult } from './consoles';
+import { ownConsoleMult, MONTH_OFFSETS } from './consoles';
+import { CONFIG } from '../core/config';
 
 export interface MetaData {
   genres: { id: string; name: string; ru: string; popularity: string; costWan: number; unlockJob: string | null; unlockLevel: number | null }[];
@@ -79,18 +80,17 @@ export { isUnlocked, consoleAvailable } from './rules';
 
 // ─── даты ───
 const MONTHS_RU = ['апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря', 'января', 'февраля', 'марта'];
-const MONTH_OFFSETS = [0, 30, 61, 91, 122, 153, 183, 214, 244, 275, 306, 334];
-const MONTH_DAYS = [30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 28, 31];
+const MONTH_DAYS = [30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 28, 31]; // MONTH_OFFSETS — единый источник: shared/consoles.ts (аудит-51 04-P3-3)
 
 export function dayInYear(week: number): number {
-  return ((week - 1) % 365) + 1; // 365 = CONFIG.YEAR_LENGTH
+  return ((week - 1) % CONFIG.YEAR_LENGTH) + 1;
 }
 
 // «15 июня 1986» (week = игровой день, старт 1 апреля 1985).
 // ВАЖНО: январь–март = конец игрового года → календарный год на 1 больше (4 января игрового
 // года 1 = 4 января 1986, не 1985).
 export function dateLabel(week: number): string {
-  const gameYear = Math.floor((week - 1) / 365);
+  const gameYear = Math.floor((week - 1) / CONFIG.YEAR_LENGTH);
   const d = dayInYear(week);
   for (let m = 0; m < 12; m++) {
     if (d <= (MONTH_OFFSETS[m] ?? 0) + (MONTH_DAYS[m] ?? 0)) {

@@ -23,7 +23,8 @@ const DIST = path.join(ROOT, 'dist');
 // SRV-06: seq/ack на WS-канале — клиент повторяет недоставленные действия после обрыва
 // (очередь с TTL); guard отсекает уже обработанные (их ack потерялся вместе с сокетом).
 // PLAN-18: guard — на пользователя (у каждого своя партия и свой поток действий)
-const guards = new Map<number, ReturnType<typeof createSeqGuard>>();
+// аудит-51 04-P3-9: с отметкой последней активности — старые записи вычищает heartbeat
+const guards = new Map<number, { g: ReturnType<typeof createSeqGuard>; seen: number }>();
 
 // SRV-13: heartbeat — полумёртвый сокет (Wi-Fi уснул, ноут в суспенде) не выглядит закрытым:
 // пингуем и закрываем молчунов. Backpressure: нечитающему клиенту снапшоты не копим — они
@@ -127,8 +128,8 @@ wss.on('connection', (ws, req) => {
     ws.close(1008, 'нет активной партии');
     return;
   }
-  const seqGuard = guards.get(user.id) ?? createSeqGuard();
-  guards.set(user.id, seqGuard);
+  const seqGuard = guards.get(user.id)?.g ?? createSeqGuard();
+  guards.set(user.id, { g: seqGuard, seen: Date.now() });
   ws.on('error', (e) => console.error('[gds] ws error:', String(e).slice(0, 300))); // SRV-14
   const live = ws as LiveSocket;
   live.isAlive = true; // SRV-13: сердцебиение — молчуна отключит heartbeat-тик
@@ -222,6 +223,9 @@ const heartbeat = setInterval(() => {
     s.isAlive = false;
     try { s.ping(); } catch { /* сокет уже мёртв — добьём следующим тиком */ }
   }
+  // аудит-51 04-P3-9: эвикция guard'ов игроков, не подключавшихся сутки (иначе map растёт вечно)
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const [uid, e] of guards) if (e.seen < cutoff) guards.delete(uid);
 }, HEARTBEAT_MS);
 wss.on('close', () => clearInterval(heartbeat));
 
@@ -315,7 +319,7 @@ async function metaFromFile(full: string, file: string, size: number, mtime: num
     try {
       musicDb.prepare('INSERT OR REPLACE INTO meta (path, size, mtime, title, artist, album, duration) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .run(file, size, mtime, meta.title, meta.artist, meta.album, meta.duration);
-    } catch { /* noop */ }
+    } catch (e) { console.error('[gds] music-meta: запись не удалась:', String(e).slice(0, 200)); } // аудит-51 04-P3-8
   }
   return meta;
 }

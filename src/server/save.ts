@@ -100,7 +100,7 @@ export class SaveManager {
     // аудит 05.09: импорт затирает текущую партию — бэкап перед перезаписью
     try {
       if (fs.existsSync(this.path)) fs.copyFileSync(this.path, `${this.path}.pre-import-${Date.now()}`);
-    } catch { /* бэкап не критичен */ }
+    } catch (e) { console.error('[gds] пред-импортный бэкап не удался:', String(e).slice(0, 200)); } // аудит-51 04-P3-8: не глотать молча
     return loaded;
   }
 

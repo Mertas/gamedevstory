@@ -1,7 +1,7 @@
 // Смоук Акта IV: S1 → … → i4. Проверяет тексты, вставки (партнёр/профессия/флаги), cond-скрытие, род.
 // Требует: сервер :8899 и chrome --remote-debugging-port=9334. Запуск: node smoke-act4.mjs
 import { createRequire } from 'node:module';
-const require = createRequire('E:/MY/GameDevStory/package.json');
+const require = createRequire(new URL('../package.json', import.meta.url)); // аудит-51 04-P3-7: без абсолютного пути
 const WebSocket = require('ws');
 
 const CDP = 'http://127.0.0.1:9334';

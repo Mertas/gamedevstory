@@ -57,6 +57,7 @@ export function PressModal() {
     speedBefore.current = speed;
     setSpeed(0);
     return () => setSpeed(speedBefore.current);
+    // аудит-51 04-P3-10: speed читается один раз при открытии (в speedBefore) — в депсах он вернул бы не ту скорость
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openKey]);
 
@@ -72,6 +73,7 @@ export function PressModal() {
     if (!openKey || step < total) return;
     const t = setTimeout(() => finish(), autopilot ? FINAL_MS : FINAL_LIMIT_MS);
     return () => clearTimeout(t);
+    // аудит-51 04-P3-10: таймер итоговой карточки; finish из замыкания — намеренно вне депсов
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openKey, autopilot, step, total]);
 
@@ -99,6 +101,7 @@ export function PressModal() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // аудит-51 04-P3-10: клавиши активны, пока открыт показ; обработчик пересоздаётся при открытии — этого достаточно
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openKey]);
 

@@ -101,6 +101,7 @@ export function DevStatus() {
     );
     prevSumRef.current = Math.round(g.points.fun + g.points.creativity + g.points.graphics + g.points.sound);
     stageRef.current = 'idle';
+    // аудит-51 04-P3-10: сброс анимации ровно на смену партии (gKey); game/g пересоздаются вместе с ключом — в депсах незачем
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gKey]);
 
@@ -115,6 +116,7 @@ export function DevStatus() {
         sound: Math.round(g.points.sound),
       });
     }
+    // аудит-51 04-P3-10: мгновенный скачок ровно на смену типа происшествия; очки намеренно не в депсах
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.pendingEvent?.type]);
 
@@ -141,6 +143,7 @@ export function DevStatus() {
       g.phase,
       dec.burst,
     );
+    // аудит-51 04-P3-10: волна за такт — по неделе/вкладу, чтобы не пересобирать частицы на каждый рендер
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.week, game.devContrib, gKey]);
 

@@ -20,5 +20,5 @@
     "types": ["vitest/globals", "node"],
     "outDir": "dist"
   },
-  "include": ["src", "scripts", "test", "tools"]
+  "include": ["src", "scripts", "test", "tools", "vite.config.ts", "vitest.config.ts", "build-define.ts"]
 }

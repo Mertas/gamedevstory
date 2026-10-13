@@ -11,6 +11,7 @@ export function IntroModal() {
   // первый рабочий день: главное окно сразу на экране — игроку остаётся выбрать первую игру
   useEffect(() => {
     if (fresh) wm.open('code');
+    // аудит-51 04-P3-10: открыть окно ровно при появлении «первого дня»; wm-хелперы не в депсах — эффект привязан к событию, не к ссылкам
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fresh]);
   if (!fresh) return null;

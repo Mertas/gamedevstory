@@ -10,7 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
-const GAME = 'E:/MY/GameDevStory';
+const GAME = path.resolve(DIR, '..'); // аудит-51 04-P3-7: без абсолютного пути — стенд лежит в корне репозитория
 const PORT = 8899;
 
 const MIME = {

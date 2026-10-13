@@ -2,6 +2,7 @@
 import { newGame, tick } from '../src/core/engine';
 import { applyDifficulty, isDifficultyId, type DifficultyId } from '../src/core/difficulty';
 import { createPlayer, type PolicyStats } from '../src/core/sim/policy';
+import { CONFIG } from '../src/core/config';
 
 const seed = Number(process.argv[2] ?? 1);
 const days = Number(process.argv[3] ?? 730);
@@ -28,7 +29,7 @@ console.log(`Банкрот: ${state.bankrupt} | Награды: GP ${state.awar
 console.log('--- История игр ---');
 for (const h of state.history) {
   console.log(
-    `Y${h.year} D${h.releaseWeek % 365} «${h.name}» ${h.score}/40 ${h.score >= 32 ? '🏆' : ''} | продано ${(h.units / 1000).toFixed(2)}M (${Math.round(h.revenue)}K) | баги на релизе ${h.bugs}`,
+    `Y${h.year} D${h.releaseWeek % 365} «${h.name}» ${h.score}/100 ${h.score >= CONFIG.HALL_OF_FAME ? '🏆' : ''} | продано ${(h.units / 1000).toFixed(2)}M (${Math.round(h.revenue)}K) | баги на релизе ${h.bugs}`,
   );
 }
 console.log('--- Последние события ---');

@@ -2,6 +2,11 @@
 // Числа находит лаборатория баланса (E:/My/gds-autoresearch) — здесь только перенос в код,
 // чтобы документ и код не расходились. Запуск: pnpm difficulty:gen
 import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+// аудит-51 04-P3-7: пути от самого файла, а не от CWD — скрипт работает из любой директории
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 interface PresetLevel {
   id: string;
@@ -14,7 +19,7 @@ interface PresetDoc {
   levels: PresetLevel[];
 }
 
-const doc = JSON.parse(readFileSync('difficulty/difficulty-presets.json', 'utf8')) as PresetDoc;
+const doc = JSON.parse(readFileSync(path.resolve(ROOT, 'difficulty', 'difficulty-presets.json'), 'utf8')) as PresetDoc;
 const esc = (s: string): string => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
 const fmtOverrides = (o: Record<string, number>): string => {
@@ -95,5 +100,5 @@ export function resetDerived(): void {
 }
 `;
 
-writeFileSync('src/core/difficulty.ts', out);
+writeFileSync(path.resolve(ROOT, 'src', 'core', 'difficulty.ts'), out);
 console.log('difficulty.ts записан; уровней:', doc.levels.length, '| champion:', doc.source.championExperimentId ?? '—');

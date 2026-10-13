@@ -27,3 +27,14 @@ Thumbs.db
 # аудит-51 02-P2-6: закрытые ключи не попадают в git
 *.key
 gds_key*
+
+# аудит-51 04-P3-11: неиспользуемые варианты аватарок (UI берёт 256_d8/d12/d16 и 1024_d4/d8/d12/d16)
+public/avatars/*/*_d2.png
+public/avatars/*/*_d6.png
+public/avatars/*/*_d32.png
+public/avatars/*/*_256.png
+public/avatars/*/*_1024.png
+*.otf.zip
+
+# артефакты покрытия (аудит-51 04-P3-6)
+coverage/

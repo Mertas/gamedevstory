@@ -42,10 +42,6 @@ function all<T>(sql: string): T[] {
   return db.prepare(sql).all() as T[];
 }
 
-function get<T>(sql: string, ...params: (string | number | null)[]): T | undefined {
-  return db.prepare(sql).get(...params) as T | undefined;
-}
-
 // ---------------- жанры ----------------
 
 export const GENRES: GenreData[] = all<Row>(
@@ -213,11 +209,6 @@ export const HIRE_METHODS: HireMethodData[] = all<Row>(
   'SELECT id, name, name_en AS nameEn, cost_wan AS costWan, office FROM hire_methods ORDER BY id',
 ).map((r) => ({ ...r }) as unknown as HireMethodData);
 
-export interface OfficeData { level: number; capacity: number; moveCost: number; triggerText: string }
-export const OFFICES: OfficeData[] = all<Row>(
-  'SELECT level, capacity, move_cost AS moveCost, trigger_text AS triggerText FROM offices ORDER BY level',
-).map((r) => ({ ...r }) as unknown as OfficeData);
-
 export interface BoosterPrice { office: number; purchaseNo: number; price: number }
 export const BOOSTER_PRICES: BoosterPrice[] = all<Row>(
   'SELECT office, purchase_no AS purchaseNo, price FROM item_boosters ORDER BY office, purchase_no',
@@ -227,12 +218,3 @@ export interface ConsumablePrice { name: string; nameEn: string | null; office: 
 export const CONSUMABLE_PRICES: ConsumablePrice[] = all<Row>(
   'SELECT name, name_en AS nameEn, office, price FROM item_consumables ORDER BY name, office',
 ).map((r) => ({ ...r }) as unknown as ConsumablePrice);
-
-// ---------------- мета ----------------
-
-export function dbInfo(): { version: number; tables: string[]; combos: number } {
-  const version = (get<Row>('PRAGMA user_version') ?? { user_version: 0 }).user_version as number;
-  const tables = all<Row>("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").map((r) => r.name as string);
-  const combos = (get<Row>('SELECT COUNT(*) AS c FROM combos') ?? { c: 0 }).c as number;
-  return { version, tables, combos };
-}

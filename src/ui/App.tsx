@@ -389,6 +389,7 @@ export function App() {
       showClientError(`Сессия партии закрыта: ${snap.sessionLostReason ?? 'соединение прервано'}`);
       exitToLauncher();
     }
+    // аудит-51 04-P3-10: депсы намеренно узкие — реагируем на смену sessionLost/экрана; хелперы пересоздаются каждый рендер и в депсах гоняли бы эффект лишний раз
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap.sessionLost, screen]);
 

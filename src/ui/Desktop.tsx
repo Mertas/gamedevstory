@@ -307,6 +307,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   useEffect(() => {
     if (prevSort.current !== deskSort) realign();
     prevSort.current = deskSort;
+    // аудит-51 04-P3-10: prevSort-паттерн — сравниваем с прошлым значением; realign из замыкания намеренно не в депсах
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deskSort]);
 
@@ -335,6 +336,7 @@ export function Desktop({ onExit }: { onExit: () => void }) {
       missing.forEach((it, i) => { next[it.id] = spots[i]!; });
       return next;
     });
+    // аудит-51 04-P3-10: пересадка иконок при смене набора/позиций; rowsCount()/firstFreeTiles — чистые, в депсах не нужны
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortedIcons, deskPos]);
 
