@@ -9,6 +9,7 @@ OUT=$BASE/backups
 KEEP_DAYS=14
 
 mkdir -p "$OUT"
+chmod 700 "$OUT" # аудит-51 02-P3-8: доступ к бэкапам — только владельцу (gds)
 STAMP="$(date +%F_%H%M)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -20,7 +21,7 @@ fi
 # контент-БД и письма — просто копируем
 [ -f "$DATA/gamedev.db" ] && cp "$DATA/gamedev.db" "$TMP/"
 [ -f "$DATA/music-meta.sqlite" ] && cp "$DATA/music-meta.sqlite" "$TMP/"
-[ -d "$DATA/mail-out" ] && cp -r "$DATA/mail-out" "$TMP/"
+# аудит-51 02-P3-8: mail-out не бэкапим — в письмах лежат активные коды восстановления
 # аудит-51 04-P2-8: секреты (.env: GDS_PEPPER, ключи LLM/почты) — иначе бэкап невосстановим
 [ -f "$BASE/shared/.env" ] && cp "$BASE/shared/.env" "$TMP/env.backup"
 

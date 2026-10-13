@@ -104,7 +104,11 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
 
   // защита от перебора: вход/сброс — 8 попыток за 10 минут, регистрация — 5 в час (на IP)
   const loginLimit = new RateLimit(8, 10 * 60 * 1000);
+  // аудит-51 02-P2-3: флуд-порог по IP — при явном переборе отказываем ДО scrypt (CPU-DoS)
+  const loginFloodLimit = new RateLimit(30, 10 * 60 * 1000);
   const registerLimit = new RateLimit(5, 60 * 60 * 1000);
+  // аудит-51 02-P2-8: /api/studio-name зовёт LLM — per-user лимит (10 за 10 минут)
+  const studioNameLimit = new RateLimit(10, 10 * 60 * 1000);
   // аудит-51 02-P2-1: подтверждение кода сброса — окно на пару (IP, логин) и на логин целиком
   const resetConfirmLimit = new RateLimit(8, 15 * 60 * 1000);
   const resetConfirmLimitUser = new RateLimit(12, 15 * 60 * 1000);
@@ -138,6 +142,10 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
     // 16.09: окно лимита считает НЕУДАЧНЫЕ попытки; верный пароль проходит всегда (и сбрасывает
     // окно) — иначе после смены пароля владелец упирался бы в чужой «таймер» и ждал 10 минут
     const allowed = loginLimit.allow(key);
+    // аудит-51 02-P2-3: явный флуд с IP отсекаем ДО scrypt (сам scrypt бьёт по CPU)
+    if (!loginFloodLimit.allow(`lf:${ipOf(req)}`)) {
+      return void res.json({ ok: false, error: 'Слишком много попыток входа — подождите 10 минут' });
+    }
     const r = users.login(name, String(password ?? ''));
     if (r.ok) {
       loginLimit.reset(key);
@@ -326,7 +334,9 @@ export function registerApi(app: Express, deps: ApiDeps): (req: HeadersLike) => 
   // SER-25: имя студии от GigaChat; занятые имена из выдачи отбрасываются, при полной занятости —
   // ещё раунд генерации. На провале LLM клиент подставит локальное название сам.
   app.get('/api/studio-name', (req, res) => {
-    void withUser(req, res, async () => {
+    void withUser(req, res, async (u) => {
+      // аудит-51 02-P2-8: LLM-эндпоинт — не чаще 10 вызовов на игрока за 10 минут
+      if (!studioNameLimit.allow(`sn:${u.id}`)) return void res.json({ ok: false, error: 'Слишком часто — попробуйте через несколько минут' });
       try {
         // занятые (из сейвов) + уже показанные в форме (skip) — оба списка уходят в промпт
         // аудит-51 02-P2-11: строки клиента идут в промпт LLM — режем длину и управляющие символы

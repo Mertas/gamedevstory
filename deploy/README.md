@@ -6,6 +6,7 @@
 | `post-receive` | `/srv/gds.git/hooks/post-receive` (+ `chmod +x`) |
 | `gds.service` | `/etc/systemd/system/gds.service` |
 | `nginx-gds.conf` | `/etc/nginx/sites-available/gds` (+ симлинк в `sites-enabled`) |
+| `nginx-limits.conf` | `/etc/nginx/conf.d/gds-limits.conf` — зоны `limit_req` для `nginx-gds.conf` (ставить ДО `nginx -t`) |
 | `rollback.sh` | `/srv/gds/rollback.sh` (+ `chmod +x`) |
 | `backup.sh` | `/srv/gds/backup.sh` (+ `chmod +x`), в cron |
 | `deploy-lab.cmd.example` | образец публикации песочницы мини-игр: запускается из каталога песочницы (напр. `E:/MY/gds-minigames`), заливает статику в `/srv/gds/lab` |
@@ -14,7 +15,7 @@
 
 ```bash
 # 1. пользователь + SSH-ключ (пароли по SSH потом выключаем)
-adduser gds && usermod -aG sudo gds
+adduser gds   # без группы sudo: сервису хватает точечного правила на рестарт (шаг 5; аудит-51 02-P2-7)
 mkdir -p /home/gds/.ssh && chmod 700 /home/gds/.ssh
 #   локально: ssh-keygen -t ed25519 -f gds_key
 #   публичный ключ → /home/gds/.ssh/authorized_keys (chmod 600, владелец gds)
@@ -32,14 +33,17 @@ sudo -u gds git init --bare /srv/gds.git
 # 4. секреты (значения — из .env.example)
 install -m 600 -o gds -g gds /dev/null /srv/gds/shared/.env
 nano /srv/gds/shared/.env          # заполнить GIGACHAT_*, HOST/PORT, PROD=1
+#   GDS_OWNER_PASSWORD (≥10 симв.) — иначе сид-владелец получит случайный пароль, смотрите его в journalctl -u gds (аудит-51 04-P1-3)
 
 # 5. хук, юнит, nginx, права на рестарт сервиса
 install -m 755 -o gds -g gds /srv/gds/current/deploy/post-receive /srv/gds.git/hooks/post-receive   # (после первого push)
 echo 'gds ALL=(root) NOPASSWD: /bin/systemctl restart gds, /bin/systemctl is-active gds' > /etc/sudoers.d/gds
 chmod 440 /etc/sudoers.d/gds
+# если пользователь уже в группе sudo (сервер настроен по старой инструкции) — вывести: gpasswd -d gds sudo
 
 # 6. система
 cp /tmp/gds.service /etc/systemd/system/gds.service && systemctl daemon-reload && systemctl enable gds
+cp /tmp/nginx-limits.conf /etc/nginx/conf.d/gds-limits.conf   # зоны limit_req (аудит-51 02-P3-9)
 cp /tmp/nginx-gds.conf /etc/nginx/sites-available/gds && ln -s /etc/nginx/sites-available/gds /etc/nginx/sites-enabled/gds
 nginx -t && systemctl reload nginx
 ufw allow 22,80,443/tcp && ufw enable

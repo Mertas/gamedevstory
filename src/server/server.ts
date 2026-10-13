@@ -44,7 +44,8 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // мини-игра живёт в iframe того же origin
   res.setHeader('Referrer-Policy', 'same-origin');
-  const proto = String(req.headers['x-forwarded-proto'] ?? req.protocol);
+  // аудит-51 02-P3-7: не читаем сырой X-Forwarded-Proto — его учитывает express (trust proxy 'loopback')
+  const proto = req.protocol;
   if (proto === 'https') res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   next();
 });
@@ -226,7 +227,8 @@ wss.on('close', () => clearInterval(heartbeat));
 
 // ─── HTTP: экспорт/импорт сейва ───
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, llm: llmStatus(), version: gameVersion(), build: buildId() });
+  // аудит-51 02-P3-1: без деталей LLM (разведка перед атакой); build нужен клиенту для плашки обновления
+  res.json({ ok: true, version: gameVersion(), build: buildId() });
 });
 
 app.get('/api/save', (req, res) => {

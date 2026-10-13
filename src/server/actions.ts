@@ -22,6 +22,9 @@ import { gform } from '../shared/gender';
 // аудит 09.09 (SRV-01): скорость — конечное число в [0..MAX_SPEED]; иначе Math.round(1000/v)=0 → тик каждую 1 мс
 export const MAX_SPEED = 8;
 
+// аудит-51 02-P2-8: лимит реплик игрока в чате — каждая запускает LLM-серию ответов команды
+const chatMsgTimes = new WeakMap<object, number[]>();
+
 /** результат действия клиента (action_result + попапы) */
 export type ActionOutcome = { ok: boolean; error?: string; popup?: { title: string; text: string } };
 
@@ -321,6 +324,16 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       return;
     // игрок пишет в чат → команда отвечает серией реплик (по одной, по очереди)
     case 'chat_message': {
+      // аудит-51 02-P2-8: не чаще 6 сообщений/мин — серия ответов команды это LLM-нагрузка
+      const nowTs = Date.now();
+      const times = (chatMsgTimes.get(s) ?? []).filter((t) => nowTs - t < 60_000);
+      if (times.length >= 6) {
+        s.pushSystem('Команда не успевает отвечать — подождите минуту.');
+        s.emit();
+        return;
+      }
+      times.push(nowTs);
+      chatMsgTimes.set(s, times);
       const text = msg.text.trim().slice(0, 400);
       if (text.length >= 2) {
         if (s.game.staff.length === 0) {

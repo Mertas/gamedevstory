@@ -14,9 +14,16 @@ Restart=always
 RestartSec=3
 StandardOutput=journal
 StandardError=journal
-# минимум прав: сервису нечего делать вне своего каталога
+# минимум прав: сервису нечего делать вне своего каталога (sandbox — аудит-51 02-P2-7)
 NoNewPrivileges=true
 PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/gds/shared /srv/gds/current /srv/gds/releases
+PrivateDevices=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

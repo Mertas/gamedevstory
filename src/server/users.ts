@@ -10,6 +10,7 @@ import type { DatabaseSync as SqliteDatabase } from 'node:sqlite';
 import { createHash, createHmac, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import { drawMinigame, type MinigameBag } from '../shared/minigames';
 import { DM_KEEP_PER_PAIR, SAVE_PAYLOAD_MAX_BYTES } from './limits';
+import { RateLimit } from './ratelimit';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const USERS_DB_PATH = path.join(ROOT, 'data', 'users.db');
@@ -104,6 +105,10 @@ function verifyPassword(pass: string, salt: string, stored: string): boolean {
 
 // аудит-51 02-P2-2: фиктивные соль/хэш — выравнивают время ответа входа для несуществующих логинов
 const DUMMY = hashPassword('timing-equalizer');
+
+// аудит-51 02-P2-3: scryptSync блокирует event loop — верификации идут через общий тормоз:
+// больше N за секунду (перебор/флуд) не пускаем до самого scrypt.
+const verifyGate = new RateLimit(20, 1000);
 const DUMMY_SALT = DUMMY.salt;
 const DUMMY_HASH = DUMMY.hash;
 
@@ -231,10 +236,13 @@ export class UserService {
   login(login: string, password: string): Res<{ user: UserRow; token: string }> {
     const u = this.userByLogin(login.trim());
     if (!u) {
+      // аудит-51 02-P2-3: под общим тормозом верификаций (scrypt бьёт по CPU)
+      if (!verifyGate.allow('verify')) return { ok: false, error: 'Сервер занят — повторите через пару секунд' };
       // аудит-51 02-P2-2: фиктивная проверка пароля — время ответа не выдаёт существование логина
       verifyPassword(password, DUMMY_SALT, DUMMY_HASH);
       return { ok: false, error: 'Неверный логин или пароль' };
     }
+    if (!verifyGate.allow('verify')) return { ok: false, error: 'Сервер занят — повторите через пару секунд' }; // аудит-51 02-P2-3
     if (!verifyPassword(password, u.salt, u.pass_hash)) return { ok: false, error: 'Неверный логин или пароль' };
     // старый хэш (без перца/слабые параметры) молча апгрейдим, пока пароль под рукой
     if (needsRehash(u.pass_hash)) {
@@ -245,13 +253,25 @@ export class UserService {
     const now = Date.now();
     this.db.prepare('INSERT INTO sessions (token, user_id, created, expires) VALUES (?, ?, ?, ?)')
       .run(sha256(token), u.id, now, now + SESSION_MS); // в базе — только его хэш
+    // аудит-51 02-P3-2: активных сессий не больше 10 — старейшие вытесняются
+    this.db.prepare(
+      `DELETE FROM sessions WHERE user_id = ? AND token NOT IN (
+         SELECT token FROM sessions WHERE user_id = ? ORDER BY created DESC LIMIT 10)`,
+    ).run(u.id, u.id);
     return { ok: true, user: UserService.toUser(u), token };
   }
 
-  /** Пользователь по токену сессии (просроченные вычищаются). В базе лежит sha256(токен). */
+  private lastSessionSweep = 0;
+
+  /** Пользователь по токену сессии (просроченные вычищаются фоном). В базе лежит sha256(токен). */
   userByToken(token: string): UserRow | null {
     if (!token) return null;
-    this.db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
+    // аудит-51 02-P3-2: чистка раз в час, а не записью на каждом чтении токена
+    const now = Date.now();
+    if (now - this.lastSessionSweep > 3_600_000) {
+      this.lastSessionSweep = now;
+      this.db.prepare('DELETE FROM sessions WHERE expires < ?').run(now);
+    }
     const row = this.db.prepare(
       `SELECT u.id, u.login, u.email, u.created, u.admin FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token = ? AND s.expires >= ?`,

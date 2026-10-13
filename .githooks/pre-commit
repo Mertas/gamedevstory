@@ -14,3 +14,12 @@ if [ "$head_ver" = "$stage_ver" ]; then
   exit 1
 fi
 echo "✔ версия: ${head_ver:-нет} → $stage_ver"
+
+# аудит-51 02-P3-4: грубый скан секретов по staged-файлам (приватные ключи и типовые токены).
+# Служебные хуки из скана исключены, чтобы проверка не срабатывала на саму себя.
+secret_hits=$(git diff --cached --name-only --diff-filter=ACM | grep -v '^\.githooks/' | tr '\n' '\0' | xargs -0 -r grep -IlE 'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY|sk-[A-Za-z0-9_-]{24,}' 2>/dev/null)
+if [ -n "$secret_hits" ]; then
+  echo "✋ Похоже на секреты в коммите:"
+  echo "$secret_hits" | sed 's/^/   /'
+  exit 1
+fi
