@@ -12,6 +12,8 @@ export interface UnlockCtx {
   officeLevel: number;
   /** офисы, которых требуют известные заказы (meta.contracts → office ?? 1) */
   contractOffices: number[];
+  /** PLAN-52 M1: в сейве есть хотя бы одна франшиза (игра 80+) */
+  hasFranchise: boolean;
 }
 
 /**
@@ -35,6 +37,9 @@ export function isAppVisible(id: string, ctx: UnlockCtx): boolean {
     case 'contracts':
       // появляется вместе с первым доступным заказом (офис дотянулся)
       return ctx.contractOffices.some((o) => ctx.officeLevel >= o);
+    case 'empire':
+      // PLAN-52 M1: «Империя» открывается вместе с первой франшизой (игра 80+)
+      return ctx.hasFranchise;
     default:
       // маркетинг и остальные — с начала игры (plan/40, п.7)
       return true;

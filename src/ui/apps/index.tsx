@@ -5,6 +5,7 @@ import { memo, type ComponentType } from 'react';
 import { ChatApp } from './ChatApp';
 import { CodeApp } from './CodeApp';
 import { ArchiveApp } from './archive/Archive';
+import { EmpireApp } from './empire/Empire';
 import { ContractsApp } from './market/Contracts';
 import { HardwareApp } from './market/Hardware';
 import { HelpApp } from './help/Help';
@@ -30,6 +31,7 @@ export const APP_DEFS: AppDef[] = [
   { id: 'chat', title: 'Чат', icon: '💬', component: memo(ChatApp) },
   { id: 'hire', title: 'Найм', icon: '👥', component: memo(HireApp) },
   { id: 'archive', title: 'Архив', icon: '🗄️', component: memo(ArchiveApp) },
+  { id: 'empire', title: 'Империя', icon: '👑', component: memo(EmpireApp) },
   { id: 'hardware', title: 'Железо', icon: '🎮', component: memo(HardwareApp) },
   { id: 'research', title: 'Исследования', icon: '🔬', component: memo(ResearchApp) },
   { id: 'marketing', title: 'Маркетинг', icon: '📣', component: memo(MarketingApp) },

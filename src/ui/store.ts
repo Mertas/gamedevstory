@@ -689,6 +689,10 @@ export function actionTakeContract(contractId: number, staffIds: string[]) {
 export function actionStartOwnConsole(name: string, kind: string, cpu: string, media: string) {
   send({ type: 'start_own_console', name, kind, cpu, media });
 }
+// PLAN-52 M1: медиа-империя — запуск/остановка линии мерча на франшизе
+export function actionMerchToggle(key: string) {
+  send({ type: 'merch_toggle', key });
+}
 
 // ─── сейвы (HTTP) ───
 export async function exportSave(): Promise<string> {

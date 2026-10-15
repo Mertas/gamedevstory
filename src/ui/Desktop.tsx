@@ -34,7 +34,7 @@ import type { GameRecord, GameState } from '../core/types';
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
 // дефолтные иконки приложений (win95-набор; подобраны вручную)
 const DEFAULT_ICONS: Record<string, string> = {
-  code: 'w95_16.png', chat: 'w95_14.png', hire: 'w95_45.png', archive: 'w95_37.png',
+  code: 'w95_16.png', chat: 'w95_14.png', hire: 'w95_45.png', archive: 'w95_37.png', empire: 'w95_6.png',
   hardware: 'w95_12.png', research: 'w95_35.png',
   marketing: 'w95_40.png', contracts: 'w95_39.png', mail: 'w95_17.png', help: 'w95_24.png',
   winamp: 'winamp.png',
@@ -92,13 +92,15 @@ export function Desktop({ onExit }: { onExit: () => void }) {
   const accountReleases = useAccountReleases();
   const meta = useMeta();
   // PLAN-40: недоступное не рисуется — ни на столе, ни в «Пуске», ни в списке окон
+  const hasFranchise = Object.keys(game.franchises ?? {}).length > 0; // PLAN-52 M1: видимость «Империи»
   const unlockCtx = useMemo(() => ({
     saveReleases: game.history.length,
     accountReleases,
     victory,
     officeLevel: game.officeLevel,
     contractOffices: meta ? meta.contracts.map((c) => c.office ?? 1) : [1],
-  }), [game.history.length, game.officeLevel, accountReleases, victory, meta]);
+    hasFranchise, // PLAN-52 M1: «Империя» видна с первой франшизой
+  }), [game.history.length, game.officeLevel, accountReleases, victory, meta, hasFranchise]);
   const apps = useMemo(
     () => APP_DEFS.filter((a) => (!a.adminOnly || owner) && isAppVisible(a.id, unlockCtx)),
     [owner, unlockCtx],

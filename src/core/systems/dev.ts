@@ -16,6 +16,7 @@ import { DIRECTION_WEIGHTS, EMPTY_STATS } from '../types';
 import { comboGradeFrom, consoleReleased as consoleAvailable, isUnlocked, score100 } from '../../shared/rules';
 import { ownConsoleMult } from '../../shared/consoles';
 import { busyStaffIds } from './staff';
+import { onGameReleased } from './franchise';
 
 export function genreById(id: string) {
   return GENRES.find((g) => g.id === id)!;
@@ -457,6 +458,8 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
     paidUnits: 0,
     paidRevenue: 0,
   });
+  // PLAN-52 M1: релиз обновляет франшизу — рождение серии или сиквел (сила бренда в «Империи»)
+  onGameReleased(state, state.history[state.history.length - 1]!);
   // 25.09: история хранится ЦЕЛИКОМ и не режется — все игры навсегда остаются в архиве (босс).
 
   log(state, `РЕЛИЗ «${game.name}»: ${genre.name} × ${type.name} на ${consoleData.name}`);

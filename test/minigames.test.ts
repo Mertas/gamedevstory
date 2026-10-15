@@ -146,13 +146,15 @@ describe('PLAN-40: сводка аккаунта, скорости, видимо
     expect(speedOptions(500)).toEqual([0, 0.5, 1, 2, 4, 8]);
   });
 
-  it('Архив/Почта — после 1-го релиза; Контракты — по офису; Маркетинг — сразу', () => {
-    const ctx = { saveReleases: 0, accountReleases: 0, victory: false, officeLevel: 1, contractOffices: [1, 2, 3] };
+  it('Архив/Почта — после 1-го релиза; Контракты — по офису; Империя — с франшизой; Маркетинг — сразу', () => {
+    const ctx = { saveReleases: 0, accountReleases: 0, victory: false, officeLevel: 1, contractOffices: [1, 2, 3], hasFranchise: false };
     expect(isAppVisible('archive', ctx)).toBe(false);
     expect(isAppVisible('mail', ctx)).toBe(false);
     expect(isAppVisible('marketing', ctx)).toBe(true);
     expect(isAppVisible('contracts', ctx)).toBe(true); // первый заказ доступен уже с офиса 1
+    expect(isAppVisible('empire', ctx)).toBe(false); // PLAN-52 M1: «Империя» — только с франшизой
     expect(isAppVisible('archive', { ...ctx, saveReleases: 1 })).toBe(true);
+    expect(isAppVisible('empire', { ...ctx, hasFranchise: true })).toBe(true);
     expect(isAppVisible('contracts', { ...ctx, officeLevel: 0, contractOffices: [2] })).toBe(false);
   });
 });

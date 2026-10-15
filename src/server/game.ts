@@ -82,6 +82,8 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'buy_ad'; adId: number }
   | { type: 'take_contract'; contractId: number; staffIds: string[] }
   | { type: 'start_own_console'; name: string; kind: 'console' | 'portable'; cpu: string; media: string }
+  // PLAN-52 M1: медиа-империя — линия мерча на франшизе («Империя»)
+  | { type: 'merch_toggle'; key: string }
   // автопилот (plan/14): включение — только вручную (кнопка «Взять/Отдать управление»)
   | { type: 'take_control' }
   | { type: 'set_autopilot'; on: boolean }

@@ -375,6 +375,24 @@ export interface UiWindow {
   z: number;
 }
 
+/** PLAN-52 M1: франшиза — игра с оценкой 80+ и её продолжения; живёт в «Империи» (медиа-империя, этап 1). */
+export interface Franchise {
+  /** имя франшизы — имя первой игры серии (далее не меняется) */
+  name: string;
+  genreId: string;
+  typeId: string;
+  /** сила бренда 0..100 (дробная внутри; в UI округляется) */
+  brand: number;
+  bornWeek: number;
+  /** последний релиз серии (для расчёта забвения) */
+  lastReleaseWeek: number;
+  releases: { name: string; week: number; score: number }[];
+  /** запущенная линия мерча (дата старта) или null */
+  merch: { startedWeek: number; line: 'figures' } | null;
+  /** сколько полных лет забвения уже списано (защита от повторного списания) */
+  decayed: number;
+}
+
 export interface GameState {
   seed: number;
   saveVersion: number; // версия формата сейва (миграции — src/core/migrate.ts)
@@ -451,6 +469,8 @@ export interface GameState {
   mailId: number; // счётчик id писем
   /** PLAN-48: вечная рента партнёра — % от продаж игр (после расставания через долю) */
   partnerRentPct?: number;
+  /** PLAN-52 M1: франшизы (медиа-империя; у старых сейвов выводится из history в migrate v19) */
+  franchises?: Record<string, Franchise>;
 }
 
 export interface StartProjectInput {

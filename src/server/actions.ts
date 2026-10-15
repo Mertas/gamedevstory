@@ -9,7 +9,7 @@ import {
   dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, introSeenAction, levelUpAction, moveOfficeAction, newGame,
   partnerBuyoutAction, partnerRentAction,
   releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
-  takeContractAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
+  takeContractAction, toggleMerchAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
 } from '../core/engine';
 import { consoleDataFor } from '../core/systems/dev';
 import type { GamedexOption, GameState } from '../core/types';
@@ -386,6 +386,11 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
     // M4
     case 'buy_ad':
       s.run(buyAdAction(s.game, msg.adId));
+      s.emit();
+      return;
+    // PLAN-52 M1: медиа-империя — запуск/остановка линии мерча
+    case 'merch_toggle':
+      s.run(toggleMerchAction(s.game, msg.key));
       s.emit();
       return;
     case 'take_contract':

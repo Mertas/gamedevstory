@@ -29,6 +29,7 @@ import { tickFanLetters } from './systems/mail';
 import { resolveStory, tickStory } from './systems/story';
 import { resolveSaga, tickSaga } from './systems/saga';
 import { resolveFinale, tickFinale } from './systems/finale';
+import { tickFranchises, tickMerch, toggleMerch } from './systems/franchise';
 import type { HeroSetup } from '../shared/hero';
 
 /** PLAN-18: что игрок выбирает на старте (экран новой игры). */
@@ -90,6 +91,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     gamedexHere: false,
     lastGamedex: null,
     gamedexFame: 0,
+    franchises: {}, // PLAN-52 M1: франшизы и мерч (медиа-империя)
     contracts: [],
     adFansGained: {},
     ownConsole: null,
@@ -354,6 +356,11 @@ export function startOwnConsoleAction(
   return startOwnConsole(state, name, type, cpu, media);
 }
 
+// PLAN-52 M1: медиа-империя — запуск/остановка линии мерча на франшизе («Империя»)
+export function toggleMerchAction(state: GameState, key: string) {
+  return toggleMerch(state, key);
+}
+
 // Gamedex: выбрать стенд (выставка в июле, офис 2+)
 export function resolveGamedexAction(state: GameState, option: GamedexOption) {
   const rng = rngFromState(state.rngState, state.seed);
@@ -424,6 +431,8 @@ export function tick(state: GameState): void {
   tickGamedex(state);
   tickContracts(state, rng);
   tickOwnConsole(state);
+  tickFranchises(state); // PLAN-52 M1: забвение франшиз без релизов (медиа-империя)
+  tickMerch(state); // PLAN-52 M1: пассив запущенных линий мерча
   tickStory(state, rng);
   tickSaga(state); // PLAN-49: сага «Синяя Комета» — старт/восстановление попапа главы
   tickFinale(state); // аудит-51 05-P2-6: финал партии — итог после истории, дальше свободная игра

@@ -391,7 +391,7 @@ it('миграция v15: сейв без саги грузится, верси�
   delete (g as { saga?: unknown }).saga;
   const m = migrateSave(g);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(18); // v18: финал партии и письмо двадцатилетия (аудит-51 05-P2-6); v17: бустеры-заряды; v16: PLAN-49 Э3 (числа саги)
+  expect(SAVE_VERSION).toBe(19); // v19: PLAN-52 M1 франшизы; v18: финал партии и письмо двадцатилетия (аудит-51 05-P2-6); v17: бустеры-заряды; v16: PLAN-49 Э3 (числа саги)
   expect(m.saga).toBeUndefined();
 });
 
