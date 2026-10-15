@@ -622,3 +622,12 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .w95-journal { height: 100%; overflow-y: auto; padding: 4px 6px; }
 .w95-journal-row { display: flex; gap: 8px; padding: 3px 4px; border-bottom: 1px solid #d8d8d8; line-height: 1.35; }
 .w95-journal-date { color: #000080; white-space: nowrap; }
+
+/* PLAN-52 M2: мини-окно вскрытия пака карточек (в духе вкладышей 90-х) */
+.pack-grid { display: flex; gap: 10px; justify-content: center; margin: 8px 0; flex-wrap: wrap; }
+.pack-card { width: 76px; height: 104px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 4px; font-size: 10px; line-height: 1.15; text-align: center; border: 2px solid; border-color: var(--w95-light) var(--w95-dark) var(--w95-dark) var(--w95-light); background: #ececec; animation: pack-in .4s ease-out backwards; }
+.pack-card b { font-size: 10px; letter-spacing: .3px; }
+.pack-card span { word-break: break-word; }
+.pack-card-rare { background: #cdd8ff; }
+.pack-card-legend { background: #ffe9a0; border-color: #a08020 #403000 #403000 #a08020; }
+@keyframes pack-in { from { transform: rotateY(90deg) scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }

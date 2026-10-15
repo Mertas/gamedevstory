@@ -316,16 +316,46 @@ export const CONFIG = {
   FRANCHISE_BRAND_LOSS: 1.0,
   /** забвение: −1 к бренду за каждые 52 недели без релиза франшизы */
   FRANCHISE_IDLE_DECAY: 1,
-  /** мерч: минимальная сила бренда для запуска линии фигурок */
+  /** мерч: минимальная сила бренда для запуска линии */
   MERCH_MIN_BRAND: 60,
-  /** мерч: разовые вложения на старт линии фигурок (K) */
-  MERCH_START_COST: 300,
-  /** мерч: содержание линии (K в день; в UI показывается как /нед) */
-  MERCH_UPKEEP_PER_DAY: 20 / 7,
-  /** мерч: доход за неделю = фанаты / MERCH_FANS_DIV × бренд / MERCH_BRAND_DIV (K) */
+  /** мерч: доход за неделю = фанаты / MERCH_FANS_DIV × бренд / MERCH_BRAND_DIV (K; × множители линии и вложений) */
   MERCH_FANS_DIV: 1000,
   MERCH_BRAND_DIV: 50,
-  /** мерч: движение бренда при запуске/остановке линии */
-  MERCH_BRAND_ON_START: 1,
+  /** мерч: бренд при остановке линии */
   MERCH_BRAND_ON_STOP: -2,
+  /**
+   * PLAN-52 M2: линии мерча по эпохам. cost — разовые вложения (K), upkeepPerDay — содержание
+   * (K/день), mult — множитель дохода, unlockYear — календарный год (работа студии).
+   */
+  MERCH_LINES: {
+    figures: { name: 'Фигурки героев', unlockYear: 1985, cost: 300, upkeepPerDay: 20 / 7, mult: 1.0 },
+    plush: { name: 'Мягкие игрушки', unlockYear: 1990, cost: 420, upkeepPerDay: 26 / 7, mult: 1.3 },
+    shirts: { name: 'Футболки с принтом', unlockYear: 1992, cost: 250, upkeepPerDay: 16 / 7, mult: 1.05 },
+    cards: { name: 'Коллекционные карточки', unlockYear: 1996, cost: 500, upkeepPerDay: 30 / 7, mult: 1.6 },
+  },
+  /**
+   * PLAN-52 M2: вложения при запуске линии: «скромно» дешевле, но бьёт по бренду и продажам,
+   * «солидно» дороже — бренд и доход выше.
+   */
+  MERCH_BUDGETS: {
+    low: { name: 'Скромно', costMult: 0.6, incomeMult: 0.85, brandOnStart: -2 },
+    norm: { name: 'Нормально', costMult: 1, incomeMult: 1, brandOnStart: 1 },
+    high: { name: 'Солидно', costMult: 1.8, incomeMult: 1.15, brandOnStart: 2 },
+  },
+  /** PLAN-52 M2: одновременно активных линий мерча — по офисам 1–3 и после финала партии */
+  MERCH_SLOTS_BY_OFFICE: [2, 4, 6],
+  MERCH_SLOTS_FINALE: 8,
+  /** PLAN-52 M2: паки карточек — цена (K), срок между паками (нед), размер пака (карт) */
+  CARD_PACK_COST: 120,
+  CARD_PACK_COOLDOWN: 13,
+  CARD_PACK_SIZE: 5,
+  /**
+   * PLAN-52 M2: таблица редкостей пака — полосы шансов сверху вниз (сумма = 1).
+   * fansPct — доля текущей фанбазы, fansMin — минимум живых душ, brand — прирост бренда франшизы.
+   */
+  CARD_PACK_TABLE: [
+    { rarity: 'legend', chance: 0.05, fansPct: 0.08, fansMin: 1200, brand: 2 },
+    { rarity: 'rare', chance: 0.25, fansPct: 0.03, fansMin: 400, brand: 0 },
+    { rarity: 'common', chance: 0.7, fansPct: 0.01, fansMin: 120, brand: 0 },
+  ],
 };

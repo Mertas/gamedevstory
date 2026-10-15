@@ -36,10 +36,11 @@ console.log('--- Последние события ---');
 for (const l of state.log.slice(-25)) {
   console.log(`Y${l.year} D${l.week % 365} ${l.text}`);
 }
-// PLAN-52 M1: портфель франшиз (медиа-империя, этап 1) — контроль метрики «пассив ≤ 30%»
+// PLAN-52 M1/M2: портфель франшиз и линии мерча (медиа-империя) — контроль метрики «пассив ≤ 30%»
 const fr = Object.values(state.franchises ?? {});
 console.log('--- Империя ---');
-console.log(`Франшиз: ${fr.length} | с линией мерча: ${fr.filter((f) => f.merch).length}`);
+console.log(`Франшиз: ${fr.length} | линий мерча: ${fr.filter((f) => f.merch).length}`);
 for (const f of fr.sort((a, b) => b.brand - a.brand).slice(0, 8)) {
-  console.log(`«${f.name}» бренд ${Math.round(f.brand)}/100 · релизов ${f.releases.length}${f.merch ? ' · 🧸 мерч' : ''}`);
+  const line = f.merch ? ` · ${CONFIG.MERCH_LINES[f.merch.line].name} (${CONFIG.MERCH_BUDGETS[f.merch.budget].name})` : '';
+  console.log(`«${f.name}» бренд ${Math.round(f.brand)}/100 · релизов ${f.releases.length}${line}`);
 }

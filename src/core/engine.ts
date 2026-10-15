@@ -5,7 +5,7 @@ import { CONSOLES } from './data/db';
 import { createRng, rngFromState } from './rng';
 import { log } from './log';
 import { SAVE_VERSION } from './migrate';
-import type { ActionResult, DirectionAxis, GamedexOption, GameState, StartProjectInput } from './types';
+import type { ActionResult, DirectionAxis, GamedexOption, GameState, MerchBudgetId, MerchLineId, StartProjectInput } from './types';
 import { minigameClosedOutcome, minigameOutcome, minigameTitle } from '../shared/minigames';
 import { gform } from '../shared/gender';
 import {
@@ -29,7 +29,7 @@ import { tickFanLetters } from './systems/mail';
 import { resolveStory, tickStory } from './systems/story';
 import { resolveSaga, tickSaga } from './systems/saga';
 import { resolveFinale, tickFinale } from './systems/finale';
-import { tickFranchises, tickMerch, toggleMerch } from './systems/franchise';
+import { ackCardPack, openCardPack, tickFranchises, tickMerch, toggleMerch } from './systems/franchise';
 import type { HeroSetup } from '../shared/hero';
 
 /** PLAN-18: что игрок выбирает на старте (экран новой игры). */
@@ -92,6 +92,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     lastGamedex: null,
     gamedexFame: 0,
     franchises: {}, // PLAN-52 M1: франшизы и мерч (медиа-империя)
+    cards: { lastWeek: -9999, last: null }, // PLAN-52 M2: паки коллекционных карточек
     contracts: [],
     adFansGained: {},
     ownConsole: null,
@@ -356,9 +357,23 @@ export function startOwnConsoleAction(
   return startOwnConsole(state, name, type, cpu, media);
 }
 
-// PLAN-52 M1: медиа-империя — запуск/остановка линии мерча на франшизе («Империя»)
-export function toggleMerchAction(state: GameState, key: string) {
-  return toggleMerch(state, key);
+// PLAN-52 M1/M2: медиа-империя — запуск линии мерча (тип + вложения) или остановка текущей
+export function toggleMerchAction(state: GameState, key: string, line?: MerchLineId, budget?: MerchBudgetId) {
+  return toggleMerch(state, key, line, budget);
+}
+
+// PLAN-52 M2: вскрытие пака карточек — броски через общее rng-состояние партии
+export function openCardPackAction(state: GameState, key: string) {
+  const rng = rngFromState(state.rngState, state.seed);
+  const res = openCardPack(state, key, rng);
+  state.rngState = rng.state;
+  return res;
+}
+
+// PLAN-52 M2: мини-окно пака просмотрено — больше его не показываем
+export function ackCardPackAction(state: GameState) {
+  ackCardPack(state);
+  return { ok: true };
 }
 
 // Gamedex: выбрать стенд (выставка в июле, офис 2+)

@@ -376,6 +376,13 @@ export interface UiWindow {
 }
 
 /** PLAN-52 M1: франшиза — игра с оценкой 80+ и её продолжения; живёт в «Империи» (медиа-империя, этап 1). */
+/** PLAN-52 M2: линия мерча — эпохи: фигурки → плюш → футболки → карточки */
+export type MerchLineId = 'figures' | 'plush' | 'shirts' | 'cards';
+/** PLAN-52 M2: вложения при запуске линии (скромно/нормально/солидно) */
+export type MerchBudgetId = 'low' | 'norm' | 'high';
+/** PLAN-52 M2: редкость карточки в паке */
+export type CardRarity = 'common' | 'rare' | 'legend';
+
 export interface Franchise {
   /** имя франшизы — имя первой игры серии (далее не меняется) */
   name: string;
@@ -387,10 +394,26 @@ export interface Franchise {
   /** последний релиз серии (для расчёта забвения) */
   lastReleaseWeek: number;
   releases: { name: string; week: number; score: number }[];
-  /** запущенная линия мерча (дата старта) или null */
-  merch: { startedWeek: number; line: 'figures' } | null;
+  /** запущенная линия мерча: тип, вложения, дата старта (или null) */
+  merch: { startedWeek: number; line: MerchLineId; budget: MerchBudgetId } | null;
   /** сколько полных лет забвения уже списано (защита от повторного списания) */
   decayed: number;
+}
+
+/** PLAN-52 M2: паки коллекционных карточек — кулдаун и последнее вскрытие (мини-окно в «Империи») */
+export interface CardPackState {
+  /** неделя последнего вскрытия (−9999 = ещё не открывали пак) */
+  lastWeek: number;
+  /** последнее вскрытие — мини-окно показывается, пока игрок его не подтвердит */
+  last: {
+    week: number;
+    franchiseKey: string;
+    /** карты пака: редкость + имя игры серии (на коллекционной карточке) */
+    cards: { rarity: CardRarity; name: string }[];
+    fansGained: number;
+    brandGained: number;
+    acked: boolean;
+  } | null;
 }
 
 export interface GameState {
@@ -471,6 +494,8 @@ export interface GameState {
   partnerRentPct?: number;
   /** PLAN-52 M1: франшизы (медиа-империя; у старых сейвов выводится из history в migrate v19) */
   franchises?: Record<string, Franchise>;
+  /** PLAN-52 M2: паки карточек (доступны с линией «карточки», с 1996) */
+  cards?: CardPackState;
 }
 
 export interface StartProjectInput {

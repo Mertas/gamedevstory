@@ -1,11 +1,20 @@
-// PLAN-52 M1: франшизы и сила бренда + минимальный мерч (медиа-империя, этап 1).
+// PLAN-52 M1/M2: франшизы, сила бренда и мерч (медиа-империя).
 // Идея: игра с оценкой 80+ — это франшиза; сиквелы и забвение двигают силу бренда;
-// запущенная линия мерча даёт пассив от фанатов. Слой над базовым циклом — формулы
-// продаж и разработки не трогает.
+// линии мерча (по эпохам: фигурки → плюш → футболки → карточки) дают пассив от фанатов;
+// с 1996-го по карточной линии раз в квартал вскрывается пак коллекционных карточек.
+// Слой над базовым циклом — формулы продаж и разработки не трогает.
 import { CONFIG } from '../config';
 import { log } from '../log';
 import { comboKey } from '../../shared/rank';
-import type { ActionResult, Franchise, GameState } from '../types';
+import type { Rng } from '../rng';
+import type {
+  ActionResult,
+  CardRarity,
+  Franchise,
+  GameState,
+  MerchBudgetId,
+  MerchLineId,
+} from '../types';
 
 /** источник записи о релизе (GameRecord подходит) — всё, что нужно франшизе */
 export interface FranchiseSource {
@@ -17,6 +26,11 @@ export interface FranchiseSource {
 }
 
 const clampBrand = (v: number) => Math.max(0, Math.min(100, v));
+
+/** Календарный год работы студии: 1 апреля 1985 — год 1 (по нему открываются эпохи). */
+export function studioYear(state: GameState): number {
+  return 1985 + Math.floor((state.week - 1) / CONFIG.YEAR_LENGTH);
+}
 
 /**
  * Применить релиз к карте франшиз. Новый сильный релиз рождает франшизу; повтор комбо —
@@ -82,6 +96,45 @@ export function tickFranchises(state: GameState): void {
   }
 }
 
+// ─── PLAN-52 M2: линии мерча ───
+
+/** Доступна ли линия по эпохе (календарному году студии). */
+export function merchLineUnlocked(state: GameState, line: MerchLineId): boolean {
+  return studioYear(state) >= CONFIG.MERCH_LINES[line].unlockYear;
+}
+
+/** Сколько линий мерча можно держать одновременно: по офису, после финала партии — восемь. */
+export function merchSlots(state: GameState): number {
+  if (state.finale) return CONFIG.MERCH_SLOTS_FINALE;
+  return CONFIG.MERCH_SLOTS_BY_OFFICE[state.officeLevel - 1] ?? 2;
+}
+
+/** Сколько линий мерча уже в работе. */
+export function activeMerchLines(state: GameState): number {
+  let n = 0;
+  for (const f of Object.values(state.franchises ?? {})) if (f.merch) n += 1;
+  return n;
+}
+
+/** Цена запуска линии с учётом вложений (K). */
+export function merchStartCost(line: MerchLineId, budget: MerchBudgetId): number {
+  return Math.round(CONFIG.MERCH_LINES[line].cost * CONFIG.MERCH_BUDGETS[budget].costMult);
+}
+
+/** Оценка дохода линии за неделю (K, чистыми) — общая формула запущенной и будущей линии. */
+export function merchWeeklyEst(fans: number, brand: number, line: MerchLineId, budget: MerchBudgetId): number {
+  const l = CONFIG.MERCH_LINES[line];
+  const b = CONFIG.MERCH_BUDGETS[budget];
+  const gross = (fans / CONFIG.MERCH_FANS_DIV) * (brand / CONFIG.MERCH_BRAND_DIV) * l.mult * b.incomeMult;
+  return gross - l.upkeepPerDay * 7;
+}
+
+/** Доход линии за неделю (K, чистыми — содержание вычтено). */
+export function merchWeekly(f: Franchise, fans: number): number {
+  if (!f.merch) return 0;
+  return merchWeeklyEst(fans, f.brand, f.merch.line, f.merch.budget);
+}
+
 /** Мерч: чистый доход за день от всех запущенных линий (K; с содержанием). */
 export function merchDailyNet(state: GameState): number {
   const map = state.franchises;
@@ -89,8 +142,11 @@ export function merchDailyNet(state: GameState): number {
   let net = 0;
   for (const f of Object.values(map)) {
     if (!f.merch) continue;
-    net += (state.fans / CONFIG.MERCH_FANS_DIV) * (f.brand / CONFIG.MERCH_BRAND_DIV) / 7; // K/нед → в день
-    net -= CONFIG.MERCH_UPKEEP_PER_DAY;
+    const line = CONFIG.MERCH_LINES[f.merch.line];
+    const bud = CONFIG.MERCH_BUDGETS[f.merch.budget];
+    const week = (state.fans / CONFIG.MERCH_FANS_DIV) * (f.brand / CONFIG.MERCH_BRAND_DIV) * line.mult * bud.incomeMult;
+    net += week / 7;
+    net -= line.upkeepPerDay;
   }
   return net;
 }
@@ -101,13 +157,13 @@ export function tickMerch(state: GameState): void {
   if (net !== 0) state.money += net;
 }
 
-/** Мерч: доход линии конкретной франшизы за неделю (K; для UI). */
-export function merchWeekly(f: Franchise, fans: number): number {
-  return (fans / CONFIG.MERCH_FANS_DIV) * (f.brand / CONFIG.MERCH_BRAND_DIV) - CONFIG.MERCH_UPKEEP_PER_DAY * 7;
-}
-
-/** Действие «Империи»: запустить/остановить линию мерча на франшизе. */
-export function toggleMerch(state: GameState, key: string): ActionResult {
+/** Действие «Империи»: запустить линию мерча (тип + вложения) или остановить текущую. */
+export function toggleMerch(
+  state: GameState,
+  key: string,
+  line: MerchLineId = 'figures',
+  budget: MerchBudgetId = 'norm',
+): ActionResult {
   const f = state.franchises?.[key];
   if (!f) return { ok: false, error: 'Нет такой франшизы' };
   if (f.merch) {
@@ -119,12 +175,89 @@ export function toggleMerch(state: GameState, key: string): ActionResult {
   if (f.brand < CONFIG.MERCH_MIN_BRAND) {
     return { ok: false, error: `Бренд слабоват: для линии нужно ${CONFIG.MERCH_MIN_BRAND}+` };
   }
-  if (state.money < CONFIG.MERCH_START_COST) {
-    return { ok: false, error: `Не хватает на запуск (нужно ${CONFIG.MERCH_START_COST}K)` };
+  const def = CONFIG.MERCH_LINES[line];
+  if (!merchLineUnlocked(state, line)) {
+    return { ok: false, error: `«${def.name}» появятся в ${def.unlockYear}-м — время ещё не пришло` };
   }
-  state.money -= CONFIG.MERCH_START_COST;
-  f.merch = { startedWeek: state.week, line: 'figures' };
-  f.brand = clampBrand(f.brand + CONFIG.MERCH_BRAND_ON_START);
-  log(state, `Линия мерча «${f.name}»: фигурки пошли в магазины!`);
+  const slots = merchSlots(state);
+  if (activeMerchLines(state) >= slots) {
+    return { ok: false, error: `Все линии заняты (${slots}) — сначала остановите другую` };
+  }
+  const cost = merchStartCost(line, budget);
+  if (state.money < cost) {
+    return { ok: false, error: `Не хватает на запуск (нужно ${cost}K)` };
+  }
+  state.money -= cost;
+  f.merch = { startedWeek: state.week, line, budget };
+  f.brand = clampBrand(f.brand + CONFIG.MERCH_BUDGETS[budget].brandOnStart);
+  log(state, `«${f.name}»: линия «${def.name}» пошла в магазины!`);
   return { ok: true };
+}
+
+// ─── PLAN-52 M2: паки коллекционных карточек (по линии «карточки», с 1996) ───
+
+/** Строка таблицы пака по броску: полосы сверху вниз (сумма шансов = 1). */
+type CardPackRow = (typeof CONFIG.CARD_PACK_TABLE)[number];
+
+function rollCard(rng: Rng): CardPackRow {
+  const r = rng.next();
+  let acc = 0;
+  for (const row of CONFIG.CARD_PACK_TABLE) {
+    acc += row.chance;
+    if (r < acc) return row;
+  }
+  // сумма полос = 1 — сюда не попадаем; ветка нужна только типам
+  return { rarity: 'common', chance: 0.7, fansPct: 0.01, fansMin: 120, brand: 0 };
+}
+
+/** Через сколько недель будет доступен новый пак (0 — можно вскрывать сейчас). */
+export function cardPackWait(state: GameState): number {
+  const lastWeek = state.cards?.lastWeek ?? -9999;
+  return Math.max(0, lastWeek + CONFIG.CARD_PACK_COOLDOWN - state.week);
+}
+
+/** Действие «Империи»: вскрыть пак карточек по франшизе с активной линией карточек. */
+export function openCardPack(state: GameState, key: string, rng: Rng): ActionResult {
+  const f = state.franchises?.[key];
+  if (!f) return { ok: false, error: 'Нет такой франшизы' };
+  if (f.merch?.line !== 'cards') {
+    return { ok: false, error: 'Паки вскрывают по франшизе с линией коллекционных карточек' };
+  }
+  const wait = cardPackWait(state);
+  if (wait > 0) return { ok: false, error: `Свежие паки будут через ${wait} нед.` };
+  if (state.money < CONFIG.CARD_PACK_COST) {
+    return { ok: false, error: `Не хватает на пак (нужно ${CONFIG.CARD_PACK_COST}K)` };
+  }
+  state.money -= CONFIG.CARD_PACK_COST;
+
+  const cards: { rarity: CardRarity; name: string }[] = [];
+  let gained = 0;
+  let brand = 0;
+  for (let i = 0; i < CONFIG.CARD_PACK_SIZE; i++) {
+    const row = rollCard(rng);
+    const rarity = row.rarity as CardRarity;
+    // на карте — игра серии (случайная из вышедших): у коллекции есть имена
+    const rel = f.releases.length > 0 ? f.releases[rng.int(0, f.releases.length - 1)] : undefined;
+    cards.push({ rarity, name: rel?.name ?? f.name });
+    gained += Math.max(Math.round(state.fans * row.fansPct), row.fansMin);
+    brand += row.brand;
+  }
+  state.fans += gained;
+  f.brand = clampBrand(f.brand + brand);
+  state.cards = state.cards ?? { lastWeek: -9999, last: null };
+  state.cards.lastWeek = state.week;
+  state.cards.last = { week: state.week, franchiseKey: key, cards, fansGained: gained, brandGained: brand, acked: false };
+
+  const legends = cards.filter((c) => c.rarity === 'legend').length;
+  if (legends > 0) {
+    log(state, `«${f.name}»: в паке ЛЕГЕНДАРНАЯ карта! Мем ушёл в народ — +${gained} фанатов`);
+  } else {
+    log(state, `«${f.name}»: пак карточек вскрыт — +${gained} фанатов`);
+  }
+  return { ok: true };
+}
+
+/** Мини-окно вскрытия просмотрено — второй раз не показываем. */
+export function ackCardPack(state: GameState): void {
+  if (state.cards?.last) state.cards.last.acked = true;
 }

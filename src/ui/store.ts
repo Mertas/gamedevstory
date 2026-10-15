@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from 'react';
 import type { QuestArt } from './questArt';
 import type * as React from 'react';
 import type { HireMethodId } from '../core/config';
-import type { GameState, StartProjectInput, UiWindow } from '../core/types';
+import type { GameState, MerchBudgetId, MerchLineId, StartProjectInput, UiWindow } from '../core/types';
 import type { ChatState } from '../shared/chat';
 import { genreById, typeById, type MetaData } from '../shared/meta';
 import { levelUpNotice, type LevelNotice } from '../shared/rank';
@@ -689,9 +689,16 @@ export function actionTakeContract(contractId: number, staffIds: string[]) {
 export function actionStartOwnConsole(name: string, kind: string, cpu: string, media: string) {
   send({ type: 'start_own_console', name, kind, cpu, media });
 }
-// PLAN-52 M1: медиа-империя — запуск/остановка линии мерча на франшизе
-export function actionMerchToggle(key: string) {
-  send({ type: 'merch_toggle', key });
+// PLAN-52 M1/M2: медиа-империя — запуск линии мерча (тип + вложения) или остановка
+export function actionMerchToggle(key: string, line?: MerchLineId, budget?: MerchBudgetId) {
+  send({ type: 'merch_toggle', key, line, budget });
+}
+// PLAN-52 M2: паки карточек — вскрыть пак по франшизе / подтвердить мини-окно
+export function actionCardPack(key: string) {
+  send({ type: 'card_pack', key });
+}
+export function actionCardPackAck() {
+  send({ type: 'card_pack_ack' });
 }
 
 // ─── сейвы (HTTP) ───

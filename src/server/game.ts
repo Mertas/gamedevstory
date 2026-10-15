@@ -7,7 +7,7 @@ import type { CareerId } from '../core/data/schema';
 import { newGame } from '../core/engine';
 import { ensureDifficulty, isDifficultyId } from '../core/difficulty';
 import { consoleEvents } from '../core/systems/market';
-import { type GameState, type StartProjectInput } from '../core/types';
+import { type GameState, type MerchBudgetId, type MerchLineId, type StartProjectInput } from '../core/types';
 import { chatSystem, resetChat, type ChatState } from '../shared/chat';
 import type { MetaData } from '../shared/meta';
 
@@ -82,8 +82,11 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'buy_ad'; adId: number }
   | { type: 'take_contract'; contractId: number; staffIds: string[] }
   | { type: 'start_own_console'; name: string; kind: 'console' | 'portable'; cpu: string; media: string }
-  // PLAN-52 M1: медиа-империя — линия мерча на франшизе («Империя»)
-  | { type: 'merch_toggle'; key: string }
+  // PLAN-52 M1/M2: медиа-империя — линия мерча на франшизе («Империя»): тип линии + вложения
+  | { type: 'merch_toggle'; key: string; line?: MerchLineId; budget?: MerchBudgetId }
+  // PLAN-52 M2: паки коллекционных карточек («Империя»)
+  | { type: 'card_pack'; key: string }
+  | { type: 'card_pack_ack' }
   // автопилот (plan/14): включение — только вручную (кнопка «Взять/Отдать управление»)
   | { type: 'take_control' }
   | { type: 'set_autopilot'; on: boolean }

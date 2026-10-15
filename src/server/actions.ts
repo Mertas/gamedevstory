@@ -10,6 +10,7 @@ import {
   partnerBuyoutAction, partnerRentAction,
   releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, toggleMerchAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
+  openCardPackAction, ackCardPackAction,
 } from '../core/engine';
 import { consoleDataFor } from '../core/systems/dev';
 import type { GamedexOption, GameState } from '../core/types';
@@ -388,9 +389,18 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.run(buyAdAction(s.game, msg.adId));
       s.emit();
       return;
-    // PLAN-52 M1: медиа-империя — запуск/остановка линии мерча
+    // PLAN-52 M1/M2: медиа-империя — запуск линии мерча (тип + вложения) или остановка
     case 'merch_toggle':
-      s.run(toggleMerchAction(s.game, msg.key));
+      s.run(toggleMerchAction(s.game, msg.key, msg.line, msg.budget));
+      s.emit();
+      return;
+    // PLAN-52 M2: паки карточек — вскрытие и подтверждение мини-окна
+    case 'card_pack':
+      s.run(openCardPackAction(s.game, msg.key));
+      s.emit();
+      return;
+    case 'card_pack_ack':
+      s.run(ackCardPackAction(s.game));
       s.emit();
       return;
     case 'take_contract':
