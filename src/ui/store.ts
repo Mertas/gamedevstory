@@ -700,6 +700,19 @@ export function actionCardPack(key: string) {
 export function actionCardPackAck() {
   send({ type: 'card_pack_ack' });
 }
+// PLAN-52 M2b: телевидение — принять предложение канала, отложить/отклонить, закрыть итоги
+export function actionTvAccept() {
+  send({ type: 'tv_accept' });
+}
+export function actionTvDecline() {
+  send({ type: 'tv_decline' });
+}
+export function actionTvDefer() {
+  send({ type: 'tv_defer' });
+}
+export function actionTvResult() {
+  send({ type: 'tv_result' });
+}
 
 // ─── сейвы (HTTP) ───
 export async function exportSave(): Promise<string> {

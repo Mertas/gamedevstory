@@ -14,7 +14,8 @@ import {
   merchWeekly,
   merchWeeklyEst,
 } from '../../../core/systems/franchise';
-import { actionCardPack, actionCardPackAck, actionMerchToggle, useGame } from '../../store';
+import { actionCardPack, actionCardPackAck, actionMerchToggle, actionTvAccept, actionTvDecline, useGame } from '../../store';
+import { ChannelIcon } from '../../ChannelIcon';
 import type { CardRarity, Franchise, MerchBudgetId, MerchLineId } from '../../../core/types';
 
 /** 1 год, 2 года, 5 лет — по-человечески */
@@ -57,6 +58,10 @@ export function EmpireApp() {
   const activeLines = rows.reduce((a, { f }) => a + (f.merch ? 1 : 0), 0);
   const merchWeek = rows.reduce((a, { f }) => a + (f.merch ? merchWeekly(f, game.fans) : 0), 0);
   const packWait = cardPackWait(game);
+  const tv = game.tv;
+  const tvShowCh = tv?.show ? CONFIG.TV_CHANNELS[tv.show.channelId] : null;
+  const tvOfferCh = tv?.offer ? CONFIG.TV_CHANNELS[tv.offer.channelId] : null;
+  const tvOfferFr = tv?.offer ? game.franchises?.[tv.offer.franchiseKey] : undefined;
 
   // мини-окно вскрытия: показываем последний пак, пока игрок его не подтвердил
   const lastPack = game.cards?.last && !game.cards.last.acked ? game.cards.last : null;
@@ -75,8 +80,53 @@ export function EmpireApp() {
       <p className="w95-hint" style={{ margin: 0 }}>
         Игра с оценкой {CONFIG.FRANCHISE_MIN_SCORE}+ становится франшизой. Сиквелы и линии мерча растят её бренд,
         годы забвения — съедают. Линии открываются с эпохой: плюш — с 1990-го, футболки — с 1992-го,
-        коллекционные карточки — с 1996-го.
+        коллекционные карточки — с 1996-го. С 1991 года телеканалы начинают предлагать сериалы по сильным
+        франшизам: эфир приводит фанатов и освежает серию, но пока он идёт — игры продаются хуже.
       </p>
+      {(tv?.show || tv?.offer || tv?.lastResult) && (
+        <div className="w95-panel w95-bevel-out" style={{ padding: '6px 8px', gap: 4 }} data-autopilot="empire-tv">
+          <div className="w95-row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+            <b>📺 Телевидение</b>
+            {tv?.show ? (
+              <span>
+                в эфире: <b>{Math.ceil(tv.show.weeksLeft / 7)}</b> нед. из {Math.round(tv.show.lengthDays / 7)}
+              </span>
+            ) : tv?.offer ? (
+              <span>предложение канала ждёт ответа</span>
+            ) : null}
+          </div>
+          {tv?.show && tvShowCh && (
+            <div className="w95-row" style={{ gap: 8, alignItems: 'flex-start' }}>
+              <ChannelIcon id={tv.show.channelId} size={44} title={tvShowCh.name} />
+              <span className="w95-hint" style={{ flex: 1 }}>
+                «{tv.show.name}» — на канале «{tvShowCh.name}»: {fmtK(tv.show.rate)}/нед от канала, +{tv.show.fansPerWeek}{' '}
+                фанатов/нед. Пока сериал в эфире, игры продаются хуже на {CONFIG.TV_CANNIBALIZE}%.
+              </span>
+            </div>
+          )}
+          {!tv?.show && tv?.offer && tvOfferCh && (
+            <div className="w95-row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <ChannelIcon id={tv.offer.channelId} size={44} title={tvOfferCh.name} />
+              <span className="w95-hint" style={{ flex: 1 }}>
+                «{tvOfferCh.name}» предлагает сериал по «{tvOfferFr?.name ?? '—'}»: {tvOfferCh.lengthWeeks} недель
+                в эфире, {fmtK(tvOfferCh.rate)}/нед.
+              </span>
+              <button type="button" className="w95-btn" onClick={() => actionTvAccept()} data-autopilot="empire-tv-accept">
+                Принять
+              </button>
+              <button type="button" className="w95-btn" onClick={() => actionTvDecline()} data-autopilot="empire-tv-decline">
+                Отклонить
+              </button>
+            </div>
+          )}
+          {!tv?.show && !tv?.offer && tv?.lastResult && (
+            <span className="w95-hint">
+              Последний сезон: «{tv.lastResult.name}» («{CONFIG.TV_CHANNELS[tv.lastResult.channelId].name}») —
+              рейтинг {tv.lastResult.rating}/100, {CONFIG.TV_RESULTS[tv.lastResult.outcome].label}
+            </span>
+          )}
+        </div>
+      )}
       {rows.length === 0 && (
         <p className="w95-hint" style={{ margin: 0 }}>
           Франшиз пока нет — выпустите хит на {CONFIG.FRANCHISE_MIN_SCORE}+, и о нём будут помнить десятилетиями.
@@ -119,7 +169,7 @@ function FranchiseCard({
   packWait: number;
 }) {
   const game = useGame();
-  const idleYears = Math.floor((game.week - f.lastReleaseWeek) / CONFIG.YEAR_LENGTH);
+  const idleYears = Math.floor((game.week - Math.max(f.lastReleaseWeek, f.lastShowWeek ?? 0)) / CONFIG.YEAR_LENGTH);
   const week = merchWeekly(f, game.fans);
   const last = f.releases[f.releases.length - 1];
   const weakBrand = f.brand < CONFIG.MERCH_MIN_BRAND;

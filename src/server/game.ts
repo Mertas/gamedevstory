@@ -87,6 +87,11 @@ export type ClientAction = { autopilot?: boolean } & (
   // PLAN-52 M2: паки коллекционных карточек («Империя»)
   | { type: 'card_pack'; key: string }
   | { type: 'card_pack_ack' }
+  // PLAN-52 M2b: телевидение — предложение канала (принять/отложить/отклонить) и итоги сезона
+  | { type: 'tv_accept' }
+  | { type: 'tv_decline' }
+  | { type: 'tv_defer' }
+  | { type: 'tv_result' }
   // автопилот (plan/14): включение — только вручную (кнопка «Взять/Отдать управление»)
   | { type: 'take_control' }
   | { type: 'set_autopilot'; on: boolean }

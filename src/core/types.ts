@@ -333,6 +333,54 @@ export interface SagaState {
   lastGap?: number;
 }
 
+/** PLAN-52 M2b: телевидение — каналы медиа-империи (эпохи — в CONFIG.TV_CHANNELS) */
+export type TvChannelId = 'svetlyachok' | 'soroka' | 'oblako' | 'mayak' | 'polnoch';
+
+/** PLAN-52 M2b: предложение канала — сезон по франшизе (week — когда пришло) */
+export interface TvOffer {
+  channelId: TvChannelId;
+  franchiseKey: string;
+  week: number;
+}
+
+/** PLAN-52 M2b: идущий сезон мультсериала */
+export interface TvShow {
+  channelId: TvChannelId;
+  franchiseKey: string;
+  name: string;
+  /** дней до финала (убывает с тиком) */
+  weeksLeft: number;
+  lengthDays: number;
+  /** K за неделю эфира */
+  rate: number;
+  fansPerWeek: number;
+  startedWeek: number;
+}
+
+export type TvOutcome = 'legend' | 'hit' | 'ok' | 'flop';
+
+/** PLAN-52 M2b: итоги завершённого сезона (строка в «Империи») */
+export interface TvResult {
+  channelId: TvChannelId;
+  franchiseKey: string;
+  name: string;
+  rating: number;
+  outcome: TvOutcome;
+  week: number;
+}
+
+/** PLAN-52 M2b: состояние телевидения (миграция v21) */
+export interface TvState {
+  show: TvShow | null;
+  offer: TvOffer | null;
+  /** день следующего предложения (переносится при каждом оффере) */
+  nextOfferWeek: number;
+  /** последний завершённый сезон */
+  lastResult?: TvResult | null;
+  /** попап итогов отложен (заняли другим событием) — покажем в первый свободный день */
+  pendingResult?: boolean;
+}
+
 export type PendingEvent =
   | { type: 'boost'; staffId: string; cost: number }
   | { type: 'boost_result'; text: string; outcome: 'success' | 'fail' }
@@ -350,6 +398,8 @@ export type PendingEvent =
   | { type: 'saga'; node: string; stage: 'choice' | 'result' | 'final' | 'end'; chosen?: number }
   /** 05-P2-6: итог партии после завершения истории (детали — в state.finale) */
   | { type: 'finale' }
+  /** PLAN-52 M2b: ТВ — предложение канала или итоги сезона (детали — в state.tv) */
+  | { type: 'tv'; stage: 'offer' | 'result' }
   | null;
 
 /** PLAN-24: сохраняемый вид рабочего стола (фон + раскладка окон). Игровая логика его не читает. */
@@ -398,6 +448,8 @@ export interface Franchise {
   merch: { startedWeek: number; line: MerchLineId; budget: MerchBudgetId } | null;
   /** сколько полных лет забвения уже списано (защита от повторного списания) */
   decayed: number;
+  /** PLAN-52 M2b: день последнего эфира сериала по франшизе (освежает забвение) */
+  lastShowWeek?: number;
 }
 
 /** PLAN-52 M2: паки коллекционных карточек — кулдаун и последнее вскрытие (мини-окно в «Империи») */
@@ -496,6 +548,8 @@ export interface GameState {
   franchises?: Record<string, Franchise>;
   /** PLAN-52 M2: паки карточек (доступны с линией «карточки», с 1996) */
   cards?: CardPackState;
+  /** PLAN-52 M2b: телевидение — предложения каналов и сезоны мультсериалов (миграция v21) */
+  tv?: TvState;
 }
 
 export interface StartProjectInput {

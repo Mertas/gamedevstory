@@ -25,14 +25,16 @@ export function dailySales(state: GameState): void {
     }
     // медиа-события (статья/TV/баг) умножают остаток продаж игры
     const mult = game.mediaMult ?? 1;
+    // PLAN-52 M2b: во время эфира сериала игры продаются хуже — фанаты у экранов
+    const tvCut = state.tv?.show ? 1 - CONFIG.TV_CANNIBALIZE / 100 : 1;
     // PLAN-48: вечная рента партнёра режет доход от продаж игр (тихо; доля — в сейве)
     const rentPct = state.partnerRentPct ?? 0;
-    const gross = entry.revenue * mult;
+    const gross = entry.revenue * mult * tvCut;
     state.money += rentPct > 0 ? gross * (1 - rentPct / 100) : gross;
-    state.fans += entry.units * mult * CONFIG.FAN_PER_UNIT;
+    state.fans += entry.units * mult * tvCut * CONFIG.FAN_PER_UNIT;
     // PLAN-29: фактический учёт для окна «Продажи» (механики не меняются — только цифры)
-    game.paidUnits = (game.paidUnits ?? 0) + (entry.unitsF ?? entry.units) * mult;
-    game.paidRevenue = (game.paidRevenue ?? 0) + entry.revenue * mult;
+    game.paidUnits = (game.paidUnits ?? 0) + (entry.unitsF ?? entry.units) * mult * tvCut;
+    game.paidRevenue = (game.paidRevenue ?? 0) + entry.revenue * mult * tvCut;
   }
   state.released = state.released.filter((g) => !g.ended);
 }

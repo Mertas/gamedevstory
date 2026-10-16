@@ -6,7 +6,7 @@ import { MinigameModal } from './MinigameModal';
 import { ActionToast } from './ActionToast';
 import { LevelToast } from './LevelToast';
 import {
-  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveFinale, actionResolveGamedex, actionResolveSaga, actionResolveStory, clearDismissedEvKey,
+  actionDismissSalesman, actionRelease, actionResolveBoost, actionResolveEvent, actionResolveFinale, actionResolveGamedex, actionResolveSaga, actionResolveStory, actionTvAccept, actionTvDefer, actionTvResult, clearDismissedEvKey,
   closeMessageBox, evDismissed, EV_DISMISS_MS, showClientError, showMessageBox, startSession, stopSession,
   useMessageBox, useSnapshot, type MessageBoxData,
 } from './store';
@@ -25,6 +25,7 @@ import { fmtK } from '../shared/nums';
 import { STORY_ARCS } from '../shared/storylines';
 import { SAGA_NODES } from '../shared/saga-data';
 import { questArt, sagaArt } from './questArt';
+import { ChannelIcon } from './ChannelIcon';
 import { applyGenderSlots } from '../shared/gender';
 import { sagaCondOk, sagaResolveText } from '../shared/saga-text';
 import { CAREER_LABELS } from '../shared/careers';
@@ -290,6 +291,57 @@ function EventWatcher() {
                 onClick: () => actionResolveSaga(String(i)),
               };
             }),
+          });
+        }
+      }
+    }
+    if (ev.type === 'tv') {
+      // PLAN-52 M2b: телевидение — предложение канала (решение с паузой) и итоги сезона
+      const g = snap.game;
+      const tv = g?.tv;
+      if (g && tv) {
+        if (ev.stage === 'offer' && tv.offer) {
+          const ch = CONFIG.TV_CHANNELS[tv.offer.channelId];
+          const fr = g.franchises?.[tv.offer.franchiseKey];
+          popup({
+            title: `📺 «${ch.name}» выходит на связь`,
+            autopilotTarget: 'mb-ok',
+            body: (
+              <div style={{ lineHeight: 1.5 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <ChannelIcon id={tv.offer.channelId} size={48} title={ch.name} />
+                  <div>{ch.voice}</div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  Канал предлагает сериал по «{fr?.name ?? '—'}»: <b>{ch.lengthWeeks} недель</b> в эфире,{' '}
+                  <b>{fmtK(ch.rate)}/нед</b>. Рейтинг финала решит, что о серии запомнят зрители.
+                </div>
+              </div>
+            ),
+            buttons: [
+              { label: 'Принять', onClick: () => actionTvAccept() },
+              { label: 'Позже', onClick: () => actionTvDefer() },
+            ],
+          });
+        } else if (ev.stage === 'result' && tv.lastResult) {
+          const r = tv.lastResult;
+          const ch = CONFIG.TV_CHANNELS[r.channelId];
+          const res = CONFIG.TV_RESULTS[r.outcome];
+          popup({
+            title: '📺 Итоги сезона',
+            autopilotTarget: 'mb-ok',
+            body: (
+              <div style={{ lineHeight: 1.5 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <ChannelIcon id={r.channelId} size={48} title={ch.name} />
+                  <div>
+                    «{r.name}» — сезон на «{ch.name}» отснят. Рейтинг: <b>{r.rating}/100</b>. {res.label}{' '}
+                    Бренд {res.brand >= 0 ? '+' : ''}{res.brand} к силе серии.
+                  </div>
+                </div>
+              </div>
+            ),
+            buttons: [{ label: 'Ок', onClick: () => actionTvResult() }],
           });
         }
       }

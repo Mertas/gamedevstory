@@ -40,6 +40,10 @@ for (const l of state.log.slice(-25)) {
 const fr = Object.values(state.franchises ?? {});
 console.log('--- Империя ---');
 console.log(`Франшиз: ${fr.length} | линий мерча: ${fr.filter((f) => f.merch).length}`);
+{
+  const tv = state.tv;
+  console.log(`ТВ: ${tv?.show ? `в эфире «${tv.show.name}» (осталось ${Math.ceil(tv.show.weeksLeft / 7)} нед.)` : tv?.offer ? 'есть предложение канала' : tv?.lastResult ? `последний сезон — рейтинг ${tv.lastResult.rating}/100 (${tv.lastResult.outcome})` : 'пока тихо'}`);
+}
 for (const f of fr.sort((a, b) => b.brand - a.brand).slice(0, 8)) {
   const line = f.merch ? ` · ${CONFIG.MERCH_LINES[f.merch.line].name} (${CONFIG.MERCH_BUDGETS[f.merch.budget].name})` : '';
   console.log(`«${f.name}» бренд ${Math.round(f.brand)}/100 · релизов ${f.releases.length}${line}`);

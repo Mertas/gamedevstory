@@ -11,6 +11,7 @@ import {
   releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, toggleMerchAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
   openCardPackAction, ackCardPackAction,
+  acceptTvAction, declineTvAction, deferTvAction, closeTvResultAction,
 } from '../core/engine';
 import { consoleDataFor } from '../core/systems/dev';
 import type { GamedexOption, GameState } from '../core/types';
@@ -401,6 +402,23 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       return;
     case 'card_pack_ack':
       s.run(ackCardPackAction(s.game));
+      s.emit();
+      return;
+    // PLAN-52 M2b: телевидение — предложение канала и итоги сезона (попап и список «Империи»)
+    case 'tv_accept':
+      s.run(acceptTvAction(s.game));
+      s.emit();
+      return;
+    case 'tv_decline':
+      s.run(declineTvAction(s.game));
+      s.emit();
+      return;
+    case 'tv_defer':
+      s.run(deferTvAction(s.game));
+      s.emit();
+      return;
+    case 'tv_result':
+      s.run(closeTvResultAction(s.game));
       s.emit();
       return;
     case 'take_contract':

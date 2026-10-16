@@ -30,6 +30,7 @@ import { resolveStory, tickStory } from './systems/story';
 import { resolveSaga, tickSaga } from './systems/saga';
 import { resolveFinale, tickFinale } from './systems/finale';
 import { ackCardPack, openCardPack, tickFranchises, tickMerch, toggleMerch } from './systems/franchise';
+import { acceptTvOffer, declineTvOffer, deferTvOffer, resolveTvResult, tickTv } from './systems/tv';
 import type { HeroSetup } from '../shared/hero';
 
 /** PLAN-18: что игрок выбирает на старте (экран новой игры). */
@@ -93,6 +94,8 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     gamedexFame: 0,
     franchises: {}, // PLAN-52 M1: франшизы и мерч (медиа-империя)
     cards: { lastWeek: -9999, last: null }, // PLAN-52 M2: паки коллекционных карточек
+    // PLAN-52 M2b: телевидение — первые каналы выходят в эфир в 1991-м
+    tv: { show: null, offer: null, nextOfferWeek: 6 * CONFIG.YEAR_LENGTH + 30 },
     contracts: [],
     adFansGained: {},
     ownConsole: null,
@@ -376,6 +379,30 @@ export function ackCardPackAction(state: GameState) {
   return { ok: true };
 }
 
+// PLAN-52 M2b: телевидение — принять предложение канала (сериал уходит в эфир)
+export function acceptTvAction(state: GameState) {
+  const rng = rngFromState(state.rngState, state.seed);
+  const res = acceptTvOffer(state, rng);
+  state.rngState = rng.state;
+  return res;
+}
+
+// PLAN-52 M2b: отложить/отклонить предложение канала и закрыть итоги сезона
+export function declineTvAction(state: GameState) {
+  declineTvOffer(state);
+  return { ok: true };
+}
+
+export function deferTvAction(state: GameState) {
+  deferTvOffer(state);
+  return { ok: true };
+}
+
+export function closeTvResultAction(state: GameState) {
+  resolveTvResult(state);
+  return { ok: true };
+}
+
 // Gamedex: выбрать стенд (выставка в июле, офис 2+)
 export function resolveGamedexAction(state: GameState, option: GamedexOption) {
   const rng = rngFromState(state.rngState, state.seed);
@@ -447,6 +474,7 @@ export function tick(state: GameState): void {
   tickContracts(state, rng);
   tickOwnConsole(state);
   tickFranchises(state); // PLAN-52 M1: забвение франшиз без релизов (медиа-империя)
+  tickTv(state, rng); // PLAN-52 M2b: эфир сериала, предложения каналов (медиа-империя)
   tickMerch(state); // PLAN-52 M1: пассив запущенных линий мерча
   tickStory(state, rng);
   tickSaga(state); // PLAN-49: сага «Синяя Комета» — старт/восстановление попапа главы

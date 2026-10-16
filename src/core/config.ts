@@ -358,4 +358,36 @@ export const CONFIG = {
     { rarity: 'rare', chance: 0.25, fansPct: 0.03, fansMin: 400, brand: 0 },
     { rarity: 'common', chance: 0.7, fansPct: 0.01, fansMin: 120, brand: 0 },
   ],
+  /**
+   * PLAN-52 M2b: телевидение — каналы (эпохи 1991–2000), сезон мультсериала по франшизе.
+   * rate — K за неделю эфира, fansPerWeek — фанаты за неделю, hardness — требовательность канала
+   * (вычитается из рейтинга финала), titles — подзаголовки сезона, voice — как канал говорит.
+   */
+  TV_CHANNELS: {
+    svetlyachok: { name: 'Светлячок', sinceYear: 1991, minBrand: 50, rate: 25, fansPerWeek: 700, hardness: 8, lengthWeeks: 16, voice: 'Мы делаем мультики для самых маленьких — ваша серия идеально впишется в утренний эфир.', titles: ['Весёлые приключения', 'Утренние истории', 'Мультпарад'] },
+    soroka: { name: 'Сорока', sinceYear: 1993, minBrand: 55, rate: 30, fansPerWeek: 600, hardness: 12, lengthWeeks: 14, voice: 'Мы любим всё громкое и весёлое — дайте серию, о которой будут говорить в школе.', titles: ['Шумный сезон', 'Клёвые истории', 'Бум'] },
+    oblako: { name: 'Облако', sinceYear: 1995, minBrand: 60, rate: 35, fansPerWeek: 800, hardness: 10, lengthWeeks: 18, voice: 'Семейный вечер — наше всё. Сделайте тепло — и зритель придёт.', titles: ['Тихие вечера', 'Сказки перед сном', 'Добрые истории'] },
+    mayak: { name: 'Маяк', sinceYear: 1997, minBrand: 65, rate: 50, fansPerWeek: 500, hardness: 6, lengthWeeks: 20, voice: 'Эфирная полоса канала «Маяк». Стране нужен большой сериал — не подведите.', titles: ['Прайм-тайм', 'Большое шоу', 'Главный эфир'] },
+    polnoch: { name: 'Полночь', sinceYear: 2000, minBrand: 70, rate: 60, fansPerWeek: 400, hardness: 14, lengthWeeks: 12, voice: 'Мы берём только странное и крутое. Но помните: «Полночь» не прощает пустоты.', titles: ['Тёмная сторона', 'Ночные хроники', 'Не для всех'] },
+  },
+  /** PLAN-52 M2b: сколько дней висит предложение канала после попапа «Позже» */
+  TV_OFFER_TTL: 42,
+  /** PLAN-52 M2b: пауза между предложениями: 1,5 года + до года разброса */
+  TV_OFFER_GAP_MIN: 546,
+  TV_OFFER_GAP_VAR: 364,
+  /** PLAN-52 M2b: общий порог силы бренда франшизы для предложения */
+  TV_MIN_BRAND: 50,
+  /** PLAN-52 M2b: известность текущего проекта за неделю эфира */
+  TV_FAME_PER_WEEK: 2,
+  /** PLAN-52 M2b: срез продаж игр во время эфира в % (фанаты у экранов) */
+  TV_CANNIBALIZE: 30,
+  /** PLAN-52 M2b: удача сезона — разброс рейтинга финала, ± очков */
+  TV_RATING_SPREAD: 8,
+  /** PLAN-52 M2b: исходы сезона (пороги рейтинга 80/60/40 — в tickTv) */
+  TV_RESULTS: {
+    legend: { label: 'Легендарный сезон!', brand: 6, fansMult: 0.6, premium: 4 },
+    hit: { label: 'Хит!', brand: 3, fansMult: 0.35, premium: 2 },
+    ok: { label: 'Крепкий сезон.', brand: 1, fansMult: 0.15, premium: 1 },
+    flop: { label: 'Провал…', brand: -4, fansMult: 0, premium: 0 },
+  },
 };

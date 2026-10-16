@@ -87,7 +87,8 @@ export function tickFranchises(state: GameState): void {
   const map = state.franchises;
   if (!map) return;
   for (const f of Object.values(map)) {
-    const idle = state.week - f.lastReleaseWeek;
+    // PLAN-52 M2b: эфир сериала освежает серию — забвение идёт от последнего показа
+    const idle = state.week - Math.max(f.lastReleaseWeek, f.lastShowWeek ?? 0);
     const fullYears = Math.floor(idle / CONFIG.YEAR_LENGTH);
     while (f.decayed < fullYears) {
       f.decayed += 1;
