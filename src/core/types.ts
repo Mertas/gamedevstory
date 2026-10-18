@@ -84,6 +84,8 @@ export interface Staff {
   history: StaffHistoryEntry[]; // PLAN-41: история (профессии, левелапы, обучение, отпуск)
   trainCount: Record<string, { n: number; gains: StaffCaps }>; // PLAN-41: сводка обучения по методам
   restDays: number; // PLAN-41: >0 — в отпуске (дней осталось)
+  /** PLAN-53: руководитель в дереве (null/нет — подчиняется владельцу-ГГ) */
+  bossId?: string | null;
 
   // ─── PLAN-48: главный герой (игрок) и партнёр ───
   /** ГГ: вечный сотрудник-игрок — уволить нельзя; в чате подписан своим именем вместо «Вы» */
@@ -489,6 +491,8 @@ export interface GameState {
   lastMode: Mode;
   lastDirection: Record<DirectionAxis, number>;
   officeLevel: 1 | 2 | 3;
+  /** PLAN-53: оплаченные места в офисе (старт 4; каждое следующее дороже) */
+  seats: number;
   staff: Staff[];
   hiredIds: string[]; // кто уже нанят/уволен (для пула)
   activeGame: ActiveGame | null; // проект в производстве

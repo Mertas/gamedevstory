@@ -6,7 +6,7 @@ import { applyDifficulty, isDifficultyId } from '../core/difficulty';
 import { genreById, typeById } from '../core/data/db';
 import {
   applyCareerManualAction, buyLicenseAction, buyAdAction, buyBoosterAction, buyCareerManualAction, buyDeadBullAction,
-  dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, introSeenAction, levelUpAction, moveOfficeAction, newGame,
+  buySeatAction, dismissSalesmanAction, fireAction, searchAction, hireFromSearchAction, introSeenAction, levelUpAction, newGame, setBossAction,
   partnerBuyoutAction, partnerRentAction,
   releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveMinigameAction, resolveSagaAction, resolveStoryAction, startOwnConsoleAction, startProjectAction,
   takeContractAction, toggleMerchAction, trainAction, applyBoosterAction, restStaffAction, trainToMaxAction,
@@ -378,8 +378,13 @@ export function dispatchClientAction(s: SessionHost, msg: ClientAction): void {
       s.run(applyCareerManualAction(s.game, msg.staffId, msg.target));
       s.emit();
       return;
-    case 'move_office': {
-      const res = moveOfficeAction(s.game);
+    case 'set_boss': {
+      s.run(setBossAction(s.game, msg.staffId, msg.bossId));
+      s.emit();
+      return;
+    }
+    case 'buy_seat': {
+      const res = buySeatAction(s.game);
       s.run(res);
       if (res.ok) s.saveNow(); // SRV-08: дорогое действие — сразу на диск
       s.emit();

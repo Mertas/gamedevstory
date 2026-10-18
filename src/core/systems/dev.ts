@@ -16,6 +16,7 @@ import { DIRECTION_WEIGHTS, EMPTY_STATS } from '../types';
 import { comboGradeFrom, consoleReleased as consoleAvailable, isUnlocked, score100 } from '../../shared/rules';
 import { ownConsoleMult } from '../../shared/consoles';
 import { busyStaffIds } from './staff';
+import { cappedStats, effectiveStats, type StatBlock } from './hierarchy';
 import { onGameReleased } from './franchise';
 
 export function genreById(id: string) {
@@ -152,23 +153,27 @@ const EMPTY_DIRECTION: Record<string, number> = {
 };
 
 // предложение: стартовые Fun/Creativity от сценариста
-function doProposal(state: GameState, game: ActiveGame): void {
+function doProposal(state: GameState, game: ActiveGame, eff: Map<string, StatBlock>): void {
   const st = state.staff.find((s) => s.id === game.proposalStaffId);
   if (!st) return;
-  game.points.fun += st.stats.scenario * CONFIG.PROPOSAL_SCENARIO_FUN;
-  game.points.creativity += st.stats.scenario * CONFIG.PROPOSAL_SCENARIO_CREATIVITY;
+  // PLAN-53: в игру идёт эффективный стат, но не выше 100
+  const scen = Math.min(eff.get(st.id)?.scenario ?? st.stats.scenario, CONFIG.GAME_STAT_CAP);
+  game.points.fun += scen * CONFIG.PROPOSAL_SCENARIO_FUN;
+  game.points.creativity += scen * CONFIG.PROPOSAL_SCENARIO_CREATIVITY;
 }
 
 const ROLE_STAT = {
   proposal: 'scenario', program: 'program', graphics: 'graphics', sound: 'sound', debug: 'program',
 } as const;
 
-function roleContributors(state: GameState, game: ActiveGame, role: Role, busy: Set<string>): { stat: number; power: number }[] {
+function roleContributors(
+  state: GameState, game: ActiveGame, role: Role, busy: Set<string>, eff: Map<string, StatBlock>,
+): { stat: number; power: number }[] {
   const ids = game.assignments[role] ?? [];
   return ids
     .map((id) => state.staff.find((s) => s.id === id))
     .filter((s): s is Staff => !!s && s.homeWeeks === 0 && (s.restDays ?? 0) === 0 && !busy.has(s.id)) // PLAN-41: в отпуске — вклада нет
-    .map((s) => ({ stat: s.stats[ROLE_STAT[role]], power: s.power }));
+    .map((s) => ({ stat: Math.min(eff.get(s.id)?.[ROLE_STAT[role]] ?? s.stats[ROLE_STAT[role]], CONFIG.GAME_STAT_CAP), power: s.power }));
 }
 
 // один тик разработки
@@ -178,7 +183,7 @@ export function devTick(state: GameState, rng: Rng): void {
   if (!game || game.phase === 'released' || game.phase === 'debug') return;
 
   if (game.phase === 'proposal') {
-    doProposal(state, game);
+    doProposal(state, game, effectiveStats(state));
     game.phase = 'dev';
     log(state, `Предложение готово: Fun ${Math.round(game.points.fun)}, Creativity ${Math.round(game.points.creativity)}`);
     return;
@@ -188,15 +193,16 @@ export function devTick(state: GameState, rng: Rng): void {
   // сотрудники без роли в проекте — средний по навыкам (универсалы).
   const genreLevel = state.genreLevels[game.genreId] ?? 0;
   const busy = busyStaffIds(state); // M9: занятые на контрактах над проектом не работают
-  const byRole = (role: Role) => roleContributors(state, game, role, busy);
+  const eff = effectiveStats(state); // PLAN-53: эффективные статы (бонусы дерева)
+  const byRole = (role: Role) => roleContributors(state, game, role, busy, eff);
   const contributors = [
     ...byRole('proposal'), ...byRole('program'), ...byRole('graphics'), ...byRole('sound'),
     // универсалы (без роли в проекте)
     ...state.staff
       .filter((s) => s.homeWeeks === 0 && (s.restDays ?? 0) === 0 && !busy.has(s.id) && !Object.values(game.assignments).some((ids) => ids.includes(s.id)))
       .map((s) => {
-        const st = s.stats;
-        return { stat: (st.program + st.scenario + st.graphics + st.sound) / 4, power: s.power };
+        const es = cappedStats(eff.get(s.id) ?? s.stats); // PLAN-53: в игру — не выше 100 за стат
+        return { stat: (es.program + es.scenario + es.graphics + es.sound) / 4, power: s.power };
       }),
   ];
   const weekly = weeklyPoints(contributors, game.mode, genreLevel);
@@ -212,13 +218,13 @@ export function devTick(state: GameState, rng: Rng): void {
     if (s.homeWeeks > 0) continue; // ушёл домой — вклада нет
     if ((s.restDays ?? 0) > 0) continue; // PLAN-41: в отпуске — вклада нет
     if (busy.has(s.id)) continue; // M9: на контракте — вклада в проект нет
+    const es = cappedStats(eff.get(s.id) ?? s.stats); // PLAN-53: вклад игры — не выше 100 за стат
     let stat = 0;
     for (const r of ['proposal', 'program', 'graphics', 'sound'] as const) {
-      if ((game.assignments[r] ?? []).includes(s.id)) { stat += s.stats[ROLE_STAT[r]]; }
+      if ((game.assignments[r] ?? []).includes(s.id)) { stat += es[ROLE_STAT[r]]; }
     }
     if (stat === 0) {
-      const st = s.stats;
-      stat = (st.program + st.scenario + st.graphics + st.sound) / 4; // универсал
+      stat = (es.program + es.scenario + es.graphics + es.sound) / 4; // универсал
     }
     if (stat <= 0) continue;
     const share = stat / totalStat; // доля сотрудника в общем котле

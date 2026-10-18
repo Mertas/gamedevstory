@@ -6,7 +6,7 @@ import type { HireMethodId } from '../../../core/config';
 import { HIRE_METHOD_LABELS, MYSTERY_IDS } from '../../../shared/hire';
 import { CAREER_LABELS } from '../../careers';
 import { StaffMiniCard } from '../../StaffMiniCard';
-import { actionHire, actionSearch, useGame, useMeta } from '../../store';
+import { actionBuySeat, actionHire, actionSearch, useGame, useMeta } from '../../store';
 import { fmtK } from '../../../shared/nums';
 
 export function SearchTab() {
@@ -15,8 +15,8 @@ export function SearchTab() {
   const [method, setMethod] = useState<HireMethodId>('word-of-mouth');
   const [candId, setCandId] = useState<string | null>(null);
   const cfg = CONFIG.HIRE_METHODS[method];
-  const officeCap = CONFIG.OFFICE_CAPACITY[game.officeLevel] ?? 4;
-  const officeFull = game.staff.length >= officeCap;
+  const seats = game.seats ?? CONFIG.STAFF_SEATS_BASE; // PLAN-53: места покупаются по одному
+  const officeFull = game.staff.length >= seats;
   const search = game.activeSearch;
   const activeCfg = search ? CONFIG.HIRE_METHODS[search.method] : null;
   const rows = (search?.ids ?? []).map((id) => meta.staff.find((d) => d.id === id)).filter(Boolean);
@@ -54,7 +54,12 @@ export function SearchTab() {
         >
           🔍 Искать кандидатов ({cfg.cost}K)
         </button>
-        {officeFull && <span className="w95-hint" style={{ color: '#c00000' }}>офис полон — нанимать некуда, сначала переезд</span>}
+        {officeFull && (
+          <span className="w95-row">
+            <span className="w95-hint" style={{ color: '#c00000' }}>свободных мест нет</span>
+            <button className="w95-btn" onClick={() => actionBuySeat()}>💺 Купить место</button>
+          </span>
+        )}
       </div>
 
       {search && activeCfg && (
@@ -84,7 +89,7 @@ export function SearchTab() {
                         data-autopilot={`hire-${c.id}`}
                         disabled={officeFull || game.money < c.hireFee}
                         onClick={(e) => { e.stopPropagation(); actionHire(c.id); }}
-                        title={officeFull ? 'Офис заполнен — купите офис больше' : game.money < c.hireFee ? `Нужно ${Math.round(c.hireFee)}K` : `Нанять за ${Math.round(c.hireFee)}K`}
+                        title={officeFull ? 'Свободных мест нет — купите место' : game.money < c.hireFee ? `Нужно ${Math.round(c.hireFee)}K` : `Нанять за ${Math.round(c.hireFee)}K`}
                       >
                         Нанять
                       </button>

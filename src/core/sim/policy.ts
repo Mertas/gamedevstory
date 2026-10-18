@@ -18,7 +18,7 @@ import { STORY_ARCS } from '../../shared/storylines';
 import {
   applyBoosterAction, buyAdAction, buyBoosterAction, dismissSalesmanAction, fireAction, searchAction,
   hireFromSearchAction, levelUpAction,
-  moveOfficeAction, releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveSagaAction, resolveStoryAction,
+  releaseAction, resolveBoostAction, resolveEventAction, resolveFinaleAction, resolveGamedexAction, resolveSagaAction, resolveStoryAction,
   skipMinigame, startProjectAction, trainAction,
 } from '../engine';
 
@@ -175,13 +175,6 @@ export function createPlayer(opts: PlayerOptions = {}): ScriptedPlayer {
         }
       }
 
-      // AP-06: переезд офиса, когда движок считает готовым (год 4+/1000K, затем 7+/3500K) —
-      // до найма, чтобы новые места были доступны уже в этом ходу
-      if (state.officeLevel < 3) {
-        const res = moveOfficeAction(state);
-        if (res.ok) journal?.push({ type: 'office' });
-      }
-
       // AP-06: лицензии — всё поступившее в продажу, по одной за ход, с резервом 800K
       // на жизнь (раньше — только Microx SX; она остаётся первой как самая дешёвая)
       if (state.money > 1500) {
@@ -307,7 +300,7 @@ function pickWeakest(state: GameState): Staff | null {
 
 /** AP-09: найм до вместимости офиса; увольнение — только под замену сильнее. */
 function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction[] | undefined, turnedDown: Set<string>): void {
-  const capacity = CONFIG.OFFICE_CAPACITY[state.officeLevel] ?? 4;
+  const capacity = state.seats ?? CONFIG.STAFF_SEATS_BASE; // PLAN-53: места покупаются
   const method = pickHireMethod(state);
   const reserve = hireReserve(state);
 
@@ -343,7 +336,7 @@ function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction
       }
     }
   }
-  if (method && bestId && state.staff.length < CONFIG.OFFICE_CAPACITY[state.officeLevel]) {
+  if (method && bestId && state.staff.length < capacity) {
     const res = hireFromSearchAction(state, bestId);
     if (res.ok) {
       stats.hires++;

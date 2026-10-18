@@ -77,7 +77,8 @@ export type ClientAction = { autopilot?: boolean } & (
   | { type: 'apply_career_manual'; staffId: string; target: CareerId }
   | { type: 'rest_staff'; staffId: string } // PLAN-41: отправить в отпуск (7 дней → POWER полный)
   | { type: 'train_to_max'; staffId: string } // PLAN-41: автотренировка до порогов
-  | { type: 'move_office' }
+  | { type: 'set_boss'; staffId: string; bossId: string | null } // PLAN-53: иерархия (перетаскивание)
+  | { type: 'buy_seat' } // PLAN-53: купить место в офисе
   // M4
   | { type: 'buy_ad'; adId: number }
   | { type: 'take_contract'; contractId: number; staffIds: string[] }

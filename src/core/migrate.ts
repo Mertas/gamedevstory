@@ -7,9 +7,10 @@ import { capInit } from '../shared/train';
 import { ownConsoleStartBase } from '../shared/consoles';
 import { avatarGender } from '../shared/hero';
 import { CONSOLES } from './data/db';
+import { CONFIG } from './config';
 import { buildFranchises } from './systems/franchise';
 
-export const SAVE_VERSION = 21; // 21: PLAN-52 M2b телевидение (tv — предложения каналов и сезоны мультсериалов); 20: PLAN-52 M2 медиа-империя — линии мерча (вложения budget) и паки карточек (cards); 19: PLAN-52 M1 медиа-империя — франшизы (выводятся из history); 18: аудит-51 05-P2-6 финал партии (finale; ставит тик) и письмо двадцатилетия (anniversary20); 17: v1.54.9 бустеры-заряды (применение требует неиспользованной покупки, аудит-51); 16: PLAN-49 Э3 числа саги (startWeek/lastWeek/lastGap — «эпоха» и «прошло» в текстах); 15: PLAN-49 сага «Синяя Комета» (опциональное поле saga; старт после первого релиза); 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
+export const SAVE_VERSION = 22; // 22: PLAN-53 иерархия сотрудников (bossId, seats) и условия офиса по 5/8; 21: PLAN-52 M2b телевидение (tv — предложения каналов и сезоны мультсериалов); 20: PLAN-52 M2 медиа-империя — линии мерча (вложения budget) и паки карточек (cards); 19: PLAN-52 M1 медиа-империя — франшизы (выводятся из history); 18: аудит-51 05-P2-6 финал партии (finale; ставит тик) и письмо двадцатилетия (anniversary20); 17: v1.54.9 бустеры-заряды (применение требует неиспользованной покупки, аудит-51); 16: PLAN-49 Э3 числа саги (startWeek/lastWeek/lastGap — «эпоха» и «прошло» в текстах); 15: PLAN-49 сага «Синяя Комета» (опциональное поле saga; старт после первого релиза); 14: пол героя по аватарке и родовые формы текстов (11.10.2026); 13: PLAN-48 главный герой и партнёр (поля необязательные у старых сейвов); 12: v1.40 процедурные квесты (годовой слот nextQuestWeek); 11: PLAN-44 сюжетные линии (арки событий); 10: v1.34 своя консоль (стартовая база от фанатов, резолв в мастере); 9: PLAN-41 пороги статов (caps, история, автотренировка, отпуск); 8: запас руководств по смене профессии; 7: русские имена сотрудников; 6: PLAN-30 оценки прессы /100 (10 критиков); 5: studioName; 4: Gamedex; 3: mail; 2: реклама; 1 = до 04.09.2026
 
 export function migrateSave(state: GameState): GameState {
   const v = state.saveVersion ?? 1; // сейвы без saveVersion — v1
@@ -152,6 +153,17 @@ export function migrateSave(state: GameState): GameState {
     // PLAN-52 M2b: телевидение — предложение канала по сильной франшизе и сезон в эфире.
     // Старым партиям первое предложение придёт через месяц — апдейт не оглушает сразу.
     state.tv = state.tv ?? { show: null, offer: null, nextOfferWeek: state.week + 30 };
+  }
+  if (v < 22) {
+    // PLAN-53: иерархия сотрудников. Старым партиям — все напрямую у владельца, места по факту
+    // команды (никого не выгоняем), условия офиса поднимаем по числу (не понижаем).
+    state.seats = Math.max(CONFIG.STAFF_SEATS_BASE, state.staff.length);
+    for (const st of state.staff) st.bossId = null;
+    const n = state.staff.length;
+    const lvl3 = CONFIG.OFFICE_LEVEL_AT[3] ?? 8;
+    const lvl2 = CONFIG.OFFICE_LEVEL_AT[2] ?? 5;
+    const byTeam = n >= lvl3 ? 3 : n >= lvl2 ? 2 : 1;
+    state.officeLevel = Math.max(state.officeLevel ?? 1, byTeam) as 1 | 2 | 3;
   }
   state.saveVersion = SAVE_VERSION;
   return state;

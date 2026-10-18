@@ -15,9 +15,10 @@ import {
 import {
   debugTick, devTick, releaseGame, resolveBoost, startProject,
 } from './systems/dev';
+import { assignBoss, buySeat } from './systems/hierarchy';
 import {
   applyCareerManual, buyAd, buyBooster, buyCareerManual, buyDeadBull, dismissSalesman,
-  levelUpStaff, moveOffice, startOwnConsole, takeContract, tickContracts, tickOwnConsole,
+  levelUpStaff, startOwnConsole, takeContract, tickContracts, tickOwnConsole,
   tickSalesman, trainStaff, trainToMax, applyBooster,
 } from './systems/progression';
 import type { CareerId } from './data/schema';
@@ -68,6 +69,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     lastMode: 'normal',
     lastDirection: { cute: 0, realism: 0, approach: 5, niche: 0, simple: 0, innovation: 0, world: 0, polish: 5 },
     officeLevel: 1,
+    seats: CONFIG.STAFF_SEATS_BASE, // PLAN-53: места покупаются по одному
     staff: [],
     hiredIds: [],
     activeGame: null,
@@ -337,8 +339,12 @@ export function trainToMaxAction(state: GameState, staffId: string) {
   return res;
 }
 
-export function moveOfficeAction(state: GameState) {
-  return moveOffice(state);
+export function setBossAction(state: GameState, staffId: string, bossId: string | null) {
+  return assignBoss(state, staffId, bossId);
+}
+
+export function buySeatAction(state: GameState) {
+  return buySeat(state);
 }
 
 // ---- M4: рынок ----

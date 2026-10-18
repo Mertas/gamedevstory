@@ -10,6 +10,7 @@ import { ContractsApp } from './market/Contracts';
 import { HardwareApp } from './market/Hardware';
 import { HelpApp } from './help/Help';
 import { HireApp } from './hire/HireApp';
+import { HierarchyApp } from './hierarchy/Hierarchy';
 import { InvitesApp } from './invites/Invites';
 import { JournalApp } from './journal/Journal';
 import { MailApp } from './mail/Mail';
@@ -30,6 +31,7 @@ export const APP_DEFS: AppDef[] = [
   { id: 'code', title: 'Код', icon: '🖥️', component: memo(CodeApp) },
   { id: 'chat', title: 'Чат', icon: '💬', component: memo(ChatApp) },
   { id: 'hire', title: 'Найм', icon: '👥', component: memo(HireApp) },
+  { id: 'hierarchy', title: 'Иерархия', icon: '🌳', component: memo(HierarchyApp) },
   { id: 'archive', title: 'Архив', icon: '🗄️', component: memo(ArchiveApp) },
   { id: 'empire', title: 'Империя', icon: '👑', component: memo(EmpireApp) },
   { id: 'hardware', title: 'Железо', icon: '🎮', component: memo(HardwareApp) },

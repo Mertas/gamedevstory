@@ -2,7 +2,8 @@
 import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
 import { AV, StaffAvatar } from '../../StaffAvatar';
-import { actionFire, actionLevelUp, useGame } from '../../store';
+import { actionBuySeat, actionFire, actionLevelUp, useGame } from '../../store';
+import { nextSeatPrice } from '../../../core/systems/hierarchy';
 import { useWindows } from '../../wm';
 import { staffWinId } from './StaffWindow';
 import { fmtK } from '../../../shared/nums';
@@ -13,7 +14,12 @@ export function TeamTab() {
 
   return (
     <>
-      <b>Команда ({game.staff.length}/{CONFIG.OFFICE_CAPACITY[game.officeLevel]})</b>
+      <div className="w95-row">
+        <b>Команда ({game.staff.length}/{game.seats ?? CONFIG.STAFF_SEATS_BASE})</b>
+        <button className="w95-btn" onClick={() => actionBuySeat()} disabled={game.money < nextSeatPrice(game)} data-autopilot="buy-seat">
+          💺 Купить место ({fmtK(nextSeatPrice(game))})
+        </button>
+      </div>
       <table className="w95-table hire-team">
         <thead>
           <tr><th>Сотрудник</th><th>Профессия</th><th>Пр</th><th>Сц</th><th>Гр</th><th>Зв</th><th>POWER</th><th>Зарплата</th><th>Действия</th><th></th></tr>

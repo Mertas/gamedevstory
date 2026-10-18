@@ -34,7 +34,8 @@ import type { GameRecord, GameState } from '../core/types';
 const W95_ICONS = [...Array.from({ length: 72 }, (_, i) => `w95_${i + 1}.png`), 'winamp.png'];
 // дефолтные иконки приложений (win95-набор; подобраны вручную)
 const DEFAULT_ICONS: Record<string, string> = {
-  code: 'w95_16.png', chat: 'w95_14.png', hire: 'w95_45.png', archive: 'w95_37.png', empire: 'w95_6.png',
+  code: 'w95_16.png', chat: 'w95_14.png', hire: 'w95_45.png', hierarchy: 'hierarchy.png',
+  archive: 'w95_37.png', empire: 'w95_6.png',
   hardware: 'w95_12.png', research: 'w95_35.png',
   marketing: 'w95_40.png', contracts: 'w95_39.png', mail: 'w95_17.png', help: 'w95_24.png',
   winamp: 'winamp.png',

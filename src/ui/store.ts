@@ -675,8 +675,12 @@ export function actionRestStaff(staffId: string) {
 export function actionTrainToMax(staffId: string) {
   send({ type: 'train_to_max', staffId });
 }
-export function actionMoveOffice() {
-  send({ type: 'move_office' });
+// PLAN-53: иерархия сотрудников и места в офисе
+export function actionSetBoss(staffId: string, bossId: string | null) {
+  send({ type: 'set_boss', staffId, bossId });
+}
+export function actionBuySeat() {
+  send({ type: 'buy_seat' });
 }
 
 // ─── M4: рынок ───

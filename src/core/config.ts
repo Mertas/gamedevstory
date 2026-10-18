@@ -13,7 +13,16 @@ export const CONFIG = {
   START_DIRECTION_POINTS: 10,
   FIRST_YEAR_FREE: true,
   EMERGENCY_FUND: 165, // K, одноразовый (чемпион лаборатории v8)
-  OFFICE_CAPACITY: { 1: 4, 2: 6, 3: 8 },
+  /** PLAN-53: кап сотрудников убран — места покупаются по одному */
+  STAFF_SEATS_BASE: 4,
+  SEAT_PRICE_BASE: 250, // K за 5-е место
+  SEAT_PRICE_MULT: 1.3, // каждое следующее место дороже
+  /** PLAN-53: «условия офиса» 2/3 включаются с 5/8 сотрудников (и не откатываются) */
+  OFFICE_LEVEL_AT: { 2: 5, 3: 8 } as Record<number, number>,
+  /** PLAN-53: иерархия — излишек статов (>100) идёт подчинённым: ×0.25, глубже ×0.5 за уровень */
+  HIERARCHY_EXCESS: 0.25,
+  HIERARCHY_DEPTH_FALLOFF: 0.5,
+  GAME_STAT_CAP: 100,
 
   // время (ДНИ; год = 365; игра начинается 1 апреля 1985)
   // 1 игровой день = 1 реальная секунда на скорости 1× (TICK_MS)

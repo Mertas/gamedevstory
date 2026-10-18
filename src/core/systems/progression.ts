@@ -540,26 +540,5 @@ export function tickOwnConsole(state: GameState): void {
 }
 
 // ─── переезд офиса ───
-function officeUpgradeInfo(state: GameState): { level: number; cost: number; ready: boolean; reason: string } | null {
-  if (state.officeLevel >= 3) return null;
-  const next = state.officeLevel + 1;
-  if (next === 2) {
-    const ready = state.year >= 4 && state.money >= 1000 && state.history.length > 0;
-    return { level: 2, cost: 600, ready, reason: 'Год 4+, ≥1000K и хотя бы одна выпущенная игра' };
-  }
-  // офис 3: 7-й год и 3500K на счету (переезд стоит 2500K)
-  const ready = state.year >= 7 && state.money >= 3500;
-  return { level: 3, cost: 2500, ready, reason: 'Нужны 7-й год и ≥3500K на счету' };
-}
 
-export function moveOffice(state: GameState): ActionResult {
-  const info = officeUpgradeInfo(state);
-  if (!info) return { ok: false, error: 'Уже самый большой офис' };
-  if (!info.ready) return { ok: false, error: `Переезд пока недоступен: ${info.reason}` };
-  if (state.money < info.cost) return { ok: false, error: `Нужно ${info.cost}K` };
-  state.money -= info.cost;
-  state.officeLevel = info.level as 2 | 3;
-  log(state, `🏢 Переезд в офис ${info.level} (−${info.cost}K, мест: ${info.level === 2 ? 6 : 8})`);
-  return { ok: true };
-}
 

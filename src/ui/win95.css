@@ -631,3 +631,14 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .pack-card-rare { background: #cdd8ff; }
 .pack-card-legend { background: #ffe9a0; border-color: #a08020 #403000 #403000 #a08020; }
 @keyframes pack-in { from { transform: rotateY(90deg) scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* PLAN-53: иерархия — дерево сотрудников (перетаскивание) */
+.hier-card { display: flex; align-items: center; gap: 6px; padding: 2px 4px; margin: 2px 0; border: 1px solid transparent; cursor: grab; }
+.hier-card.root { border: 1px solid #808080; background: #fffbd0; cursor: default; }
+.hier-card.over { border: 1px dashed #000080; background: #d8e8ff; }
+.hier-card.drag { opacity: .55; }
+.hier-info { display: flex; flex-direction: column; line-height: 1.25; }
+.hier-stats { display: flex; gap: 8px; font-size: 10px; color: #404040; }
+.hier-bonus { color: #008000; }
+.hier-children { margin-left: 18px; padding-left: 10px; border-left: 1px dashed #a0a0a0; }
+.hier-node { position: relative; }

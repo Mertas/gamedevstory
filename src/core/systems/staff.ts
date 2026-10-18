@@ -2,6 +2,7 @@
 import { CONFIG, type HireMethodId } from '../config';
 import { STAFF } from '../data/db';
 import { salaryWithLevels } from '../formulas';
+import { detachChildren, syncOfficeLevel } from './hierarchy';
 import { log } from '../log';
 import type { Rng } from '../rng';
 import type { ActionResult, GameState, Staff, StaffHistoryEntry } from '../types';
@@ -189,8 +190,9 @@ export function hireFromSearch(
   if (state.hiredIds.includes(staffId)) return { ok: false, error: 'Этот кандидат уже не доступен' };
   const d = STAFF.find((x) => x.id === staffId);
   if (!d) return { ok: false, error: 'Нет такого кандидата' };
-  if (state.staff.length >= CONFIG.OFFICE_CAPACITY[state.officeLevel]) {
-    return { ok: false, error: 'Нет мест в офисе' };
+  const seats = state.seats ?? CONFIG.STAFF_SEATS_BASE;
+  if (state.staff.length >= seats) {
+    return { ok: false, error: `Нет свободных мест (${state.staff.length}/${seats}) — купите место` };
   }
   if (state.money < d.hireFee) return { ok: false, error: 'Не хватает денег на взнос' };
 
@@ -198,8 +200,10 @@ export function hireFromSearch(
   if (!staff) return { ok: false, error: 'Ошибка данных' };
   staff.avatar = pickAvatar(rng);
   state.money -= d.hireFee;
+  staff.bossId = null; // PLAN-53: по умолчанию подчиняется владельцу
   state.staff.push(staff);
   state.hiredIds.push(staff.id);
+  syncOfficeLevel(state); // PLAN-53: 5-й/8-й сотрудник включает условия офиса 2/3
   search.ids = search.ids.filter((id) => id !== staffId);
   log(state, `${gform('Нанят/Нанята', staff.gender)}: ${staff.name} (${staff.activeCareer} Lv${staff.careers[staff.activeCareer]}, взнос ${staff.hireFee}K, зарплата ${staff.salary}K/год)`);
   pushHistory(staff, state.week, 'hire', `Нанят: ${CAREER_LABELS[staff.activeCareer] ?? staff.activeCareer} Lv${staff.careers[staff.activeCareer] ?? 1}, взнос ${staff.hireFee}K`);
@@ -215,6 +219,7 @@ export function fireStaff(state: GameState, staffId: string): ActionResult {
   if (typeof s.partnerPct === 'number') return { ok: false, error: 'С партнёром можно расстаться только двумя способами: выкуп доли или доля дохода' };
   // аудит-51 01-P2-10: партия без сотрудников мертва (проект не начать, зарплат нет, банкротства нет)
   if (state.staff.length <= 1) return { ok: false, error: 'Нельзя уволить последнего сотрудника' };
+  detachChildren(state, s.id); // PLAN-53: его подчинённые переходят к его руководителю
   state.staff.splice(i, 1);
   // аудит 05.09: уволенный возвращается в пул кандидатов (раньше hiredIds.push() делал
   // обратное заявленному — повторный найм был невозможен, плюс копились дубли)

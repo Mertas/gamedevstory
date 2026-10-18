@@ -82,20 +82,16 @@ describe('AP-06: хозяйство «разумного» игрока (офи�
   const boosterCount = (state: ReturnType<typeof newGame>): number =>
     Object.values(state.boosterPurchases).reduce((a, b) => a + b, 0);
 
-  it('переезжает в офис 2, когда движок считает готовым (год 4+, 1000K+, есть релиз)', () => {
+  it('не нанимает сверх купленных мест (PLAN-53: кап офиса убран)', () => {
     const state = newGame(42);
     const player = createPlayer();
     const stats = emptyStats();
-    // играем до первого релиза — переезду нужна хотя бы одна выпущенная игра
-    for (let i = 0; i < 2000 && state.history.length === 0 && !state.bankrupt; i++) {
+    for (let i = 0; i < 2000 && !state.bankrupt; i++) {
       player.turn(state, stats);
       tick(state);
     }
-    expect(state.history.length).toBeGreaterThan(0);
-    state.year = 4; // готовность проверяет движок; здесь всё сходится: год, деньги, история
-    state.money = Math.max(state.money, 1200);
-    player.turn(state, stats);
-    expect(state.officeLevel).toBe(2);
+    expect(state.staff.length).toBeLessThanOrEqual(state.seats);
+    expect(state.officeLevel).toBe(1); // policy места не покупает — офис не растёт сам
   });
 
   it('берёт лицензии шире Microx SX — по одной за ход, с резервом 800K', () => {
@@ -112,7 +108,7 @@ describe('AP-06: хозяйство «разумного» игрока (офи�
     expect(state.consoles['exodus']!.licensed).toBe(true); // следующая по цене (400K)
     // дорогая лицензия при остатке меньше резерва (цена + 800) не берётся
     state.consoles['play-gear']!.availableAtWeek = state.week;
-    expect(state.staff.length).toBe(CONFIG.OFFICE_CAPACITY[state.officeLevel]); // команда полная — ход не тратит на найм
+    expect(state.staff.length).toBe(state.seats); // PLAN-53: мест нет — ход не тратит на найм
     state.money = 1700; // 1700 − 1050 = 650 < 800 — резерв обязан остановить
     player.turn(state, stats);
     expect(state.consoles['play-gear']!.licensed).toBe(false);
