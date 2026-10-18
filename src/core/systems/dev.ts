@@ -18,6 +18,7 @@ import { ownConsoleMult } from '../../shared/consoles';
 import { busyStaffIds } from './staff';
 import { cappedStats, effectiveStats, type StatBlock } from './hierarchy';
 import { onGameReleased } from './franchise';
+import { addComboBrand, applyCombos } from './combos';
 
 export function genreById(id: string) {
   return GENRES.find((g) => g.id === id)!;
@@ -383,9 +384,13 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   const { scores: baseScores } = judgeScore(game.points, CRITICS.map((c) => c.weights), game.bugs, noise);
   // v1.18.0: критики ставят по-разному — «база ±2»; сумма слегка гуляет, 100/100 — редкая удача
   const scores = spreadScores(baseScores, rng);
-  const total = reviewTotal(scores);
+  let total = reviewTotal(scores);
   const genre = genreById(game.genreId);
   const type = typeById(game.typeId);
+
+  // PLAN-54: скрытые комбо команды — проверяются на готовой игре (после завершения разработки)
+  const combos = applyCombos(state, game);
+  if (combos.score) total = Math.min(100, total + combos.score);
 
   game.name = game.name || generateName(genre.ru ?? genre.name, type.nameRu ?? type.name, rng); // аудит-51 05-P3-2: имена — по-русски
   game.score = total;
@@ -430,6 +435,10 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   game.totalUnits = plan.totalUnits;
   game.totalRevenue = plan.totalRevenue;
 
+  // PLAN-54: коммерческие эффекты комбо — разово на релизе (продажи этой игры уже посчитаны)
+  if (combos.money) state.money += combos.money;
+  if (combos.fans) state.fans += combos.fans;
+
   // база консоли растёт
   cs.base += CONFIG.CONSOLE_BASE_GROWTH;
 
@@ -466,6 +475,11 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   });
   // PLAN-52 M1: релиз обновляет франшизу — рождение серии или сиквел (сила бренда в «Империи»)
   onGameReleased(state, state.history[state.history.length - 1]!);
+  if (combos.brand) addComboBrand(state, game, combos.brand); // PLAN-54: бренд — после франшизы
+  if (combos.matched.length) {
+    log(state, `Комбо команды: ${combos.matched.map((c) => `«${c.name}»`).join(', ')}` +
+      (combos.opened.length ? ` — впервые открыто: ${combos.opened.map((c) => `«${c.name}»`).join(', ')}` : ''));
+  }
   // 25.09: история хранится ЦЕЛИКОМ и не режется — все игры навсегда остаются в архиве (босс).
 
   log(state, `РЕЛИЗ «${game.name}»: ${genre.name} × ${type.name} на ${consoleData.name}`);
@@ -480,13 +494,18 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
     .slice(0, 5)
     .map(([id, v]) => `${state.staff.find((s) => s.id === id)?.name ?? id} ${Math.round(v)}`)
     .join(' · ');
+  const comboLine = combos.matched.length
+    ? `\n\n💠 Комбо команды: ${combos.matched.map((c) => `«${c.name}»`).join(', ')}` +
+      (combos.opened.length ? `\n✨ Впервые открыто: ${combos.opened.map((c) => `«${c.name}»`).join(', ')}` : '')
+    : '';
   state.pendingEvent = {
     type: 'release_result',
     text:
       `🎉 «${game.name}» выпущена!\n` +
       `Оценки критиков: ${scores.join(' · ')} = ${score100(total)}/100\n` +
       `${total >= CONFIG.HALL_OF_FAME ? '🏆 ЗАЛ СЛАВЫ!' : total >= CONFIG.GRAND_PRIZE_SCORE ? 'Претендент на Гран-при!' : 'Удачи в следующий раз!'}` +
-      (topContrib ? `\n\nВклад в разработку:\n${topContrib}` : ''),
+      (topContrib ? `\n\nВклад в разработку:\n${topContrib}` : '') +
+      comboLine,
   };
   return { ok: true };
 }

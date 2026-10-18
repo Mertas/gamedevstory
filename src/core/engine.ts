@@ -98,6 +98,7 @@ export function newGame(seed = 1, opts: NewGameOptions = {}): GameState {
     cards: { lastWeek: -9999, last: null }, // PLAN-52 M2: паки коллекционных карточек
     // PLAN-52 M2b: телевидение — первые каналы выходят в эфир в 1991-м
     tv: { show: null, offer: null, nextOfferWeek: 6 * CONFIG.YEAR_LENGTH + 30 },
+    combos: {}, // PLAN-54: открытые комбо команды
     contracts: [],
     adFansGained: {},
     ownConsole: null,

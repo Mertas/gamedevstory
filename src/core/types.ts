@@ -554,6 +554,8 @@ export interface GameState {
   cards?: CardPackState;
   /** PLAN-52 M2b: телевидение — предложения каналов и сезоны мультсериалов (миграция v21) */
   tv?: TvState;
+  /** PLAN-54: открытые комбо команды (id → неделя первого открытия; навсегда) */
+  combos?: Record<string, number>;
 }
 
 export interface StartProjectInput {

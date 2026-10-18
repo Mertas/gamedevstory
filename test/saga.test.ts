@@ -391,7 +391,7 @@ it('миграция v15: сейв без саги грузится, верси�
   delete (g as { saga?: unknown }).saga;
   const m = migrateSave(g);
   expect(m.saveVersion).toBe(SAVE_VERSION);
-  expect(SAVE_VERSION).toBe(22); // v22: PLAN-53 иерархия (bossId, seats); v21: PLAN-52 M2b телевидение; v20: PLAN-52 M2 линии мерча и паки карточек; v19: PLAN-52 M1 франшизы; v18: финал партии и письмо двадцатилетия (аудит-51 05-P2-6); v17: бустеры-заряды; v16: PLAN-49 Э3 (числа саги)
+  expect(SAVE_VERSION).toBe(23); // v23: PLAN-54 комбо команды; v22: PLAN-53 иерархия (bossId, seats); v21: PLAN-52 M2b телевидение; v20: PLAN-52 M2 линии мерча и паки карточек; v19: PLAN-52 M1 франшизы; v18: финал партии и письмо двадцатилетия (аудит-51 05-P2-6); v17: бустеры-заряды; v16: PLAN-49 Э3 (числа саги)
   expect(m.saga).toBeUndefined();
 });
 
