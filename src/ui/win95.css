@@ -646,3 +646,4 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .hier-combo { display: flex; flex-direction: column; gap: 0; border: 1px solid #a0a0a0; background: #ececec; padding: 1px 5px; font-size: 10px; max-width: 210px; }
 .hier-combo span { color: #404040; }
 .hier-combo.on { background: #d8ffd8; border-color: #008000; }
+.stat-boost { color: #008000; font-weight: bold; font-size: 8px; margin-left: 1px; }

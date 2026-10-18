@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { newGame } from '../src/core/engine';
 import { migrateSave, SAVE_VERSION } from '../src/core/migrate';
 import {
-  addComboBrand, applyCombos, matchingCombos, TEAM_COMBOS,
+  addBrandAll, addComboBrand, applyCombos, matchingCombos, TEAM_COMBOS,
 } from '../src/core/systems/combos';
 import type { ActiveGame, Role, Staff } from '../src/core/types';
 
@@ -11,10 +11,10 @@ type StatKey = 'program' | 'scenario' | 'graphics' | 'sound';
 type Career = Staff['activeCareer'];
 
 function staff(
-  id: string, career: Career, opts: { stats?: Partial<Record<StatKey, number>>; hireWeek?: number } = {},
+  id: string, career: Career, opts: { stats?: Partial<Record<StatKey, number>>; hireWeek?: number; gender?: 'M' | 'F' } = {},
 ): Staff {
   return {
-    id, name: id, gender: 'M', salary: 10, hireFee: 0, maxPower: 10, power: 10,
+    id, name: id, gender: opts.gender ?? 'M', salary: 10, hireFee: 0, maxPower: 10, power: 10,
     stats: { program: 0, scenario: 0, graphics: 0, sound: 0, ...opts.stats },
     careers: { coder: 1, writer: 0, designer: 0, sound: 0, director: 0, producer: 0, hw: 0, hacker: 0 },
     activeCareer: career, levelUps: 0, boosterUses: {}, avatar: '', homeWeeks: 0, lastRole: null,
@@ -127,6 +127,74 @@ describe('PLAN-54: эффекты и открытие', () => {
     expect(r.brand).toBeGreaterThanOrEqual(1);
     addComboBrand(g, game, r.brand);
     expect(g.franchises['rpg|action']!.brand).toBeCloseTo(50 + r.brand, 6);
+  });
+
+  it('«Вся студия»: в игре участвовали все 5+ сотрудников', () => {
+    const g = newGame(9);
+    g.staff = [staff('a', 'coder'), staff('b', 'writer'), staff('c', 'designer'), staff('d', 'sound'), staff('e', 'coder')];
+    const game = fakeGame({ contribTotal: { a: 1, b: 1, c: 1, d: 1, e: 1 } });
+    expect(matchingCombos(g, game).map((c) => c.id)).toContain('studio');
+    g.staff[4] = staff('e2', 'coder'); // пятый не внёс вклад
+    expect(matchingCombos(g, game).map((c) => c.id)).not.toContain('studio');
+  });
+
+  it('«Молодёжь»: все наняты меньше 3 лет назад', () => {
+    const g = newGame(10);
+    g.week = 2000;
+    g.staff = [
+      staff('a', 'coder', { hireWeek: 1900 }),
+      staff('b', 'writer', { hireWeek: 1500 }),
+      staff('c', 'designer', { hireWeek: 1000 }),
+    ];
+    const game = fakeGame({ contribTotal: { a: 1, b: 1, c: 1 } });
+    expect(matchingCombos(g, game).map((c) => c.id)).toContain('young');
+    g.staff[2] = staff('c', 'designer', { hireWeek: 500 }); // 4+ лет
+    expect(matchingCombos(g, game).map((c) => c.id)).not.toContain('young');
+  });
+
+  it('«Своя компания»: все одного пола', () => {
+    const g = newGame(11);
+    g.staff = [staff('a', 'coder'), staff('b', 'writer'), staff('c', 'designer')];
+    const game = fakeGame({ contribTotal: { a: 1, b: 1, c: 1 } });
+    expect(matchingCombos(g, game).map((c) => c.id)).toContain('same-sex');
+    g.staff[2] = staff('c', 'designer', { gender: 'F' });
+    expect(matchingCombos(g, game).map((c) => c.id)).not.toContain('same-sex');
+  });
+
+  it('награда за 3 комбо: 150K и 500 фанатов при пересечении порога', () => {
+    const g = newGame(12);
+    g.week = 500;
+    g.combos = { a: 1, b: 2 }; // две уже открыты
+    g.staff = [
+      staff('a', 'coder', { gender: 'M' }),
+      staff('b', 'coder', { gender: 'F' }),
+      staff('c', 'coder', { gender: 'M' }),
+    ];
+    const game = fakeGame({ contribTotal: { a: 1, b: 1, c: 1 } });
+    const r = applyCombos(g, game);
+    expect(r.count).toBe(3);
+    expect(r.awards.map((a) => a.at)).toContain(3);
+    expect(r.money).toBe(180 + 150);
+    expect(r.fans).toBe(500);
+  });
+
+  it('награда за 5 комбо добавляет бренд всем франшизам', () => {
+    const g = newGame(13);
+    g.week = 600;
+    g.combos = { a: 1, b: 1, c: 1, d: 1 };
+    g.staff = [
+      staff('a', 'coder'), staff('b', 'coder'), staff('c', 'coder'), staff('d', 'coder'), staff('e', 'coder'),
+    ];
+    const game = fakeGame({ contribTotal: { a: 1, b: 1, c: 1, d: 1, e: 1 } });
+    g.franchises = {
+      x: { name: 'X', genreId: 'rpg', typeId: 'action', brand: 50, bornWeek: 1, lastReleaseWeek: 1, releases: [], merch: null } as never,
+      y: { name: 'Y', genreId: 'rpg', typeId: 'action', brand: 70, bornWeek: 1, lastReleaseWeek: 1, releases: [], merch: null } as never,
+    };
+    const r = applyCombos(g, game);
+    expect(r.awards.map((a) => a.at)).toContain(5);
+    for (const a of r.awards) if (a.brandAll) addBrandAll(g, a.brandAll);
+    expect(g.franchises.x!.brand).toBe(52);
+    expect(g.franchises.y!.brand).toBe(72);
   });
 
   it('все стартовые комбо имеют уникальные id и непустые условия', () => {

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CONFIG } from '../../../core/config';
 import { effectiveStats, nextSeatPrice, seatsOf, type StatBlock } from '../../../core/systems/hierarchy';
-import { TEAM_COMBOS } from '../../../core/systems/combos';
+import { COMBO_AWARDS, TEAM_COMBOS } from '../../../core/systems/combos';
 import { STAT_SHORT } from '../../../shared/train';
 import { fmtK } from '../../../shared/nums';
 import { StaffAvatar, AV } from '../../StaffAvatar';
@@ -93,10 +93,12 @@ export function HierarchyApp() {
         <div className="w95-hint">Пока в студии только вы — наймите команду в приложении «Найм».</div>
       )}
 
-      <h4 className="w95-help-sub" style={{ marginTop: 8 }}>Комбо команды</h4>
+      <h4 className="w95-help-sub" style={{ marginTop: 8 }}>
+        Комбо команды ({Object.keys(game.combos ?? {}).length}/{TEAM_COMBOS.length})
+      </h4>
       <div className="w95-hint">
         Скрытые комбинации открываются, когда команда доводит игру до релиза. Бонус срабатывает
-        на готовой игре.
+        на готовой игре. За коллекцию — награды на {COMBO_AWARDS.map((a) => a.at).join(', ')} комбо.
       </div>
       <div className="hier-combos">
         {TEAM_COMBOS.map((c) => {

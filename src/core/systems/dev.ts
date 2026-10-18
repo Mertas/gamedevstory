@@ -18,7 +18,7 @@ import { ownConsoleMult } from '../../shared/consoles';
 import { busyStaffIds } from './staff';
 import { cappedStats, effectiveStats, type StatBlock } from './hierarchy';
 import { onGameReleased } from './franchise';
-import { addComboBrand, applyCombos } from './combos';
+import { addBrandAll, addComboBrand, applyCombos } from './combos';
 
 export function genreById(id: string) {
   return GENRES.find((g) => g.id === id)!;
@@ -476,9 +476,11 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
   // PLAN-52 M1: релиз обновляет франшизу — рождение серии или сиквел (сила бренда в «Империи»)
   onGameReleased(state, state.history[state.history.length - 1]!);
   if (combos.brand) addComboBrand(state, game, combos.brand); // PLAN-54: бренд — после франшизы
-  if (combos.matched.length) {
+  for (const a of combos.awards) if (a.brandAll) addBrandAll(state, a.brandAll); // награды коллекции
+  if (combos.matched.length || combos.awards.length) {
     log(state, `Комбо команды: ${combos.matched.map((c) => `«${c.name}»`).join(', ')}` +
-      (combos.opened.length ? ` — впервые открыто: ${combos.opened.map((c) => `«${c.name}»`).join(', ')}` : ''));
+      (combos.opened.length ? ` — впервые открыто: ${combos.opened.map((c) => `«${c.name}»`).join(', ')}` : '') +
+      (combos.awards.length ? ` · коллекция ${combos.count}: ${combos.awards.map((a) => a.text).join('; ')}` : ''));
   }
   // 25.09: история хранится ЦЕЛИКОМ и не режется — все игры навсегда остаются в архиве (босс).
 
@@ -498,6 +500,9 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
     ? `\n\n💠 Комбо команды: ${combos.matched.map((c) => `«${c.name}»`).join(', ')}` +
       (combos.opened.length ? `\n✨ Впервые открыто: ${combos.opened.map((c) => `«${c.name}»`).join(', ')}` : '')
     : '';
+  const awardLine = combos.awards.length
+    ? `\n🏅 Награда за коллекцию: ${combos.awards.map((a) => a.text).join('; ')}`
+    : '';
   state.pendingEvent = {
     type: 'release_result',
     text:
@@ -505,7 +510,8 @@ export function releaseGame(state: GameState, rng: Rng, _name?: string): ActionR
       `Оценки критиков: ${scores.join(' · ')} = ${score100(total)}/100\n` +
       `${total >= CONFIG.HALL_OF_FAME ? '🏆 ЗАЛ СЛАВЫ!' : total >= CONFIG.GRAND_PRIZE_SCORE ? 'Претендент на Гран-при!' : 'Удачи в следующий раз!'}` +
       (topContrib ? `\n\nВклад в разработку:\n${topContrib}` : '') +
-      comboLine,
+      comboLine +
+      awardLine,
   };
   return { ok: true };
 }

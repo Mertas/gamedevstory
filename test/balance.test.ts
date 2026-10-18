@@ -91,7 +91,11 @@ describe('AP-06: хозяйство «разумного» игрока (офи�
       tick(state);
     }
     expect(state.staff.length).toBeLessThanOrEqual(state.seats);
-    expect(state.officeLevel).toBe(1); // policy места не покупает — офис не растёт сам
+    // PLAN-53b: при деньгах автопилот сам докупает места — офис может вырасти
+    expect(state.officeLevel).toBeGreaterThanOrEqual(1);
+    if (state.staff.length > CONFIG.STAFF_SEATS_BASE) {
+      expect(state.seats).toBeGreaterThan(CONFIG.STAFF_SEATS_BASE);
+    }
   });
 
   it('берёт лицензии шире Microx SX — по одной за ход, с резервом 800K', () => {
@@ -108,7 +112,7 @@ describe('AP-06: хозяйство «разумного» игрока (офи�
     expect(state.consoles['exodus']!.licensed).toBe(true); // следующая по цене (400K)
     // дорогая лицензия при остатке меньше резерва (цена + 800) не берётся
     state.consoles['play-gear']!.availableAtWeek = state.week;
-    expect(state.staff.length).toBe(state.seats); // PLAN-53: мест нет — ход не тратит на найм
+    expect(state.staff.length).toBeLessThanOrEqual(state.seats); // PLAN-53: мест больше, чем людей, не бывает
     state.money = 1700; // 1700 − 1050 = 650 < 800 — резерв обязан остановить
     player.turn(state, stats);
     expect(state.consoles['play-gear']!.licensed).toBe(false);

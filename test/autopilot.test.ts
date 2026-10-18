@@ -763,7 +763,8 @@ describe('AP-09: найм и увольнения', () => {
   it('офис полон: слабейшего меняет на сильного кандидата (увольнение только на замену)', () => {
     const g = fresh();
     g.officeLevel = 1; // вместимость 4
-    g.money = 5000;
+    // денег хватает на найм, но НЕ на новое место с запасом (PLAN-53b) — тогда путь замены
+    g.money = 1800;
     const weakIds: string[] = [];
     for (const d of STAFF) {
       if (g.staff.length >= 4) break;
@@ -788,6 +789,30 @@ describe('AP-09: найм и увольнения', () => {
     expect(journal.some((a) => a.type === 'hire')).toBe(true); // и замена пришла
     expect(g.staff.length).toBe(4); // состав не просел
     expect(pol.stats.fires).toBe(1);
+  });
+
+  it('офис полон и денег много: расширяется местом, а не увольняет (PLAN-53b)', () => {
+    const g = fresh();
+    g.officeLevel = 1;
+    g.money = 5000;
+    for (const d of STAFF) {
+      if (g.staff.length >= 4) break;
+      if (g.hiredIds.includes(d.id)) continue;
+      const w = makeStaffFromData(d.id);
+      if (!w) continue;
+      w.stats = { program: 1, scenario: 1, graphics: 1, sound: 1 };
+      g.staff.push(w);
+      g.hiredIds.push(w.id);
+    }
+    expect(g.staff.length).toBe(4);
+    busy(g);
+    const pol = createAutopilotPolicy();
+    const journal: PolicyAction[] = [];
+    pol.turn(g, journal);
+    expect(journal.some((a) => a.type === 'seat')).toBe(true); // куплено место
+    expect(g.staff.length).toBe(5); // и нанят пятый, без увольнения
+    expect(journal.some((a) => a.type === 'fire')).toBe(false);
+    expect(pol.stats.fires).toBe(0);
   });
 
   it('если есть свободные места — увольнений нет, только найм', () => {

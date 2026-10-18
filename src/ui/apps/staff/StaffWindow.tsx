@@ -12,6 +12,7 @@ import { fmtK } from '../../../shared/nums';
 import { fmtPct } from '../../../shared/hero';
 import { dateLabel } from '../../../shared/meta';
 import { capGain, careerChangePreview, effTrainDelta, STAT_KEYS, STAT_SHORT, type StatKey } from '../../../shared/train';
+import { effectiveStats } from '../../../core/systems/hierarchy';
 import type { Staff } from '../../../core/types';
 import type { CareerId } from '../../../core/data/schema';
 
@@ -71,6 +72,8 @@ export function StaffWindow({ winId }: { winId: string }) {
   else if (ag) status = `💻 В офисе, на проекте не назначен`;
 
   const atCapAll = STAT_KEYS.every((k) => s.stats[k] >= s.caps[k]);
+  const effMap = effectiveStats(game); // PLAN-53: статы с бонусом руководителя
+  const effStats = effMap.get(s.id) ?? s.stats;
   const canAnyTrain = meta.trainings.some((t) => game.officeLevel >= (t.office ?? 1) && game.money >= (t.costWan ?? 0) / 10 && s.power >= 1 && !resting && STAT_KEYS.some((k) => effTrainDelta((t as unknown as Record<StatKey, number>)[k], s.caps[k]) > 0 && s.stats[k] < s.caps[k]));
 
   const hist = [...s.history].reverse();
@@ -136,7 +139,10 @@ export function StaffWindow({ winId }: { winId: string }) {
               return (
                 <tr key={k}>
                   <td>{STAT_SHORT[k]}</td>
-                  <td>{val}{maxed ? ' 🎯' : ''}</td>
+                  <td title={effStats[k] !== val ? `База ${val}, бонус руководителя +${effStats[k] - val}` : undefined}>
+                    {effStats[k]}{effStats[k] !== val && <sup className="stat-boost">+{effStats[k] - val}</sup>}
+                    {maxed ? ' 🎯' : ''}
+                  </td>
                   <td style={{ width: 90 }}>
                     <div className="w95-staff-power" style={{ width: 80, margin: '4px 4px 1px' }}><div style={{ width: `${cap > 0 ? Math.round((val / cap) * 100) : 0}%`, background: maxed ? '#1a7a1a' : '#000080' }} /></div>
                   </td>

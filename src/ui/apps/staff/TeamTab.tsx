@@ -3,7 +3,7 @@ import { CONFIG } from '../../../core/config';
 import { CAREER_LABELS } from '../../careers';
 import { AV, StaffAvatar } from '../../StaffAvatar';
 import { actionBuySeat, actionFire, actionLevelUp, useGame } from '../../store';
-import { nextSeatPrice } from '../../../core/systems/hierarchy';
+import { effectiveStats, nextSeatPrice } from '../../../core/systems/hierarchy';
 import { useWindows } from '../../wm';
 import { staffWinId } from './StaffWindow';
 import { fmtK } from '../../../shared/nums';
@@ -11,6 +11,7 @@ import { fmtK } from '../../../shared/nums';
 export function TeamTab() {
   const game = useGame();
   const wm = useWindows();
+  const eff = effectiveStats(game); // PLAN-53: статы с бонусом руководителя
 
   return (
     <>
@@ -27,6 +28,12 @@ export function TeamTab() {
         <tbody>
           {game.staff.map((st) => {
             const lv = st.careers[st.activeCareer] ?? 0;
+            const e = eff.get(st.id) ?? st.stats;
+            const cell = (base: number, val: number) => (
+              <td title={val !== base ? `База ${base}, бонус руководителя +${val - base}` : undefined}>
+                {val}{val !== base && <sup className="stat-boost">+{val - base}</sup>}
+              </td>
+            );
             const price = CONFIG.LEVEL_PR[st.activeCareer]?.[lv - 1];
             return (
               // аудит-51 03-P3-7в: клик по строке открывает окно сотрудника (как иконка на столе)
@@ -38,10 +45,10 @@ export function TeamTab() {
                   </span>
                 </td>
                 <td>{CAREER_LABELS[st.activeCareer] ?? st.activeCareer} Lv{lv}</td>
-                <td>{st.stats.program}</td>
-                <td>{st.stats.scenario}</td>
-                <td>{st.stats.graphics}</td>
-                <td>{st.stats.sound}</td>
+                {cell(st.stats.program, e.program)}
+                {cell(st.stats.scenario, e.scenario)}
+                {cell(st.stats.graphics, e.graphics)}
+                {cell(st.stats.sound, e.sound)}
                 <td>{st.power}/{st.maxPower}</td>
                 <td>{fmtK(st.salary * Math.pow(1.2, st.levelUps))}</td>
                 <td>

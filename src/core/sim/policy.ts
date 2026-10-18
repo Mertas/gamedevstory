@@ -8,6 +8,7 @@ import { comboGrade, consoleAvailable, genreById, typeById } from '../systems/de
 import { BOOSTER_KEY_JOB, boosterPrice } from '../systems/progression';
 import { salaryWithLevels } from '../formulas';
 import { candidateBand } from '../systems/staff';
+import { buySeat, nextSeatPrice } from '../systems/hierarchy';
 import { SAGA_NODES } from '../../shared/saga-data';
 import { sagaCondOk } from '../../shared/saga-text';
 import { unlockedMystery } from '../../shared/hire';
@@ -42,6 +43,7 @@ export type PolicyAction =
   | { type: 'search'; method: HireMethodId }
   | { type: 'hire'; staffId?: string; method?: HireMethodId }
   | { type: 'fire'; staffId: string; name?: string }
+  | { type: 'seat'; price: number }
   | { type: 'license'; consoleId: string }
   | { type: 'booster'; boosterType: string; staffId: string };
 
@@ -300,7 +302,7 @@ function pickWeakest(state: GameState): Staff | null {
 
 /** AP-09: найм до вместимости офиса; увольнение — только под замену сильнее. */
 function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction[] | undefined, turnedDown: Set<string>): void {
-  const capacity = state.seats ?? CONFIG.STAFF_SEATS_BASE; // PLAN-53: места покупаются
+  let capacity = state.seats ?? CONFIG.STAFF_SEATS_BASE; // PLAN-53: места покупаются
   const method = pickHireMethod(state);
   const reserve = hireReserve(state);
 
@@ -323,6 +325,20 @@ function hireAndFire(state: GameState, stats: PolicyStats, journal: PolicyAction
 
   const bestId = method ? pickBestCandidate(state, method, turnedDown, reserve) : null;
   const cand = bestId ? STAFF.find((x) => x.id === bestId) : undefined;
+
+  // PLAN-53b: автопилот расширяет студию — покупает место под сильного кандидата, если хватает денег.
+  if (method && cand && state.staff.length >= capacity && state.staff.length < 12) {
+    const price = nextSeatPrice(state);
+    const cost = (CONFIG.HIRE_METHODS[method]?.cost ?? 0) + cand.hireFee + cand.salary;
+    // покупаем только с большим запасом: расширение не должно съедать капитал студии
+    if (state.money - price - cost >= reserve + CONFIG.SEAT_PRICE_BASE * 3) {
+      const seat = buySeat(state);
+      if (seat.ok) {
+        journal?.push({ type: 'seat', price });
+        capacity = state.seats ?? capacity;
+      }
+    }
+  }
 
   // замена: офис полон и кандидат ЗАМЕТНО сильнее слабейшего (иначе — никакой «карусели»)
   if (method && cand && bestId && state.staff.length >= capacity && state.staff.length > 2) {
