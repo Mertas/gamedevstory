@@ -646,4 +646,47 @@ body { font-family: var(--w95-font); font-size: 11px; user-select: none; }
 .hier-combo { display: flex; flex-direction: column; gap: 0; border: 1px solid #a0a0a0; background: #ececec; padding: 1px 5px; font-size: 10px; max-width: 210px; }
 .hier-combo span { color: #404040; }
 .hier-combo.on { background: #d8ffd8; border-color: #008000; }
+
+/* PLAN-55: поле иерархии */
+.hierfield-panel { position: relative; display: flex; flex-direction: column; gap: 4px; height: 100%; min-height: 0; overflow: hidden; }
+.hierfield-top { flex-wrap: wrap; gap: 6px; align-items: center; }
+.hierfield-legend { font-size: 10px; color: #606060; }
+.hierfield-wrap { flex: 1 1 auto; min-height: 240px; max-height: 54vh; overflow: auto; border: 2px inset #d4d0c8; background-color: #f7f7f4; background-image: linear-gradient(#eaeae6 1px, transparent 1px), linear-gradient(90deg, #eaeae6 1px, transparent 1px); background-size: 16px 16px; }
+.hierfield-canvas { position: relative; min-width: 100%; }
+.hierfield-links { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 1; }
+.hierfield-links path { fill: none; stroke: #8a8a8a; stroke-width: 1.2; stroke-linecap: round; }
+.hierfield-card { position: absolute; z-index: 3; box-sizing: border-box; display: flex; align-items: center; gap: 6px; width: 200px; height: 58px; padding: 4px 5px; background: #fff; border: 1px solid #9a9a9a; box-shadow: 1px 1px 0 #8a8a8a; cursor: grab; user-select: none; touch-action: none; will-change: left, top; transition: left .34s cubic-bezier(.22, .8, .25, 1), top .34s cubic-bezier(.22, .8, .25, 1), transform .12s ease, box-shadow .12s ease, background .12s ease; animation: hierfield-in .24s ease backwards; }
+.hierfield-card:hover { z-index: 5; transform: translateY(-1px); box-shadow: 2px 3px 0 rgba(0, 0, 0, .28); }
+.hierfield-card.owner { background: #fffbd0; border-color: #808080; cursor: default; }
+.hierfield-card.boss { border-color: #7a6a20; }
+.hierfield-card.dragging { opacity: .35; transform: scale(.97); cursor: grabbing; }
+.hierfield-card.over { outline: 2px solid #000080; outline-offset: -2px; background: #eaf2ff; transform: scale(1.03); box-shadow: 0 5px 12px rgba(0, 0, 60, .28); }
+.hierfield-card.bad { outline: 2px dashed #b00020; outline-offset: -2px; background: #ffecec; }
+.hierfield-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.hierfield-name { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hierfield-owner { margin-left: 3px; padding: 0 3px; font-size: 8px; font-weight: 400; color: #fff; background: #000080; vertical-align: 1px; }
+.hierfield-crown { margin-left: 3px; font-size: 10px; }
+.hierfield-role { font-size: 9px; color: #404040; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hierfield-sub { color: #6a5a00; }
+.hierfield-stats { display: grid; grid-template-columns: 1fr 1fr; column-gap: 4px; margin-top: 1px; font-size: 9px; color: #303030; }
+.hierfield-stats i { font-style: normal; color: #8a8a8a; }
+.hierfield-bonus { color: #008000; font-weight: 700; }
+.hierfield-unit { position: absolute; z-index: 0; box-sizing: border-box; border: 1px dashed #7a9a7a; border-radius: 9px; background: rgba(120, 180, 120, .05); pointer-events: none; transition: left .34s cubic-bezier(.22, .8, .25, 1), top .34s cubic-bezier(.22, .8, .25, 1), width .34s ease, height .34s ease, box-shadow .15s ease, background .15s ease; }
+.hierfield-unit.service { border-color: #6a7fa8; background: rgba(110, 140, 200, .06); }
+.hierfield-unit.department { border-color: #a88a5a; background: rgba(190, 150, 80, .07); }
+.hierfield-unit.hot { box-shadow: 0 0 0 2px rgba(0, 0, 128, .22) inset; background: rgba(120, 160, 255, .12); }
+.hierfield-unit-label { position: absolute; top: -9px; left: 8px; padding: 0 4px; font-size: 9px; color: #3a5a3a; background: #f7f7f4; border: 1px solid currentColor; border-radius: 3px; white-space: nowrap; }
+.hierfield-unit.service .hierfield-unit-label { color: #3a4a70; }
+.hierfield-unit.department .hierfield-unit-label { color: #6a5320; }
+.hierfield-empty { position: absolute; left: 20px; top: 76px; max-width: 380px; font-size: 11px; color: #606060; }
+.hierfield-tip { font-size: 10px; line-height: 1.35; }
+.hierfield-toast { position: absolute; left: 50%; bottom: 10px; z-index: 60; transform: translateX(-50%); padding: 3px 10px; font-size: 11px; color: #fff; background: #000080; box-shadow: 2px 2px 0 rgba(0, 0, 0, .4); animation: hierfield-toast-in .18s ease; }
+.hierfield-dropbar { position: absolute; left: 50%; top: 40px; z-index: 55; transform: translateX(-50%); padding: 2px 9px; font-size: 10px; color: #303030; background: #ffffcc; border: 1px solid #808080; box-shadow: 1px 1px 0 #808080; pointer-events: none; white-space: nowrap; }
+.hierfield-ghost { position: fixed; z-index: 9999; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 4px 5px; background: #fff; border: 2px solid #000080; box-shadow: 6px 8px 16px rgba(0, 0, 0, .35); transform: rotate(1.5deg) scale(1.03); opacity: .96; pointer-events: none; }
+.hierfield-a11y { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@keyframes hierfield-in { from { opacity: 0; transform: translateY(-6px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes hierfield-toast-in { from { opacity: 0; transform: translate(-50%, 4px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .hierfield-card, .hierfield-unit { transition: none; animation: none; }
+}
 .stat-boost { color: #008000; font-weight: bold; font-size: 8px; margin-left: 1px; }

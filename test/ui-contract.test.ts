@@ -85,6 +85,11 @@ describe('DOM-контракт автопилота и карточек', () => 
     expect(search).toContain('data-autopilot="hire-search"');
     expect(hierarchy).toContain('actionSetBoss'); // PLAN-53: дерево перетаскиванием
     expect(hierarchy).toContain('data-autopilot="buy-seat"');
+    // PLAN-55: поле — раскладка по координатам, подразделения и карточки-жетоны
+    expect(hierarchy).toContain('buildField');
+    expect(hierarchy).toContain('hierfield-card');
+    expect(hierarchy).toContain('hierfield-unit');
+    expect(hierarchy).toContain('hierfield-dropbar');
     expect(salesman).toContain('data-autopilot={`booster-${b.id}`}');
     expect(marketing).toContain('data-autopilot={`ad-${a.id}`}');
     expect(hardware).toContain('data-autopilot={`lic-${c.id}`}');
