@@ -52,7 +52,7 @@ export function HierarchyApp() {
     e.preventDefault();
     const { px, py } = point(e.clientX, e.clientY);
     setDrag(c.id);
-    setGhost({ x: e.clientX, y: e.clientY, ox: e.clientX - (px - c.x), oy: e.clientY - (py - c.y) });
+    setGhost({ x: e.clientX, y: e.clientY, ox: px - c.x, oy: py - c.y });
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
