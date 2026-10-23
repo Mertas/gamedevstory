@@ -103,6 +103,8 @@ export interface FieldUnit {
   label: string;
   icon: string;
   count: number;
+  /** Все сотрудники подразделения: начальник и всё поддерево (для сумм статов). */
+  memberIds: string[];
   x: number;
   y: number;
   w: number;
@@ -280,6 +282,7 @@ export function buildField(staff: Staff[]): FieldModel {
       label: c.unitLabel,
       icon: UNIT_META[c.unitLevel].icon,
       count: countSubtree(c.id, children, new Set()) + 1,
+      memberIds: [c.id, ...collect(c.id, children, new Set()).map((k) => k.id)],
       x: x1 - FIELD.UNIT_SIDE,
       y: c.y - FIELD.UNIT_TOP,
       w: x2 - x1 + FIELD.UNIT_SIDE * 2,
